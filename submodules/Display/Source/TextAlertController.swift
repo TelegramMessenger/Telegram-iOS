@@ -29,7 +29,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
     
     private let backgroundNode: ASDisplayNode
     
-    var highlightedUpdated: (Bool) -> Void = { _ in }
+    public var highlightedUpdated: (Bool) -> Void = { _ in }
         
     public init(theme: AlertControllerTheme, action: TextAlertAction) {
         self.theme = theme
@@ -68,13 +68,13 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         })
     }
     
-    func performAction() {
+    public func performAction() {
         if self.actionEnabled {
             self.action.action()
         }
     }
     
-    func setHighlighted(_ highlighted: Bool, animated: Bool) {
+    public func setHighlighted(_ highlighted: Bool, animated: Bool) {
         self.highlightedUpdated(highlighted)
         if highlighted {
             if self.backgroundNode.supernode == nil {

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import ContextUI
@@ -133,8 +134,15 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     private var absoluteRect: (CGRect, CGSize)?
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+        let previousContaierSize = self.absoluteRect?.1
         self.absoluteRect = (rect, containerSize)
         self.backdropNode.update(rect: rect, within: containerSize, transition: transition)
+        
+        if let previousContaierSize, previousContaierSize != containerSize {
+            Queue.mainQueue().after(0.2) {
+                self.micButton.reset()
+            }
+        }
     }
     
     func updateLayout(size: CGSize, isMediaInputExpanded: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {

@@ -131,10 +131,6 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     
     func present() {
         let windowIsVisible: (UIWindow) -> Bool = { window in
-            print(window.alpha)
-            print(window.isHidden)
-            print(window.frame)
-            print(window.subviews)
             return !window.frame.height.isZero
         }
         

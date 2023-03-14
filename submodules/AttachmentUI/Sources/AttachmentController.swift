@@ -117,6 +117,12 @@ public extension AttachmentContainable {
 }
 
 public enum AttachmentMediaPickerSendMode {
+    case generic
+    case silently
+    case whenOnline
+}
+
+public enum AttachmentMediaPickerAttachmentMode {
     case media
     case files
 }
@@ -131,7 +137,7 @@ public protocol AttachmentMediaPickerContext {
     func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode)
     func schedule()
 }
 
@@ -380,12 +386,14 @@ public class AttachmentController: ViewController {
             self.panel.sendMessagePressed = { [weak self] mode in
                 if let strongSelf = self {
                     switch mode {
-                        case .generic:
-                            strongSelf.mediaPickerContext?.send(silently: false, mode: .media)
-                        case .silent:
-                            strongSelf.mediaPickerContext?.send(silently: true, mode: .media)
-                        case .schedule:
-                            strongSelf.mediaPickerContext?.schedule()
+                    case .generic:
+                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media)
+                    case .silent:
+                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media)
+                    case .schedule:
+                        strongSelf.mediaPickerContext?.schedule()
+                    case .whenOnline:
+                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media)
                     }
                 }
             }
@@ -959,9 +967,15 @@ public class AttachmentController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let previousSize = self.validLayout?.size
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
+        if let previousSize, previousSize != layout.size {
+            Queue.mainQueue().after(0.1) {
+                self.node.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
     

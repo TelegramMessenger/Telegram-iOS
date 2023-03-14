@@ -343,7 +343,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
                                         strongSelf.backgroundColorNode.isHidden = true
                                     } else {
-                                        strongSelf.backgroundColorNode.isHidden = false
+                                        strongSelf.backgroundColorNode.isHidden = true
                                     }
                                 } else {
                                     if strongSelf.backgroundMaskNode.supernode == nil {

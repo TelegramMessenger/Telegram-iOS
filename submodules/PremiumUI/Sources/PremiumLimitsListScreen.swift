@@ -618,6 +618,8 @@ public class PremiumLimitsListScreen: ViewController {
         var disposable: Disposable?
         var promoConfiguration: PremiumPromoConfiguration?
         
+        let nextAction = ActionSlot<Void>()
+        
         init(context: AccountContext, controller: PremiumLimitsListScreen, buttonTitle: String, gloss: Bool) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
@@ -761,12 +763,20 @@ public class PremiumLimitsListScreen: ViewController {
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
+            self.pagerView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.pagerTapGesture(_:))))
+            
             self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 self.controller?.dismiss(animated: true)
+            }
+        }
+        
+        @objc func pagerTapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.nextAction.invoke(Void())
             }
         }
         
@@ -1067,7 +1077,10 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(
                                     StickersCarouselComponent(
                                         context: context,
-                                        stickers: stickers
+                                        stickers: stickers,
+                                        tapAction: { [weak self] in
+                                            self?.nextAction.invoke(Void())
+                                        }
                                     )
                                 ),
                                 title: strings.Premium_Stickers,
@@ -1224,6 +1237,7 @@ public class PremiumLimitsListScreen: ViewController {
                             DemoPagerComponent(
                                 items: items,
                                 index: index,
+                                nextAction: nextAction,
                                 updated: { [weak self] position, count in
                                     if let strongSelf = self {
                                         strongSelf.footerNode.updatePosition(position, count: count)

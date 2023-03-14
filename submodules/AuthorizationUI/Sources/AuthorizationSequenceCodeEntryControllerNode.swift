@@ -12,9 +12,9 @@ import PhoneNumberFormat
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
-import InvisibleInkDustNode
 import AuthorizationUtils
 import TelegramStringFormatting
+import TextNodeWithEntities
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -24,15 +24,15 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private let titleNode: ImmediateTextNode
     private let titleActivateAreaNode: AccessibilityAreaNode
     private let titleIconNode: ASImageNode
-    private let currentOptionNode: ImmediateTextNode
+    private let currentOptionNode: ImmediateTextNodeWithEntities
     private let currentOptionActivateAreaNode: AccessibilityAreaNode
-    private var dustNode: InvisibleInkDustNode?
     
     private let currentOptionInfoNode: ASTextNode
     private let currentOptionInfoActivateAreaNode: AccessibilityAreaNode
     private let nextOptionTitleNode: ImmediateTextNode
     private let nextOptionButtonNode: HighlightableButtonNode
     
+    private let resetTextNode: ImmediateTextNode
     private let resetNode: HighlightableButtonNode
     
     private let dividerNode: AuthorizationDividerNode
@@ -76,6 +76,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     var requestAnotherOption: (() -> Void)?
     var updateNextEnabled: ((Bool) -> Void)?
     var reset: (() -> Void)?
+    var retryReset: (() -> Void)?
     
     var inProgress: Bool = false {
         didSet {
@@ -105,11 +106,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.titleIconNode.displayWithoutProcessing = true
         self.titleIconNode.displaysAsynchronously = false
         
-        self.currentOptionNode = ImmediateTextNode()
+        self.currentOptionNode = ImmediateTextNodeWithEntities()
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
         self.currentOptionNode.lineSpacing = 0.1
         self.currentOptionNode.maximumNumberOfLines = 0
+        self.currentOptionNode.spoilerColor = self.theme.list.itemSecondaryTextColor
         
         self.currentOptionActivateAreaNode = AccessibilityAreaNode()
         self.currentOptionActivateAreaNode.accessibilityTraits = .staticText
@@ -159,6 +161,13 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.resetNode.setAttributedTitle(NSAttributedString(string: self.strings.Login_Email_CantAccess, font: Font.regular(17.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center), for: [])
         self.resetNode.isHidden = true
         
+        self.resetTextNode = ImmediateTextNode()
+        self.resetTextNode.maximumNumberOfLines = 1
+        self.resetTextNode.textAlignment = .center
+        self.resetTextNode.isUserInteractionEnabled = false
+        self.resetTextNode.displaysAsynchronously = false
+        self.resetTextNode.isHidden = true
+        
         self.dividerNode = AuthorizationDividerNode(theme: self.theme, strings: self.strings)
         
         if #available(iOS 13.0, *) {
@@ -190,6 +199,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.nextOptionButtonNode)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.resetNode)
+        self.addSubnode(self.resetTextNode)
         self.addSubnode(self.dividerNode)
         self.addSubnode(self.errorTextNode)
         self.addSubnode(self.proceedNode)
@@ -337,6 +347,23 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 }
             })
             self.countdownDisposable.set(disposable)
+        } else if case let .email(_, _, _, pendingDate, _, _) = codeType, let pendingDate {
+            let disposable = ((Signal<Int, NoError>.single(1) |> delay(1.0, queue: Queue.mainQueue())) |> restart).start(next: { [weak self] _ in
+                if let strongSelf = self {
+                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                    let interval = pendingDate - currentTime
+                    if interval <= 0 {
+                        strongSelf.countdownDisposable.set(nil)
+                        Queue.mainQueue().after(2.0) {
+                            strongSelf.retryReset?()
+                        }
+                    }
+                    if let layoutArguments = strongSelf.layoutArguments {
+                        strongSelf.containerLayoutUpdated(layoutArguments.0, navigationBarHeight: layoutArguments.1, transition: .immediate)
+                    }
+                }
+            })
+            self.countdownDisposable.set(disposable)
         } else {
             self.currentTimeoutTime = nil
             self.countdownDisposable.set(nil)
@@ -418,8 +445,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
         let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
         let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
-        let resetSize = self.resetNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
-        
+    
         let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - inset * 2.0, transition: transition)
         let proceedSize = CGSize(width: maximumWidth - inset * 2.0, height: proceedHeight)
         
@@ -515,16 +541,56 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: currentOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                 
                 var canReset = false
-                if case let .email(_, _, resetPeriod, _, _, setup) = codeType, !setup && resetPeriod != nil {
-                    canReset = true
+                var pendingDate: Int32?
+                if case let .email(_, _, resetPeriod, pendingDateValue, _, setup) = codeType, !setup {
+                    if resetPeriod != nil {
+                        canReset = true
+                    } else if pendingDateValue != nil {
+                        pendingDate = pendingDateValue
+                    }
                 }
                 
-                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: canReset ? 0.0 : 104.0, maxValue: canReset ? 0.0 : 104.0)))
+                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: canReset || pendingDate != nil ? 0.0 : 104.0, maxValue: canReset ? 0.0 : 104.0)))
                 
                 if canReset {
+                    self.resetNode.setAttributedTitle(NSAttributedString(string: self.strings.Login_Email_CantAccess, font: Font.regular(17.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center), for: [])
+                    let resetSize = self.resetNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
+                    
+                    self.resetTextNode.isHidden = true
                     self.resetNode.isHidden = false
                     items.append(AuthorizationLayoutItem(node: self.resetNode, size: resetSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 36.0, maxValue: 36.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 104.0, maxValue: 104.0)))
+                } else if let pendingDate {
+                    self.resetNode.setAttributedTitle(NSAttributedString(string: self.strings.Login_Email_ResetNowViaSMS, font: Font.regular(17.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center), for: [])
+                    let resetSize = self.resetNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
+                    
+                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                    let resetText: String
+                    let interval = pendingDate - currentTime
+                    if interval <= 0 {
+                        resetText = "Please wait..."
+                    } else if interval < 60 * 60 * 24 {
+                        let minutes = interval / 60
+                        let seconds = interval % 60
+                        let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
+                        resetText = "in \(timeString)"
+                    } else {
+                        resetText = unmuteIntervalString(strings: self.strings, value: interval)
+                    }
+                                        
+                    self.resetTextNode.attributedText = NSAttributedString(string: self.strings.Login_Email_WillBeResetIn(resetText).string, font: Font.regular(16.0), textColor: self.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+                    let resetTextSize = self.resetTextNode.updateLayout(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
+                   
+                    if !self.resetNode.isHidden && self.resetTextNode.isHidden {
+                        self.resetTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                    
+                    self.resetTextNode.isHidden = false
+                    items.append(AuthorizationLayoutItem(node: self.resetTextNode, size: resetTextSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 36.0, maxValue: 36.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                    
+                    self.resetNode.isHidden = false
+                    items.append(AuthorizationLayoutItem(node: self.resetNode, size: resetSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 20.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 104.0, maxValue: 104.0)))
                 } else {
+                    self.resetTextNode.isHidden = true
                     self.resetNode.isHidden = true
                 }
 
@@ -569,23 +635,6 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
-        
-        if let textLayout = self.currentOptionNode.cachedLayout, !textLayout.spoilers.isEmpty {
-            if self.dustNode == nil {
-                let dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: true)
-                self.dustNode = dustNode
-                self.currentOptionNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.currentOptionNode)
-                
-            }
-            if let dustNode = self.dustNode {
-                let textFrame = self.currentOptionNode.frame
-                dustNode.update(size: textFrame.size, color: self.theme.list.itemSecondaryTextColor, textColor: self.theme.list.itemPrimaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
-                transition.updateFrame(node: dustNode, frame: textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0))
-            }
-        } else if let dustNode = self.dustNode {
-            self.dustNode = nil
-            dustNode.removeFromSupernode()
-        }
         
         self.nextOptionTitleNode.frame = self.nextOptionButtonNode.bounds
         

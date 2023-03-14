@@ -18,6 +18,8 @@ import LegacyMediaPickerUI
 import PasswordSetupUI
 import TelegramNotices
 import AuthenticationServices
+import Markdown
+import AlertUI
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
@@ -280,13 +282,16 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func codeEntryController(number: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, phoneCodeHash: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
                 if c.data?.2 == type {
                     currentController = c
                 }
+//                else if case let .email(_, _, _, newPendingDate, _, _) = type, let previousType = c.data?.2, case let .email(_, _, _, previousPendingDate, _, _) = previousType, newPendingDate != nil && previousPendingDate == nil {
+//                    currentController = c
+//                }
                 break
             }
         }
@@ -302,8 +307,81 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).start()
             })
-            controller.resetEmail = {
-                
+            controller.retryResetEmail = { [weak self] in
+                if let self {
+                    self.actionDisposable.set(
+                        resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash).start()
+                    )
+                }
+            }
+            controller.resetEmail = { [weak self, weak controller] in
+                if let self, case let .email(pattern, _, resetAvailablePeriod, resetPendingDate, _, setup) = type, !setup {
+                    let body = MarkdownAttributeSet(font: Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                    if let _ = resetPendingDate {
+                        self.actionDisposable.set(
+                            resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash).start(error: { [weak self] error in
+                                if let self, case .alreadyInProgress = error {
+                                    let formattedNumber = formatPhoneNumber(number)
+                                    let title = NSAttributedString(string: self.presentationData.strings.Login_Email_PremiumRequiredTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                                    let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_PremiumRequiredText(formattedNumber).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                                    
+                                    let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { })])
+                                    controller?.present(alertController, in: .window(.root))
+                                }
+                            })
+                        )
+                    } else if let resetAvailablePeriod {
+                        if resetAvailablePeriod == 0 {
+                            self.actionDisposable.set(
+                                resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash).start()
+                            )
+                        } else {
+                            let pattern = pattern.replacingOccurrences(of: "*", with: "#")
+                            let title = NSAttributedString(string: self.presentationData.strings.Login_Email_ResetTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                            let availableIn = unmuteIntervalString(strings: self.presentationData.strings, value: resetAvailablePeriod)
+                            let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_ResetText(pattern, availableIn).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                            if let regex = try? NSRegularExpression(pattern: "\\#", options: []) {
+                                let matches = regex.matches(in: text.string, options: [], range: NSMakeRange(0, text.length))
+                                if let first = matches.first {
+                                    text.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: NSRange(location: first.range.location, length: matches.count))
+                                }
+                            }
+                            
+                            let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_Email_Reset, action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.actionDisposable.set(
+                                    (resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash)
+                                     |> deliverOnMainQueue).start(error: { [weak self] error in
+                                         Queue.mainQueue().async {
+                                             guard let self, let controller = controller else {
+                                                 return
+                                             }
+                                             controller.inProgress = false
+                                             
+                                             let text: String
+                                             switch error {
+                                             case .limitExceeded:
+                                                 text = self.presentationData.strings.Login_CodeFloodError
+                                             case .generic, .alreadyInProgress:
+                                                 text = self.presentationData.strings.Login_UnknownError
+                                             case .codeExpired:
+                                                 text = self.presentationData.strings.Login_CodeExpired
+                                                 let account = self.account
+                                                 let _ = TelegramEngineUnauthorized(account: self.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                             }
+                                             
+                                             controller.presentInGlobalOverlay(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]))
+                                         }
+                                     })
+                                )
+                            })])
+                            controller?.present(alertController, in: .window(.root))
+                        }
+                    }
+                }
             }
             controller.loginWithCode = { [weak self, weak controller] code in
                 if let strongSelf = self {
@@ -474,7 +552,22 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if nextType == nil {
                     if MFMailComposeViewController.canSendMail(), let controller = controller {
                         let formattedNumber = formatPhoneNumber(number)
-                        strongSelf.presentEmailComposeController(address: "sms@telegram.org", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string, from: controller)
+                        
+                        var emailBody = ""
+                        emailBody.append(strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string)
+                        emailBody.append("\n\n")
+                        
+                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+                        let systemVersion = UIDevice.current.systemVersion
+                        let locale = Locale.current.identifier
+                        let carrier = CTCarrier()
+                        let mnc = carrier.mobileNetworkCode ?? "none"
+                        emailBody.append("Telegram: \(appVersion)\n")
+                        emailBody.append("OS: \(systemVersion)\n")
+                        emailBody.append("Locale: \(locale)\n")
+                        emailBody.append("MNC: \(mnc)")
+                        
+                        strongSelf.presentEmailComposeController(address: "sms@telegram.org", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: emailBody, from: controller)
                     } else {
                         controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
@@ -1068,7 +1161,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 
                     controllers.append(self.phoneEntryController(countryCode: countryCode, number: number, splashController: previousSplashController))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty && (previousSplashController == nil || self.viewControllers.count > 2))
-                case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):
+                case let .confirmationCodeEntry(number, type, phoneCodeHash, timeout, nextType, _):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())
@@ -1081,7 +1174,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         if let _ = self.currentEmail {
                             controllers.append(self.emailSetupController(number: number, appleSignInAllowed: self.appleSignInAllowed))
                         }
-                        controllers.append(self.codeEntryController(number: number, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
+                        controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
                     }
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                 case let .passwordEntry(hint, _, _, suggestReset, syncContacts):

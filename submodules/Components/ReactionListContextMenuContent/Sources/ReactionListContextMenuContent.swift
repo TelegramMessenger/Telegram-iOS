@@ -651,7 +651,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     self.readIconView.tintColor = presentationData.theme.contextMenu.secondaryColor
                     let fraction: CGFloat = textFontFraction
                     let iconSize = CGSize(width: floor(readImage.size.width * fraction), height: floor(readImage.size.height * fraction))
-                    self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + floor(textFontFraction * 4.0) - UIScreenPixel), size: iconSize)
+                    self.readIconView.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: textFrame.minY + floor(textFontFraction * 4.0) - UIScreenPixel + (item.timestampIsReaction ? -2.0 - UIScreenPixel : 0.0)), size: iconSize)
                 }
                 self.readIconView.isHidden = !self.displayReadTimestamps || text.isEmpty
                 

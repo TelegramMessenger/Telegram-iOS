@@ -124,7 +124,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(id: PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
         
-        self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(forwardedMessageIds).withUpdatedForwardOptionsState(ChatInterfaceForwardOptionsState(hideNames: false, hideCaptions: false, unhideNamesOnCaptionChange: false)) }
+        self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(forwardedMessageIds) }
         self.presentationInterfaceStatePromise.set(self.presentationInterfaceState)
         
         if let _ = self.requestPeerType {
@@ -342,9 +342,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, forwardSelectedMessages: {
         }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
-        }, updateForwardOptionsState: { [weak self] value in
+        }, updateForwardOptionsState: { [weak self] f in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState($0.forwardOptionsState) }) })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState(f($0.forwardOptionsState ?? ChatInterfaceForwardOptionsState(hideNames: false, hideCaptions: false, unhideNamesOnCaptionChange: false))) }) })
             }
         }, presentForwardOptions: { [weak self] sourceNode in
             guard let strongSelf = self else  {
@@ -659,9 +659,16 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 hasEntityKeyboard = true
             }
             
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
-            }, sendMessage: { [weak textInputPanelNode] silently in
-                textInputPanelNode?.sendMessage(silently ? .silent : .generic)
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, canSendWhenOnline: false, completion: {
+            }, sendMessage: { [weak textInputPanelNode] mode in
+                switch mode {
+                case .generic:
+                    textInputPanelNode?.sendMessage(.generic)
+                case .silently:
+                    textInputPanelNode?.sendMessage(.silent)
+                case .whenOnline:
+                    textInputPanelNode?.sendMessage(.whenOnline)
+                }
             }, schedule: { [weak textInputPanelNode] in
                 textInputPanelNode?.sendMessage(.schedule)
             })

@@ -18,7 +18,7 @@ import HierarchyTrackingLayer
 
 private let motionAmount: CGFloat = 32.0
 
-private func generateBlurredContents(image: UIImage) -> UIImage? {
+private func generateBlurredContents(image: UIImage, dimColor: UIColor?) -> UIImage? {
     let size = image.size.aspectFitted(CGSize(width: 64.0, height: 64.0))
     guard let context = DrawingContext(size: size, scale: 1.0, opaque: true, clear: false) else {
         return nil
@@ -31,6 +31,13 @@ private func generateBlurredContents(image: UIImage) -> UIImage? {
     telegramFastBlurMore(Int32(context.size.width), Int32(context.size.height), Int32(context.bytesPerRow), context.bytes)
 
     adjustSaturationInContext(context: context, saturation: 1.7)
+    
+    if let dimColor {
+        context.withFlippedContext { c in
+            c.setFillColor(dimColor.cgColor)
+            c.fill(CGRect(origin: CGPoint(), size: size))
+        }
+    }
 
     return context.generateImage()
 }
@@ -323,6 +330,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         private var cleanWallpaperNode: ASDisplayNode?
         private var gradientWallpaperNode: GradientBackgroundNode.CloneNode?
+        private var overlayNode: ASDisplayNode?
         private weak var backgroundNode: WallpaperBackgroundNodeImpl?
         private var index: SparseBag<BubbleBackgroundNodeImpl>.Index?
 
@@ -369,11 +377,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             guard let backgroundNode = self.backgroundNode else {
                 return
             }
+            
+            var overlayColor: UIColor?
 
             if let bubbleTheme = backgroundNode.bubbleTheme, let bubbleCorners = backgroundNode.bubbleCorners {
                 let wallpaper = backgroundNode.wallpaper ?? bubbleTheme.chat.defaultWallpaper
 
                 let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+                
                 var needsCleanBackground = false
                 switch self.bubbleType {
                 case .incoming:
@@ -401,6 +412,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     self.contentNode.image = nil
                     self.contentNode.backgroundColor = nil
                     needsCleanBackground = true
+                    
+                    //if wallpaper.isBuiltin {
+                        overlayColor = selectDateFillStaticColor(theme: bubbleTheme, wallpaper: wallpaper)
+                    //}
                 }
 
                 var isInvertedGradient = false
@@ -490,6 +505,21 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     cleanWallpaperNode.removeFromSupernode()
                 }
             }
+            
+            if let overlayColor {
+                let overlayNode: ASDisplayNode
+                if let current = self.overlayNode {
+                    overlayNode = current
+                } else {
+                    overlayNode = ASDisplayNode()
+                    self.overlayNode = overlayNode
+                    self.addSubnode(overlayNode)
+                }
+                overlayNode.backgroundColor = overlayColor
+            } else if let overlayNode = self.overlayNode {
+                self.overlayNode = nil
+                overlayNode.removeFromSupernode()
+            }
 
             if let (rect, containerSize) = self.currentLayout {
                 self.update(rect: rect, within: containerSize)
@@ -521,6 +551,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
                 }
             }
+            if let overlayNode = self.overlayNode {
+                transition.updateFrame(layer: overlayNode.layer, frame: self.bounds, delay: delay)
+            }
         }
         
         func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator) {
@@ -538,6 +571,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 animator.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds, completion: nil)
                 animator.updateContentsRect(layer: gradientWallpaperNode.layer, contentsRect: shiftedContentsRect, completion: nil)
             }
+            if let overlayNode = self.overlayNode {
+                animator.updateFrame(layer: overlayNode.layer, frame: self.bounds, completion: nil)
+            }
         }
 
         func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
@@ -554,6 +590,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             if let gradientWallpaperNode = self.gradientWallpaperNode {
                 transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
                 gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
+            }
+            if let overlayNode = self.overlayNode {
+                transition.updateFrame(layer: overlayNode.layer, frame: self.bounds)
             }
         }
 
@@ -653,10 +692,21 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     private let contentNode: ASDisplayNode
     
     private var blurredBackgroundContents: UIImage?
-    private var blurredBackgroundPortalSourceView: PortalSourceView?
-    private var blurredBackgroundDimmedNode: GradientBackgroundNode.CloneNode?
-    private var blurredBackgroundDimmedOverlayView: UIView?
-    private var blurredBackgroundContentView: UIImageView?
+    
+    private var freeBackgroundPortalSourceView: PortalSourceView?
+    private var freeBackgroundNode: WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl? {
+        didSet {
+            if self.freeBackgroundNode !== oldValue {
+                if let oldValue {
+                    oldValue.view.removeFromSuperview()
+                }
+                if let freeBackgroundNode = self.freeBackgroundNode, let freeBackgroundPortalSourceView = self.freeBackgroundPortalSourceView {
+                    freeBackgroundPortalSourceView.addSubview(freeBackgroundNode.view)
+                    freeBackgroundNode.frame = CGRect(origin: CGPoint(), size: freeBackgroundPortalSourceView.bounds.size)
+                }
+            }
+        }
+    }
     
     private var incomingBackgroundPortalSourceView: PortalSourceView?
     private var incomingBackgroundNode: WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl? {
@@ -817,14 +867,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         super.init()
         
         if #available(iOS 12.0, *) {
-            let blurredBackgroundPortalSourceView = PortalSourceView()
-            self.blurredBackgroundPortalSourceView = blurredBackgroundPortalSourceView
-            blurredBackgroundPortalSourceView.alpha = 0.0
-            self.view.addSubview(blurredBackgroundPortalSourceView)
-            
-            let blurredBackgroundContentView = UIImageView()
-            self.blurredBackgroundContentView = blurredBackgroundContentView
-            blurredBackgroundPortalSourceView.addSubview(blurredBackgroundContentView)
+            let freeBackgroundPortalSourceView = PortalSourceView()
+            self.freeBackgroundPortalSourceView = freeBackgroundPortalSourceView
+            freeBackgroundPortalSourceView.alpha = 0.0
+            self.view.addSubview(freeBackgroundPortalSourceView)
             
             let incomingBackgroundPortalSourceView = PortalSourceView()
             self.incomingBackgroundPortalSourceView = incomingBackgroundPortalSourceView
@@ -857,6 +903,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         var gradientColors: [UInt32] = []
         var gradientAngle: Int32 = 0
+        
+        let wallpaperDimColor: UIColor? = nil
 
         if case let .color(color) = wallpaper {
             gradientColors = [color]
@@ -885,28 +933,11 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     scheduleLoopingEvent = true
                 }
             }
-            if let gradientBackgroundNode = self.gradientBackgroundNode {
-                if self.blurredBackgroundDimmedNode == nil {
-                    let blurredBackgroundDimmedNode = GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
-                    self.blurredBackgroundDimmedNode = blurredBackgroundDimmedNode
-                    self.blurredBackgroundPortalSourceView?.addSubnode(blurredBackgroundDimmedNode)
-                }
-                if self.blurredBackgroundDimmedOverlayView == nil {
-                    let blurredBackgroundDimmedOverlayView = UIView()
-                    self.blurredBackgroundDimmedOverlayView = blurredBackgroundDimmedOverlayView
-                    self.blurredBackgroundPortalSourceView?.addSubview(blurredBackgroundDimmedOverlayView)
-                }
-            }
             self.gradientBackgroundNode?.updateColors(colors: mappedColors)
-            
-            if let bubbleTheme = self.bubbleTheme {
-                self.blurredBackgroundDimmedOverlayView?.backgroundColor = selectDateFillStaticColor(theme: bubbleTheme, wallpaper: wallpaper)
-            }
 
             self.contentNode.backgroundColor = nil
             self.contentNode.contents = nil
             self.blurredBackgroundContents = nil
-            self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
             self.motionEnabled = false
             self.wallpaperDisposable.set(nil)
         } else {
@@ -915,14 +946,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 gradientBackgroundNode.removeFromSupernode()
                 gradientBackgroundNode.setPatternOverlay(layer: nil)
                 self.layer.insertSublayer(self.patternImageLayer, above: self.contentNode.layer)
-            }
-            if let blurredBackgroundDimmedNode = self.blurredBackgroundDimmedNode {
-                self.blurredBackgroundDimmedNode = nil
-                blurredBackgroundDimmedNode.removeFromSupernode()
-            }
-            if let blurredBackgroundDimmedOverlayView = self.blurredBackgroundDimmedOverlayView {
-                self.blurredBackgroundDimmedOverlayView = nil
-                blurredBackgroundDimmedOverlayView.removeFromSuperview()
             }
 
             self.motionEnabled = wallpaper.settings?.motion ?? false
@@ -944,28 +967,24 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 })
                 self.contentNode.contents = image?.cgImage
                 self.blurredBackgroundContents = image
-                self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                 self.wallpaperDisposable.set(nil)
             } else if gradientColors.count >= 1 {
                 self.contentNode.backgroundColor = UIColor(rgb: gradientColors[0])
                 self.contentNode.contents = nil
                 self.blurredBackgroundContents = nil
-                self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
                 self.wallpaperDisposable.set(nil)
             } else {
                 self.contentNode.backgroundColor = .white
                 if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.sharedContext.accountManager.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
-                    self.blurredBackgroundContents = generateBlurredContents(image: image)
-                    self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
+                    self.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: wallpaperDimColor)
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
                     }
                 } else if let image = chatControllerBackgroundImage(theme: nil, wallpaper: wallpaper, mediaBox: self.context.account.postbox.mediaBox, knockoutMode: false) {
                     self.contentNode.contents = image.cgImage
-                    self.blurredBackgroundContents = generateBlurredContents(image: image)
-                    self.blurredBackgroundContentView?.image = self.blurredBackgroundContents
+                    self.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: wallpaperDimColor)
                     self.wallpaperDisposable.set(nil)
                     Queue.mainQueue().justDispatch {
                         self._isReady.set(true)
@@ -978,16 +997,21 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         }
                         strongSelf.contentNode.contents = image?.0?.cgImage
                         if let image = image?.0 {
-                            strongSelf.blurredBackgroundContents = generateBlurredContents(image: image)
+                            strongSelf.blurredBackgroundContents = generateBlurredContents(image: image, dimColor: wallpaperDimColor)
                         } else {
                             strongSelf.blurredBackgroundContents = nil
                         }
-                        strongSelf.blurredBackgroundContentView?.image = strongSelf.blurredBackgroundContents
                         strongSelf._isReady.set(true)
                     }))
                 }
                 self.contentNode.isHidden = false
             }
+        }
+        
+        if self.hasBubbleBackground(for: .free) {
+            self.freeBackgroundNode = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: .free)
+        } else {
+            self.freeBackgroundNode = nil
         }
         
         if self.hasBubbleBackground(for: .incoming) {
@@ -1035,7 +1059,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 if patternIsBlack {
                     self.patternImageLayer.softlightMode = .never
                 } else {
-                    if self.useSharedAnimationPhase {
+                    if self.useSharedAnimationPhase && file.settings.colors.count > 2 {
                         self.patternImageLayer.softlightMode = .whileAnimating
                     } else {
                         self.patternImageLayer.softlightMode = .always
@@ -1243,17 +1267,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         let isFirstLayout = self.validLayout == nil
         self.validLayout = (size, displayMode)
         
-        if let blurredBackgroundPortalSourceView = self.blurredBackgroundPortalSourceView {
-            transition.updateFrame(view: blurredBackgroundPortalSourceView, frame: CGRect(origin: CGPoint(), size: size))
-        }
-        if let blurredBackgroundContentView = self.blurredBackgroundContentView {
-            transition.updateFrame(view: blurredBackgroundContentView, frame: CGRect(origin: CGPoint(), size: size))
-        }
-        if let blurredBackgroundDimmedNode = self.blurredBackgroundDimmedNode {
-            transition.updateFrame(view: blurredBackgroundDimmedNode.view, frame: CGRect(origin: CGPoint(), size: size))
-        }
-        if let blurredBackgroundDimmedOverlayView = self.blurredBackgroundDimmedOverlayView {
-            transition.updateFrame(view: blurredBackgroundDimmedOverlayView, frame: CGRect(origin: CGPoint(), size: size))
+        if let freeBackgroundPortalSourceView = self.freeBackgroundPortalSourceView {
+            transition.updateFrame(view: freeBackgroundPortalSourceView, frame: CGRect(origin: CGPoint(), size: size))
         }
         
         if let incomingBackgroundPortalSourceView = self.incomingBackgroundPortalSourceView {
@@ -1275,6 +1290,11 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         if let outgoingBubbleGradientBackgroundNode = self.outgoingBubbleGradientBackgroundNode {
             transition.updateFrame(node: outgoingBubbleGradientBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
             outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: transition, extendAnimation: false, backwards: false, completion: {})
+        }
+        
+        if let freeBackgroundNode = self.freeBackgroundNode {
+            transition.updateFrame(node: freeBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+            freeBackgroundNode.update(rect: CGRect(origin: CGPoint(), size: size), within: size, transition: transition)
         }
         
         if let incomingBackgroundNode = self.incomingBackgroundNode {
@@ -1348,8 +1368,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.outgoingBubbleGradientBackgroundNode = nil
             }
             
-            if let wallpaper = self.wallpaper {
-                self.blurredBackgroundDimmedOverlayView?.backgroundColor = selectDateFillStaticColor(theme: bubbleTheme, wallpaper: wallpaper)
+            if self.hasBubbleBackground(for: .free) {
+                self.freeBackgroundNode = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: .free)
+            } else {
+                self.freeBackgroundNode = nil
             }
             
             if self.hasBubbleBackground(for: .incoming) {
@@ -1428,7 +1450,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         var sourceView: PortalSourceView?
         switch type {
         case .free:
-            sourceView = self.blurredBackgroundPortalSourceView
+            sourceView = self.freeBackgroundPortalSourceView
         case .incoming:
             sourceView = self.incomingBackgroundPortalSourceView
         case .outgoing:
@@ -1451,14 +1473,16 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     }
     
     func makeFreeBackground() -> PortalView? {
-        guard let blurredBackgroundPortalSourceView = self.blurredBackgroundPortalSourceView else {
+        if !self.hasBubbleBackground(for: .free) {
             return nil
         }
-        guard let portalView = PortalView(matchPosition: true) else {
+        
+        if let sourceView = self.freeBackgroundPortalSourceView, let portalView = PortalView(matchPosition: true) {
+            sourceView.addPortal(view: portalView)
+            return portalView
+        } else {
             return nil
         }
-        blurredBackgroundPortalSourceView.addPortal(view: portalView)
-        return portalView
     }
     
     func hasExtraBubbleBackground() -> Bool {

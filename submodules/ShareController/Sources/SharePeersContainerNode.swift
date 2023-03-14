@@ -697,11 +697,11 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             if node.isHidden {
                 continue
             }
-            if let result = node.hitTest(point.offsetBy(dx: -nodeFrame.minX, dy: -nodeFrame.minY), with: event) {
+            if let result = node.hitTest(point.offsetBy(dx: -self.headerNode.frame.minX, dy: -self.headerNode.frame.minY).offsetBy(dx: -nodeFrame.minX, dy: -nodeFrame.minY), with: event) {
                 return result
             }
         }
-        
+
         return super.hitTest(point, with: event)
     }
     

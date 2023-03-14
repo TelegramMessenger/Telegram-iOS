@@ -2311,6 +2311,7 @@ public final class EmojiPagerContentComponent: Component {
         public weak var externalExpansionView: UIView?
         public let useOpaqueTheme: Bool
         public let hideBackground: Bool
+        public let scrollingStickersGridPromise = ValuePromise<Bool>(false)
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
@@ -5168,7 +5169,7 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         private var previousScrollingOffset: ScrollingOffsetState?
-        
+                
         public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             if self.keepTopPanelVisibleUntilScrollingInput {
                 self.keepTopPanelVisibleUntilScrollingInput = false
@@ -5188,6 +5189,7 @@ public final class EmojiPagerContentComponent: Component {
                 self.visibleSearchHeader?.deactivate()
             }
             self.component?.inputInteractionHolder.inputInteraction?.onScroll()
+            self.component?.inputInteractionHolder.inputInteraction?.scrollingStickersGridPromise.set(true)
         }
         
         public func ensureSearchUnfocused() {
@@ -5217,11 +5219,13 @@ public final class EmojiPagerContentComponent: Component {
         public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
             if !decelerate {
                 self.snapScrollingOffsetToInsets()
+                self.component?.inputInteractionHolder.inputInteraction?.scrollingStickersGridPromise.set(false)
             }
         }
         
         public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
             self.snapScrollingOffsetToInsets()
+            self.component?.inputInteractionHolder.inputInteraction?.scrollingStickersGridPromise.set(false)
         }
         
         private func updateScrollingOffset(isReset: Bool, transition: Transition) {

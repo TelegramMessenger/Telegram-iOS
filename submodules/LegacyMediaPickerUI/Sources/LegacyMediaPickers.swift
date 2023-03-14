@@ -105,8 +105,8 @@ public class LegacyAssetPickerContext: AttachmentMediaPickerContext {
         self.controller?.editingContext.setForcedCaption(caption, skipUpdate: true)
     }
     
-    public func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
-        self.controller?.send(silently)
+    public func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+        self.controller?.send(mode == .silently, whenOnline: mode == .whenOnline)
     }
     
     public func schedule() {

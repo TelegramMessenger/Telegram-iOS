@@ -11,7 +11,6 @@ import AccountContext
 import LocalizedPeerData
 import PhotoResources
 import TelegramStringFormatting
-import InvisibleInkDustNode
 import TextFormat
 import ChatPresentationInterfaceState
 import TextNodeWithEntities
@@ -29,7 +28,6 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     let iconNode: ASImageNode
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNodeWithEntities
-    var dustNode: InvisibleInkDustNode?
     let imageNode: TransformImageNode
     
     private let actionArea: AccessibilityAreaNode
@@ -73,6 +71,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.insets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
         self.textNode.visibility = true
+        self.textNode.spoilerColor = self.theme.chat.inputPanel.secondaryTextColor
         
         if let animationCache = animationCache, let animationRenderer = animationRenderer {
             self.textNode.arguments = TextNodeWithEntities.Arguments(
@@ -293,6 +292,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             if let text = self.textNode.attributedText?.string {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
+            self.textNode.spoilerColor = self.theme.chat.inputPanel.secondaryTextColor
             
             if let (size, inset, interfaceState) = self.validLayout {
                 self.updateState(size: size, inset: inset, interfaceState: interfaceState)
@@ -344,21 +344,6 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         let textFrame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.textNode.insets.left, y: 25.0 - self.textNode.insets.top), size: textSize)
         if self.textNode.supernode == self {
             self.textNode.frame = textFrame
-        }
-        
-        if let textLayout = self.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
-            if self.dustNode == nil {
-                let dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
-                self.dustNode = dustNode
-                self.textNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.textNode)
-            }
-            if let dustNode = self.dustNode {
-                dustNode.update(size: textFrame.size, color: self.theme.chat.inputPanel.secondaryTextColor, textColor: self.theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
-                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-            }
-        } else if let dustNode = self.dustNode {
-            self.dustNode = nil
-            dustNode.removeFromSupernode()
         }
     }
     

@@ -17,15 +17,18 @@ private let rightInset: CGFloat = 16.0
 
 private enum ChatSendMessageActionIcon {
     case sendWithoutSound
+    case sendWhenOnline
     case schedule
     
     func image(theme: PresentationTheme) -> UIImage? {
         let imageName: String
         switch self {
-            case .sendWithoutSound:
-                imageName = "Chat/Input/Menu/SilentIcon"
-            case .schedule:
-                imageName = "Chat/Input/Menu/ScheduleIcon"
+        case .sendWithoutSound:
+            imageName = "Chat/Input/Menu/SilentIcon"
+        case .sendWhenOnline:
+            imageName = "Chat/Input/Menu/WhenOnlineIcon"
+        case .schedule:
+            imageName = "Chat/Input/Menu/ScheduleIcon"
         }
         return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
     }
@@ -191,7 +194,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
-    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, canSendWhenOnline: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, send: (() -> Void)?, sendSilently: (() -> Void)?, sendWhenOnline: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.sourceSendButton = sourceSendButton
@@ -249,6 +252,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: self.presentationData.strings.Conversation_SendMessage_SendSilently, icon: .sendWithoutSound, hasSeparator: true, action: {
                 sendSilently?()
             }))
+            if canSendWhenOnline {
+                contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: self.presentationData.strings.Conversation_SendMessage_SendWhenOnline, icon: .sendWhenOnline, hasSeparator: true, action: {
+                    sendWhenOnline?()
+                }))
+            }
         }
         if let _ = schedule {
             contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: reminders ? self.presentationData.strings.Conversation_SendMessage_SetReminder: self.presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: .schedule, hasSeparator: false, action: {

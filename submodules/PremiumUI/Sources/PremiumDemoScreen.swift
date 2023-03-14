@@ -283,15 +283,18 @@ final class DemoPagerComponent: Component {
     
     let items: [Item]
     let index: Int
+    let nextAction: ActionSlot<Void>?
     let updated: (CGFloat, Int) -> Void
     
     public init(
         items: [Item],
         index: Int = 0,
+        nextAction: ActionSlot<Void>? = nil,
         updated: @escaping (CGFloat, Int) -> Void
     ) {
         self.items = items
         self.index = index
+        self.nextAction = nextAction
         self.updated = updated
     }
     
@@ -345,6 +348,17 @@ final class DemoPagerComponent: Component {
         
         func update(component: DemoPagerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             var validIds: [AnyHashable] = []
+            
+            component.nextAction?.connect { [weak self] in
+                if let self {
+                    var nextContentOffset = self.scrollView.contentOffset
+                    nextContentOffset.x += self.scrollView.frame.width
+                    if nextContentOffset.x >= self.scrollView.contentSize.width {
+                        nextContentOffset.x = 0.0
+                    }
+                    self.scrollView.contentOffset = nextContentOffset
+                }
+            }
             
             let firstTime = self.itemViews.isEmpty
             
@@ -787,7 +801,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(
                                     StickersCarouselComponent(
                                         context: component.context,
-                                        stickers: stickers
+                                        stickers: stickers,
+                                        tapAction: {}
                                     )
                                 ),
                                 title: strings.Premium_Stickers,

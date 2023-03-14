@@ -771,7 +771,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return componentView.findTitleView()
     }
     
+    private var previousEmojiSetupTimestamp: Double?
     private func openStatusSetup(sourceView: UIView) {
+        let currentTimestamp = CACurrentMediaTime()
+        if let previousTimestamp = self.previousEmojiSetupTimestamp, currentTimestamp < previousTimestamp + 1.0 {
+            return
+        }
+        self.previousEmojiSetupTimestamp = currentTimestamp
+        
         self.emojiStatusSelectionController?.dismiss()
         var selectedItems = Set<MediaId>()
         var topStatusTitle = self.presentationData.strings.PeerStatusSetup_NoTimerTitle

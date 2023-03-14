@@ -391,11 +391,11 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
-//        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
+        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
     }
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
-//        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
+        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
