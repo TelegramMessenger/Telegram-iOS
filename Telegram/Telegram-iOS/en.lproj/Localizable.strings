@@ -9071,3 +9071,5 @@ Sorry for the inconvenience.";
 "DataUsage.SettingsHelpWifi" = "You can change your auto-download settings for media to reduce data usage when on wifi.";
 
 "DataUsage.Reset" = "Reset Statistics";
+
+"Conversation.SendWhenOnlineTooltip" = "Long tap to send the message later.";

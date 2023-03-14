@@ -169,6 +169,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case dismissedTrendingEmojiPacks = 35
     case audioRateOptionsTip = 36
     case translationSuggestion = 37
+    case sendWhenOnlineTip = 38
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -373,6 +374,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func audioRateOptionsTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.audioRateOptionsTip.key)
+    }
+    
+    static func sendWhenOnlineTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.sendWhenOnlineTip.key)
     }
 }
 
@@ -1324,6 +1329,30 @@ public struct ApplicationSpecificNotice {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId), entry)
             }
             return previousValue
+        }
+    }
+    
+    public static func getSendWhenOnlineTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sendWhenOnlineTip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementSendWhenOnlineTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sendWhenOnlineTip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.sendWhenOnlineTip(), entry)
+            }
         }
     }
     
