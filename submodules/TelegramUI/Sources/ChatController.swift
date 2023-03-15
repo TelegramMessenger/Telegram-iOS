@@ -17537,10 +17537,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     var sendWhenOnlineAvailable = false
-                    if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(until) = presence.status {
+                    if peer.id != strongSelf.context.account.peerId, let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(until) = presence.status, until != .max {
                         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                         let (_, _, _, hours, _) = getDateTimeComponents(timestamp: currentTime)
-                        if currentTime > until + 60 * 30 && hours >= 0 && hours < 8 {
+                        if currentTime > until + 60 * 30 && hours >= 0 && hours <= 8 {
                             sendWhenOnlineAvailable = true
                         }
                     }
