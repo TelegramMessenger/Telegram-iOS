@@ -533,6 +533,42 @@ public extension Api {
     }
 }
 public extension Api {
+    enum InputCommunity: TypeConstructorDescription {
+        case inputCommunityDialogFilter(filterId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputCommunityDialogFilter(let filterId):
+                    if boxed {
+                        buffer.appendInt32(450955169)
+                    }
+                    serializeInt32(filterId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputCommunityDialogFilter(let filterId):
+                return ("inputCommunityDialogFilter", [("filterId", filterId as Any)])
+    }
+    }
+    
+        public static func parse_inputCommunityDialogFilter(_ reader: BufferReader) -> InputCommunity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputCommunity.inputCommunityDialogFilter(filterId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputContact: TypeConstructorDescription {
         case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
     

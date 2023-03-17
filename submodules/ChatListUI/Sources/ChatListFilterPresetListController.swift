@@ -56,8 +56,8 @@ private enum ChatListFilterPresetListEntryStableId: Hashable {
     case suggestedPreset(ChatListFilterData)
     case suggestedAddCustom
     case listHeader
-    case preset(Int32)
     case addItem
+    case preset(Int32)
     case listFooter
 }
 
@@ -75,7 +75,6 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     case suggestedPreset(index: PresetIndex, title: String, label: String, preset: ChatListFilterData)
     case suggestedAddCustom(String)
     case listHeader(String)
-    case addFolder
     case preset(index: PresetIndex, title: String, label: String, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool, isAllChats: Bool, isDisabled: Bool)
     case addItem(text: String, isEditing: Bool)
     case listFooter(String)
@@ -86,7 +85,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return ChatListFilterPresetListSection.screenHeader.rawValue
         case .suggestedListHeader, .suggestedPreset, .suggestedAddCustom:
             return ChatListFilterPresetListSection.suggested.rawValue
-        case .listHeader, .addFolder, .preset, .addItem, .listFooter:
+        case .listHeader, .preset, .addItem, .listFooter:
             return ChatListFilterPresetListSection.list.rawValue
         }
     }

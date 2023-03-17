@@ -174,6 +174,7 @@ extension ChatListFilterIncludePeers {
 }
 
 public struct ChatListFilterData: Equatable, Hashable {
+    public var isShared: Bool
     public var categories: ChatListFilterPeerCategories
     public var excludeMuted: Bool
     public var excludeRead: Bool
@@ -182,6 +183,7 @@ public struct ChatListFilterData: Equatable, Hashable {
     public var excludePeers: [PeerId]
     
     public init(
+        isShared: Bool,
         categories: ChatListFilterPeerCategories,
         excludeMuted: Bool,
         excludeRead: Bool,
@@ -189,6 +191,7 @@ public struct ChatListFilterData: Equatable, Hashable {
         includePeers: ChatListFilterIncludePeers,
         excludePeers: [PeerId]
     ) {
+        self.isShared = isShared
         self.categories = categories
         self.excludeMuted = excludeMuted
         self.excludeRead = excludeRead
@@ -246,6 +249,7 @@ public enum ChatListFilter: Codable, Equatable {
             let emoticon = try container.decodeIfPresent(String.self, forKey: "emoticon")
             
             let data = ChatListFilterData(
+                isShared: try container.decodeIfPresent(Bool.self, forKey: "isShared") ?? false,
                 categories: ChatListFilterPeerCategories(rawValue: try container.decode(Int32.self, forKey: "categories")),
                 excludeMuted: (try container.decode(Int32.self, forKey: "excludeMuted")) != 0,
                 excludeRead: (try container.decode(Int32.self, forKey: "excludeRead")) != 0,
@@ -275,6 +279,7 @@ public enum ChatListFilter: Codable, Equatable {
                 try container.encode(title, forKey: "title")
                 try container.encodeIfPresent(emoticon, forKey: "emoticon")
             
+                try container.encode(data.isShared, forKey: "isShared")
                 try container.encode(data.categories.rawValue, forKey: "categories")
                 try container.encode((data.excludeMuted ? 1 : 0) as Int32, forKey: "excludeMuted")
                 try container.encode((data.excludeRead ? 1 : 0) as Int32, forKey: "excludeRead")
@@ -297,6 +302,7 @@ extension ChatListFilter {
                 title: title,
                 emoticon: emoticon,
                 data: ChatListFilterData(
+                    isShared: false,
                     categories: ChatListFilterPeerCategories(apiFlags: flags),
                     excludeMuted: (flags & (1 << 11)) != 0,
                     excludeRead: (flags & (1 << 12)) != 0,
@@ -336,6 +342,43 @@ extension ChatListFilter {
                             return nil
                         }
                     }
+                )
+            )
+        case let .dialogFilterCommunity(_, id, title, emoticon, pinnedPeers, includePeers):
+            self = .filter(
+                id: id,
+                title: title,
+                emoticon: emoticon,
+                data: ChatListFilterData(
+                    isShared: true,
+                    categories: [],
+                    excludeMuted: false,
+                    excludeRead: false,
+                    excludeArchived: false,
+                    includePeers: ChatListFilterIncludePeers(rawPeers: includePeers.compactMap { peer -> PeerId? in
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            return nil
+                        }
+                    }, rawPinnedPeers: pinnedPeers.compactMap { peer -> PeerId? in
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            return nil
+                        }
+                    }),
+                    excludePeers: []
                 )
             )
         }
@@ -436,6 +479,46 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                     break
                 case let .dialogFilter(_, _, _, _, pinnedPeers, includePeers, excludePeers):
                     for peer in pinnedPeers + includePeers + excludePeers {
+                        var peerId: PeerId?
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            break
+                        }
+                        if let peerId = peerId {
+                            if transaction.getPeer(peerId) == nil && !missingPeerIds.contains(peerId) {
+                                missingPeerIds.insert(peerId)
+                                missingPeers.append(peer)
+                            }
+                        }
+                    }
+                    
+                    for peer in pinnedPeers {
+                        var peerId: PeerId?
+                        switch peer {
+                        case let .inputPeerUser(userId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        case let .inputPeerChat(chatId):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                        case let .inputPeerChannel(channelId, _):
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        default:
+                            break
+                        }
+                        if let peerId = peerId, !missingChatIds.contains(peerId) {
+                            if transaction.getPeerChatListIndex(peerId) == nil {
+                                missingChatIds.insert(peerId)
+                                missingChats.append(peer)
+                            }
+                        }
+                    }
+                case let .dialogFilterCommunity(_, _, _, _, pinnedPeers, includePeers):
+                    for peer in pinnedPeers + includePeers {
                         var peerId: PeerId?
                         switch peer {
                         case let .inputPeerUser(userId, _):
@@ -931,6 +1014,7 @@ public struct ChatListFeaturedFilter: Codable, Equatable {
         self.title = try container.decode(String.self, forKey: "title")
         self.description = try container.decode(String.self, forKey: "description")
         self.data = ChatListFilterData(
+            isShared: try container.decodeIfPresent(Bool.self, forKey: "isShared") ?? false,
             categories: ChatListFilterPeerCategories(rawValue: try container.decode(Int32.self, forKey: "categories")),
             excludeMuted: (try container.decode(Int32.self, forKey: "excludeMuted")) != 0,
             excludeRead: (try container.decode(Int32.self, forKey: "excludeRead")) != 0,

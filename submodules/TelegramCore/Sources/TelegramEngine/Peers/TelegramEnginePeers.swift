@@ -1025,6 +1025,14 @@ public extension TelegramEngine {
                 |> ignoreValues
             }
         }
+        
+        public func exportChatFolder(filterId: Int32, title: String, peerIds: [PeerId]) -> Signal<ExportedChatFolderLink, ExportChatFolderError> {
+            return _internal_exportChatFolder(account: self.account, filterId: filterId, title: title, peerIds: peerIds)
+        }
+        
+        public func getExportedChatLinks(id: Int32) -> Signal<[ExportedChatFolderLink], NoError> {
+            return _internal_getExportedChatLinks(account: self.account, id: id)
+        }
     }
 }
 

@@ -2911,6 +2911,111 @@ public extension Api.functions.channels {
                     })
                 }
 }
+public extension Api.functions.communities {
+                static func checkCommunityInvite(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.community.CommunityInvite>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1753956947)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "communities.checkCommunityInvite", parameters: [("slug", String(describing: slug))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.community.CommunityInvite? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.community.CommunityInvite?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.community.CommunityInvite
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.communities {
+                static func deleteExportedInvite(community: Api.InputCommunity, slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-110213610)
+                    community.serialize(buffer, true)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "communities.deleteExportedInvite", parameters: [("community", String(describing: community)), ("slug", String(describing: slug))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.communities {
+                static func editExportedInvite(flags: Int32, community: Api.InputCommunity, slug: String, title: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedCommunityInvite>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(873155725)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    community.serialize(buffer, true)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "communities.editExportedInvite", parameters: [("flags", String(describing: flags)), ("community", String(describing: community)), ("slug", String(describing: slug)), ("title", String(describing: title))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedCommunityInvite? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ExportedCommunityInvite?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ExportedCommunityInvite
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.communities {
+                static func exportCommunityInvite(community: Api.InputCommunity, title: String, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.communities.ExportedCommunityInvite>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1107192281)
+                    community.serialize(buffer, true)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "communities.exportCommunityInvite", parameters: [("community", String(describing: community)), ("title", String(describing: title)), ("peers", String(describing: peers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.communities.ExportedCommunityInvite? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.communities.ExportedCommunityInvite?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.communities.ExportedCommunityInvite
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.communities {
+                static func getExportedInvites(community: Api.InputCommunity) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.communities.ExportedInvites>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1183359901)
+                    community.serialize(buffer, true)
+                    return (FunctionDescription(name: "communities.getExportedInvites", parameters: [("community", String(describing: community))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.communities.ExportedInvites? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.communities.ExportedInvites?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.communities.ExportedInvites
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.communities {
+                static func joinCommunityInvite(slug: String, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(82835751)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "communities.joinCommunityInvite", parameters: [("slug", String(describing: slug)), ("peers", String(describing: peers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
 public extension Api.functions.contacts {
                 static func acceptContact(id: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
