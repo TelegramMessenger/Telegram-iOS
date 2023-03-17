@@ -8,8 +8,9 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import ContextUI
 
-final class InstantPageContentNode : ASDisplayNode {
+public final class InstantPageContentNode : ASDisplayNode {
     private let context: AccountContext
     private let strings: PresentationStrings
     private let nameDisplayOrder: PresentationPersonNameOrder

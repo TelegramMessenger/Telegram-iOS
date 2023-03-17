@@ -8,16 +8,17 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import ContextUI
 
 private let detailsInset: CGFloat = 17.0
 private let titleInset: CGFloat = 22.0
 
-final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
+public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let context: AccountContext
     private let strings: PresentationStrings
     private let nameDisplayOrder: PresentationPersonNameOrder
     private let theme: InstantPageTheme
-    let item: InstantPageDetailsItem
+    public let item: InstantPageDetailsItem
     
     private let titleTile: InstantPageTile
     private let titleTileNode: InstantPageTileNode
