@@ -111,6 +111,7 @@ private final class FetchImpl {
         
         var pendingParts: [PendingPart] = []
         var completedRanges = RangeSet<Int64>()
+        var nextRangePriorityIndex: Int = 0
         
         init(
             fetchLocation: FetchLocation,
@@ -193,7 +194,7 @@ private final class FetchImpl {
         private let postbox: Postbox
         private let network: Network
         private let mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?
-        private let resource: TelegramMediaResource
+        private var resource: TelegramMediaResource
         private let datacenterId: Int
         private let size: Int64?
         private let parameters: MediaResourceFetchParameters?
@@ -207,6 +208,7 @@ private final class FetchImpl {
         private let consumerId: Int64
         
         private var knownSize: Int64?
+        private var updatedFileReference: Data?
         
         private var requiredRangesDisposable: Disposable?
         private var requiredRanges: [RequiredRange] = []
@@ -252,6 +254,10 @@ private final class FetchImpl {
             self.consumerId = Int64.random(in: Int64.min ... Int64.max)
             
             self.knownSize = size
+            
+            /*#if DEBUG
+            self.updatedFileReference = Data()
+            #endif*/
             
             if let resource = resource as? TelegramCloudMediaResource {
                 if let apiInputLocation = resource.apiInputLocation(fileReference: Data()) {
@@ -301,16 +307,28 @@ private final class FetchImpl {
             
             switch state {
             case let .fetching(state):
-                var filteredRequiredRanges = RangeSet<Int64>()
+                var filteredRequiredRanges: [RangeSet<Int64>] = []
+                for _ in 0 ..< 3 {
+                    filteredRequiredRanges.append(RangeSet<Int64>())
+                }
+                
                 for range in self.requiredRanges {
-                    filteredRequiredRanges.formUnion(RangeSet<Int64>(range.value))
+                    filteredRequiredRanges[Int(range.priority.rawValue)].formUnion(RangeSet<Int64>(range.value))
                 }
-                if let knownSize = self.knownSize {
-                    filteredRequiredRanges.remove(contentsOf: knownSize ..< Int64.max)
-                }
-                filteredRequiredRanges.subtract(state.completedRanges)
-                for pendingPart in state.pendingParts {
-                    filteredRequiredRanges.remove(contentsOf: pendingPart.partRange)
+                var excludedInHigherPriorities = RangeSet<Int64>()
+                for i in (0 ..< filteredRequiredRanges.count).reversed() {
+                    if let knownSize = self.knownSize {
+                        for i in 0 ..< filteredRequiredRanges.count {
+                            filteredRequiredRanges[i].remove(contentsOf: knownSize ..< Int64.max)
+                        }
+                    }
+                    filteredRequiredRanges[i].subtract(excludedInHigherPriorities)
+                    filteredRequiredRanges[i].subtract(state.completedRanges)
+                    for pendingPart in state.pendingParts {
+                        filteredRequiredRanges[i].remove(contentsOf: pendingPart.partRange)
+                    }
+                    
+                    excludedInHigherPriorities.subtract(filteredRequiredRanges[i])
                 }
                 
                 /*for _ in 0 ..< 1000000 {
@@ -331,29 +349,43 @@ private final class FetchImpl {
                 }*/
                 
                 if state.pendingParts.count < state.maxPendingParts {
-                    Logger.shared.log("FetchV2", "\(self.loggingIdentifier): will fetch \(filteredRequiredRanges.ranges)")
+                    //let debugRanges = filteredRequiredRanges.ranges.map { "\($0.lowerBound)..<\($0.upperBound)" }
+                    //Logger.shared.log("FetchV2", "\(self.loggingIdentifier): will fetch \(debugRanges)")
                     
                     while state.pendingParts.count < state.maxPendingParts {
-                        guard let firstRange = filteredRequiredRanges.ranges.first else {
+                        var found = false
+                        inner: for i in 0 ..< filteredRequiredRanges.count {
+                            let priorityIndex = (state.nextRangePriorityIndex + i) % filteredRequiredRanges.count
+                            
+                            guard let firstRange = filteredRequiredRanges[priorityIndex].ranges.first else {
+                                continue
+                            }
+                            
+                            state.nextRangePriorityIndex += 1
+                            
+                            let (partRange, alignedRange) = alignPartFetchRange(
+                                partRange: firstRange.lowerBound ..< min(firstRange.upperBound, firstRange.lowerBound + state.partSize),
+                                minPartSize: state.minPartSize,
+                                maxPartSize: state.maxPartSize,
+                                alignment: state.partAlignment,
+                                boundaryLimit: state.partDivision
+                            )
+                            
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): take part \(partRange) (aligned as \(alignedRange))")
+                            
+                            let pendingPart = PendingPart(
+                                partRange: partRange,
+                                fetchRange: alignedRange
+                            )
+                            state.pendingParts.append(pendingPart)
+                            filteredRequiredRanges[priorityIndex].remove(contentsOf: partRange)
+                            
+                            found = true
+                            break inner
+                        }
+                        if !found {
                             break
                         }
-                        
-                        let (partRange, alignedRange) = alignPartFetchRange(
-                            partRange: firstRange.lowerBound ..< min(firstRange.upperBound, firstRange.lowerBound + state.partSize),
-                            minPartSize: state.minPartSize,
-                            maxPartSize: state.maxPartSize,
-                            alignment: state.partAlignment,
-                            boundaryLimit: state.partDivision
-                        )
-                        
-                        Logger.shared.log("FetchV2", "\(self.loggingIdentifier): take part \(partRange) (aligned as \(alignedRange))")
-                        
-                        let pendingPart = PendingPart(
-                            partRange: partRange,
-                            fetchRange: alignedRange
-                        )
-                        state.pendingParts.append(pendingPart)
-                        filteredRequiredRanges.remove(contentsOf: partRange)
                     }
                 }
                 
@@ -393,6 +425,7 @@ private final class FetchImpl {
                             partDivision: 1 * 1024 * 1024,
                             maxPendingParts: 6
                         ))
+                        self.update()
                     }, error: { [weak self] error in
                         guard let `self` = self else {
                             return
@@ -403,6 +436,52 @@ private final class FetchImpl {
             case let .refreshingFileReference(state):
                 if state.disposable == nil {
                     Logger.shared.log("FetchV2", "\(self.loggingIdentifier): refreshing file reference")
+                    
+                    if let info = self.parameters?.info as? TelegramCloudMediaResourceFetchInfo, let mediaReferenceRevalidationContext = self.mediaReferenceRevalidationContext {
+                        let fetchLocation = state.fetchLocation
+                        
+                        state.disposable = (revalidateMediaResourceReference(
+                            postbox: self.postbox,
+                            network: self.network,
+                            revalidationContext: mediaReferenceRevalidationContext,
+                            info: info,
+                            resource: self.resource
+                        )
+                        |> deliverOn(self.queue)).start(next: { [weak self] validationResult in
+                            guard let `self` = self else {
+                                return
+                            }
+                            
+                            if let validatedResource = validationResult.updatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
+                                self.updatedFileReference = reference
+                            }
+                            self.resource = validationResult.updatedResource
+                            
+                            /*if let reference = validationResult.updatedReference {
+                             strongSelf.resourceReference = .reference(reference)
+                             } else {
+                             strongSelf.resourceReference = .empty
+                             }*/
+                            
+                            self.state = .fetching(FetchingState(
+                                fetchLocation: fetchLocation,
+                                partSize: 128 * 1024,
+                                minPartSize: 4 * 1024,
+                                maxPartSize: 128 * 1024,
+                                partAlignment: 4 * 1024,
+                                partDivision: 1 * 1024 * 1024,
+                                maxPendingParts: 6
+                            ))
+                            
+                            self.update()
+                        }, error: { [weak self] _ in
+                            guard let `self` = self else {
+                                return
+                            }
+                            self.state = .failed
+                            self.update()
+                        })
+                    }
                 }
             case .failed:
                 break
@@ -467,7 +546,9 @@ private final class FetchImpl {
             case let .datacenter(sourceDatacenterId):
                 if let cloudResource = self.resource as? TelegramCloudMediaResource {
                     var fileReference: Data?
-                    if let info = self.parameters?.info as? TelegramCloudMediaResourceFetchInfo {
+                    if let updatedFileReference = self.updatedFileReference {
+                        fileReference = updatedFileReference
+                    } else if let info = self.parameters?.info as? TelegramCloudMediaResourceFetchInfo {
                         fileReference = info.reference.apiFileReference
                     }
                     if let inputLocation = cloudResource.apiInputLocation(fileReference: fileReference) {
@@ -477,7 +558,8 @@ private final class FetchImpl {
                             data: Api.functions.upload.getFile(
                                 flags: 0,
                                 location: inputLocation,
-                                offset: part.fetchRange.lowerBound, limit: Int32(requestedLength)),
+                                offset: part.fetchRange.lowerBound,
+                                limit: Int32(requestedLength)),
                             tag: self.parameters?.tag,
                             continueInBackground: self.continueInBackground
                         )
@@ -496,8 +578,12 @@ private final class FetchImpl {
                                 ))
                             }
                         }
-                        |> `catch` { _ -> Signal<FilePartResult, NoError> in
-                            return .single(.failure)
+                        |> `catch` { error -> Signal<FilePartResult, NoError> in
+                            if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
+                                return .single(.fileReferenceExpired)
+                            } else {
+                                return .single(.failure)
+                            }
                         }
                     }
                 }
