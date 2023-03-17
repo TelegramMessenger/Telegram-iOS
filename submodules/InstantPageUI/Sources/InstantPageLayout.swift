@@ -8,18 +8,18 @@ import TelegramUIPreferences
 import TelegramStringFormatting
 import MosaicLayout
 
-final class InstantPageLayout {
-    let origin: CGPoint
-    let contentSize: CGSize
-    let items: [InstantPageItem]
+public final class InstantPageLayout {
+    public let origin: CGPoint
+    public let contentSize: CGSize
+    public let items: [InstantPageItem]
     
-    init(origin: CGPoint, contentSize: CGSize, items: [InstantPageItem]) {
+    public init(origin: CGPoint, contentSize: CGSize, items: [InstantPageItem]) {
         self.origin = origin
         self.contentSize = contentSize
         self.items = items
     }
     
-    func flattenedItemsWithOrigin(_ origin: CGPoint) -> [InstantPageItem] {
+    public func flattenedItemsWithOrigin(_ origin: CGPoint) -> [InstantPageItem] {
         return self.items.map({ item in
             var item = item
             let itemFrame = item.frame.offsetBy(dx: origin.x, dy: origin.y)
@@ -48,7 +48,7 @@ private func setupStyleStack(_ stack: InstantPageTextStyleStack, theme: InstantP
     }
 }
 
-func layoutInstantPageBlock(webpage: TelegramMediaWebpage, userLocation: MediaResourceUserLocation, rtl: Bool, block: InstantPageBlock, boundingWidth: CGFloat, horizontalInset: CGFloat, safeInset: CGFloat, isCover: Bool, previousItems: [InstantPageItem], fillToSize: CGSize?, media: [MediaId: Media], mediaIndexCounter: inout Int, embedIndexCounter: inout Int, detailsIndexCounter: inout Int, theme: InstantPageTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, webEmbedHeights: [Int : CGFloat] = [:], excludeCaptions: Bool) -> InstantPageLayout {
+public func layoutInstantPageBlock(webpage: TelegramMediaWebpage, userLocation: MediaResourceUserLocation, rtl: Bool, block: InstantPageBlock, boundingWidth: CGFloat, horizontalInset: CGFloat, safeInset: CGFloat, isCover: Bool, previousItems: [InstantPageItem], fillToSize: CGSize?, media: [MediaId: Media], mediaIndexCounter: inout Int, embedIndexCounter: inout Int, detailsIndexCounter: inout Int, theme: InstantPageTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, webEmbedHeights: [Int : CGFloat] = [:], excludeCaptions: Bool) -> InstantPageLayout {
    
     let layoutCaption: (InstantPageCaption, CGSize) -> ([InstantPageItem], CGSize) = { caption, contentSize in
         var items: [InstantPageItem] = []
@@ -835,7 +835,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, userLocation: MediaRe
     }
 }
 
-func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, userLocation: MediaResourceUserLocation, boundingWidth: CGFloat, safeInset: CGFloat, strings: PresentationStrings, theme: InstantPageTheme, dateTimeFormat: PresentationDateTimeFormat, webEmbedHeights: [Int : CGFloat] = [:]) -> InstantPageLayout {
+public func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, userLocation: MediaResourceUserLocation, boundingWidth: CGFloat, safeInset: CGFloat, strings: PresentationStrings, theme: InstantPageTheme, dateTimeFormat: PresentationDateTimeFormat, webEmbedHeights: [Int : CGFloat] = [:]) -> InstantPageLayout {
     var maybeLoadedContent: TelegramMediaWebpageLoadedContent?
     if case let .Loaded(content) = webPage.content {
         maybeLoadedContent = content

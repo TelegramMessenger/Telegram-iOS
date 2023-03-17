@@ -32,9 +32,9 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let updateExpanded: (Bool) -> Void
     var expanded: Bool
     
-    var previousNode: InstantPageDetailsNode?
+    public var previousNode: InstantPageDetailsNode?
     
-    var requestLayoutUpdate: ((Bool) -> Void)?
+    public var requestLayoutUpdate: ((Bool) -> Void)?
     
     init(context: AccountContext, sourceLocation: InstantPageSourceLocation, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.context = context
@@ -120,10 +120,10 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.arrowNode.setOpen(expanded, animated: animated)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
-    override public func layout() {
+    public override func layout() {
         super.layout()
         
         let size = self.bounds.size
@@ -139,31 +139,31 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.separatorNode.frame = CGRect(origin: CGPoint(x: self.item.rtl ? 0.0 : inset, y: self.item.titleHeight - lineSize.height), size: lineSize)
     }
     
-    func updateIsVisible(_ isVisible: Bool) {
+    public func updateIsVisible(_ isVisible: Bool) {
         
     }
     
-    func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    public func transitionNode(media: InstantPageMedia) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return self.contentNode.transitionNode(media: media)
     }
     
-    func updateHiddenMedia(media: InstantPageMedia?) {
+    public func updateHiddenMedia(media: InstantPageMedia?) {
         self.contentNode.updateHiddenMedia(media: media)
     }
     
-    func update(strings: PresentationStrings, theme: InstantPageTheme) {
+    public func update(strings: PresentationStrings, theme: InstantPageTheme) {
         self.arrowNode.color = theme.controlColor
         self.separatorNode.backgroundColor = theme.controlColor
         self.highlightedBackgroundNode.backgroundColor = theme.panelHighlightedBackgroundColor
     }
     
-    func updateVisibleItems(visibleBounds: CGRect, animated: Bool) {
+    public func updateVisibleItems(visibleBounds: CGRect, animated: Bool) {
         if self.bounds.height > self.item.titleHeight {
             self.contentNode.updateVisibleItems(visibleBounds: visibleBounds.offsetBy(dx: -self.contentNode.frame.minX, dy: -self.contentNode.frame.minY), animated: animated)
         }
     }
     
-    func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
+    public func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
         if self.titleTileNode.frame.contains(location) {
             for case let item as InstantPageTextItem in self.item.titleItems {
                 if item.frame.contains(location) {
@@ -177,7 +177,7 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         return nil
     }
     
-    func tapActionAtPoint(_ point: CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction {
+    public func tapActionAtPoint(_ point: CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction {
         if self.titleTileNode.frame.contains(point) {
             if self.item.linkSelectionRects(at: point).isEmpty {
                 return .fail
@@ -188,11 +188,11 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         return .waitForSingleTap
     }
     
-    var effectiveContentSize: CGSize {
+    public var effectiveContentSize: CGSize {
         return self.contentNode.effectiveContentSize
     }
     
-    func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
+    public func effectiveFrameForItem(_ item: InstantPageItem) -> CGRect {
         return self.contentNode.effectiveFrameForItem(item).offsetBy(dx: 0.0, dy: self.item.titleHeight)
     }
 }

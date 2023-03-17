@@ -16,15 +16,15 @@ struct InstantPageMapAttribute: InstantPageImageAttribute {
     let dimensions: CGSize
 }
 
-final class InstantPageImageItem: InstantPageItem {
-    var frame: CGRect
+public final class InstantPageImageItem: InstantPageItem {
+    public var frame: CGRect
     
     let webPage: TelegramMediaWebpage
     
     let media: InstantPageMedia
     let attributes: [InstantPageImageAttribute]
     
-    var medias: [InstantPageMedia] {
+    public var medias: [InstantPageMedia] {
         return [self.media]
     }
     
@@ -32,8 +32,8 @@ final class InstantPageImageItem: InstantPageItem {
     let roundCorners: Bool
     let fit: Bool
     
-    let wantsNode: Bool = true
-    let separatesTiles: Bool = false
+    public let wantsNode: Bool = true
+    public let separatesTiles: Bool = false
     
     init(frame: CGRect, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute] = [], interactive: Bool, roundCorners: Bool, fit: Bool) {
         self.frame = frame
@@ -45,15 +45,15 @@ final class InstantPageImageItem: InstantPageItem {
         self.fit = fit
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         return InstantPageImageNode(context: context, sourceLocation: sourceLocation, theme: theme, webPage: self.webPage, media: self.media, attributes: self.attributes, interactive: self.interactive, roundCorners: self.roundCorners, fit: self.fit, openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished)
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         if let node = node as? InstantPageImageNode {
             return node.media == self.media
         } else {
@@ -61,11 +61,11 @@ final class InstantPageImageItem: InstantPageItem {
         }
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return 1
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         if count > 3 {
             return 400.0
         } else {
@@ -73,10 +73,10 @@ final class InstantPageImageItem: InstantPageItem {
         }
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
 }

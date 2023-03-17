@@ -51,6 +51,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let scrollNodeFooter: ASDisplayNode
     private var linkHighlightingNode: LinkHighlightingNode?
     private var textSelectionNode: LinkHighlightingNode?
+    
     private var settingsNode: InstantPageSettingsNode?
     private var settingsDimNode: ASDisplayNode?
     

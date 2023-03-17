@@ -8,11 +8,11 @@ import TelegramUIPreferences
 import AccountContext
 import ContextUI
 
-final class InstantPagePeerReferenceItem: InstantPageItem {
-    var frame: CGRect
-    let wantsNode: Bool = true
-    let separatesTiles: Bool = false
-    let medias: [InstantPageMedia] = []
+public final class InstantPagePeerReferenceItem: InstantPageItem {
+    public var frame: CGRect
+    public let wantsNode: Bool = true
+    public let separatesTiles: Bool = false
+    public let medias: [InstantPageMedia] = []
     
     let initialPeer: Peer
     let safeInset: CGFloat
@@ -27,15 +27,15 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         self.rtl = rtl
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         return InstantPagePeerReferenceNode(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, initialPeer: self.initialPeer, safeInset: self.safeInset, transparent: self.transparent, rtl: self.rtl, openPeer: openPeer)
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         if let node = node as? InstantPagePeerReferenceNode {
             return self.initialPeer.id == node.peer?.id && self.safeInset == node.safeInset
         } else {
@@ -43,11 +43,11 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         }
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return 5
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         if count > 3 {
             return 1000.0
         } else {
@@ -55,10 +55,10 @@ final class InstantPagePeerReferenceItem: InstantPageItem {
         }
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
     }
 }
