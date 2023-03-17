@@ -117,6 +117,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
         if !pathComponents.isEmpty {
             pathComponents.removeFirst()
         }
+        if let lastComponent = pathComponents.last, lastComponent.isEmpty {
+            pathComponents.removeLast()
+        }
         if !pathComponents.isEmpty && !pathComponents[0].isEmpty {
             let peerName: String = pathComponents[0]
             if pathComponents.count == 1 {

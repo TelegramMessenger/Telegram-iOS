@@ -535,12 +535,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var emptyType: ChatHistoryNodeLoadState.EmptyType?
                 if case let .empty(type) = loadState {
-                    emptyType = type
-                    if case .joined = type {
-                        if strongSelf.didDisplayEmptyGreeting {
-                            emptyType = .generic
-                        } else {
-                            strongSelf.didDisplayEmptyGreeting = true
+                    if case .botInfo = type {
+                    } else {
+                        emptyType = type
+                        if case .joined = type {
+                            if strongSelf.didDisplayEmptyGreeting {
+                                emptyType = .generic
+                            } else {
+                                strongSelf.didDisplayEmptyGreeting = true
+                            }
                         }
                     }
                 } else if case .messages = loadState {
@@ -1966,13 +1969,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             if inputPanelNodeHandlesTransition {
-                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: .immediate)
                 inputPanelNode.frame = apparentInputPanelFrame
                 inputPanelNode.alpha = 1.0
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: .immediate)
             } else {
-                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: transition)
                 transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
                 transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: transition)
             }
             
             if let viewForOverlayContent = inputPanelNode.viewForOverlayContent {
