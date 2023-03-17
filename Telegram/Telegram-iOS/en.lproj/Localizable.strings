@@ -9071,3 +9071,13 @@ Sorry for the inconvenience.";
 "DataUsage.SettingsHelpWifi" = "You can change your auto-download settings for media to reduce data usage when on wifi.";
 
 "DataUsage.Reset" = "Reset Statistics";
+
+"Conversation.SendWhenOnlineTooltip" = "Long tap to send the message later.";
+
+"Bot.Active" = "bot is active now";
+"Bot.Inactive" = "bot is not active";
+"Bot.Slow" = "bot replies slowly";
+"Bot.TapToUse" = "Tap here to use this bot";
+
+"CreateGroup.PeersTitleDelimeter" = ", ";
+"CreateGroup.PeersTitleLastDelimeter" = " and ";

@@ -234,7 +234,7 @@ public final class MediaGroupsScreen: ViewController {
                     albums.append(collection)
                 }
             }
-            state.albums.enumerateObjects { collection, _, _ in
+            state.albums.enumerateObjects(options: [.reverse]) { collection, _, _ in
                 albums.append(collection)
             }
             entries.append(.albums(self.presentationData.theme, albums))

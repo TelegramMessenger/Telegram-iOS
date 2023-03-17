@@ -1514,7 +1514,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             break
                         }
                     }
-                    if let file = media as? TelegramMediaFile, !isCopyProtected {
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                        
+                    } else if let file = media as? TelegramMediaFile, !isCopyProtected {
                         if file.isVideo {
                             if file.isAnimated && !file.isVideoSticker {
                                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_SaveGif, icon: { theme in

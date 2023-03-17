@@ -3540,9 +3540,33 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var mediaMessage: Message?
         var forceOpen = false
         if let item = self.item {
-            for media in item.message.media {
-                if let file = media as? TelegramMediaFile, file.duration != nil {
-                    mediaMessage = item.message
+            if case .group = item.content {
+                var message: Message? = item.content.firstMessage
+                loop: for contentNode in self.contentNodes {
+                    if !(contentNode is ChatMessageTextBubbleContentNode) {
+                        continue loop
+                    }
+                    let convertedNodeFrame = contentNode.view.convert(contentNode.bounds, to: self.view).insetBy(dx: 0.0, dy: -10.0)
+                    if !convertedNodeFrame.contains(location) {
+                        continue loop
+                    }
+                    if contentNode is ChatMessageEventLogPreviousMessageContentNode {
+                    } else {
+                        message = contentNode.item?.message
+                    }
+                }
+                if let message {
+                    for media in message.media {
+                        if let file = media as? TelegramMediaFile, file.duration != nil {
+                            mediaMessage = message
+                        }
+                    }
+                }
+            } else {
+                for media in item.message.media {
+                    if let file = media as? TelegramMediaFile, file.duration != nil {
+                        mediaMessage = item.message
+                    }
                 }
             }
             if mediaMessage == nil {

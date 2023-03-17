@@ -4908,15 +4908,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         })))
                     }
                     
-                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: user, chatPeer: user, cachedData: strongSelf.data?.cachedData)
+                    let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: user, chatPeer: chatPeer, cachedData: strongSelf.data?.cachedData)
                     if clearPeerHistory.canClearForMyself != nil || clearPeerHistory.canClearForEveryone != nil {
-                        if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ClearMessages"), color: theme.contextMenu.primaryColor)
-                            }, action: { c, _ in
-                                self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, peer: user, chatPeer: user)
-                            })))
-                        }
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ClearMessages"), color: theme.contextMenu.primaryColor)
+                        }, action: { c, _ in
+                            self?.openClearHistory(contextController: c, clearPeerHistory: clearPeerHistory, peer: user, chatPeer: user)
+                        })))
                     }
                     
                     if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
@@ -5560,8 +5558,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             })))
         }
         
-        if let _ = clearPeerHistory.canClearForMyself {
-            let text: String = self.presentationData.strings.Conversation_DeleteMessagesForMe
+        if let canClearForMyself = clearPeerHistory.canClearForMyself {
+            let text: String
+            switch canClearForMyself {
+            case .secretChat:
+                text = self.presentationData.strings.Conversation_DeleteMessagesFor(EnginePeer(chatPeer).compactDisplayTitle).string
+            default:
+                text = self.presentationData.strings.Conversation_DeleteMessagesForMe
+            }
             
             subItems.append(.action(ContextMenuActionItem(text: text, textColor: .destructive, icon: { _ in
                 return nil
@@ -6012,7 +6016,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     
     private func openChatWithClearedHistory(type: InteractiveHistoryClearingType) {
-        guard let peer = self.data?.peer, let navigationController = self.controller?.navigationController as? NavigationController else {
+        guard let peer = self.data?.chatPeer, let navigationController = self.controller?.navigationController as? NavigationController else {
             return
         }
         

@@ -1328,16 +1328,19 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             } else if let file = m as? TelegramMediaFile {
                                 subject = .media(.message(message: MessageReference(messages[0]._asMessage()), media: file))
                                 if file.isAnimated {
-                                    preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
-                                        if let strongSelf = self {
-                                            let message = messages[0]
-                                            
-                                            let context = strongSelf.context
-                                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                            let controllerInteraction = strongSelf.controllerInteraction
-                                            let _ = (toggleGifSaved(account: context.account, fileReference: .message(message: MessageReference(message._asMessage()), media: file), saved: true)
-                                            |> deliverOnMainQueue).start(next: { result in
-                                                switch result {
+                                    if messages[0].id.peerId.namespace == Namespaces.Peer.SecretChat {
+                                        preferredAction = .default
+                                    } else {
+                                        preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
+                                            if let strongSelf = self {
+                                                let message = messages[0]
+                                                
+                                                let context = strongSelf.context
+                                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                                let controllerInteraction = strongSelf.controllerInteraction
+                                                let _ = (toggleGifSaved(account: context.account, fileReference: .message(message: MessageReference(message._asMessage()), media: file), saved: true)
+                                                         |> deliverOnMainQueue).start(next: { result in
+                                                    switch result {
                                                     case .generic:
                                                         controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil, timeout: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), nil)
                                                     case let .limitExceeded(limit, premiumLimit):
@@ -1356,10 +1359,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                                             }
                                                             return false
                                                         }), nil)
-                                                }
-                                            })
-                                        }
-                                    }))
+                                                    }
+                                                })
+                                            }
+                                        }))
+                                    }
                                 } else if file.mimeType.hasPrefix("image/") {
                                     preferredAction = .saveToCameraRoll
                                     actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved

@@ -347,4 +347,8 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
     func focus() {
         self.phoneNode.numberField?.becomeFirstResponder()
     }
+    
+    func selectAll() {
+        self.phoneNode.numberField?.textField.selectAll(nil)
+    }
 }

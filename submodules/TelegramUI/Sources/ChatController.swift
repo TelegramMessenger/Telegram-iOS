@@ -361,7 +361,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var recentlyUsedInlineBotsDisposable: Disposable?
     
     private var unpinMessageDisposable: MetaDisposable?
-    
+        
     private let typingActivityPromise = Promise<Bool>(false)
     private var inputActivityDisposable: Disposable?
     private var recordingActivityValue: ChatRecordingActivity = .none
@@ -431,6 +431,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var messageTooltipController: TooltipController?
     private weak var videoUnmuteTooltipController: TooltipController?
     private var didDisplayVideoUnmuteTooltip = false
+    private var didDisplaySendWhenOnlineTip = false
     private weak var silentPostTooltipController: TooltipController?
     private weak var mediaRecordingModeTooltipController: TooltipController?
     private weak var mediaRestrictedTooltipController: TooltipController?
@@ -3875,16 +3876,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
                 |> mapToSignal { message -> Signal<(EngineMessage.Id, Int32?)?, NoError> in
-                    if let message = message, let sourceMessageId = message.forwardInfo?.sourceMessageId {
-                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: sourceMessageId.peerId))
+                    if let message {
+                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: message.id.peerId))
                         |> map { statsDatacenterId -> (EngineMessage.Id, Int32?)? in
-                            return (sourceMessageId, statsDatacenterId)
+                            return (message.id, statsDatacenterId)
                         }
                     } else {
-                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: id.peerId))
-                        |> map { statsDatacenterId -> (EngineMessage.Id, Int32?)? in
-                            return (id, statsDatacenterId)
-                        }
+                        return .complete()
                     }
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] messageIdAndStatsDatacenterId in
@@ -7572,6 +7570,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         Signal<Bool, NoError>.single(false)
                         |> delay(4.0, queue: Queue.mainQueue())
                     ))
+                    
+                    if !strongSelf.didDisplaySendWhenOnlineTip {
+                        strongSelf.didDisplaySendWhenOnlineTip = true
+                        Queue.mainQueue().after(2.0) {
+                            strongSelf.displaySendWhenOnlineTooltip()
+                        }
+                    }
                 } else {
                     strongSelf.typingActivityPromise.set(.single(false))
                 }
@@ -9876,6 +9881,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
                         sendWhenOnlineAvailable = false
+                    }
+                    
+                    if sendWhenOnlineAvailable {
+                        let _ = ApplicationSpecificNotice.incrementSendWhenOnlineTip(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).start()
                     }
                     
                     let controller = ChatSendMessageActionSheetController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, canSendWhenOnline: sendWhenOnlineAvailable, completion: { [weak self] in
@@ -17505,6 +17514,60 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return nil
             }))
         }
+    }
+    
+    private func displaySendWhenOnlineTooltip() {
+        guard let rect = self.chatDisplayNode.frameForInputActionButton(), self.effectiveNavigationController?.topViewController === self, let peerId = self.chatLocation.peerId else {
+            return
+        }
+        let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
+        guard !inputText.isEmpty else {
+            return
+        }
+        
+        self.sendingOptionsTooltipController?.dismiss()
+        
+        let _ = (ApplicationSpecificNotice.getSendWhenOnlineTip(accountManager: self.context.sharedContext.accountManager)
+        |> deliverOnMainQueue).start(next: { [weak self] counter in
+            if let strongSelf = self, counter < 3 {
+                let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                    guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
+                        return
+                    }
+                    var sendWhenOnlineAvailable = false
+                    if peer.id != strongSelf.context.account.peerId, let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(until) = presence.status, until != .max {
+                        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                        let (_, _, _, hours, _) = getDateTimeComponents(timestamp: currentTime)
+                        if currentTime > until + 60 * 30 && hours >= 0 && hours <= 8 {
+                            sendWhenOnlineAvailable = true
+                        }
+                    }
+                    if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+                        sendWhenOnlineAvailable = false
+                    }
+                    
+                    if sendWhenOnlineAvailable {
+                        let _ = ApplicationSpecificNotice.incrementSendWhenOnlineTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                        
+                        let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.Conversation_SendWhenOnlineTooltip), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, timeout: 3.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 2.0)
+                        strongSelf.sendingOptionsTooltipController = tooltipController
+                        tooltipController.dismissed = { [weak self, weak tooltipController] _ in
+                            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.sendingOptionsTooltipController === tooltipController {
+                                strongSelf.sendingOptionsTooltipController = nil
+                            }
+                        }
+                        strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                            if let strongSelf = self {
+                                return (strongSelf.chatDisplayNode, rect)
+                            }
+                            return nil
+                        }))
+                    }
+                })
+            }
+        })
     }
     
     private func displaySendingOptionsTooltip() {
