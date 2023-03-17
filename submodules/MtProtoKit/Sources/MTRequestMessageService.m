@@ -89,6 +89,10 @@
         
         if (![_requests containsObject:request])
         {
+            if (MTLogEnabled()) {
+                MTLog(@"[MTRequestMessageService#%" PRIxPTR " add request %@]", (intptr_t)self, request.metadata);
+            }
+            
             [_requests addObject:request];
             [mtProto requestTransportTransaction];
         }
