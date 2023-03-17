@@ -361,6 +361,7 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                     if let maxOffset = self.fileMap.ranges.ranges.reversed().first?.upperBound {
                         let maxValue = max(resourceOffset + Int64(dataRange.count), Int64(maxOffset))
                         self.fileMap.truncate(maxValue)
+                        self.fileMap.serialize(manager: self.manager, to: self.metaPath)
                     }
                 }
             case let .resourceSizeUpdated(size):

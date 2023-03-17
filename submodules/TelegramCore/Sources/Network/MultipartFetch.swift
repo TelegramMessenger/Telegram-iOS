@@ -873,7 +873,7 @@ public func resourceFetchInfo(resource: TelegramMediaResource) -> MediaResourceF
     )
 }
 
-func multipartFetch(
+private func multipartFetchV1(
     postbox: Postbox,
     network: Network,
     mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -962,4 +962,51 @@ func multipartFetch(
             managerRef = nil
         }
     }
+}
+
+func multipartFetch(
+    postbox: Postbox,
+    network: Network,
+    mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
+    resource: TelegramMediaResource,
+    datacenterId: Int,
+    size: Int64?,
+    intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>,
+    parameters: MediaResourceFetchParameters?,
+    encryptionKey: SecretFileEncryptionKey? = nil,
+    decryptedSize: Int64? = nil,
+    continueInBackground: Bool = false,
+    useMainConnection: Bool = false
+) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    #if DEBUG && false
+    return multipartFetchV2(
+        postbox: postbox,
+        network: network,
+        mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+        resource: resource,
+        datacenterId: datacenterId,
+        size: size,
+        intervals: intervals,
+        parameters: parameters,
+        encryptionKey: encryptionKey,
+        decryptedSize: decryptedSize,
+        continueInBackground: continueInBackground,
+        useMainConnection: useMainConnection
+    )
+    #else
+    return multipartFetchV1(
+        postbox: postbox,
+        network: network,
+        mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+        resource: resource,
+        datacenterId: datacenterId,
+        size: size,
+        intervals: intervals,
+        parameters: parameters,
+        encryptionKey: encryptionKey,
+        decryptedSize: decryptedSize,
+        continueInBackground: continueInBackground,
+        useMainConnection: useMainConnection
+    )
+    #endif
 }
