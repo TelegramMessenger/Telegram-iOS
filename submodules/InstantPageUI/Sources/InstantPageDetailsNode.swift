@@ -123,7 +123,7 @@ public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
-    override func layout() {
+    override public func layout() {
         super.layout()
         
         let size = self.bounds.size

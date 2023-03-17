@@ -9,7 +9,7 @@ import TelegramUIPreferences
 import AccountContext
 import ContextUI
 
-final class InstantPageDetailsItem: InstantPageItem {
+public final class InstantPageDetailsItem: InstantPageItem {
     var frame: CGRect
     let wantsNode: Bool = true
     let separatesTiles: Bool = true
