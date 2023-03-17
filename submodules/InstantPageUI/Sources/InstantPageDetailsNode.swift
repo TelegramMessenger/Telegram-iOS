@@ -8,16 +8,17 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import ContextUI
 
 private let detailsInset: CGFloat = 17.0
 private let titleInset: CGFloat = 22.0
 
-final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
+public final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let context: AccountContext
     private let strings: PresentationStrings
     private let nameDisplayOrder: PresentationPersonNameOrder
     private let theme: InstantPageTheme
-    let item: InstantPageDetailsItem
+    public let item: InstantPageDetailsItem
     
     private let titleTile: InstantPageTile
     private let titleTileNode: InstantPageTileNode
@@ -35,7 +36,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var requestLayoutUpdate: ((Bool) -> Void)?
     
-    init(context: AccountContext, sourceLocation: InstantPageSourceLocation, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
+    init(context: AccountContext, sourceLocation: InstantPageSourceLocation, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
@@ -65,7 +66,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: self.expanded)
         self.separatorNode = ASDisplayNode()
         
-        self.contentNode = InstantPageContentNode(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, sourceLocation: sourceLocation, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl)
+        self.contentNode = InstantPageContentNode(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, sourceLocation: sourceLocation, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished, openPeer: openPeer, openUrl: openUrl)
         
         super.init()
         

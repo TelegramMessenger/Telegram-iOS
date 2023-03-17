@@ -2740,14 +2740,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     loadState = .empty(.generic)
                 }
             } else {
-                loadState = .messages
+                if transition.historyView.filteredEntries.count == 1, let entry = transition.historyView.filteredEntries.first, case .ChatInfoEntry = entry {
+                    loadState = .empty(.botInfo)
+                } else {
+                    loadState = .messages
+                }
             }
             if self.loadState != loadState {
                 self.loadState = loadState
                 self.loadStateUpdated?(loadState, transition.options.contains(.AnimateInsertion))
             }
             
-            let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+            let isEmpty = transition.historyView.originalView.entries.isEmpty || loadState == .empty(.botInfo)
+            let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty)
             if self.currentHistoryState != historyState {
                 self.currentHistoryState = historyState
                 self.historyState.set(historyState)
@@ -2925,7 +2930,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if historyView.originalView.isLoadingEarlier && strongSelf.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser {
                             loadState = .loading(true)
                         } else {
-                            loadState = .messages
+                            if historyView.filteredEntries.count == 1, let entry = historyView.filteredEntries.first, case .ChatInfoEntry = entry {
+                                loadState = .empty(.botInfo)
+                            } else {
+                                loadState = .messages
+                            }
                         }
                     }
                 } else {
@@ -2989,7 +2998,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))
                 }
                 strongSelf._cachedPeerDataAndMessages.set(.single((transition.cachedData, transition.cachedDataMessages)))
-                let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+                let isEmpty = transition.historyView.originalView.entries.isEmpty || loadState == .empty(.botInfo)
+                let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty)
                 if strongSelf.currentHistoryState != historyState {
                     strongSelf.currentHistoryState = historyState
                     strongSelf.historyState.set(historyState)

@@ -164,7 +164,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var fontSize: CGFloat
     private let gloss: Bool
     
-    private let buttonBackgroundNode: ASImageNode
+    public let buttonBackgroundNode: ASImageNode
     private var buttonBackgroundAnimationView: UIImageView?
     
     private var shimmerView: ShimmerEffectForegroundView?
@@ -173,7 +173,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var borderShimmerView: ShimmerEffectForegroundView?
         
     private let buttonNode: HighlightTrackingButtonNode
-    private let titleNode: ImmediateTextNode
+    public let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: SimpleAnimationNode?
@@ -181,7 +181,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var badgeNode: BadgeNode?
     
     private let buttonHeight: CGFloat
-    private let buttonCornerRadius: CGFloat
+    public let buttonCornerRadius: CGFloat
     
     public var pressed: (() -> Void)?
     public var validLayout: CGFloat?
@@ -309,6 +309,23 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     public var progressType: SolidRoundedButtonProgressType = .fullSize
         
+    public var highlightEnabled = true {
+        didSet {
+            if !self.highlightEnabled {
+                self.buttonBackgroundNode.alpha = 1.0
+                self.titleNode.alpha = 1.0
+                self.subtitleNode.alpha = 1.0
+                self.iconNode.alpha = 1.0
+                self.animationNode?.alpha = 1.0
+                self.buttonBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                self.titleNode.layer.removeAnimation(forKey: "opacity")
+                self.subtitleNode.layer.removeAnimation(forKey: "opacity")
+                self.iconNode.layer.removeAnimation(forKey: "opacity")
+                self.animationNode?.layer.removeAnimation(forKey: "opacity")
+            }
+        }
+    }
+    
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
@@ -366,7 +383,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self, strongSelf.isEnabled {
+            if let strongSelf = self, strongSelf.isEnabled && strongSelf.highlightEnabled {
                 if highlighted {
                     strongSelf.buttonBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonBackgroundNode.alpha = 0.55
