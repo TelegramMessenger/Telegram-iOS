@@ -8,11 +8,11 @@ import TelegramUIPreferences
 import AccountContext
 import ContextUI
 
-final class InstantPageArticleItem: InstantPageItem {
-    var frame: CGRect
-    let wantsNode: Bool = true
-    let separatesTiles: Bool = false
-    let medias: [InstantPageMedia] = []
+public final class InstantPageArticleItem: InstantPageItem {
+    public var frame: CGRect
+    public let wantsNode: Bool = true
+    public let separatesTiles: Bool = false
+    public let medias: [InstantPageMedia] = []
     let userLocation: MediaResourceUserLocation
     let webPage: TelegramMediaWebpage
     
@@ -37,15 +37,15 @@ final class InstantPageArticleItem: InstantPageItem {
         self.hasRTL = hasRTL
     }
 
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         return InstantPageArticleNode(context: context, item: self, webPage: self.webPage, strings: strings, theme: theme, contentItems: self.contentItems, contentSize: self.contentSize, cover: self.cover, url: self.url, webpageId: self.webpageId, openUrl: openUrl)
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         if let node = node as? InstantPageArticleNode {
             return self === node.item
         } else {
@@ -53,11 +53,11 @@ final class InstantPageArticleItem: InstantPageItem {
         }
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return 7
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         if count > 3 {
             return 1000.0
         } else {
@@ -65,10 +65,10 @@ final class InstantPageArticleItem: InstantPageItem {
         }
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
 }

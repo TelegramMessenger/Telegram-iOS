@@ -57,10 +57,10 @@ public struct InstantPageTextRangeRectEdge: Equatable {
     }
 }
 
-final class InstantPageTextLine {
+public final class InstantPageTextLine {
     let line: CTLine
     let range: NSRange
-    let frame: CGRect
+    public let frame: CGRect
     let strikethroughItems: [InstantPageTextStrikethroughItem]
     let markedItems: [InstantPageTextMarkedItem]
     let imageItems: [InstantPageTextImageItem]
@@ -89,18 +89,18 @@ private func frameForLine(_ line: InstantPageTextLine, boundingWidth: CGFloat, a
     return lineFrame
 }
 
-final class InstantPageTextItem: InstantPageItem {
+public final class InstantPageTextItem: InstantPageItem {
     let attributedString: NSAttributedString
-    let lines: [InstantPageTextLine]
+    public let lines: [InstantPageTextLine]
     let rtlLineIndices: Set<Int>
-    var frame: CGRect
+    public var frame: CGRect
     let alignment: NSTextAlignment
     let opaqueBackground: Bool
-    let medias: [InstantPageMedia] = []
+    public let medias: [InstantPageMedia] = []
     let anchors: [String: (Int, Bool)]
-    let wantsNode: Bool = false
-    let separatesTiles: Bool = false
-    var selectable: Bool = true
+    public let wantsNode: Bool = false
+    public let separatesTiles: Bool = false
+    public var selectable: Bool = true
     
     var containsRTL: Bool {
         return !self.rtlLineIndices.isEmpty
@@ -128,7 +128,7 @@ final class InstantPageTextItem: InstantPageItem {
         self.anchors = anchors
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
         context.saveGState()
         context.textMatrix = CGAffineTransform(scaleX: 1.0, y: -1.0)
         context.translateBy(x: self.frame.minX, y: self.frame.minY)
@@ -251,7 +251,7 @@ final class InstantPageTextItem: InstantPageItem {
         return nil
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         if let (index, dict) = self.attributesAtPoint(point) {
             if let _ = dict[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 if let rects = self.attributeRects(name: NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), at: index) {
@@ -268,7 +268,7 @@ final class InstantPageTextItem: InstantPageItem {
         return []
     }
     
-    func urlAttribute(at point: CGPoint) -> InstantPageUrlItem? {
+    public func urlAttribute(at point: CGPoint) -> InstantPageUrlItem? {
         if let (_, dict) = self.attributesAtPoint(point) {
             if let url = dict[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? InstantPageUrlItem {
                 return url
@@ -359,7 +359,7 @@ final class InstantPageTextItem: InstantPageItem {
         return nil
     }
     
-    func lineRects() -> [CGRect] {
+    public func lineRects() -> [CGRect] {
         let boundsWidth = self.frame.width
         var rects: [CGRect] = []
         var topLeft = CGPoint(x: CGFloat.greatestFiniteMagnitude, y: 0.0)
@@ -425,30 +425,30 @@ final class InstantPageTextItem: InstantPageItem {
         return ceil(width)
     }
     
-    func plainText() -> String {
+    public func plainText() -> String {
         if let first = self.lines.first, let last = self.lines.last {
             return self.attributedString.attributedSubstring(from: NSMakeRange(first.range.location, last.range.location + last.range.length - first.range.location)).string
         }
         return ""
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         return nil
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         return false
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return nil
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         return 0.0
     }
 }

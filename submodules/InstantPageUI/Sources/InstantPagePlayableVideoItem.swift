@@ -8,19 +8,19 @@ import TelegramUIPreferences
 import AccountContext
 import ContextUI
 
-final class InstantPagePlayableVideoItem: InstantPageItem {
-    var frame: CGRect
+public final class InstantPagePlayableVideoItem: InstantPageItem {
+    public var frame: CGRect
     let webPage: TelegramMediaWebpage
     
     let media: InstantPageMedia
-    var medias: [InstantPageMedia] {
+    public var medias: [InstantPageMedia] {
         return [self.media]
     }
     
     let interactive: Bool
     
-    let wantsNode: Bool = true
-    let separatesTiles: Bool = false
+    public let wantsNode: Bool = true
+    public let separatesTiles: Bool = false
     
     init(frame: CGRect, webPage: TelegramMediaWebpage, media: InstantPageMedia, interactive: Bool) {
         self.frame = frame
@@ -29,15 +29,15 @@ final class InstantPagePlayableVideoItem: InstantPageItem {
         self.interactive = interactive
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         return InstantPagePlayableVideoNode(context: context, userLocation: sourceLocation.userLocation, webPage: self.webPage, theme: theme, media: self.media, interactive: self.interactive, openMedia: openMedia)
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         if let node = node as? InstantPagePlayableVideoNode {
             return node.media == self.media
         } else {
@@ -45,11 +45,11 @@ final class InstantPagePlayableVideoItem: InstantPageItem {
         }
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return 2
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         if count > 3 {
             return 200.0
         } else {
@@ -57,10 +57,10 @@ final class InstantPagePlayableVideoItem: InstantPageItem {
         }
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
 }

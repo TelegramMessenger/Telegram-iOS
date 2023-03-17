@@ -100,21 +100,21 @@ private let tableCellInsets = UIEdgeInsets(top: 14.0, left: 12.0, bottom: 14.0, 
 private let tableBorderWidth: CGFloat = 1.0
 private let tableCornerRadius: CGFloat = 5.0
 
-final class InstantPageTableItem: InstantPageScrollableItem {
-    var frame: CGRect
+public final class InstantPageTableItem: InstantPageScrollableItem {
+    public var frame: CGRect
     let totalWidth: CGFloat
-    let horizontalInset: CGFloat
-    let medias: [InstantPageMedia] = []
-    let wantsNode: Bool = true
-    let separatesTiles: Bool = false
+    public let horizontalInset: CGFloat
+    public let medias: [InstantPageMedia] = []
+    public let wantsNode: Bool = true
+    public let separatesTiles: Bool = false
     
     let theme: InstantPageTheme
     
-    let isRTL: Bool
+    public let isRTL: Bool
     fileprivate let cells: [InstantPageTableCellItem]
     private let borderWidth: CGFloat
     
-    let anchors: [String: (CGFloat, Bool)]
+    public let anchors: [String: (CGFloat, Bool)]
     
     fileprivate init(frame: CGRect, totalWidth: CGFloat, horizontalInset: CGFloat, borderWidth: CGFloat, theme: InstantPageTheme, cells: [InstantPageTableCellItem], rtl: Bool) {
         self.frame = frame
@@ -140,11 +140,11 @@ final class InstantPageTableItem: InstantPageScrollableItem {
         self.anchors = anchors
     }
     
-    var contentSize: CGSize {
+    public var contentSize: CGSize {
         return CGSize(width: self.totalWidth, height: self.frame.height)
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
         for cell in self.cells {
             if cell.cell.text == nil {
                 continue
@@ -196,11 +196,11 @@ final class InstantPageTableItem: InstantPageScrollableItem {
         }
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         var additionalNodes: [InstantPageNode] = []
         for cell in self.cells {
             for item in cell.additionalItems {
@@ -215,22 +215,22 @@ final class InstantPageTableItem: InstantPageScrollableItem {
         return InstantPageScrollableNode(item: self, additionalNodes: additionalNodes)
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         if let node = node as? InstantPageScrollableNode {
             return node.item === self
         }
         return false
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return nil
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         return 0.0
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         for cell in self.cells {
             if let item = cell.textItem, item.selectable, item.frame.insetBy(dx: -tableCellInsets.left, dy: -tableCellInsets.top).contains(point.offsetBy(dx: -cell.frame.minX - self.horizontalInset, dy: -cell.frame.minY)) {
                 let rects = item.linkSelectionRects(at: point.offsetBy(dx: -cell.frame.minX - self.horizontalInset - item.frame.minX, dy: -cell.frame.minY - item.frame.minY))
@@ -240,7 +240,7 @@ final class InstantPageTableItem: InstantPageScrollableItem {
         return []
     }
     
-    func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
+    public func textItemAtLocation(_ location: CGPoint) -> (InstantPageTextItem, CGPoint)? {
         for cell in self.cells {
             if let item = cell.textItem, item.selectable, item.frame.insetBy(dx: -tableCellInsets.left, dy: -tableCellInsets.top).contains(location.offsetBy(dx: -cell.frame.minX - self.horizontalInset, dy: -cell.frame.minY)) {
                 return (item, cell.frame.origin.offsetBy(dx: self.horizontalInset, dy: 0.0))
