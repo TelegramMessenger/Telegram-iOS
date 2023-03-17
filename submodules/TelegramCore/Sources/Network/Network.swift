@@ -603,7 +603,9 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures)
+            let useExperimentalFeatures = networkSettings?.useExperimentalDownload ?? false
+            
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures)
             appDataUpdatedImpl = { [weak network] data in
                 guard let data = data else {
                     return
@@ -735,6 +737,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     private let useRequestTimeoutTimers: Bool
     public let useBetaFeatures: Bool
+    public let useExperimentalFeatures: Bool
     
     private let appDataDisposable: Disposable
     
@@ -778,7 +781,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return "Network context: \(self.context)"
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool, useExperimentalFeatures: Bool) {
         self.encryptionProvider = encryptionProvider
         
         self.queue = queue
@@ -793,6 +796,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.basePath = basePath
         self.useRequestTimeoutTimers = useRequestTimeoutTimers
         self.useBetaFeatures = useBetaFeatures
+        self.useExperimentalFeatures = useExperimentalFeatures
         
         super.init()
         

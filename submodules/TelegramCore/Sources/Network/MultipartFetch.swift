@@ -978,22 +978,22 @@ func multipartFetch(
     continueInBackground: Bool = false,
     useMainConnection: Bool = false
 ) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    #if DEBUG && false
-    return multipartFetchV2(
-        postbox: postbox,
-        network: network,
-        mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
-        resource: resource,
-        datacenterId: datacenterId,
-        size: size,
-        intervals: intervals,
-        parameters: parameters,
-        encryptionKey: encryptionKey,
-        decryptedSize: decryptedSize,
-        continueInBackground: continueInBackground,
-        useMainConnection: useMainConnection
-    )
-    #else
+    if network.useExperimentalFeatures, let _ = resource as? TelegramCloudMediaResource {
+        return multipartFetchV2(
+            postbox: postbox,
+            network: network,
+            mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+            resource: resource,
+            datacenterId: datacenterId,
+            size: size,
+            intervals: intervals,
+            parameters: parameters,
+            encryptionKey: encryptionKey,
+            decryptedSize: decryptedSize,
+            continueInBackground: continueInBackground,
+            useMainConnection: useMainConnection
+        )
+    }
     return multipartFetchV1(
         postbox: postbox,
         network: network,
@@ -1008,5 +1008,4 @@ func multipartFetch(
         continueInBackground: continueInBackground,
         useMainConnection: useMainConnection
     )
-    #endif
 }
