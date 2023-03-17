@@ -85,7 +85,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .joinedByRequest)
     case let .messageActionWebViewDataSentMe(text, _), let .messageActionWebViewDataSent(text):
         return TelegramMediaAction(action: .webViewData(text))
-    case let .messageActionGiftPremium(currency, amount, months):
+    case let .messageActionGiftPremium(_, currency, amount, months, _, _):
         return TelegramMediaAction(action: .giftPremium(currency: currency, amount: amount, months: months))
     case let .messageActionTopicCreate(_, title, iconColor, iconEmojiId):
         return TelegramMediaAction(action: .topicCreated(title: title, iconColor: iconColor, iconFileId: iconEmojiId))
