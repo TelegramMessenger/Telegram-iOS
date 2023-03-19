@@ -154,6 +154,7 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
     }
     
     private var isUsingSoftlight: Bool = false
+    private var useFilter: Bool = false
     
     var suspendCompositionUpdates: Bool = false
     private var needsCompositionUpdate: Bool = false
@@ -172,10 +173,11 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
             useSoftlight = true
             useFilter = false
         }
-        if self.isUsingSoftlight != useSoftlight {
+        if self.isUsingSoftlight != useSoftlight || self.useFilter != useFilter {
             self.isUsingSoftlight = useSoftlight
+            self.useFilter = useFilter
             
-            if self.isUsingSoftlight && useFilter {
+            if self.isUsingSoftlight && self.useFilter {
                 self.compositingFilter = "softLightBlendMode"
             } else {
                 self.compositingFilter = nil
@@ -842,10 +844,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     }
     private static var cachedSharedPattern: (PatternKey, UIImage)?
     
-    //private var inlineAnimationNodes: [(AnimatedStickerNode, CGPoint)] = []
-    //private let hierarchyTrackingLayer = HierarchyTrackingLayer()
-    //private var activateInlineAnimationTimer: SwiftSignalKit.Timer?
-
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
@@ -1308,13 +1306,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
 
         self.loadPatternForSizeIfNeeded(size: size, displayMode: displayMode, transition: transition)
-        
-        /*for (animationNode, relativePosition) in self.inlineAnimationNodes {
-            let sizeNorm = CGSize(width: 1440, height: 2960)
-            let animationSize = CGSize(width: 512.0 / sizeNorm.width * size.width, height: 512.0 / sizeNorm.height * size.height)
-            animationNode.frame = CGRect(origin: CGPoint(x: relativePosition.x / sizeNorm.width * size.width, y: relativePosition.y / sizeNorm.height * size.height), size: animationSize)
-            animationNode.updateLayout(size: animationNode.frame.size)
-        }*/
                 
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
