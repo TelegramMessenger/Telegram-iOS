@@ -1597,8 +1597,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
                 
                 let keyboardAppearance = interfaceState.theme.rootController.keyboardColor.keyboardAppearance
-                if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
-                    if textInputNode.isCurrentlyEmoji() {
+                if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance {
+                    if textInputNode.isFirstResponder() && textInputNode.isCurrentlyEmoji() {
                         textInputNode.initialPrimaryLanguage = "emoji"
                         textInputNode.resetInitialPrimaryLanguage()
                     }
@@ -2268,7 +2268,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let _ = placeholderApply()
             
-            transition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: hideOffset.x + leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: placeholderSize.size))
+            let placeholderTransition: ContainedViewLayoutTransition
+            if placeholderSize.size.width == contextPlaceholderNode.frame.width {
+                placeholderTransition = transition
+            } else {
+                placeholderTransition = .immediate
+            }
+            placeholderTransition.updateFrame(node: contextPlaceholderNode, frame: CGRect(origin: CGPoint(x: hideOffset.x + leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: placeholderSize.size))
             contextPlaceholderNode.alpha = audioRecordingItemsAlpha
         } else if let contextPlaceholderNode = self.contextPlaceholderNode {
             self.contextPlaceholderNode = nil

@@ -667,7 +667,7 @@ public class ShareRootControllerImpl {
                                                         attemptSelectionImpl?(peer)
                                                     }, createNewGroup: {
                                                         createNewGroupImpl?()
-                                                    }, pretendPresentedInModal: true, selectForumThreads: true))
+                                                    }, pretendPresentedInModal: true, selectForumThreads: false))
                                                     
                                                     controller.customDismiss = {
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
