@@ -208,6 +208,7 @@ private final class FetchImpl {
         private let consumerId: Int64
         
         private var knownSize: Int64?
+        private var didReportKnownSize: Bool = false
         private var updatedFileReference: Data?
         
         private var requiredRangesDisposable: Disposable?
@@ -307,6 +308,11 @@ private final class FetchImpl {
             
             switch state {
             case let .fetching(state):
+                if let knownSize = self.knownSize, !self.didReportKnownSize {
+                    self.didReportKnownSize = true
+                    self.onNext(.resourceSizeUpdated(knownSize))
+                }
+                
                 var filteredRequiredRanges: [RangeSet<Int64>] = []
                 for _ in 0 ..< 3 {
                     filteredRequiredRanges.append(RangeSet<Int64>())
@@ -349,8 +355,32 @@ private final class FetchImpl {
                 }*/
                 
                 if state.pendingParts.count < state.maxPendingParts {
-                    //let debugRanges = filteredRequiredRanges.ranges.map { "\($0.lowerBound)..<\($0.upperBound)" }
-                    //Logger.shared.log("FetchV2", "\(self.loggingIdentifier): will fetch \(debugRanges)")
+                    var debugRangesString = ""
+                    for priorityIndex in 0 ..< 3 {
+                        if filteredRequiredRanges[priorityIndex].isEmpty {
+                            continue
+                        }
+                        
+                        if !debugRangesString.isEmpty {
+                            debugRangesString.append(", ")
+                        }
+                        debugRangesString.append("priority: \(priorityIndex): [")
+                        
+                        var isFirst = true
+                        for range in filteredRequiredRanges[priorityIndex].ranges {
+                            if isFirst {
+                                isFirst = false
+                            } else {
+                                debugRangesString.append(", ")
+                            }
+                            debugRangesString.append("\(range.lowerBound)..<\(range.upperBound)")
+                        }
+                        debugRangesString.append("]")
+                    }
+                    
+                    if !debugRangesString.isEmpty {
+                        Logger.shared.log("FetchV2", "\(self.loggingIdentifier): will fetch \(debugRangesString)")
+                    }
                     
                     while state.pendingParts.count < state.maxPendingParts {
                         var found = false
