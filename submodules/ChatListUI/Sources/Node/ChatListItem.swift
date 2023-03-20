@@ -890,6 +890,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var compoundTextButtonNode: HighlightTrackingButtonNode?
     let measureNode: TextNode
     private var currentItemHeight: CGFloat?
+    let forwardedIconNode: ASImageNode
     let textNode: TextNodeWithEntities
     var dustNode: InvisibleInkDustNode?
     let inputActivitiesNode: ChatListInputActivitiesNode
@@ -1159,6 +1160,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.badgeNode = ChatListBadgeNode()
         self.mentionBadgeNode = ChatListBadgeNode()
         self.onlineNode = PeerOnlineMarkerNode()
+        
+        self.forwardedIconNode = ASImageNode()
+        self.forwardedIconNode.isLayerBacked = true
+        self.forwardedIconNode.displaysAsynchronously = false
+        self.forwardedIconNode.displayWithoutProcessing = true
         
         self.pinnedIconNode = ASImageNode()
         self.pinnedIconNode.isLayerBacked = true
@@ -1651,6 +1657,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentMutedIconImage: UIImage?
             var currentCredibilityIconContent: EmojiStatusComponent.Content?
             var currentSecretIconImage: UIImage?
+            var currentForwardedIcon: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -1766,9 +1773,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let contentImageSide: CGFloat = max(10.0, min(20.0, floor(item.presentationData.fontSize.baseDisplaySize * 18.0 / 17.0)))
             let contentImageSize = CGSize(width: contentImageSide, height: contentImageSide)
             let contentImageSpacing: CGFloat = 2.0
+            let forwardedIconSpacing: CGFloat = 6.0
             let contentImageTrailingSpace: CGFloat = 5.0
             var contentImageSpecs: [(message: EngineMessage, media: EngineMedia, size: CGSize)] = []
             var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32, isUnread: Bool)?
+            
+            var displayForwardedIcon = false
             
             switch contentData {
                 case let .chat(itemPeer, _, _, _, text, spoilers, customEmojiRanges):
@@ -1928,6 +1938,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         attributedText = composedString
                         
+                        if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
+                            displayForwardedIcon = true
+                        }
+                
                         var displayMediaPreviews = true
                         if message._asMessage().containsSecretMedia {
                             displayMediaPreviews = false
@@ -2007,6 +2021,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                     attributedText = textString
+            }
+            
+            if displayForwardedIcon {
+                currentForwardedIcon = PresentationResourcesChatList.forwardedIcon(item.presentationData.theme)
+            }
+            
+            if let currentForwardedIcon {
+                textLeftCutout += currentForwardedIcon.size.width
+                if !contentImageSpecs.isEmpty {
+                    textLeftCutout += forwardedIconSpacing
+                } else {
+                    textLeftCutout += contentImageTrailingSpace
+                }
             }
             
             for i in 0 ..< contentImageSpecs.count {
@@ -3161,6 +3188,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.authorNode.alpha = 0.0
                             strongSelf.compoundHighlightingNode?.alpha = 0.0
                             strongSelf.dustNode?.alpha = 0.0
+                            strongSelf.forwardedIconNode.alpha = 0.0
                             
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
@@ -3168,6 +3196,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.authorNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                 strongSelf.compoundHighlightingNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                 strongSelf.dustNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                                strongSelf.forwardedIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                             }
                         }
                     } else {
@@ -3177,6 +3206,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.authorNode.alpha = 1.0
                             strongSelf.compoundHighlightingNode?.alpha = 1.0
                             strongSelf.dustNode?.alpha = 1.0
+                            strongSelf.forwardedIconNode.alpha = 1.0
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { value in
                                     if let strongSelf = self, value {
@@ -3187,6 +3217,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.authorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.compoundHighlightingNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.dustNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                strongSelf.forwardedIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                             } else {
                                 strongSelf.inputActivitiesNode.removeFromSupernode()
                             }
@@ -3203,6 +3234,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     inputActivitiesApply?()
                     
                     var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: floor((measureLayout.size.height - contentImageSize.height) / 2.0))
+                    
+                    if let currentForwardedIcon = currentForwardedIcon {
+                        strongSelf.forwardedIconNode.image = currentForwardedIcon
+                        if strongSelf.forwardedIconNode.supernode == nil {
+                            strongSelf.mainContentContainerNode.addSubnode(strongSelf.forwardedIconNode)
+                        }
+                        transition.updateFrame(node: strongSelf.forwardedIconNode, frame: CGRect(origin: CGPoint(x: mediaPreviewOffset.x, y: mediaPreviewOffset.y + 3.0), size: currentForwardedIcon.size))
+                        mediaPreviewOffset.x += currentForwardedIcon.size.width + forwardedIconSpacing
+                    } else if strongSelf.forwardedIconNode.supernode != nil {
+                        strongSelf.forwardedIconNode.removeFromSupernode()
+                    }
+                    
                     var validMediaIds: [EngineMedia.Id] = []
                     for (message, media, mediaSize) in contentImageSpecs {
                         var mediaId = media.id

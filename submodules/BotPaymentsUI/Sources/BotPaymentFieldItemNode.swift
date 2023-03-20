@@ -9,6 +9,7 @@ private let titleFont = Font.regular(17.0)
 enum BotPaymentFieldContentType {
     case generic
     case name
+    case asciiName
     case phoneNumber
     case email
     case address
@@ -51,6 +52,9 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
             case .generic:
                 break
             case .name:
+                self.textField.textField.autocorrectionType = .no
+                self.textField.textField.keyboardType = .default
+            case .asciiName:
                 self.textField.textField.autocorrectionType = .no
                 self.textField.textField.keyboardType = .asciiCapable
             case .address:

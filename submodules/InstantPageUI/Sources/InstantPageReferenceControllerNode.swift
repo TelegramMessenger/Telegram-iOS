@@ -204,7 +204,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
             
             let sideInset: CGFloat = 16.0
             let (_, items, contentSize) = layoutTextItemWithString(self.anchorText, boundingWidth: width - sideInset * 2.0, offset: CGPoint(x: sideInset, y: sideInset), media: media, webpage: self.webPage)
-            let contentNode = InstantPageContentNode(context: self.context, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, sourceLocation: self.sourceLocation, theme: self.theme, items: items, contentSize: CGSize(width: width, height: contentSize.height), inOverlayPanel: true, openMedia: { _ in }, longPressMedia: { _ in }, openPeer: { _ in }, openUrl: { _ in })
+            let contentNode = InstantPageContentNode(context: self.context, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, sourceLocation: self.sourceLocation, theme: self.theme, items: items, contentSize: CGSize(width: width, height: contentSize.height), inOverlayPanel: true, openMedia: { _ in }, longPressMedia: { _ in }, activatePinchPreview: nil, pinchPreviewFinished: nil, openPeer: { _ in }, openUrl: { _ in })
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleAreaHeight), size: CGSize(width: width, height: contentSize.height)))
             self.contentContainerNode.insertSubnode(contentNode, at: 0)
             self.contentNode = contentNode

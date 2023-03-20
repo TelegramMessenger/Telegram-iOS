@@ -167,7 +167,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         
     static var body: Body {
         let overscroll = Child(Rectangle.self)
-        let fade = Child(RoundedRectangle.self)
         let text = Child(MultilineTextComponent.self)
         let optionsSection = Child(SectionGroupComponent.self)
         let perksSection = Child(SectionGroupComponent.self)
@@ -195,23 +194,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             context.add(overscroll
                 .position(CGPoint(x: overscroll.size.width / 2.0, y: -overscroll.size.height / 2.0))
             )
-            
-            let fade = fade.update(
-                component: RoundedRectangle(
-                    colors: [
-                        theme.list.plainBackgroundColor,
-                        theme.list.blocksBackgroundColor
-                    ],
-                    cornerRadius: 0.0,
-                    gradientDirection: .vertical
-                ),
-                availableSize: CGSize(width: availableWidth, height: 300),
-                transition: context.transition
-            )
-            context.add(fade
-                .position(CGPoint(x: fade.size.width / 2.0, y: fade.size.height / 2.0))
-            )
-            
+                        
             size.height += 183.0 + 10.0 + environment.navigationHeight - 56.0
             
             let textColor = theme.list.itemPrimaryTextColor

@@ -212,6 +212,7 @@ private final class AudioPlayerRendererContext {
     let lowWaterSizeInSeconds: Int = 2
     
     let audioSession: MediaPlayerAudioSessionControl
+    let forAudioVideoMessage: Bool
     let useVoiceProcessingMode: Bool
     let controlTimebase: CMTimebase
     let updatedRate: () -> Void
@@ -225,6 +226,7 @@ private final class AudioPlayerRendererContext {
     var audioGraph: AUGraph?
     var timePitchAudioUnit: AudioComponentInstance?
     var mixerAudioUnit: AudioComponentInstance?
+    var equalizerAudioUnit: AudioComponentInstance?
     var outputAudioUnit: AudioComponentInstance?
     
     var bufferContextId: Int32!
@@ -242,14 +244,18 @@ private final class AudioPlayerRendererContext {
                 if let audioSessionControl = self.audioSessionControl {
                     audioSessionControl.setOutputMode(self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system)
                 }
+                if let equalizerAudioUnit = self.equalizerAudioUnit, self.forAudioVideoMessage && !self.ambient {
+                    AudioUnitSetParameter(equalizerAudioUnit, kAUNBandEQParam_GlobalGain, kAudioUnitScope_Global, 0, self.forceAudioToSpeaker ? 0.0 : 12.0, 0)
+                }
             }
         }
     }
     
-    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, useVoiceProcessingMode: Bool, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, forAudioVideoMessage: Bool, playAndRecord: Bool, useVoiceProcessingMode: Bool, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         assert(audioPlayerRendererQueue.isCurrent())
         
         self.audioSession = audioSession
+        self.forAudioVideoMessage = forAudioVideoMessage
         self.forceAudioToSpeaker = forceAudioToSpeaker
         self.baseRate = baseRate
         self.audioLevelPipe = audioLevelPipe
@@ -416,6 +422,15 @@ private final class AudioPlayerRendererContext {
                 return
             }
             
+            var equalizerNode: AUNode = 0
+            var equalizerDescription = AudioComponentDescription()
+            equalizerDescription.componentType = kAudioUnitType_Effect
+            equalizerDescription.componentSubType = kAudioUnitSubType_NBandEQ
+            equalizerDescription.componentManufacturer = kAudioUnitManufacturer_Apple
+            guard AUGraphAddNode(audioGraph, &equalizerDescription, &equalizerNode) == noErr else {
+                return
+            }
+            
             var outputNode: AUNode = 0
             var outputDesc = AudioComponentDescription()
             outputDesc.componentType = kAudioUnitType_Output
@@ -443,7 +458,11 @@ private final class AudioPlayerRendererContext {
                 return
             }
             
-            guard AUGraphConnectNodeInput(audioGraph, mixerNode, 0, outputNode, 0) == noErr else {
+            guard AUGraphConnectNodeInput(audioGraph, mixerNode, 0, equalizerNode, 0) == noErr else {
+                return
+            }
+            
+            guard AUGraphConnectNodeInput(audioGraph, equalizerNode, 0, outputNode, 0) == noErr else {
                 return
             }
             
@@ -463,6 +482,15 @@ private final class AudioPlayerRendererContext {
                 return
             }
             
+            var maybeEqualizerAudioUnit: AudioComponentInstance?
+            guard AUGraphNodeInfo(audioGraph, equalizerNode, &equalizerDescription, &maybeEqualizerAudioUnit) == noErr, let equalizerAudioUnit = maybeEqualizerAudioUnit else {
+                return
+            }
+  
+            if self.forAudioVideoMessage && !self.ambient {
+                AudioUnitSetParameter(equalizerAudioUnit, kAUNBandEQParam_GlobalGain, kAudioUnitScope_Global, 0, self.forceAudioToSpeaker ? 0.0 : 12.0, 0)
+            }
+            
             var maybeOutputAudioUnit: AudioComponentInstance?
             guard AUGraphNodeInfo(audioGraph, outputNode, &outputDesc, &maybeOutputAudioUnit) == noErr, let outputAudioUnit = maybeOutputAudioUnit else {
                 return
@@ -476,6 +504,7 @@ private final class AudioPlayerRendererContext {
             AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
             AudioUnitSetProperty(timePitchAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
             AudioUnitSetProperty(mixerAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
+            AudioUnitSetProperty(equalizerAudioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &streamFormat, UInt32(MemoryLayout<AudioStreamBasicDescription>.size))
             
             var callbackStruct = AURenderCallbackStruct()
             callbackStruct.inputProc = rendererInputProc
@@ -494,6 +523,7 @@ private final class AudioPlayerRendererContext {
             AudioUnitSetProperty(converterAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
             AudioUnitSetProperty(timePitchAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
             AudioUnitSetProperty(mixerAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
+            AudioUnitSetProperty(equalizerAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
             AudioUnitSetProperty(outputAudioUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maximumFramesPerSlice, 4)
                         
             guard AUGraphInitialize(audioGraph) == noErr else {
@@ -505,6 +535,7 @@ private final class AudioPlayerRendererContext {
             self.audioGraph = audioGraph
             self.timePitchAudioUnit = timePitchAudioUnit
             self.mixerAudioUnit = mixerAudioUnit
+            self.equalizerAudioUnit = equalizerAudioUnit
             self.outputAudioUnit = outputAudioUnit
         }
         
@@ -616,8 +647,10 @@ private final class AudioPlayerRendererContext {
             }
             
             self.audioGraph = nil
-            self.outputAudioUnit = nil
             self.timePitchAudioUnit = nil
+            self.mixerAudioUnit = nil
+            self.equalizerAudioUnit = nil
+            self.outputAudioUnit = nil
         }
     }
     
@@ -788,7 +821,7 @@ public final class MediaPlayerAudioRenderer {
     private let audioClock: CMClock
     public let audioTimebase: CMTimebase
     
-    public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, useVoiceProcessingMode: Bool = false, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    public init(audioSession: MediaPlayerAudioSessionControl, forAudioVideoMessage: Bool = false, playAndRecord: Bool, useVoiceProcessingMode: Bool = false, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         var audioClock: CMClock?
         CMAudioClockCreate(allocator: nil, clockOut: &audioClock)
         if audioClock == nil {
@@ -801,7 +834,7 @@ public final class MediaPlayerAudioRenderer {
         self.audioTimebase = audioTimebase!
         
         audioPlayerRendererQueue.async {
-            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, useVoiceProcessingMode: useVoiceProcessingMode, ambient: ambient, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
+            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, forAudioVideoMessage: forAudioVideoMessage, playAndRecord: playAndRecord, useVoiceProcessingMode: useVoiceProcessingMode, ambient: ambient, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

@@ -233,7 +233,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let context: AccountContext
     public let chatLocation: ChatLocation
     public let subject: ChatControllerSubject?
-    private let botStart: ChatControllerInitialBotStart?
+    private var botStart: ChatControllerInitialBotStart?
     private var attachBotStart: ChatControllerInitialAttachBotStart?
     private var botAppStart: ChatControllerInitialBotAppStart?
     
@@ -664,10 +664,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
             if strongSelf.presentVoiceMessageDiscardAlert(action: action, performAction: false) {
-                return false
-            }
-            
-            if strongSelf.presentTopicDiscardAlert(action: action, performAction: false) {
                 return false
             }
             
@@ -4104,7 +4100,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
                     }
                     
-                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, isInline: false, isSimple: false)
+                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, fromAttachMenu: false, isInline: false, isSimple: false)
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                         self?.openUrl(url, concealed: true, forceExternal: true)
                     }, getInputContainerNode: { [weak self] in
@@ -4159,7 +4155,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, isInline: isInline, isSimple: true)
+                        let params = WebAppParameters(peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: isInline, isSimple: true)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         }, requestSwitchInline: { [weak self] query, chatTypes, completion in
@@ -4199,7 +4195,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false, isInline: false, isSimple: false)
+                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         }, completion: { [weak self] in
@@ -7183,6 +7179,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: strongSelf.isViewLoaded && strongSelf.view.window != nil, {
                     $0.updatedChatHistoryState(state)
                 })
+                
+                if let botStart = strongSelf.botStart, case let .loaded(isEmpty) = state {
+                    strongSelf.botStart = nil
+                    if !isEmpty {
+                        strongSelf.startBot(botStart.payload)
+                    }
+                }
             }
         })
         
@@ -9596,6 +9599,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, presentController: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments)
+        }, presentControllerInCurrent: { [weak self] controller, arguments in
+            self?.present(controller, in: .current, with: arguments)
         }, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, presentGlobalOverlayController: { [weak self] controller, arguments in
@@ -10546,11 +10551,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self, strongSelf.currentFailedMessagesAlertController == nil {
                         let text: String
+                        var title: String?
                         let moreInfo: Bool
                         switch reason {
                         case .flood:
                             text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
                             moreInfo = true
+                        case .sendingTooFast:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorTooFast
+                            title = strongSelf.presentationData.strings.Conversation_SendMessageErrorTooFastTitle
+                            moreInfo = false
                         case .publicBan:
                             text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
                             moreInfo = true
@@ -10575,7 +10585,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             actions = [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]
                         }
-                        let controller = textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: text, actions: actions)
+                        let controller = textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: title, text: text, actions: actions)
                         strongSelf.currentFailedMessagesAlertController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }
@@ -12713,7 +12723,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, fromMenu: false, isInline: false, isSimple: false)
+            let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false)
             let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                 self?.openUrl(url, concealed: true, forceExternal: true)
             }, completion: { [weak self] in
@@ -13233,10 +13243,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 case let .app(bot, botName, _):
                     var payload: String?
+                    var fromAttachMenu = true
                     if case let .bot(_, botPayload, _) = subject {
                         payload = botPayload
+                        fromAttachMenu = false
                     }
-                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, isInline: false, isSimple: false)
+                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, replyToMessageId: replyMessageId, threadId: strongSelf.chatLocation.threadId)
                     controller.openUrl = { [weak self] url in
@@ -17670,7 +17682,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
-            if let controller = controller as? TooltipScreen {
+            if let controller = controller as? TooltipScreen, !controller.alwaysVisible {
                 controller.dismiss()
             }
             return true
@@ -18247,36 +18259,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             Queue.mainQueue().after(delay ? 0.2 : 0.0) {
                 self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Conversation_DiscardVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_DiscardVoiceMessageAction, action: { [weak self] in
                     self?.stopMediaRecorder()
-                    action()
+                    Queue.mainQueue().after(0.1) {
+                        action()
+                    }
                 })]), in: .window(.root))
-            }
-            
-            return true
-        } else if performAction {
-            action()
-        }
-        return false
-    }
-    
-    private func presentTopicDiscardAlert(action: @escaping () -> Void = {}, delay: Bool = false, performAction: Bool = true) -> Bool {
-        if self.chatDisplayNode.emptyType == .topic, !"".isEmpty {
-            Queue.mainQueue().after(delay ? 0.2 : 0.0) {
-                self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: "Delete Topic", text: "Topic isn't created, because you haven't posted a message.\n\nDo you want to discard this topic?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Yes, action: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    if case let .replyThread(messagePromise) = strongSelf.chatLocationInfoData {
-                        let _ = (messagePromise.get()
-                        |> deliverOnMainQueue).start(next: { [weak self] message in
-                            if let strongSelf = self, let message = message {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
-                            }
-                        })
-                    }
-                    
-                    action()
-                }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_No, action: {})]), in: .window(.root))
             }
             
             return true

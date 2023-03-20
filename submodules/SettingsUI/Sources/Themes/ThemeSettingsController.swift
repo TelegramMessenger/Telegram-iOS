@@ -1292,9 +1292,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
     
     public init(view: UIView? = nil, topOffset: CGFloat? = nil, bottomOffset: CGFloat? = nil, leftOffset: CGFloat? = nil, sideInset: CGFloat = 0.0) {
         if let view = view {
-            if var leftOffset = leftOffset {
-                leftOffset += UIScreenPixel
-                
+            if let leftOffset = leftOffset {
                 if let view = view.snapshotView(afterScreenUpdates: false) {
                     let clipView = UIView()
                     clipView.clipsToBounds = true
@@ -1306,13 +1304,13 @@ public final class ThemeSettingsCrossfadeController: ViewController {
                     if let topOffset = topOffset, let bottomOffset = bottomOffset {
                         var frame = view.frame
                         frame.origin.y = topOffset
-                        frame.size.width = leftOffset
+                        frame.size.width = leftOffset + sideInset
                         frame.size.height = bottomOffset - topOffset
                         clipView.frame = frame
                         
                         frame = view.frame
                         frame.origin.y = -topOffset
-                        frame.size.width = leftOffset
+                        frame.size.width = leftOffset + sideInset
                         frame.size.height = bottomOffset
                         view.frame = frame
                     }
@@ -1322,7 +1320,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
             }
             
             if sideInset > 0.0 {
-                if let view = view.snapshotView(afterScreenUpdates: false) {
+                if let view = view.snapshotView(afterScreenUpdates: false), leftOffset == nil {
                     let clipView = UIView()
                     clipView.clipsToBounds = true
                     clipView.addSubview(view)

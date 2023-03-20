@@ -139,6 +139,11 @@ open class ViewControllerComponentContainer: ViewController {
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
             self.currentLayout = (layout, navigationHeight)
             
+            var theme = self.theme ?? self.presentationData.theme
+            if theme.list.blocksBackgroundColor.rgb == theme.list.plainBackgroundColor.rgb {
+                theme = theme.withModalBlocksBackground()
+            }
+            
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: navigationHeight,
@@ -147,7 +152,7 @@ open class ViewControllerComponentContainer: ViewController {
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,
                 isVisible: self.currentIsVisible,
-                theme: self.theme ?? self.presentationData.theme,
+                theme: theme,
                 strings: self.presentationData.strings,
                 dateTimeFormat: self.presentationData.dateTimeFormat,
                 controller: { [weak self] in
