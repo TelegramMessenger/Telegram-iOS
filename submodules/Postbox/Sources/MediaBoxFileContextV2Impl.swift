@@ -360,13 +360,17 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                 if complete {
                     if let maxOffset = self.fileMap.ranges.ranges.reversed().first?.upperBound {
                         let maxValue = max(resourceOffset + Int64(dataRange.count), Int64(maxOffset))
-                        self.fileMap.truncate(maxValue)
-                        self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+                        if self.fileMap.truncationSize != maxValue {
+                            self.fileMap.truncate(maxValue)
+                            self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+                        }
                     }
                 }
             case let .resourceSizeUpdated(size):
-                self.fileMap.truncate(size)
-                self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+                if self.fileMap.truncationSize != size {
+                    self.fileMap.truncate(size)
+                    self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+                }
             case let .progressUpdated(progress):
                 let _ = progress
             case let .replaceHeader(data, range):
