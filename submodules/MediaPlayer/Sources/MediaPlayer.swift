@@ -481,7 +481,7 @@ private final class MediaPlayerContext {
                 self.state = .seeking(frameSource: frameSource, timestamp: timestamp, seekState: seekState, disposable: disposable, action: .play, enableSound: enableSound)
                 self.lastStatusUpdateTimestamp = nil
             case let .paused(loadedState):
-                if faded && false {
+                if faded {
                     self.fadeTimer?.invalidate()
                     
                     var volume: Double = 0.0
@@ -676,7 +676,7 @@ private final class MediaPlayerContext {
                 self.state = .paused(loadedState)
                 self.lastStatusUpdateTimestamp = nil
                 
-                if faded && false {
+                if faded {
                     self.fadeTimer?.invalidate()
                     
                     var volume: Double = 1.0

@@ -616,6 +616,7 @@ private final class AudioPlayerRendererContext {
             }
             
             self.audioGraph = nil
+            self.mixerAudioUnit = nil
             self.outputAudioUnit = nil
             self.timePitchAudioUnit = nil
         }
