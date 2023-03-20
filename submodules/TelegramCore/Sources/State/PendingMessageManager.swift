@@ -57,11 +57,14 @@ public enum PendingMessageFailureReason {
     case slowmodeActive
     case tooMuchScheduled
     case voiceMessagesForbidden
+    case sendingTooFast
 }
 
 private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
     if error.hasPrefix("PEER_FLOOD") {
         return .flood
+    } else if error.hasPrefix("SENDING_TOO_FAST") {
+        return .sendingTooFast
     } else if error.hasPrefix("USER_BANNED_IN_CHANNEL") {
         return .publicBan
     } else if error.hasPrefix("CHAT_SEND_") && error.hasSuffix("_FORBIDDEN") {

@@ -10555,11 +10555,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> deliverOnMainQueue).start(next: { [weak self] reason in
                     if let strongSelf = self, strongSelf.currentFailedMessagesAlertController == nil {
                         let text: String
+                        var title: String?
                         let moreInfo: Bool
                         switch reason {
                         case .flood:
                             text = strongSelf.presentationData.strings.Conversation_SendMessageErrorFlood
                             moreInfo = true
+                        case .sendingTooFast:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorTooFast
+                            title = strongSelf.presentationData.strings.Conversation_SendMessageErrorTooFastTitle
+                            moreInfo = false
                         case .publicBan:
                             text = strongSelf.presentationData.strings.Conversation_SendMessageErrorGroupRestricted
                             moreInfo = true
@@ -10584,7 +10589,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             actions = [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]
                         }
-                        let controller = textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: text, actions: actions)
+                        let controller = textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: title, text: text, actions: actions)
                         strongSelf.currentFailedMessagesAlertController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }
