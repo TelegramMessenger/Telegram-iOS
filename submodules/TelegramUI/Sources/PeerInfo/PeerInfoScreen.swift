@@ -9313,6 +9313,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         return result
     }
+    
+    fileprivate func presentSelectionDiscardAlert(action: @escaping () -> Void = {}) -> Bool {
+        if let selectedIds = self.chatInterfaceInteraction.selectionState?.selectedIds, !selectedIds.isEmpty {
+            self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.PeerInfo_CancelSelectionAlertText, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.PeerInfo_CancelSelectionAlertNo, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.PeerInfo_CancelSelectionAlertYes, action: {
+                action()
+            })]), in: .window(.root))
+            return true
+        }
+        return false
+    }
 }
 
 public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
@@ -9666,6 +9676,20 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 }
             }
         })
+        
+        if !isSettings {
+            self.attemptNavigation = { [weak self] action in
+                guard let strongSelf = self else {
+                    return true
+                }
+
+                if strongSelf.controllerNode.presentSelectionDiscardAlert(action: action) {
+                    return false
+                }
+                
+                return true
+            }
+        }
     }
     
     required init(coder aDecoder: NSCoder) {

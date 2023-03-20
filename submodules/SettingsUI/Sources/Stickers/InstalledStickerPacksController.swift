@@ -92,6 +92,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case packOrder(PresentationTheme, String, Bool)
     case packOrderInfo(PresentationTheme, String)
     case suggestAnimatedEmoji(String, Bool)
+    case suggestAnimatedEmojiInfo(PresentationTheme, String)
     case packsTitle(PresentationTheme, String)
     case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool, Bool, ItemListStickerPackItemEditing, Bool?)
     case packsInfo(PresentationTheme, String)
@@ -100,7 +101,7 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
         switch self {
             case .trending, .masks, .emoji, .quickReaction, .archived:
                 return InstalledStickerPacksSection.categories.rawValue
-            case .suggestOptions, .largeEmoji, .suggestAnimatedEmoji, .packOrder, .packOrderInfo:
+            case .suggestOptions, .largeEmoji, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo, .packOrder, .packOrderInfo:
                 return InstalledStickerPacksSection.settings.rawValue
             case .packsTitle, .pack, .packsInfo:
                 return InstalledStickerPacksSection.stickers.rawValue
@@ -125,16 +126,18 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return .index(6)
             case .suggestAnimatedEmoji:
                 return .index(7)
-            case .packOrder:
+            case .suggestAnimatedEmojiInfo:
                 return .index(8)
-            case .packOrderInfo:
+            case .packOrder:
                 return .index(9)
-            case .packsTitle:
+            case .packOrderInfo:
                 return .index(10)
+            case .packsTitle:
+                return .index(11)
             case let .pack(_, _, _, info, _, _, _, _, _, _):
                 return .pack(info.id)
             case .packsInfo:
-                return .index(11)
+                return .index(12)
         }
     }
     
@@ -196,6 +199,12 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 }
             case let .suggestAnimatedEmoji(lhsText, lhsValue):
                 if case let .suggestAnimatedEmoji(rhsText, rhsValue) = rhs, lhsValue == rhsValue, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .suggestAnimatedEmojiInfo(lhsTheme, lhsText):
+                if case let .suggestAnimatedEmojiInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -323,9 +332,16 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
             default:
                 return true
             }
+        case .suggestAnimatedEmojiInfo:
+            switch rhs {
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo:
+                return false
+            default:
+                return true
+            }
         case .packsTitle:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .packsTitle:
+            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo, .packsTitle:
                 return false
             default:
                 return true
@@ -390,6 +406,8 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSuggestAnimatedEmoji(value)
                 })
+            case let .suggestAnimatedEmojiInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing, selected):
@@ -531,6 +549,7 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
         }
         
         entries.append(.suggestAnimatedEmoji(presentationData.strings.StickerPacksSettings_SuggestAnimatedEmoji, stickerSettings.suggestAnimatedEmoji))
+        entries.append(.suggestAnimatedEmojiInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_SuggestAnimatedEmojiInfo))
     }
     
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView {

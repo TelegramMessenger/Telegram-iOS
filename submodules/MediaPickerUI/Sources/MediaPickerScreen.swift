@@ -248,7 +248,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.addSubnode(self.containerNode)
             self.containerNode.addSubnode(self.backgroundNode)
             self.containerNode.addSubnode(self.gridNode)
-//            self.containerNode.addSubnode(self.scrollingArea)
+            //self.containerNode.addSubnode(self.scrollingArea)
             
             let preloadPromise = self.preloadPromise
             let updatedState: Signal<State, NoError>
@@ -359,30 +359,36 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.itemsDimensionsUpdatedDisposable?.dispose()
         }
         
-        private var selectionGesture: MediaPickerGridSelectionGesture?
+        private var selectionGesture: MediaPickerGridSelectionGesture<TGMediaSelectableItem>?
         override func didLoad() {
             super.didLoad()
             
             self.gridNode.scrollView.alwaysBounceVertical = true
             self.gridNode.scrollView.showsVerticalScrollIndicator = false
             
-            self.selectionGesture = MediaPickerGridSelectionGesture(target: nil, action: nil, gridNode: self.gridNode)
-            self.selectionGesture?.delegate = self
-            self.selectionGesture?.began = { [weak self] in
+            let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
+            selectionGesture.delegate = self
+            selectionGesture.began = { [weak self] in
                 self?.controller?.cancelPanGesture()
             }
-            self.selectionGesture?.itemAt = { [weak self] point in
+            selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
+                self?.gridNode.scrollView.isScrollEnabled = isEnabled
+            }
+            selectionGesture.itemAt = { [weak self] point in
                 if let strongSelf = self, let itemNode = strongSelf.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
                     return (selectableItem, strongSelf.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
                 } else {
                     return nil
                 }
             }
-            self.selectionGesture?.updateSelection = { [weak self] asset, selected in
+            selectionGesture.updateSelection = { [weak self] asset, selected in
                 if let strongSelf = self {
                     strongSelf.controller?.interaction?.selectionState?.setItem(asset, selected: selected, animated: true, sender: nil)
                 }
             }
+            selectionGesture.sideInset = 44.0
+            self.gridNode.view.addGestureRecognizer(selectionGesture)
+            self.selectionGesture = selectionGesture
             
             if let controller = self.controller, case let .assets(collection) = controller.subject, collection != nil {
                 self.gridNode.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
@@ -1546,7 +1552,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             let controller = textAlertController(context: self.context, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
-                
             }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertYes, action: { [weak self] in
                 self?.dismissAllTooltips()
                 completion()
@@ -1794,37 +1799,31 @@ private final class MediaPickerContextReferenceContentSource: ContextReferenceCo
     }
 }
 
-private class MediaPickerGridSelectionGesture: UIPanGestureRecognizer {
-    var itemAt: (CGPoint) -> (TGMediaSelectableItem, Bool)? = { _ in return nil }
-    var updateSelection: (TGMediaSelectableItem, Bool) -> Void = { _, _ in}
-    var began: () -> Void = {}
-    
-    private weak var gridNode: GridNode?
+public class MediaPickerGridSelectionGesture<T> : UIPanGestureRecognizer {
+    public var itemAt: (CGPoint) -> (T, Bool)? = { _ in return nil }
+    public var updateSelection: (T, Bool) -> Void = { _, _ in}
+    public var updateIsScrollEnabled: (Bool) -> Void = { _ in}
+    public var began: () -> Void = {}
     
     private var processing = false
     private var selecting = false
     
     private var initialLocation: CGPoint?
     
-    var sideInset: CGFloat = 0.0
+    public var sideInset: CGFloat = 0.0
     
-    init(target: Any?, action: Selector?, gridNode: GridNode) {
-        self.gridNode = gridNode
-        
-        super.init(target: target, action: action)
-        
-        gridNode.view.addGestureRecognizer(self)
+    public init() {
+        super.init(target: nil, action: nil)
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
-        guard let touch = touches.first, self.numberOfTouches == 1, let gridNode = self.gridNode else {
+        guard let touch = touches.first, self.numberOfTouches == 1 else {
             return
         }
         
-        let location = touch.location(in: gridNode.view)
-        
+        let location = touch.location(in: self.view)
         if location.x > self.sideInset {
             self.initialLocation = location
         } else {
@@ -1832,15 +1831,15 @@ private class MediaPickerGridSelectionGesture: UIPanGestureRecognizer {
         }
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
         
-        guard let touch = touches.first, let gridNode = self.gridNode, let initialLocation = self.initialLocation else {
+        guard let touch = touches.first, let initialLocation = self.initialLocation else {
             self.state = .failed
             return
         }
         
-        let location = touch.location(in: gridNode.view)
+        let location = touch.location(in: self.view)
         let translation = CGPoint(x: location.x - initialLocation.x, y: location.y - initialLocation.y)
         
         var additionalLocation: CGPoint?
@@ -1849,7 +1848,7 @@ private class MediaPickerGridSelectionGesture: UIPanGestureRecognizer {
                 self.state = .failed
             } else if abs(translation.x) > 8.0 {
                 self.processing = true
-                self.gridNode?.scrollView.isScrollEnabled = false
+                self.updateIsScrollEnabled(false)
                 self.began()
                 
                 if let (_, selected) = self.itemAt(location) {
@@ -1873,25 +1872,25 @@ private class MediaPickerGridSelectionGesture: UIPanGestureRecognizer {
         }
     }
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+    public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
         self.state = .failed
         self.reset()
     }
     
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+    public override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesCancelled(touches, with: event)
         
         self.state = .failed
         self.reset()
     }
     
-    override func reset() {
+    public override func reset() {
         super.reset()
         
         self.processing = false
         self.initialLocation = nil
-        self.gridNode?.scrollView.isScrollEnabled = true
+        self.updateIsScrollEnabled(true)
     }
 }
