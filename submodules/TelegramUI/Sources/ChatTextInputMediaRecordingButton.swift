@@ -327,6 +327,15 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        if let micLevelDisposable = self.micLevelDisposable {
+            micLevelDisposable.dispose()
+        }
+        if let recordingOverlay = self.recordingOverlay {
+            recordingOverlay.dismiss()
+        }
+    }
+    
     func updateMode(mode: ChatTextInputMediaRecordingButtonMode, animated: Bool) {
         self.updateMode(mode: mode, animated: animated, force: false)
     }
@@ -400,15 +409,6 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.pallete = legacyInputMicPalette(from: theme)
         self.micDecorationValue?.setColor(self.theme.chat.inputPanel.actionControlFillColor)
         (self.micLockValue as? LockView)?.updateTheme(theme)
-    }
-    
-    deinit {
-        if let micLevelDisposable = self.micLevelDisposable {
-            micLevelDisposable.dispose()
-        }
-        if let recordingOverlay = self.recordingOverlay {
-            recordingOverlay.dismiss()
-        }
     }
     
     func cancelRecording() {

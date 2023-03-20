@@ -667,10 +667,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
-            if strongSelf.presentTopicDiscardAlert(action: action, performAction: false) {
-                return false
-            }
-            
             return true
         }
         
@@ -18263,36 +18259,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             Queue.mainQueue().after(delay ? 0.2 : 0.0) {
                 self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Conversation_DiscardVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_DiscardVoiceMessageAction, action: { [weak self] in
                     self?.stopMediaRecorder()
-                    action()
+                    Queue.mainQueue().after(0.1) {
+                        action()
+                    }
                 })]), in: .window(.root))
-            }
-            
-            return true
-        } else if performAction {
-            action()
-        }
-        return false
-    }
-    
-    private func presentTopicDiscardAlert(action: @escaping () -> Void = {}, delay: Bool = false, performAction: Bool = true) -> Bool {
-        if self.chatDisplayNode.emptyType == .topic, !"".isEmpty {
-            Queue.mainQueue().after(delay ? 0.2 : 0.0) {
-                self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: "Delete Topic", text: "Topic isn't created, because you haven't posted a message.\n\nDo you want to discard this topic?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Yes, action: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    if case let .replyThread(messagePromise) = strongSelf.chatLocationInfoData {
-                        let _ = (messagePromise.get()
-                        |> deliverOnMainQueue).start(next: { [weak self] message in
-                            if let strongSelf = self, let message = message {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
-                            }
-                        })
-                    }
-                    
-                    action()
-                }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_No, action: {})]), in: .window(.root))
             }
             
             return true
