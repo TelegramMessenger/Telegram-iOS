@@ -2101,7 +2101,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
     
     func update(width: CGFloat, safeInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, cachedData: CachedPeerData?, isContact: Bool, isSettings: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
         let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
-        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 13.0), size: CGSize(width: avatarSize, height: avatarSize))
+        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
         transition.updateFrameAdditiveToCenter(node: self.avatarNode, frame: CGRect(origin: avatarFrame.center, size: CGSize()))
         
         var contentHeight: CGFloat = statusBarHeight + 10.0 + avatarSize + 20.0
@@ -3675,12 +3675,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 }
 
 private class DynamicIslandMaskNode: ManagedAnimationNode {
+    var frameIndex: Int = 0
+    
     func update(_ value: CGFloat) {
         let lowerBound = 0
         let upperBound = 180
         let frameIndex = lowerBound + Int(value * CGFloat(upperBound - lowerBound))
-        
-        self.trackTo(item: ManagedAnimationItem(source: .local("UserAvatarMask"), frames: .range(startFrame: frameIndex, endFrame: frameIndex), duration: 0.001))
+        if frameIndex != self.frameIndex {
+            self.frameIndex = frameIndex
+            self.trackTo(item: ManagedAnimationItem(source: .local("UserAvatarMask"), frames: .range(startFrame: frameIndex, endFrame: frameIndex), duration: 0.001))
+        }
     }
 }
 
@@ -3730,6 +3734,7 @@ private class DynamicIslandBlurNode: ASDisplayNode {
     }
     
     func update(_ value: CGFloat) {
+        let fadeAlpha = min(1.0, max(0.0, -0.25 + value * 1.55))
         if value > 0.0 {
             self.prepare()
             self.effectView?.layer.timeOffset = max(0.0, -0.1 + value * 1.1)
@@ -3739,8 +3744,7 @@ private class DynamicIslandBlurNode: ASDisplayNode {
             self.effectView?.layer.timeOffset = 0.0
             self.effectView?.effect = nil
         }
-        
-        self.fadeNode.alpha = min(1.0, max(0.0, -0.25 + value * 1.55))
+        self.fadeNode.alpha = fadeAlpha
     }
     
     override func layout() {

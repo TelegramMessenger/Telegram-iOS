@@ -25,6 +25,7 @@ import CheckNode
 import AppBundle
 import ChatControllerInteraction
 import InvisibleInkDustNode
+import MediaPickerUI
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -1631,7 +1632,7 @@ private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> 
     }
 }
 
-final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
+final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     enum ContentType {
         case photoOrVideo
         case photo
@@ -2445,6 +2446,27 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.itemGrid.addToTransitionSurface(view: view)
     }
     
+    private var gridSelectionGesture: MediaPickerGridSelectionGesture<EngineMessage.Id>?
+    private var listSelectionGesture: MediaPickerGridSelectionGesture<EngineMessage.Id>?
+    
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        let location = gestureRecognizer.location(in: gestureRecognizer.view)
+        if location.x < 44.0 {
+            return false
+        }
+        return true
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer.state != .failed, let otherGestureRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer {
+            otherGestureRecognizer.isEnabled = false
+            otherGestureRecognizer.isEnabled = true
+            return true
+        } else {
+            return false
+        }
+    }
+    
     func updateSelectedMessages(animated: Bool) {
         switch self.contentType {
         case .files, .music, .voiceAndVideoMessages:
@@ -2473,7 +2495,36 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id), animated: animated)
             }
 
-            self.itemGrid.pinchEnabled = self.chatControllerInteraction.selectionState == nil
+            let isSelecting = self.chatControllerInteraction.selectionState != nil
+            self.itemGrid.pinchEnabled = !isSelecting
+            
+            if isSelecting {
+                if self.gridSelectionGesture == nil {
+                    let selectionGesture = MediaPickerGridSelectionGesture<EngineMessage.Id>()
+                    selectionGesture.delegate = self
+                    selectionGesture.sideInset = 44.0
+                    selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
+                        self?.itemGrid.isScrollEnabled = isEnabled
+                    }
+                    selectionGesture.itemAt = { [weak self] point in
+                        if let strongSelf = self, let itemLayer = strongSelf.itemGrid.item(at: point)?.layer as? ItemLayer, let messageId = itemLayer.item?.message.id {
+                            return (messageId, strongSelf.chatControllerInteraction.selectionState?.selectedIds.contains(messageId) ?? false)
+                        } else {
+                            return nil
+                        }
+                    }
+                    selectionGesture.updateSelection = { [weak self] messageId, selected in
+                        if let strongSelf = self {
+                            strongSelf.chatControllerInteraction.toggleMessagesSelection([messageId], selected)
+                        }
+                    }
+                    self.itemGrid.view.addGestureRecognizer(selectionGesture)
+                    self.gridSelectionGesture = selectionGesture
+                }
+            } else if let gridSelectionGesture = self.gridSelectionGesture {
+                self.itemGrid.view.removeGestureRecognizer(gridSelectionGesture)
+                self.gridSelectionGesture = nil
+            }
         }
     }
     

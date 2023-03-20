@@ -9084,3 +9084,9 @@ Sorry for the inconvenience.";
 
 "Conversation.SendMessageErrorTooFastTitle" = "Not so fast";
 "Conversation.SendMessageErrorTooFast" = "You are sending messages too fast. Please wait a bit.";
+
+"PeerInfo.CancelSelectionAlertText" = "Cancel selection?";
+"PeerInfo.CancelSelectionAlertYes" = "Yes";
+"PeerInfo.CancelSelectionAlertNo" = "No";
+
+"StickerPacksSettings.SuggestAnimatedEmojiInfo" = "Each time you enter an emoji you can replace it with an animated emoji.";

@@ -1344,6 +1344,12 @@ public final class SparseItemGrid: ASDisplayNode {
             self.pinchRecognizer?.isEnabled = self.pinchEnabled
         }
     }
+    
+    public var isScrollEnabled: Bool = true {
+        didSet {
+            self.currentViewport?.scrollView.isScrollEnabled = self.isScrollEnabled
+        }
+    }
 
     public init(theme: PresentationTheme, initialZoomLevel: ZoomLevel? = nil) {
         self.theme = theme

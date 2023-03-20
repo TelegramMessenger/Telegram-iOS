@@ -134,6 +134,7 @@ public struct WebAppParameters {
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
     let fromMenu: Bool
+    let fromAttachMenu: Bool
     let isInline: Bool
     let isSimple: Bool
     
@@ -147,6 +148,7 @@ public struct WebAppParameters {
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
         fromMenu: Bool,
+        fromAttachMenu: Bool,
         isInline: Bool,
         isSimple: Bool
     ) {
@@ -159,6 +161,7 @@ public struct WebAppParameters {
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.fromMenu = fromMenu
+        self.fromAttachMenu = fromAttachMenu
         self.isInline = isInline
         self.isSimple = isSimple
     }
@@ -656,7 +659,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self.handleSendData(data: eventData)
                     }
                 case "web_app_setup_main_button":
-                    if let webView = self.webView, !webView.didTouchOnce && controller.url == nil {
+                    if let webView = self.webView, !webView.didTouchOnce && controller.url == nil && controller.fromAttachMenu {
                         self.delayedScriptMessage = message
                     } else if let json = json {
                         if var isVisible = json["is_visible"] as? Bool {
@@ -1058,6 +1061,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let payload: String?
     private let buttonText: String?
     private let fromMenu: Bool
+    private let fromAttachMenu: Bool
     private let isInline: Bool
     private let isSimple: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
@@ -1083,6 +1087,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.payload = params.payload
         self.buttonText = params.buttonText
         self.fromMenu = params.fromMenu
+        self.fromAttachMenu = params.fromAttachMenu
         self.isInline = params.isInline
         self.isSimple = params.isSimple
         self.keepAliveSignal = params.keepAliveSignal
