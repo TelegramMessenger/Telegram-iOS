@@ -948,6 +948,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private var activityTimer: SwiftSignalKit.Timer?
 
     public var beginScrolling: (() -> UIScrollView?)?
+    public var finishedScrolling: (() -> Void)?
     public var setContentOffset: ((CGPoint) -> Void)?
     public var openCurrentDate: (() -> Void)?
 
@@ -1059,6 +1060,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 strongSelf.updateLineIndicator(transition: transition)
 
                 strongSelf.updateActivityTimer(isScrolling: false)
+                
+                strongSelf.finishedScrolling?()
             },
             moved: { [weak self] relativeOffset in
                 guard let strongSelf = self else {

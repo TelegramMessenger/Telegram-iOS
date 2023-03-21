@@ -154,15 +154,20 @@ final class MediaPickerGridItemNode: GridItemNode {
     
     var _cachedTag: Int32?
     var tag: Int32? {
-//        if let tag = self._cachedTag {
-//            return tag
-//        } else if let asset = self.asset, let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
-//            let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
-//            self._cachedTag = tag
-//            return tag
-//        } else {
+        if let tag = self._cachedTag {
+            return tag
+        } else if let (fetchResult, index) = self.currentState {
+            let asset = fetchResult.object(at: index)
+            if let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
+                let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
+                self._cachedTag = tag
+                return tag
+            } else {
+                return nil
+            }
+        } else {
             return nil
-//        }
+        }
     }
     
     func updateSelectionState(animated: Bool = false) {
@@ -226,58 +231,6 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
         if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentState!.1 != index {
-//            let editingContext = interaction.editingState
-//            let asset = media.asset as? TGMediaEditableItem
-//
-//            let editedSignal = Signal<UIImage?, NoError> { subscriber in
-//                if let signal = editingContext.thumbnailImageSignal(forIdentifier: media.identifier) {
-//                    let disposable = signal.start(next: { next in
-//                        if let image = next as? UIImage {
-//                            subscriber.putNext(image)
-//                        } else {
-//                            subscriber.putNext(nil)
-//                        }
-//                    }, error: { _ in
-//                    }, completed: nil)!
-//
-//                    return ActionDisposable {
-//                        disposable.dispose()
-//                    }
-//                } else {
-//                    return EmptyDisposable
-//                }
-//            }
-//
-//            let originalImageSignal = Signal<UIImage?, NoError> { subscriber in
-//                if let signal = asset?.thumbnailImageSignal?()
-//            }
-//
-//            let scale = min(2.0, UIScreenScale)
-//            let targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
-//            let originalSignal: Signal<UIImage, NoError> = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false)
-//            let imageSignal: Signal<UIImage?, NoError> = editedSignal
-//            |> mapToSignal { result in
-//                if let result = result {
-//                    return .single(result)
-//                } else {
-//                    return originalSignal
-//                }
-//            }
-//            self.imageNode.setSignal(imageSignal)
-//
-//            if case .video = media, let asset = media.asset as? TGCameraCapturedVideo {
-//                self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
-//
-//                if self.typeIconNode.supernode == nil {
-//                    self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(asset.videoDuration)), font: Font.semibold(12.0), textColor: .white)
-//
-//                    self.addSubnode(self.gradientNode)
-//                    self.addSubnode(self.typeIconNode)
-//                    self.addSubnode(self.durationNode)
-//                    self.setNeedsLayout()
-//                }
-//            }
-//
             self.currentMediaState = (media.asset, index)
             self.setNeedsLayout()
         }
@@ -319,10 +272,17 @@ final class MediaPickerGridItemNode: GridItemNode {
                     return EmptyDisposable
                 }
             }
-
+            
             let scale = min(2.0, UIScreenScale)
             let targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
-            let originalSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false)
+            
+            let assetImageSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .fastFormat, synchronous: true)
+            |> then(
+                assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .highQualityFormat, synchronous: false)
+                |> delay(0.03, queue: Queue.concurrentDefaultQueue())
+            )
+
+            let originalSignal = assetImageSignal //assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, synchronous: true)
             let imageSignal: Signal<UIImage?, NoError> = editedSignal
             |> mapToSignal { result in
                 if let result = result {

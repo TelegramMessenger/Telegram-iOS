@@ -196,6 +196,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         private var placeholderNode: MediaPickerPlaceholderNode?
         private var manageNode: MediaPickerManageNode?
         private var scrollingArea: SparseItemGridScrollingArea
+        private var isFastScrolling = false
         
         private var selectionNode: MediaPickerSelectedListNode?
         
@@ -213,11 +214,20 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         private let hiddenMediaId = Promise<String?>(nil)
         
+        private var selectionGesture: MediaPickerGridSelectionGesture<TGMediaSelectableItem>?
+        
+        private var fastScrollContentOffset = ValuePromise<CGPoint>(ignoreRepeated: true)
+        private var fastScrollDisposable: Disposable?
+        
         private var didSetReady = false
         private let _ready = Promise<Bool>()
         var ready: Promise<Bool> {
             return self._ready
         }
+        
+        fileprivate var isSuspended = false
+        private var hasGallery = false
+        private var isCameraPreviewVisible = true
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
@@ -248,7 +258,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.addSubnode(self.containerNode)
             self.containerNode.addSubnode(self.backgroundNode)
             self.containerNode.addSubnode(self.gridNode)
-            //self.containerNode.addSubnode(self.scrollingArea)
+            self.containerNode.addSubnode(self.scrollingArea)
             
             let preloadPromise = self.preloadPromise
             let updatedState: Signal<State, NoError>
@@ -357,9 +367,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.hiddenMediaDisposable?.dispose()
             self.selectionChangedDisposable?.dispose()
             self.itemsDimensionsUpdatedDisposable?.dispose()
+            self.fastScrollDisposable?.dispose()
         }
         
-        private var selectionGesture: MediaPickerGridSelectionGesture<TGMediaSelectableItem>?
         override func didLoad() {
             super.didLoad()
             
@@ -402,16 +412,44 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 guard let strongSelf = self else {
                     return nil
                 }
+                strongSelf.controller?.requestAttachmentMenuExpansion()
+                strongSelf.isFastScrolling = true
                 return strongSelf.gridNode.scrollView
+            }
+            self.scrollingArea.finishedScrolling = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.isFastScrolling = false
             }
             self.scrollingArea.setContentOffset = { [weak self] offset in
                 guard let strongSelf = self else {
                     return
                 }
-//                strongSelf.isFastScrolling = true
-                strongSelf.gridNode.scrollView.setContentOffset(offset, animated: false)
-//                strongSelf.isFastScrolling = false
+                Queue.concurrentDefaultQueue().async {
+                    strongSelf.fastScrollContentOffset.set(offset)
+                }
             }
+            self.gridNode.visibleItemsUpdated = { [weak self] _ in
+                self?.updateScrollingArea()
+                
+                if let self, let cameraView = self.cameraView {
+                    self.isCameraPreviewVisible = self.gridNode.scrollView.bounds.intersects(cameraView.frame)
+                    self.updateIsCameraActive()
+                }
+            }
+            self.updateScrollingArea()
+            
+            let throttledContentOffsetSignal = self.fastScrollContentOffset.get()
+            |> mapToThrottled { next -> Signal<CGPoint, NoError> in
+                return .single(next) |> then(.complete() |> delay(0.02, queue: Queue.concurrentDefaultQueue()))
+            }
+            self.fastScrollDisposable = (throttledContentOffsetSignal
+            |> deliverOnMainQueue).start(next: { [weak self] contentOffset in
+                if let self {
+                    self.gridNode.scrollView.setContentOffset(contentOffset, animated: false)
+                }
+            })
             
             if let controller = self.controller, case .assets(nil) = controller.subject {
                 let enableAnimations = self.controller?.context.sharedContext.energyUsageSettings.fullTranslucency ?? true
@@ -439,6 +477,15 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.gridNode.addSubnode(self.cameraActivateAreaNode)
             } else {
                 self.containerNode.clipsToBounds = true
+            }
+        }
+        
+        func updateIsCameraActive() {
+            let isCameraActive = !self.isSuspended && !self.hasGallery && self.isCameraPreviewVisible
+            if isCameraActive {
+                self.cameraView?.resumePreview()
+            } else {
+                self.cameraView?.pausePreview()
             }
         }
         
@@ -706,9 +753,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
-                self?.cameraView?.pausePreview()
+                self?.hasGallery = true
+                self?.updateIsCameraActive()
             }, willTransitionOut: { [weak self] in
-                self?.cameraView?.resumePreview()
+                self?.hasGallery = false
+                self?.updateIsCameraActive()
             }, dismissAll: { [weak self] in
                 self?.controller?.dismissAll()
             })
@@ -742,9 +791,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
-                self?.cameraView?.pausePreview()
+                self?.hasGallery = true
+                self?.updateIsCameraActive()
             }, willTransitionOut: { [weak self] in
-                self?.cameraView?.resumePreview()
+                self?.hasGallery = false
+                self?.updateIsCameraActive()
             }, dismissAll: { [weak self] in
                 self?.controller?.dismissAll()
             })
@@ -1590,12 +1641,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         self.scrollToTop?()
         
-        self.controllerNode.cameraView?.pausePreview()
+        self.controllerNode.isSuspended = true
+        self.controllerNode.updateIsCameraActive()
     }
     
     public func prepareForReuse() {
-        self.controllerNode.cameraView?.resumePreview()
-        
+        self.controllerNode.isSuspended = false
+        self.controllerNode.updateIsCameraActive()
         self.controllerNode.updateNavigation(delayDisappear: true, transition: .immediate)
     }
     

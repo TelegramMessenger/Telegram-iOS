@@ -9090,3 +9090,5 @@ Sorry for the inconvenience.";
 "PeerInfo.CancelSelectionAlertNo" = "No";
 
 "StickerPacksSettings.SuggestAnimatedEmojiInfo" = "Each time you enter an emoji you can replace it with an animated emoji.";
+
+"DialogList.DeleteBotClearHistory" = "Clear Chat History";
