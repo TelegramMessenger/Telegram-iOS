@@ -3,6 +3,8 @@ public enum Api {
     public enum account {}
     public enum auth {}
     public enum channels {}
+    public enum communities {}
+    public enum community {}
     public enum contacts {}
     public enum help {}
     public enum messages {}
@@ -20,6 +22,7 @@ public enum Api {
         public enum auth {}
         public enum bots {}
         public enum channels {}
+        public enum communities {}
         public enum contacts {}
         public enum folders {}
         public enum help {}
@@ -190,6 +193,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-712374074] = { return Api.Dialog.parse_dialog($0) }
     dict[1908216652] = { return Api.Dialog.parse_dialogFolder($0) }
     dict[1949890536] = { return Api.DialogFilter.parse_dialogFilter($0) }
+    dict[-665432009] = { return Api.DialogFilter.parse_dialogFilterCommunity($0) }
     dict[909284270] = { return Api.DialogFilter.parse_dialogFilterDefault($0) }
     dict[2004110666] = { return Api.DialogFilterSuggested.parse_dialogFilterSuggested($0) }
     dict[-445792507] = { return Api.DialogPeer.parse_dialogPeer($0) }
@@ -234,6 +238,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[594758406] = { return Api.EncryptedMessage.parse_encryptedMessageService($0) }
     dict[179611673] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
     dict[-317687113] = { return Api.ExportedChatInvite.parse_chatInvitePublicJoinRequests($0) }
+    dict[-337788502] = { return Api.ExportedCommunityInvite.parse_exportedCommunityInvite($0) }
     dict[1103040667] = { return Api.ExportedContactToken.parse_exportedContactToken($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
     dict[-207944868] = { return Api.FileHash.parse_fileHash($0) }
@@ -285,6 +290,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1736378792] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordEmpty($0) }
     dict[-763367294] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordSRP($0) }
     dict[1968737087] = { return Api.InputClientProxy.parse_inputClientProxy($0) }
+    dict[450955169] = { return Api.InputCommunity.parse_inputCommunityDialogFilter($0) }
     dict[-208488460] = { return Api.InputContact.parse_inputPhoneContact($0) }
     dict[-55902537] = { return Api.InputDialogPeer.parse_inputDialogPeer($0) }
     dict[1684014375] = { return Api.InputDialogPeer.parse_inputDialogPeerFolder($0) }
@@ -456,7 +462,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1230047312] = { return Api.MessageAction.parse_messageActionEmpty($0) }
     dict[-1834538890] = { return Api.MessageAction.parse_messageActionGameScore($0) }
     dict[-1730095465] = { return Api.MessageAction.parse_messageActionGeoProximityReached($0) }
-    dict[-1415514682] = { return Api.MessageAction.parse_messageActionGiftPremium($0) }
+    dict[-935499028] = { return Api.MessageAction.parse_messageActionGiftPremium($0) }
     dict[2047704898] = { return Api.MessageAction.parse_messageActionGroupCall($0) }
     dict[-1281329567] = { return Api.MessageAction.parse_messageActionGroupCallScheduled($0) }
     dict[-1615153660] = { return Api.MessageAction.parse_messageActionHistoryClear($0) }
@@ -990,6 +996,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
     dict[-266911767] = { return Api.channels.ChannelParticipants.parse_channelParticipantsNotModified($0) }
     dict[-191450938] = { return Api.channels.SendAsPeers.parse_sendAsPeers($0) }
+    dict[1805101290] = { return Api.communities.ExportedCommunityInvite.parse_exportedCommunityInvite($0) }
+    dict[-2662489] = { return Api.communities.ExportedInvites.parse_exportedInvites($0) }
+    dict[988463765] = { return Api.community.CommunityInvite.parse_communityInvite($0) }
+    dict[74184410] = { return Api.community.CommunityInvite.parse_communityInviteAlready($0) }
     dict[182326673] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-513392236] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
     dict[-353862078] = { return Api.contacts.Contacts.parse_contacts($0) }
@@ -1341,6 +1351,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedChatInvite:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.ExportedCommunityInvite:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedContactToken:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
@@ -1396,6 +1408,8 @@ public extension Api {
             case let _1 as Api.InputCheckPasswordSRP:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputClientProxy:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputCommunity:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputContact:
                 _1.serialize(buffer, boxed)
@@ -1782,6 +1796,12 @@ public extension Api {
             case let _1 as Api.channels.ChannelParticipants:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.SendAsPeers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.communities.ExportedCommunityInvite:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.communities.ExportedInvites:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.community.CommunityInvite:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Blocked:
                 _1.serialize(buffer, boxed)

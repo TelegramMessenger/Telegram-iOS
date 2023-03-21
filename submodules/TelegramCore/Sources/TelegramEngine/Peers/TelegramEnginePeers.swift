@@ -1025,6 +1025,30 @@ public extension TelegramEngine {
                 |> ignoreValues
             }
         }
+        
+        public func exportChatFolder(filterId: Int32, title: String, peerIds: [PeerId]) -> Signal<ExportedChatFolderLink, ExportChatFolderError> {
+            return _internal_exportChatFolder(account: self.account, filterId: filterId, title: title, peerIds: peerIds)
+        }
+        
+        public func getExportedChatFolderLinks(id: Int32) -> Signal<[ExportedChatFolderLink], NoError> {
+            return _internal_getExportedChatFolderLinks(account: self.account, id: id)
+        }
+        
+        public func editChatFolderLink(filterId: Int32, link: ExportedChatFolderLink, title: String?, revoke: Bool) -> Signal<Never, EditChatFolderLinkError> {
+            return _internal_editChatFolderLink(account: self.account, filterId: filterId, link: link, title: title, revoke: revoke)
+        }
+        
+        public func revokeChatFolderLink(filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
+            return _internal_revokeChatFolderLink(account: self.account, filterId: filterId, link: link)
+        }
+        
+        public func checkChatFolderLink(slug: String) -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> {
+            return _internal_checkChatFolderLink(account: self.account, slug: slug)
+        }
+        
+        public func joinChatFolderLink(slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
+            return _internal_joinChatFolderLink(account: self.account, slug: slug, peerIds: peerIds)
+        }
     }
 }
 

@@ -1,4 +1,44 @@
 public extension Api {
+    enum ExportedMessageLink: TypeConstructorDescription {
+        case exportedMessageLink(link: String, html: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .exportedMessageLink(let link, let html):
+                    if boxed {
+                        buffer.appendInt32(1571494644)
+                    }
+                    serializeString(link, buffer: buffer, boxed: false)
+                    serializeString(html, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedMessageLink(let link, let html):
+                return ("exportedMessageLink", [("link", link as Any), ("html", html as Any)])
+    }
+    }
+    
+        public static func parse_exportedMessageLink(_ reader: BufferReader) -> ExportedMessageLink? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     

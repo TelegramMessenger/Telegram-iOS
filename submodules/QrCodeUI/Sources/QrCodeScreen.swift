@@ -38,6 +38,7 @@ public final class QrCodeScreen: ViewController {
     public enum Subject {
         case peer(peer: EnginePeer)
         case invite(invite: ExportedInvitation, isGroup: Bool)
+        case chatFolder(slug: String)
         
         var link: String {
             switch self {
@@ -45,6 +46,8 @@ public final class QrCodeScreen: ViewController {
                     return "https://t.me/\(peer.addressName ?? "")"
                 case let .invite(invite, _):
                     return invite.link ?? ""
+                case let .chatFolder(slug):
+                    return "https://t.me/folder/\(slug)"
             }
         }
         
@@ -53,6 +56,8 @@ public final class QrCodeScreen: ViewController {
                 case .peer:
                     return "Q"
                 case .invite:
+                    return "Q"
+                case .chatFolder:
                     return "Q"
             }
         }

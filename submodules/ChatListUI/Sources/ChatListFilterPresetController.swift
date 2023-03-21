@@ -14,6 +14,7 @@ import ItemListPeerActionItem
 import AvatarNode
 import ChatListFilterSettingsHeaderItem
 import PremiumUI
+import InviteLinksUI
 
 private enum FilterSection: Int32, Hashable {
     case include
@@ -32,6 +33,8 @@ private final class ChatListFilterPresetControllerArguments {
     let deleteExcludeCategory: (ChatListFilterExcludeCategory) -> Void
     let focusOnName: () -> Void
     let expandSection: (FilterSection) -> Void
+    let createLink: () -> Void
+    let openLink: (ExportedChatFolderLink) -> Void
     
     init(
         context: AccountContext,
@@ -44,7 +47,9 @@ private final class ChatListFilterPresetControllerArguments {
         deleteIncludeCategory: @escaping (ChatListFilterIncludeCategory) -> Void,
         deleteExcludeCategory: @escaping (ChatListFilterExcludeCategory) -> Void,
         focusOnName: @escaping () -> Void,
-        expandSection: @escaping (FilterSection) -> Void
+        expandSection: @escaping (FilterSection) -> Void,
+        createLink: @escaping () -> Void,
+        openLink: @escaping (ExportedChatFolderLink) -> Void
     ) {
         self.context = context
         self.updateState = updateState
@@ -57,6 +62,8 @@ private final class ChatListFilterPresetControllerArguments {
         self.deleteExcludeCategory = deleteExcludeCategory
         self.focusOnName = focusOnName
         self.expandSection = expandSection
+        self.createLink = createLink
+        self.openLink = openLink
     }
 }
 
@@ -65,6 +72,7 @@ private enum ChatListFilterPresetControllerSection: Int32 {
     case name
     case includePeers
     case excludePeers
+    case inviteLinks
 }
 
 private enum ChatListFilterPresetEntryStableId: Hashable {
@@ -76,6 +84,7 @@ private enum ChatListFilterPresetEntryStableId: Hashable {
     case excludeCategory(ChatListFilterExcludeCategory)
     case includeExpand
     case excludeExpand
+    case inviteLink(String)
 }
 
 private enum ChatListFilterPresetEntrySortId: Comparable {
@@ -83,6 +92,9 @@ private enum ChatListFilterPresetEntrySortId: Comparable {
     case topIndex(Int)
     case includeIndex(Int)
     case excludeIndex(Int)
+    case bottomIndex(Int)
+    case inviteLink(Int)
+    case inviteLinkFooter
     
     static func <(lhs: ChatListFilterPresetEntrySortId, rhs: ChatListFilterPresetEntrySortId) -> Bool {
         switch lhs {
@@ -103,6 +115,12 @@ private enum ChatListFilterPresetEntrySortId: Comparable {
                 return true
             case .excludeIndex:
                 return true
+            case .bottomIndex:
+                return true
+            case .inviteLink:
+                return true
+            case .inviteLinkFooter:
+                return true
             }
         case let .includeIndex(lhsIndex):
             switch rhs {
@@ -113,6 +131,12 @@ private enum ChatListFilterPresetEntrySortId: Comparable {
             case let .includeIndex(rhsIndex):
                 return lhsIndex < rhsIndex
             case .excludeIndex:
+                return true
+            case .bottomIndex:
+                return true
+            case .inviteLink:
+                return true
+            case .inviteLinkFooter:
                 return true
             }
         case let .excludeIndex(lhsIndex):
@@ -125,6 +149,63 @@ private enum ChatListFilterPresetEntrySortId: Comparable {
                 return false
             case let .excludeIndex(rhsIndex):
                 return lhsIndex < rhsIndex
+            case .bottomIndex:
+                return true
+            case .inviteLink:
+                return true
+            case .inviteLinkFooter:
+                return true
+            }
+        case let .bottomIndex(lhsIndex):
+            switch rhs {
+            case .screenHeader:
+                return false
+            case .topIndex:
+                return false
+            case .includeIndex:
+                return false
+            case .excludeIndex:
+                return false
+            case let .bottomIndex(rhsIndex):
+                return lhsIndex < rhsIndex
+            case .inviteLink:
+                return true
+            case .inviteLinkFooter:
+                return true
+            }
+        case let .inviteLink(lhsIndex):
+            switch rhs {
+            case .screenHeader:
+                return false
+            case .topIndex:
+                return false
+            case .includeIndex:
+                return false
+            case .excludeIndex:
+                return false
+            case .bottomIndex:
+                return false
+            case let .inviteLink(rhsIndex):
+                return lhsIndex < rhsIndex
+            case .inviteLinkFooter:
+                return true
+            }
+        case .inviteLinkFooter:
+            switch rhs {
+            case .screenHeader:
+                return false
+            case .topIndex:
+                return false
+            case .includeIndex:
+                return false
+            case .excludeIndex:
+                return false
+            case .bottomIndex:
+                return false
+            case .inviteLink:
+                return false
+            case .inviteLinkFooter:
+                return false
             }
         }
     }
@@ -235,6 +316,10 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case excludePeerInfo(String)
     case includeExpand(String)
     case excludeExpand(String)
+    case inviteLinkHeader
+    case inviteLinkCreate
+    case inviteLink(Int, ExportedChatFolderLink)
+    case inviteLinkInfo
     
     var section: ItemListSectionId {
         switch self {
@@ -246,6 +331,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ChatListFilterPresetControllerSection.includePeers.rawValue
         case .excludePeersHeader, .addExcludePeer, .excludeCategory, .excludePeer, .excludePeerInfo, .excludeExpand:
             return ChatListFilterPresetControllerSection.excludePeers.rawValue
+        case .inviteLinkHeader, .inviteLinkCreate, .inviteLink, .inviteLinkInfo:
+            return ChatListFilterPresetControllerSection.inviteLinks.rawValue
         }
     }
     
@@ -281,6 +368,14 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .peer(peer.peerId)
         case let .excludePeer(_, peer, _):
             return .peer(peer.peerId)
+        case .inviteLinkHeader:
+            return .index(11)
+        case .inviteLinkCreate:
+            return .index(12)
+        case let .inviteLink(_, link):
+            return .inviteLink(link.link)
+        case .inviteLinkInfo:
+            return .index(13)
         }
     }
     
@@ -316,6 +411,14 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .excludeIndex(999)
         case .excludePeerInfo:
             return .excludeIndex(1000)
+        case .inviteLinkHeader:
+            return .bottomIndex(0)
+        case .inviteLinkCreate:
+            return .bottomIndex(1)
+        case let .inviteLink(index, _):
+            return .inviteLink(index)
+        case .inviteLinkInfo:
+            return .inviteLinkFooter
         }
     }
     
@@ -413,6 +516,23 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: {
                 arguments.expandSection(.exclude)
             })
+        case .inviteLinkHeader:
+            //TODO:localize
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: "INVITE LINK", sectionId: self.section)
+        case .inviteLinkCreate:
+            //TODO:localize
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: "Share Folder with Others", sectionId: self.section, editing: false, action: {
+                arguments.createLink()
+            })
+        case let .inviteLink(_, link):
+            return ItemListFolderInviteLinkListItem(presentationData: presentationData, invite: link, share: false, sectionId: self.section, style: .blocks) { invite in
+                arguments.openLink(invite)
+            } contextAction: { invite, node, gesture in
+                //arguments.linkContextAction(invite, canEdit, node, gesture)
+            }
+        case .inviteLinkInfo:
+            //TODO:localize
+            return ItemListTextItem(presentationData: presentationData, text: .markdown("Give vour friends and colleagues access to the entire folder including all of its groups and channels where you have the necessary rights."), sectionId: self.section)
         }
     }
 }
@@ -455,7 +575,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     }
 }
 
-private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer], isPremium: Bool, limit: Int32) -> [ChatListFilterPresetEntry] {
+private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer], isPremium: Bool, limit: Int32, inviteLinks: [ExportedChatFolderLink]?) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
     if isNewFilter {
@@ -530,6 +650,19 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     }
     
     entries.append(.excludePeerInfo(presentationData.strings.ChatListFolder_ExcludeSectionInfo))
+    
+    if !isNewFilter, let inviteLinks {
+        entries.append(.inviteLinkHeader)
+        entries.append(.inviteLinkCreate)
+        
+        var index = 0
+        for link in inviteLinks {
+            entries.append(.inviteLink(index, link))
+            index += 1
+        }
+        
+        entries.append(.inviteLinkInfo)
+    }
     
     return entries
 }
@@ -887,7 +1020,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 var includePeers = ChatListFilterIncludePeers()
                 includePeers.setPeers(state.additionallyIncludePeers)
-                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
                 if let data = filter.data {
                     switch chatListFilterType(data) {
                     case .generic:
@@ -923,6 +1056,12 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var focusOnNameImpl: (() -> Void)?
+    
+    let sharedLinks = Promise<[ExportedChatFolderLink]?>(nil)
+    if let currentPreset {
+        sharedLinks.set(Signal<[ExportedChatFolderLink]?, NoError>.single(nil) |> then(context.engine.peers.getExportedChatFolderLinks(id: currentPreset.id)
+        |> map(Optional.init)))
+    }
     
     let currentPeers = Atomic<[PeerId: EngineRenderedPeer]>(value: [:])
     let stateWithPeers = statePromise.get()
@@ -1025,7 +1164,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 let state = stateValue.with { $0 }
                 var includePeers = ChatListFilterIncludePeers()
                 includePeers.setPeers(state.additionallyIncludePeers)
-                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
                 
                 let _ = (context.engine.peers.currentChatListFilters()
                 |> deliverOnMainQueue).start(next: { filters in
@@ -1047,7 +1186,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             let state = stateValue.with { $0 }
             var includePeers = ChatListFilterIncludePeers()
             includePeers.setPeers(state.additionallyIncludePeers)
-            let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+            let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
             let _ = (context.engine.peers.currentChatListFilters()
             |> deliverOnMainQueue).start(next: { filters in
@@ -1124,6 +1263,47 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 state.expandedSections.insert(section)
                 return state
             }
+        },
+        createLink: {
+            if let currentPreset, let data = currentPreset.data, !data.includePeers.peers.isEmpty {
+                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { updatedLink in
+                    let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                        guard var links else {
+                            return
+                        }
+                        
+                        if let updatedLink {
+                            links.insert(updatedLink, at: 0)
+                            sharedLinks.set(.single(links))
+                        }
+                    })
+                }))
+            }
+        }, openLink: { link in
+            if let currentPreset, let data = currentPreset.data {
+                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: link, linkUpdated: { updatedLink in
+                    if updatedLink != link {
+                        let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                            guard var links else {
+                                return
+                            }
+                            
+                            if let updatedLink {
+                                if let index = links.firstIndex(where: { $0 == link }) {
+                                    links.remove(at: index)
+                                }
+                                links.insert(updatedLink, at: 0)
+                                sharedLinks.set(.single(links))
+                            } else {
+                                if let index = links.firstIndex(where: { $0 == link }) {
+                                    links.remove(at: index)
+                                    sharedLinks.set(.single(links))
+                                }
+                            }
+                        })
+                    }
+                }))
+            }
         }
     )
         
@@ -1138,7 +1318,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             if currentPreset == nil {
                 filterId = context.engine.peers.generateNewChatListFilterId(filters: filters)
             }
-            var updatedFilter: ChatListFilter = .filter(id: filterId, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+            var updatedFilter: ChatListFilter = .filter(id: filterId, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
             var filters = filters
             if let _ = currentPreset {
@@ -1182,10 +1362,11 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         context.account.postbox.peerView(id: context.account.peerId),
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
-        )
+        ),
+        sharedLinks.get()
     )
     |> deliverOnMainQueue
-    |> map { presentationData, stateWithPeers, peerView, premiumLimits -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, stateWithPeers, peerView, premiumLimits, sharedLinks -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (state, includePeers, excludePeers) = stateWithPeers
         
         let isPremium = peerView.peers[peerView.peerId]?.isPremium ?? false
@@ -1206,7 +1387,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? presentationData.strings.ChatListFolder_TitleEdit : presentationData.strings.ChatListFolder_TitleCreate), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount, inviteLinks: sharedLinks), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
         skipStateAnimation = false
         
         return (controllerState, (listState, arguments))
@@ -1261,7 +1442,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             
             var includePeers = ChatListFilterIncludePeers()
             includePeers.setPeers(state.additionallyIncludePeers)
-            let filter: ChatListFilter = .filter(id: currentPreset.id, title: state.name, emoticon: currentPreset.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+            let filter: ChatListFilter = .filter(id: currentPreset.id, title: state.name, emoticon: currentPreset.emoticon, data: ChatListFilterData(isShared: currentPreset.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             if currentPresetWithoutPinnedPeers != filter {
                 displaySaveAlert()
                 return false

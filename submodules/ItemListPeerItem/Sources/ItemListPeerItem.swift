@@ -16,6 +16,7 @@ import ContextUI
 import AccountContext
 import ComponentFlow
 import EmojiStatusComponent
+import CheckNode
 
 private final class ShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
@@ -252,16 +253,19 @@ public enum ItemListPeerItemLabel {
 public struct ItemListPeerItemSwitch {
     public var value: Bool
     public var style: ItemListPeerItemSwitchStyle
+    public var isEnabled: Bool
     
-    public init(value: Bool, style: ItemListPeerItemSwitchStyle) {
+    public init(value: Bool, style: ItemListPeerItemSwitchStyle, isEnabled: Bool = true) {
         self.value = value
         self.style = style
+        self.isEnabled = isEnabled
     }
 }
 
 public enum ItemListPeerItemSwitchStyle {
     case standard
     case check
+    case leftCheck
 }
 
 public enum ItemListPeerItemAliasHandling {
@@ -474,6 +478,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private var credibilityIconView: ComponentHostView<Empty>?
     private var switchNode: SwitchNode?
     private var checkNode: ASImageNode?
+    private var leftCheckNode: CheckNode?
     
     private var shimmerNode: LoadingShimmerNode?
     private var absoluteLocation: (CGRect, CGSize)?
@@ -736,6 +741,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 peerRevealOptions = []
             }
             
+            var additionalLeftInset: CGFloat = 0.0
+            var leftInset: CGFloat = params.leftInset
             var rightInset: CGFloat = params.rightInset
             let switchSize = CGSize(width: 51.0, height: 31.0)
             var checkImage: UIImage?
@@ -755,6 +762,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     }
                     rightInset += 24.0
                     currentSwitchNode = nil
+                case .leftCheck:
+                    additionalLeftInset += 40.0
+                    leftInset += additionalLeftInset
+                    currentSwitchNode = nil
+                    currentCheckNode = nil
                 }
             } else {
                 currentSwitchNode = nil
@@ -842,7 +854,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 break
             }
 
-            let leftInset: CGFloat
             let verticalInset: CGFloat
             let verticalOffset: CGFloat
             let avatarSize: CGFloat
@@ -856,7 +867,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 }
                 verticalOffset = 0.0
                 avatarSize = 31.0
-                leftInset = 59.0 + params.leftInset
+                leftInset += 59.0
                 avatarFontSize = floor(31.0 * 16.0 / 37.0)
             case .peerList:
                 if case .none = item.text {
@@ -866,7 +877,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 }
                 verticalOffset = 0.0
                 avatarSize = 40.0
-                leftInset = 65.0 + params.leftInset
+                leftInset += 65.0
                 avatarFontSize = floor(40.0 * 16.0 / 37.0)
             }
             
@@ -1234,8 +1245,28 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
-                    let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+                    let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + additionalLeftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
+                    
+                    if let switchValue = item.switchValue, case .leftCheck = switchValue.style {
+                        let leftCheckNode: CheckNode
+                        if let current = strongSelf.leftCheckNode {
+                            leftCheckNode = current
+                        } else {
+                            var checkTheme = CheckNodeTheme(theme: item.presentationData.theme, style: .plain)
+                            checkTheme.isDottedBorder = !switchValue.isEnabled
+                            leftCheckNode = CheckNode(theme: checkTheme)
+                            strongSelf.leftCheckNode = leftCheckNode
+                            strongSelf.avatarNode.supernode?.addSubnode(leftCheckNode)
+                        }
+                        leftCheckNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 16.0, y: floor((layout.contentSize.height - 22.0) / 2.0)), size: CGSize(width: 22.0, height: 22.0))
+                        leftCheckNode.setSelected(switchValue.value, animated: animated)
+                    } else {
+                        if let leftCheckNode = strongSelf.leftCheckNode {
+                            strongSelf.leftCheckNode = nil
+                            leftCheckNode.removeFromSupernode()
+                        }
+                    }
                     
                     if let threadInfo = item.threadInfo {
                         let threadIconSize = floor(avatarSize * 0.9)

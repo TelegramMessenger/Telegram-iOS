@@ -837,6 +837,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                     }
                     handleResolvedUrl(.premiumOffer(reference: reference))
+                } else if parsedUrl.host == "folder" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var slug: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        slug = value
+                                    }
+                                }
+                            }
+                        }
+                        if let slug = slug {
+                            convertedUrl = "https://t.me/folder/\(slug)"
+                        }
+                    }
                 }
             } else {
                 if parsedUrl.host == "importStickers" {

@@ -56,8 +56,8 @@ private enum ChatListFilterPresetListEntryStableId: Hashable {
     case suggestedPreset(ChatListFilterData)
     case suggestedAddCustom
     case listHeader
-    case preset(Int32)
     case addItem
+    case preset(Int32)
     case listFooter
 }
 
@@ -96,10 +96,10 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return 0
         case .listHeader:
             return 100
-        case let .preset(index, _, _, _, _, _, _, _, _):
-            return 101 + index.value
         case .addItem:
-            return 1000
+            return 101
+        case let .preset(index, _, _, _, _, _, _, _, _):
+            return 102 + index.value
         case .listFooter:
             return 1001
         case .suggestedListHeader:
@@ -219,9 +219,13 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
         return true
     }
     
+    
+    entries.append(.listHeader(presentationData.strings.ChatListFolderSettings_FoldersSection))
+    
+    //TODO:localize
+    entries.append(.addItem(text: "Create a Folder", isEditing: state.isEditing))
+    
     if !filters.isEmpty || suggestedFilters.isEmpty {
-        entries.append(.listHeader(presentationData.strings.ChatListFolderSettings_FoldersSection))
-        
         var folderCount = 0
         for (filter, chatCount) in filtersWithAppliedOrder(filters: filters, order: updatedFilterOrder) {
             if case .allChats = filter {
@@ -232,8 +236,6 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
                 entries.append(.preset(index: PresetIndex(value: entries.count), title: title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing, isAllChats: false, isDisabled: !isPremium && folderCount > limits.maxFoldersCount))
             }
         }
-        
-        entries.append(.addItem(text: presentationData.strings.ChatListFolderSettings_NewFolder, isEditing: state.isEditing))
         
         entries.append(.listFooter(presentationData.strings.ChatListFolderSettings_EditFoldersInfo))
     }
