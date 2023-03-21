@@ -275,8 +275,8 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
             let nextColor: ItemBackgroundColor
             let transitionFraction: CGFloat
             
-            color = .green
-            nextColor = .yellow
+            color = .blue
+            nextColor = .blue
             transitionFraction = 1.0
             
             let topColor = color.colors.top

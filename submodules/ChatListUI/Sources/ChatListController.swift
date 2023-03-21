@@ -43,6 +43,7 @@ import PeerInfoUI
 import ComponentDisplayAdapters
 import ChatListHeaderComponent
 import ChatListTitleView
+import InviteLinksUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -1539,6 +1540,28 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                             })
                                         })))
                                     }
+                                    
+                                    //TODO:localize
+                                    
+                                    for filter in filters {
+                                        if filter.id == filterId, case let .filter(_, _, _, data) = filter {
+                                            if !data.includePeers.peers.isEmpty {
+                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, icon: { theme in
+                                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
+                                                }, action: { c, f in
+                                                    c.dismiss(completion: {
+                                                        guard let strongSelf = self else {
+                                                            return
+                                                        }
+                                                        strongSelf.shareFolder(filterId: filterId, data: data)
+                                                    })
+                                                })))
+                                            }
+                                            
+                                            break
+                                        }
+                                    }
+                                    
                                     break
                                 }
                             }
@@ -2674,6 +2697,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 break
             }
         }
+    }
+    
+    private func shareFolder(filterId: Int32, data: ChatListFilterData) {
+        self.push(folderInviteLinkListController(context: self.context, filterId: filterId, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { _ in
+        }))
     }
     
     private func askForFilterRemoval(id: Int32) {

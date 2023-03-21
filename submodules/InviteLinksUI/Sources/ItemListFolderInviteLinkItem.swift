@@ -519,6 +519,13 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                             shimmerNode.updateAbsoluteRect(rect, within: size)
                         }
                         
+                        if itemListHasRoundedBlockLayout(params) {
+                            shimmerNode.clipsToBounds = true
+                            shimmerNode.cornerRadius = 11.0
+                        } else {
+                            shimmerNode.cornerRadius = 0.0
+                        }
+                        
                         let lineWidth: CGFloat = 180.0
                         let lineDiameter: CGFloat = 12.0
                         let titleFrame = strongSelf.invitedPeersNode.frame

@@ -253,10 +253,12 @@ public enum ItemListPeerItemLabel {
 public struct ItemListPeerItemSwitch {
     public var value: Bool
     public var style: ItemListPeerItemSwitchStyle
+    public var isEnabled: Bool
     
-    public init(value: Bool, style: ItemListPeerItemSwitchStyle) {
+    public init(value: Bool, style: ItemListPeerItemSwitchStyle, isEnabled: Bool = true) {
         self.value = value
         self.style = style
+        self.isEnabled = isEnabled
     }
 }
 
@@ -1251,7 +1253,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         if let current = strongSelf.leftCheckNode {
                             leftCheckNode = current
                         } else {
-                            leftCheckNode = CheckNode(theme: CheckNodeTheme(theme: item.presentationData.theme, style: .plain))
+                            var checkTheme = CheckNodeTheme(theme: item.presentationData.theme, style: .plain)
+                            checkTheme.isDottedBorder = !switchValue.isEnabled
+                            leftCheckNode = CheckNode(theme: checkTheme)
                             strongSelf.leftCheckNode = leftCheckNode
                             strongSelf.avatarNode.supernode?.addSubnode(leftCheckNode)
                         }

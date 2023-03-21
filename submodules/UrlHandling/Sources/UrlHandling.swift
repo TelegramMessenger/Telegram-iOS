@@ -97,6 +97,7 @@ public enum ParsedInternalUrl {
     case phone(String, String?, String?)
     case startAttach(String, String?, String?)
     case contactToken(String)
+    case chatFolder(slug: String)
 }
 
 private enum ParsedUrl {
@@ -417,6 +418,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
                     return .theme(pathComponents[1])
+                } else if pathComponents[0] == "folder" {
+                    return .chatFolder(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?
@@ -774,6 +777,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
         case let .stickerPack(name, type):
             return .single(.stickerPack(name: name, type: type))
+        case let .chatFolder(slug):
+            return .single(.chatFolder(slug: slug))
         case let .invoice(slug):
             return context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
             |> map(Optional.init)

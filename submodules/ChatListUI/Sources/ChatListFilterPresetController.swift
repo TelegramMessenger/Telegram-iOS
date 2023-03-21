@@ -188,7 +188,7 @@ private enum ChatListFilterPresetEntrySortId: Comparable {
             case let .inviteLink(rhsIndex):
                 return lhsIndex < rhsIndex
             case .inviteLinkFooter:
-                return false
+                return true
             }
         case .inviteLinkFooter:
             switch rhs {
@@ -1059,8 +1059,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     
     let sharedLinks = Promise<[ExportedChatFolderLink]?>(nil)
     if let currentPreset {
-        sharedLinks.set(context.engine.peers.getExportedChatLinks(id: currentPreset.id)
-        |> map(Optional.init))
+        sharedLinks.set(Signal<[ExportedChatFolderLink]?, NoError>.single(nil) |> then(context.engine.peers.getExportedChatFolderLinks(id: currentPreset.id)
+        |> map(Optional.init)))
     }
     
     let currentPeers = Atomic<[PeerId: EngineRenderedPeer]>(value: [:])
@@ -1266,20 +1266,43 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         },
         createLink: {
             if let currentPreset, let data = currentPreset.data, !data.includePeers.peers.isEmpty {
-                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: nil))
-                
-                /*if data.isShared {
-                    
-                } else {
-                    let _ = (context.engine.peers.exportChatFolder(filterId: currentPreset.id, title: "Link", peerIds: data.includePeers.peers)
-                    |> deliverOnMainQueue).start(completed: {
-                        dismissImpl?()
+                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { updatedLink in
+                    let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                        guard var links else {
+                            return
+                        }
+                        
+                        if let updatedLink {
+                            links.insert(updatedLink, at: 0)
+                            sharedLinks.set(.single(links))
+                        }
                     })
-                }*/
+                }))
             }
         }, openLink: { link in
             if let currentPreset, let data = currentPreset.data {
-                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: link))
+                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: link, linkUpdated: { updatedLink in
+                    if updatedLink != link {
+                        let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                            guard var links else {
+                                return
+                            }
+                            
+                            if let updatedLink {
+                                if let index = links.firstIndex(where: { $0 == link }) {
+                                    links.remove(at: index)
+                                }
+                                links.insert(updatedLink, at: 0)
+                                sharedLinks.set(.single(links))
+                            } else {
+                                if let index = links.firstIndex(where: { $0 == link }) {
+                                    links.remove(at: index)
+                                    sharedLinks.set(.single(links))
+                                }
+                            }
+                        })
+                    }
+                }))
             }
         }
     )

@@ -29,6 +29,7 @@ import WebUI
 import BotPaymentsUI
 import PremiumUI
 import AuthorizationUI
+import ChatFolderLinkPreviewScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -749,6 +750,10 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             } else {
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            }
+        case let .chatFolder(slug):
+            if let navigationController = navigationController {
+                navigationController.pushViewController(ChatFolderLinkPreviewScreen(context: context, slug: slug))
             }
     }
 }

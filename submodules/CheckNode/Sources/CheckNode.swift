@@ -6,16 +6,17 @@ import LegacyComponents
 import TelegramPresentationData
 
 public struct CheckNodeTheme {
-    public let backgroundColor: UIColor
-    public let strokeColor: UIColor
-    public let borderColor: UIColor
-    public let overlayBorder: Bool
-    public let hasInset: Bool
-    public let hasShadow: Bool
-    public let filledBorder: Bool
-    public let borderWidth: CGFloat?
+    public var backgroundColor: UIColor
+    public var strokeColor: UIColor
+    public var borderColor: UIColor
+    public var overlayBorder: Bool
+    public var hasInset: Bool
+    public var hasShadow: Bool
+    public var filledBorder: Bool
+    public var borderWidth: CGFloat?
+    public var isDottedBorder: Bool
     
-    public init(backgroundColor: UIColor, strokeColor: UIColor, borderColor: UIColor, overlayBorder: Bool, hasInset: Bool, hasShadow: Bool, filledBorder: Bool = false, borderWidth: CGFloat? = nil) {
+    public init(backgroundColor: UIColor, strokeColor: UIColor, borderColor: UIColor, overlayBorder: Bool, hasInset: Bool, hasShadow: Bool, filledBorder: Bool = false, borderWidth: CGFloat? = nil, isDottedBorder: Bool = false) {
         self.backgroundColor = backgroundColor
         self.strokeColor = strokeColor
         self.borderColor = borderColor
@@ -24,6 +25,7 @@ public struct CheckNodeTheme {
         self.hasShadow = hasShadow
         self.filledBorder = filledBorder
         self.borderWidth = borderWidth
+        self.isDottedBorder = isDottedBorder
     }
 }
 
@@ -168,6 +170,9 @@ public class CheckNode: ASDisplayNode {
             let fillProgress = parameters.animatingOut ? 1.0 : min(1.0, parameters.animationProgress * 1.35)
             
             context.setStrokeColor(parameters.theme.borderColor.cgColor)
+            if parameters.theme.isDottedBorder {
+                context.setLineDash(phase: 0.0, lengths: [4.0, 4.0])
+            }
             context.setLineWidth(borderWidth)
             
             let maybeScaleOut = {
