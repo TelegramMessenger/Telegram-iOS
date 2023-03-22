@@ -295,7 +295,7 @@ public final class WebSearchController: ViewController {
         let throttledSearchQuery = self.searchQueryPromise.get()
         |> mapToSignal { query -> Signal<String, NoError> in
             if !query.isEmpty {
-                return (.complete() |> delay(0.6, queue: Queue.mainQueue()))
+                return (.complete() |> delay(1.0, queue: Queue.mainQueue()))
                 |> then(.single(query))
             } else {
                 return .single(query)

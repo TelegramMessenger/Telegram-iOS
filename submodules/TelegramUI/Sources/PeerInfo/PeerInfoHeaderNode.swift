@@ -3691,7 +3691,7 @@ private class DynamicIslandMaskNode: ManagedAnimationNode {
     
     func update(_ value: CGFloat) {
         let lowerBound = 0
-        let upperBound = 180
+        let upperBound = 540
         let frameIndex = lowerBound + Int(value * CGFloat(upperBound - lowerBound))
         if frameIndex != self.frameIndex {
             self.update(frameIndex: frameIndex)

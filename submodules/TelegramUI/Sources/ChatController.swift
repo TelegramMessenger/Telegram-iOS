@@ -3910,7 +3910,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(string: message.text), snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
+                        let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: inputText, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
                             return self?.getCaptionPanelView()
                         }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                             if let strongSelf = self {
@@ -8139,16 +8140,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, let peerId = strongSelf.chatLocation.peerId {
                 let presentationData = strongSelf.presentationData
                 
-                let forwardOptions: Signal<ChatControllerSubject.ForwardOptions, NoError>
-                if peerId.namespace == Namespaces.Peer.SecretChat {
-                    forwardOptions = .single(ChatControllerSubject.ForwardOptions(hideNames: true, hideCaptions: false))
-                } else {
-                    forwardOptions = strongSelf.presentationInterfaceStatePromise.get()
-                    |> map { state -> ChatControllerSubject.ForwardOptions in
-                        return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
+                let forwardOptions = strongSelf.presentationInterfaceStatePromise.get()
+                |> map { state -> ChatControllerSubject.ForwardOptions in
+                    var hideNames = state.interfaceState.forwardOptionsState?.hideNames ?? false
+                    if peerId.namespace == Namespaces.Peer.SecretChat {
+                        hideNames = true
                     }
-                    |> distinctUntilChanged
+                    return ChatControllerSubject.ForwardOptions(hideNames: hideNames, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
                 }
+                |> distinctUntilChanged
                 
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .forwardedMessages(peerIds: [peerId], ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
@@ -8208,88 +8208,90 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let canHideNames = hasNotOwnMessages && hasOther
-                    
+                    var canHideNames = hasNotOwnMessages && hasOther
+                    if case let .peer(peerId) = strongSelf.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+                        canHideNames = false
+                    }
                     let hideNames = forwardOptions.hideNames
                     let hideCaptions = forwardOptions.hideCaptions
                     
-                    if case let .peer(peerId) = strongSelf.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+                    if canHideNames {
+                        items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames, icon: { theme in
+                            if hideNames {
+                                return nil
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { [weak self] _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideNames = false
+                                updated.hideCaptions = false
+                                updated.unhideNamesOnCaptionChange = false
+                                return updated
+                            })
+                        })))
                         
-                    } else {
-                        if canHideNames {
-                            items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames, icon: { theme in
-                                if hideNames {
-                                    return nil
-                                } else {
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                                }
-                            }, action: { [weak self] _, f in
-                                self?.interfaceInteraction?.updateForwardOptionsState({ current in
-                                    var updated = current
-                                    updated.hideNames = false
-                                    updated.hideCaptions = false
-                                    updated.unhideNamesOnCaptionChange = false
-                                    return updated
-                                })
-                            })))
-                            
-                            items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames, icon: { theme in
-                                if hideNames {
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                                } else {
-                                    return nil
-                                }
-                            }, action: { _, f in
-                                self?.interfaceInteraction?.updateForwardOptionsState({ current in
-                                    var updated = current
-                                    updated.hideNames = true
-                                    updated.unhideNamesOnCaptionChange = false
-                                    return updated
-                                })
-                            })))
-                            
-                            items.append(.separator)
-                        }
+                        items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames, icon: { theme in
+                            if hideNames {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            } else {
+                                return nil
+                            }
+                        }, action: { _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideNames = true
+                                updated.unhideNamesOnCaptionChange = false
+                                return updated
+                            })
+                        })))
                         
-                        if hasCaptions {
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowCaption, icon: { theme in
-                                if hideCaptions {
-                                    return nil
-                                } else {
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                                }
-                            }, action: { [weak self] _, f in
-                                self?.interfaceInteraction?.updateForwardOptionsState({ current in
-                                    var updated = current
-                                    updated.hideCaptions = false
+                        items.append(.separator)
+                    }
+                    
+                    if hasCaptions {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowCaption, icon: { theme in
+                            if hideCaptions {
+                                return nil
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { [weak self] _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideCaptions = false
+                                if canHideNames {
                                     if updated.unhideNamesOnCaptionChange {
                                         updated.unhideNamesOnCaptionChange = false
                                         updated.hideNames = false
                                     }
-                                    return updated
-                                })
-                            })))
-                            
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
-                                if hideCaptions {
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                                } else {
-                                    return nil
                                 }
-                            }, action: { _, f in
-                                self?.interfaceInteraction?.updateForwardOptionsState({ current in
-                                    var updated = current
-                                    updated.hideCaptions = true
+                                return updated
+                            })
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
+                            if hideCaptions {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                            } else {
+                                return nil
+                            }
+                        }, action: { _, f in
+                            self?.interfaceInteraction?.updateForwardOptionsState({ current in
+                                var updated = current
+                                updated.hideCaptions = true
+                                if canHideNames {
                                     if !updated.hideNames {
                                         updated.hideNames = true
                                         updated.unhideNamesOnCaptionChange = true
                                     }
-                                    return updated
-                                })
-                            })))
-                            
-                            items.append(.separator)
-                        }
+                                }
+                                return updated
+                            })
+                        })))
+                        
+                        items.append(.separator)
                     }
                     
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ChangeRecipient, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
@@ -11370,7 +11372,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         var layout = layout
-        if case .compact = layout.metrics.widthClass, let _ = self.attachmentController {
+        if case .compact = layout.metrics.widthClass, let attachmentController = self.attachmentController, attachmentController.window != nil {
             layout = layout.withUpdatedInputHeight(nil)
         }
                 
