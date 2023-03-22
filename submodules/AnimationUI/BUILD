@@ -13,6 +13,7 @@ swift_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/lottie-ios:Lottie",
+        "//submodules/GZip:GZip",
         "//submodules/AppBundle:AppBundle",
         "//submodules/Display:Display",
     ],

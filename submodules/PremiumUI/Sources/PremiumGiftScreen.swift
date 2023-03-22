@@ -1032,7 +1032,7 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer, Attachme
             completion: { duration in
                 completionImpl?(duration)
             }
-        ), navigationBarAppearance: .transparent)
+        ), navigationBarAppearance: .transparent, presentationMode: .modal)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     

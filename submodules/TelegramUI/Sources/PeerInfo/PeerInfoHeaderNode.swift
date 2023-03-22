@@ -1044,7 +1044,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.bottomCoverNode = ASDisplayNode()
         self.bottomCoverNode.backgroundColor = .black
         
-        self.maskNode = DynamicIslandMaskNode(size: CGSize(width: 512.0, height: 512.0))
+        self.maskNode = DynamicIslandMaskNode()
         self.pinchSourceNode = PinchSourceContainerNode()
         
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
@@ -3678,29 +3678,35 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     }
 }
 
-private class DynamicIslandMaskNode: ManagedAnimationNode {
-    var frameIndex: Int = 0
+private class DynamicIslandMaskNode: ASDisplayNode {
+    private var animationNode: AnimationNode?
     
     var isForum = false {
         didSet {
             if self.isForum != oldValue {
-                self.update(frameIndex: self.frameIndex)
+                self.animationNode?.removeFromSupernode()
+                let animationNode = AnimationNode(animation: "ForumAvatarMask")
+                self.addSubnode(animationNode)
+                self.animationNode = animationNode
             }
         }
     }
     
-    func update(_ value: CGFloat) {
-        let lowerBound = 0
-        let upperBound = 540
-        let frameIndex = lowerBound + Int(value * CGFloat(upperBound - lowerBound))
-        if frameIndex != self.frameIndex {
-            self.update(frameIndex: frameIndex)
-        }
+    override init() {
+        let animationNode = AnimationNode(animation: "UserAvatarMask")
+        self.animationNode = animationNode
+        
+        super.init()
+        
+        self.addSubnode(animationNode)
     }
     
-    func update(frameIndex: Int) {
-        self.frameIndex = frameIndex
-        self.trackTo(item: ManagedAnimationItem(source: .local(self.isForum ? "ForumAvatarMask" : "UserAvatarMask"), frames: .range(startFrame: frameIndex, endFrame: frameIndex), duration: 0.001))
+    func update(_ value: CGFloat) {
+        self.animationNode?.setProgress(value)
+    }
+    
+    override func layout() {
+        self.animationNode?.frame = self.bounds
     }
 }
 
