@@ -1860,6 +1860,10 @@ final class ControlledTransitionProperty {
     let toValue: AnyValue
     private let completion: ((Bool) -> Void)?
     
+    private lazy var animationKey: String = {
+        return "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())"
+    }()
+    
     init<T: Equatable>(layer: CALayer, path: String, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
         self.layer = layer
         self.path = path
@@ -1871,7 +1875,7 @@ final class ControlledTransitionProperty {
     }
     
     deinit {
-        self.layer.removeAnimation(forKey: "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())")
+        self.layer.removeAnimation(forKey: self.animationKey)
     }
     
     func update(at fraction: CGFloat) {
@@ -1887,7 +1891,7 @@ final class ControlledTransitionProperty {
         animation.toValue = value.nsValue
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.isRemovedOnCompletion = false
-        self.layer.add(animation, forKey: "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())")
+        self.layer.add(animation, forKey: self.animationKey)
     }
     
     func complete(atEnd: Bool) {

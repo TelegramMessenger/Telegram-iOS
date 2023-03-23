@@ -70,7 +70,6 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         self.maskForeground.masksToBounds = true
         self.maskLayer.addSublayer(self.maskForeground)
             
-        self.addSubnode(self.interactiveFileNode)
         self.addSubnode(self.interactiveVideoNode)
                 
         self.interactiveVideoNode.requestUpdateLayout = { [weak self] _ in
@@ -285,13 +284,8 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     return (finalSize, { [weak self] animation, synchronousLoads, applyInfo in
                         if let strongSelf = self {
-                            let firstTime = strongSelf.item == nil
                             strongSelf.item = item
                             strongSelf.isExpanded = isExpanded
-                            
-                            if firstTime {
-                                strongSelf.interactiveFileNode.isHidden = true
-                            }
                             
                             strongSelf.bubbleBackgroundNode?.layer.mask = strongSelf.maskLayer
                             if let bubbleBackdropNode = strongSelf.bubbleBackdropNode, bubbleBackdropNode.hasImage && strongSelf.backdropMaskForeground.superlayer == nil {
