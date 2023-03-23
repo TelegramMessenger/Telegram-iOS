@@ -7923,7 +7923,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 var webpageUrl: String?
                                 for media in message.media {
                                     if media is TelegramMediaImage || media is TelegramMediaFile {
-                                        inputTextMaxLength = strongSelf.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
+                                        inputTextMaxLength = strongSelf.context.userLimits.maxCaptionLength
                                     } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                                         webpageUrl = content.url
                                     }
