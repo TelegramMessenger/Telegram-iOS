@@ -195,6 +195,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private final var lastContentOffset: CGPoint = CGPoint()
     private final var lastContentOffsetTimestamp: CFAbsoluteTime = 0.0
     private final var ignoreScrollingEvents: Bool = false
+    public final var globalIgnoreScrollingEvents: Bool = false
 
     private let infiniteScrollSize: CGFloat
     
@@ -937,6 +938,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     private func updateScrollViewDidScroll(_ scrollView: UIScrollView, synchronous: Bool) {
         if self.ignoreScrollingEvents || scroller !== self.scroller {
+            return
+        }
+        if self.globalIgnoreScrollingEvents {
             return
         }
 
