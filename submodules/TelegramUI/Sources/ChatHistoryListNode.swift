@@ -3789,15 +3789,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
 
-        let snapshotView = self.view.snapshotView(afterScreenUpdates: false)!
+        let snapshotView = self.view//.snapshotView(afterScreenUpdates: false)!
+        self.globalIgnoreScrollingEvents = true
 
-        snapshotView.frame = self.view.bounds
-        if let sublayers = self.layer.sublayers {
+        //snapshotView.frame = self.view.bounds
+        /*if let sublayers = self.layer.sublayers {
             for sublayer in sublayers {
                 sublayer.isHidden = true
             }
-        }
-        self.view.addSubview(snapshotView)
+        }*/
+        //self.view.addSubview(snapshotView)
 
         let overscrollView = self.overscrollView
         if let overscrollView = overscrollView {
@@ -3835,6 +3836,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         snapshotParentView.frame = self.view.frame
 
         snapshotState.snapshotView.frame = snapshotParentView.bounds
+        
+        snapshotState.snapshotView.clipsToBounds = true
+        snapshotState.snapshotView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        
         self.view.superview?.insertSubview(snapshotParentView, belowSubview: self.view)
 
         snapshotParentView.layer.animatePosition(from: CGPoint(x: 0.0, y: 0.0), to: CGPoint(x: 0.0, y: -self.view.bounds.height - snapshotState.snapshotBottomInset - snapshotTopInset), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak snapshotParentView] _ in
