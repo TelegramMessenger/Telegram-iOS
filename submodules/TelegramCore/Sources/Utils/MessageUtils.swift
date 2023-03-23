@@ -225,7 +225,7 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associ
 
 public extension Message {
     func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
-        if self.author?.id == accountPeerId, self.id.peerId != accountPeerId {
+        if self.id.peerId == accountPeerId {
             if self.forwardInfo != nil {
                 return true
             } else {
