@@ -1054,7 +1054,12 @@ private final class NotificationServiceHandler {
                             }
 
                             if let category = aps["category"] as? String {
-                                content.category = category
+                                if peerId.isGroupOrChannel && ["r", "m"].contains(category) {
+                                    content.category = "g\(category)"
+                                } else {
+                                    content.category = category
+                                }
+
 
                                 let _ = messageId
 
