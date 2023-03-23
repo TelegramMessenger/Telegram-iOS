@@ -239,7 +239,7 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
                         
                         if data.count != 0 && data.count <= currentReadRequest.request.length - currentReadRequest.readyLength {
                             currentReadRequest.data.withUnsafeMutableBytes { currentBuffer in
-                                guard let currentBytes = currentBuffer.assumingMemoryBound(to: UInt8.self).baseAddress else {
+                                guard let currentBytes = currentBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                                     return
                                 }
                                 data.copyBytes(to: currentBytes.advanced(by: currentReadRequest.readyLength), count: data.count)
