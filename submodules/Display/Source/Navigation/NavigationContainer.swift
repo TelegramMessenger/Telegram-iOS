@@ -82,6 +82,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
     public private(set) var isReady: Bool = false
     public var isReadyUpdated: (() -> Void)?
     public var controllerRemoved: (ViewController) -> Void
+    public var requestFilterController: (ViewController) -> Void = { _ in }
     public var keyboardViewManager: KeyboardViewManager? {
         didSet {
         }
@@ -117,6 +118,8 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
     
     var statusBarStyle: StatusBarStyle = .Ignore
     var statusBarStyleUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    
+    
     
     private var panRecognizer: InteractiveTransitionGestureRecognizer?
     
@@ -211,7 +214,10 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 let topController = self.controllers[self.controllers.count - 1]
                 let bottomController = self.controllers[self.controllers.count - 2]
                 
-                if !topController.attemptNavigation({
+                if !topController.attemptNavigation({ [weak self, weak topController] in
+                    if let self, let topController {
+                        self.requestFilterController(topController)
+                    }
                 }) {
                     return
                 }

@@ -303,7 +303,13 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 disposable.set((callContext.context.panelData
                                 |> deliverOnMainQueue).start(next: { panelData in
                                     callContext.keep()
-                                    subscriber.putNext(panelData)
+                                    var updatedPanelData = panelData
+                                    if let panelData {
+                                        var updatedInfo = panelData.info
+                                        updatedInfo.subscribedToScheduled = activeCall.subscribedToScheduled
+                                        updatedPanelData = panelData.withInfo(updatedInfo)
+                                    }
+                                    subscriber.putNext(updatedPanelData)
                                 }))
                             }
                             

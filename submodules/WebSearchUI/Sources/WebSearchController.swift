@@ -122,6 +122,9 @@ public final class WebSearchController: ViewController {
     
     public var attemptItemSelection: (ChatContextResult) -> Bool = { _ in return true }
     
+    private var searchQueryPromise = ValuePromise<String>()
+    private var searchQueryDisposable: Disposable?
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: EngineConfiguration.SearchBots, mode: WebSearchControllerMode, activateOnDisplay: Bool = true) {
         self.context = context
         self.mode = mode
@@ -195,7 +198,7 @@ public final class WebSearchController: ViewController {
         self.navigationContentNode = navigationContentNode
         navigationContentNode.setQueryUpdated { [weak self] query in
             if let strongSelf = self, strongSelf.isNodeLoaded {
-                strongSelf.updateSearchQuery(query)
+                strongSelf.searchQueryPromise.set(query)
                 strongSelf.searchingUpdated(!query.isEmpty)
             }
         }
@@ -288,6 +291,24 @@ public final class WebSearchController: ViewController {
                 }
             })
         }
+        
+        let throttledSearchQuery = self.searchQueryPromise.get()
+        |> mapToSignal { query -> Signal<String, NoError> in
+            if !query.isEmpty {
+                return (.complete() |> delay(1.0, queue: Queue.mainQueue()))
+                |> then(.single(query))
+            } else {
+                return .single(query)
+            }
+        }
+        
+        self.searchQueryDisposable = (throttledSearchQuery
+        |> deliverOnMainQueue).start(next: { [weak self] query in
+            if let self {
+                self.updateSearchQuery(query)
+            }
+        })
+       
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -298,6 +319,7 @@ public final class WebSearchController: ViewController {
         self.disposable?.dispose()
         self.resultsDisposable.dispose()
         self.selectionDisposable?.dispose()
+        self.searchQueryDisposable?.dispose()
     }
     
     public func cancel() {

@@ -3054,7 +3054,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         let controller = ForumCreateTopicScreen(context: strongSelf.context, peerId: strongSelf.peerId, mode: .edit(threadId: threadId, threadInfo: threadData.info, isHidden: threadData.isHidden))
                         controller.navigationPresentation = .modal
                         let context = strongSelf.context
-                        controller.completion = { [weak controller] title, fileId, isHidden in
+                        controller.completion = { [weak controller] title, fileId, _, isHidden in
                             let _ = (context.engine.peers.editForumChannelTopic(id: peerId, threadId: threadId, title: title, iconFileId: fileId)
                             |> deliverOnMainQueue).start(completed: {
                                 controller?.dismiss()

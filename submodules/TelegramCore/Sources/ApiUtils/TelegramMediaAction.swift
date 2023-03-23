@@ -104,7 +104,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             components.append(.isHidden(hidden == .boolTrue))
         }
         return TelegramMediaAction(action: .topicEdited(components: components))
-    case let.messageActionSuggestProfilePhoto(photo):
+    case let .messageActionSuggestProfilePhoto(photo):
         return TelegramMediaAction(action: .suggestedProfilePhoto(image: telegramMediaImageFromApiPhoto(photo)))
     case let .messageActionRequestedPeer(buttonId, peer):
         return TelegramMediaAction(action: .requestedPeer(buttonId: buttonId, peerId: peer.peerId))

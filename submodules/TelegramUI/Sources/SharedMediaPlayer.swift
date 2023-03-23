@@ -374,6 +374,9 @@ final class SharedMediaPlayer {
                     strongSelf.forceAudioToSpeaker = forceAudioToSpeaker
                     strongSelf.playbackItem?.setForceAudioToSpeaker(forceAudioToSpeaker)
                     if !forceAudioToSpeaker {
+                        if let playbackStateValue = strongSelf._playbackStateValue, case let .item(item) = playbackStateValue, item.status.timestamp < 1.5 {
+                            strongSelf.control(.seek(0.0))
+                        }
                         strongSelf.control(.playback(.play))
                     } else {
                         strongSelf.control(.playback(.pause))

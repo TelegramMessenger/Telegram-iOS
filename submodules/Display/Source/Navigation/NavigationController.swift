@@ -826,6 +826,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                         self?.controllerRemoved(controller)
                     })
+                    flatContainer.requestFilterController = { [weak self] controller in
+                        self?.filterController(controller, animated: true)
+                    }
                     flatContainer.statusBarStyleUpdated = { [weak self] transition in
                         guard let strongSelf = self else {
                             return
@@ -853,6 +856,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
+                flatContainer.requestFilterController = { [weak self] controller in
+                    self?.filterController(controller, animated: true)
+                }
                 flatContainer.statusBarStyleUpdated = { [weak self] transition in
                     guard let strongSelf = self else {
                         return

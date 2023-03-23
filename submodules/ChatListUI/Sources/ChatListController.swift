@@ -1206,10 +1206,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
                     
-                    controller.completion = { [weak controller] title, fileId, _ in
+                    controller.completion = { [weak controller] title, fileId, iconColor, _ in
                         controller?.isInProgress = true
                         
-                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
+                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).start()
                         }, error: { _ in
@@ -2464,10 +2464,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
                     
-                    controller.completion = { [weak controller] title, fileId, _ in
+                    controller.completion = { [weak controller] title, fileId, iconColor, _ in
                         controller?.isInProgress = true
                         
-                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
+                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             if let navigationController = (sourceController.navigationController as? NavigationController) {
                                 let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).start()
@@ -3413,7 +3413,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 } else if case let .user(user) = chatPeer, user.botInfo != nil {
                     canStop = !user.flags.contains(.isSupport)
-                    canClear = user.botInfo == nil
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 } else if case .secretChat = chatPeer {
                     canClear = true
@@ -3478,6 +3477,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 } else {
                     items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                     
+                    if canStop {
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_DeleteBotConversationConfirmation, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            
+                            if let strongSelf = self {
+                                strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in
+                                }, removed: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    let _ = strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.peerId, isBlocked: true).start()
+                                })
+                            }
+                        }))
+                    }
+                    
                     if canClear {
                         let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
                             guard let strongSelf = self else {
@@ -3523,7 +3538,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }), in: .current)
                         }
                         
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: canStop ? strongSelf.presentationData.strings.DialogList_DeleteBotClearHistory : strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             
                             guard let strongSelf = self else {
@@ -3586,7 +3601,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             strongSelf.schedulePeerChatRemoval(peer: peer, type: .forEveryone, deleteGloballyIfPossible: true, completion: {
                             })
                         }))
-                    } else {
+                    } else if !canStop {
                         items.append(ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             guard let strongSelf = self else {
@@ -3658,23 +3673,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }))
                     }
                 }
-                
-                if canStop {
-                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_DeleteBotConversationConfirmation, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        
-                        if let strongSelf = self {
-                            strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in
-                            }, removed: {
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                let _ = strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.peerId, isBlocked: true).start()
-                            })
-                        }
-                    }))
-                }
-                
+            
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
                         ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in

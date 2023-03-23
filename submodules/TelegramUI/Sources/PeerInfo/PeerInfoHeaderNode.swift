@@ -1044,7 +1044,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.bottomCoverNode = ASDisplayNode()
         self.bottomCoverNode.backgroundColor = .black
         
-        self.maskNode = DynamicIslandMaskNode(size: CGSize(width: 512.0, height: 512.0))
+        self.maskNode = DynamicIslandMaskNode()
         self.pinchSourceNode = PinchSourceContainerNode()
         
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
@@ -1125,8 +1125,9 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         }
     }
     
-    func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, isForum: Bool, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
         self.arguments = (peer, threadId, threadInfo, theme, avatarSize, isExpanded)
+        self.maskNode.isForum = isForum
         self.pinchSourceNode.update(size: size, transition: transition)
         self.pinchSourceNode.frame = CGRect(origin: CGPoint(), size: size)
         self.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
@@ -2579,7 +2580,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.presentationData = presentationData
         
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-        
         let credibilityIcon: CredibilityIcon
         if let peer = peer {
             if peer.isFake {
@@ -2597,6 +2597,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         } else {
             credibilityIcon = .none
+        }
+        
+        var isForum = false
+        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            isForum = true
         }
         
         if themeUpdated || self.currentCredibilityIcon != credibilityIcon {
@@ -2742,7 +2747,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     transitionSourceAvatarFrame = avatarNavigationNode.avatarNode.view.convert(avatarNavigationNode.avatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
                 }
             } else {
-                transitionSourceAvatarFrame = avatarFrame.offsetBy(dx: 0.0, dy: -avatarFrame.maxY).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
+                if deviceMetrics.hasDynamicIsland {
+                    transitionSourceAvatarFrame = CGRect(origin: CGPoint(x: avatarFrame.minX, y: -20.0), size: avatarFrame.size).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
+                } else {
+                    transitionSourceAvatarFrame = avatarFrame.offsetBy(dx: 0.0, dy: -avatarFrame.maxY).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
+                }
             }
             transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
             transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
@@ -3207,12 +3216,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateAlpha(node: subtitleArrowNode, alpha: (1.0 - titleCollapseFraction))
             }
         }
-        
-        var isForum = false
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
-            isForum = true
-        }
-        
+                
         let avatarCornerRadius: CGFloat = isForum ? floor(avatarSize * 0.25) : avatarSize / 2.0
  
         if self.isAvatarExpanded {
@@ -3240,7 +3244,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             })
         }
         
-        self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, threadId: self.forumTopicThreadId, threadInfo: threadData?.info, theme: presentationData.theme, transition: transition)
+        self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, isForum: isForum, threadId: self.forumTopicThreadId, threadInfo: threadData?.info, theme: presentationData.theme, transition: transition)
         self.editingContentNode.avatarNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
         self.avatarOverlayNode.update(peer: peer, threadData: threadData, chatLocation: self.chatLocation, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
         if additive {
@@ -3305,7 +3309,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateSublayerTransformScale(node: self.avatarListNode.listContainerTransformNode, scale: avatarListContainerScale)
         }
         
-        if deviceMetrics.hasDynamicIsland && !isForum && self.forumTopicThreadId == nil {
+        if deviceMetrics.hasDynamicIsland && self.forumTopicThreadId == nil {
             self.avatarListNode.maskNode.frame = CGRect(origin: CGPoint(x: -85.5, y: -self.avatarListNode.frame.minY + 48.0), size: CGSize(width: 171.0, height: 171.0))
             self.avatarListNode.bottomCoverNode.frame = self.avatarListNode.maskNode.frame
             self.avatarListNode.topCoverNode.frame = self.avatarListNode.maskNode.frame
@@ -3674,17 +3678,35 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     }
 }
 
-private class DynamicIslandMaskNode: ManagedAnimationNode {
-    var frameIndex: Int = 0
+private class DynamicIslandMaskNode: ASDisplayNode {
+    private var animationNode: AnimationNode?
+    
+    var isForum = false {
+        didSet {
+            if self.isForum != oldValue {
+                self.animationNode?.removeFromSupernode()
+                let animationNode = AnimationNode(animation: "ForumAvatarMask")
+                self.addSubnode(animationNode)
+                self.animationNode = animationNode
+            }
+        }
+    }
+    
+    override init() {
+        let animationNode = AnimationNode(animation: "UserAvatarMask")
+        self.animationNode = animationNode
+        
+        super.init()
+        
+        self.addSubnode(animationNode)
+    }
     
     func update(_ value: CGFloat) {
-        let lowerBound = 0
-        let upperBound = 180
-        let frameIndex = lowerBound + Int(value * CGFloat(upperBound - lowerBound))
-        if frameIndex != self.frameIndex {
-            self.frameIndex = frameIndex
-            self.trackTo(item: ManagedAnimationItem(source: .local("UserAvatarMask"), frames: .range(startFrame: frameIndex, endFrame: frameIndex), duration: 0.001))
-        }
+        self.animationNode?.setProgress(value)
+    }
+    
+    override func layout() {
+        self.animationNode?.frame = self.bounds
     }
 }
 

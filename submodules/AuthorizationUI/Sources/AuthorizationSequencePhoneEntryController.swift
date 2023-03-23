@@ -252,6 +252,9 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
     }
     
     @objc func nextPressed() {
+        guard self.confirmationController == nil else {
+            return
+        }
         let (_, _, number) = self.controllerNode.codeAndNumber
         if !number.isEmpty {
             let logInNumber = cleanPhoneNumber(self.controllerNode.currentNumber, removePlus: true)

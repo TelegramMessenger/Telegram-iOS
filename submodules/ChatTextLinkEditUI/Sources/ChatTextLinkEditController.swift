@@ -12,7 +12,7 @@ import UrlEscaping
 private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegate {
     private var theme: PresentationTheme
     private let backgroundNode: ASImageNode
-    private let textInputNode: EditableTextNode
+    fileprivate let textInputNode: EditableTextNode
     private let placeholderNode: ASTextNode
     
     var updateHeight: (() -> Void)?
@@ -238,6 +238,21 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         }
         
         self.updateTheme(theme)
+        
+        if (link ?? "").isEmpty {
+            Queue.mainQueue().after(0.1, {
+                let pasteboard = UIPasteboard.general
+                if pasteboard.hasURLs {
+                    if let url = pasteboard.url?.absoluteString, !url.isEmpty {
+                        self.inputFieldNode.text = url
+                        if let lastNode = self.actionNodes.last {
+                           lastNode.actionEnabled = true
+                        }
+                        self.inputFieldNode.textInputNode.textView.selectAll(nil)
+                    }
+                }
+            })
+        }
     }
     
     deinit {

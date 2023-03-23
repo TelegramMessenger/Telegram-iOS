@@ -711,6 +711,10 @@ NSString *suffix = @"";
         [platform isEqualToString:@"iPad11,7"])
         return @"iPad (8th gen)";
     
+    if ([platform isEqualToString:@"iPad12,1"] ||
+        [platform isEqualToString:@"iPad12,2"])
+        return @"iPad (9th gen)";
+    
     if ([platform isEqualToString:@"iPad13,1"] ||
         [platform isEqualToString:@"iPad13,2"])
         return @"iPad Air (4th gen)";

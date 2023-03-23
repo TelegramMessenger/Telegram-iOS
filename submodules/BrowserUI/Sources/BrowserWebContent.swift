@@ -26,9 +26,8 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         let configuration = WKWebViewConfiguration()
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            self.webView.allowsLinkPreview = false
-        }
+        self.webView.allowsLinkPreview = false
+        
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
