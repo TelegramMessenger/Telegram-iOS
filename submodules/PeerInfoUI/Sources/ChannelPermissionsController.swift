@@ -341,8 +341,12 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                     case let .member(_, _, _, banInfo, _):
                         var exceptionsString = ""
                         if let banInfo = banInfo {
+                            let sendMediaRights = banSendMediaSubList().map { $0.0 }
                             for (rights, _) in internal_allPossibleGroupPermissionList {
                                 if !defaultBannedRights.contains(rights) && banInfo.rights.flags.contains(rights) {
+                                    if banInfo.rights.flags.contains(.banSendMedia) && sendMediaRights.contains(rights) {
+                                        continue
+                                    }
                                     if !exceptionsString.isEmpty {
                                         exceptionsString.append(", ")
                                     }

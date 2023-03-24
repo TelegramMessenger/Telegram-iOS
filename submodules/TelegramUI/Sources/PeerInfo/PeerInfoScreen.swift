@@ -4260,30 +4260,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             self.requestCall(isVideo: false, gesture: gesture)
         case .mute:
             var displayCustomNotificationSettings = false
-            
-            var peerIsMuted = false
-            if let notificationSettings = self.data?.notificationSettings {
-                if case .muted = notificationSettings.muteState {
-                    peerIsMuted = true
-                } else if case .default = notificationSettings.muteState, let globalNotificationSettings = self.data?.globalNotificationSettings {
-                    if let peer = self.data?.peer {
-                        if peer is TelegramUser {
-                            peerIsMuted = !globalNotificationSettings.privateChats.enabled
-                        } else if peer is TelegramGroup {
-                            peerIsMuted = !globalNotificationSettings.groupChats.enabled
-                        } else if let channel = peer as? TelegramChannel {
-                            switch channel.info {
-                            case .group:
-                                peerIsMuted = !globalNotificationSettings.groupChats.enabled
-                            case .broadcast:
-                                peerIsMuted = !globalNotificationSettings.channels.enabled
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if peerIsMuted {
+                        
+            let chatIsMuted = peerInfoIsChatMuted(peer: self.data?.peer, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings)
+            if chatIsMuted {
             } else {
                 displayCustomNotificationSettings = true
             }
@@ -4360,7 +4339,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 items.append(.separator)
                 
                 var isSoundEnabled = true
-                if let notificationSettings = self.data?.notificationSettings {
+                let notificationSettings = self.data?.threadNotificationSettings ?? self.data?.peerNotificationSettings
+                if let notificationSettings {
                     switch notificationSettings.messageSound {
                     case .none:
                         isSoundEnabled = false
@@ -4369,53 +4349,34 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 }
                 
-                if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_ButtonUnmute, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOn"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-                        
-                        guard let self else {
-                            return
-                        }
-                        
-                        let _ = self.context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: self.chatLocation.threadId, muteInterval: nil).start()
-                        
-                        let iconColor: UIColor = .white
-                        self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
-                                "Middle.Group 1.Fill 1": iconColor,
-                                "Top.Group 1.Fill 1": iconColor,
-                                "Bottom.Group 1.Fill 1": iconColor,
-                                "EXAMPLE.Group 1.Fill 1": iconColor,
-                                "Line.Group 1.Stroke 1": iconColor
-                        ], title: nil, text: self.presentationData.strings.PeerInfo_TooltipUnmuted, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
-                    })))
-                } else if !isSoundEnabled {
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_EnableSound, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOn"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-                        
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: strongSelf.chatLocation.threadId, sound: .default).start()
-                        
-                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_on", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundEnabled, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
-                    })))
-                } else {
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_DisableSound, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOff"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-                        
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: strongSelf.chatLocation.threadId, sound: .none).start()
-                        
-                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_off", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundDisabled, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
-                    })))
+                if !chatIsMuted {
+                    if !isSoundEnabled {
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_EnableSound, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOn"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: strongSelf.chatLocation.threadId, sound: .default).start()
+                            
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_on", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundEnabled, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        })))
+                    } else {
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_DisableSound, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SoundOff"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: strongSelf.chatLocation.threadId, sound: .none).start()
+                            
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_off", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundDisabled, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        })))
+                    }
                 }
                 
                 let context = self.context
@@ -4505,26 +4466,49 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })
                 })))
                 
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_MuteForever, textColor: .destructive, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.destructiveColor)
-                }, action: { [weak self] _, f in
-                    f(.default)
-                    
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: strongSelf.chatLocation.threadId, muteInterval: Int32.max).start()
-                    
-                    let iconColor: UIColor = .white
-                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
-                        "Middle.Group 1.Fill 1": iconColor,
-                        "Top.Group 1.Fill 1": iconColor,
-                        "Bottom.Group 1.Fill 1": iconColor,
-                        "EXAMPLE.Group 1.Fill 1": iconColor,
-                        "Line.Group 1.Stroke 1": iconColor
-                ], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
-                })))
+                if chatIsMuted {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_ButtonUnmute, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        guard let self else {
+                            return
+                        }
+                        
+                        let _ = self.context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: self.chatLocation.threadId, muteInterval: 0).start()
+                        
+                        let iconColor: UIColor = .white
+                        self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                                "Middle.Group 1.Fill 1": iconColor,
+                                "Top.Group 1.Fill 1": iconColor,
+                                "Bottom.Group 1.Fill 1": iconColor,
+                                "EXAMPLE.Group 1.Fill 1": iconColor,
+                                "Line.Group 1.Stroke 1": iconColor
+                        ], title: nil, text: self.presentationData.strings.PeerInfo_TooltipUnmuted, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                    })))
+                } else {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_MuteForever, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.destructiveColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: strongSelf.chatLocation.threadId, muteInterval: Int32.max).start()
+                        
+                        let iconColor: UIColor = .white
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                            "Middle.Group 1.Fill 1": iconColor,
+                            "Top.Group 1.Fill 1": iconColor,
+                            "Bottom.Group 1.Fill 1": iconColor,
+                            "EXAMPLE.Group 1.Fill 1": iconColor,
+                            "Line.Group 1.Stroke 1": iconColor
+                        ], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                    })))
+                }
                 
                 var tip: ContextController.Tip?
                 tip = nil
@@ -8689,7 +8673,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         let headerInset = sectionInset
         
-        var headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, notificationSettings: self.data?.notificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive)
+        var headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive)
         if !self.isSettings && !self.state.isEditing {
             headerHeight += 71.0
         }
@@ -9054,7 +9038,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 let headerInset = sectionInset
 
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, notificationSettings: self.data?.notificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, peerNotificationSettings: self.data?.peerNotificationSettings, threadNotificationSettings: self.data?.threadNotificationSettings, globalNotificationSettings: self.data?.globalNotificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: additive)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
@@ -10287,7 +10271,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 }
                 let headerInset = sectionInset
                 
-                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, threadData: self.screenNode.data?.threadData, notificationSettings: self.screenNode.data?.notificationSettings, globalNotificationSettings: self.screenNode.data?.globalNotificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: false)
+                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, threadData: self.screenNode.data?.threadData, peerNotificationSettings: self.screenNode.data?.peerNotificationSettings, threadNotificationSettings: self.screenNode.data?.threadNotificationSettings, globalNotificationSettings: self.screenNode.data?.globalNotificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, transition: transition, additive: false)
             }
             
             let titleScale = (fraction * previousTitleNode.view.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.view.bounds.height

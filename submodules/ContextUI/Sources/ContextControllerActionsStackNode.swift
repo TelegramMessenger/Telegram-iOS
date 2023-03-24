@@ -265,7 +265,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 textColor: titleColor)
         }
         
-        self.titleLabelNode.isUserInteractionEnabled = self.titleLabelNode.tapAttributeAction != nil
+        self.titleLabelNode.isUserInteractionEnabled = self.titleLabelNode.tapAttributeAction != nil && self.item.action == nil
         
         self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
             return NSAttributedString(

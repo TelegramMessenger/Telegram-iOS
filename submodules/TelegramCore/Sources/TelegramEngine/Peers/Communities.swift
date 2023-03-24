@@ -155,8 +155,8 @@ public enum EditChatFolderLinkError {
     case generic
 }
 
-func _internal_editChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink, title: String?, peerIds: [EnginePeer.Id]?, revoke: Bool) -> Signal<Never, EditChatFolderLinkError> {
-    return account.postbox.transaction { transaction -> Signal<Never, EditChatFolderLinkError> in
+func _internal_editChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink, title: String?, peerIds: [EnginePeer.Id]?, revoke: Bool) -> Signal<ExportedChatFolderLink, EditChatFolderLinkError> {
+    return account.postbox.transaction { transaction -> Signal<ExportedChatFolderLink, EditChatFolderLinkError> in
         var flags: Int32 = 0
         if revoke {
             flags |= 1 << 0
@@ -166,13 +166,24 @@ func _internal_editChatFolderLink(account: Account, filterId: Int32, link: Expor
         }
         var peers: [Api.InputPeer]?
         if let peerIds = peerIds {
+            flags |= 1 << 2
             peers = peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
         }
         return account.network.request(Api.functions.communities.editExportedInvite(flags: flags, community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug, title: title, peers: peers))
         |> mapError { _ -> EditChatFolderLinkError in
             return .generic
         }
-        |> ignoreValues
+        |> map { result in
+            switch result {
+            case let .exportedCommunityInvite(flags, title, url, peers):
+                return ExportedChatFolderLink(
+                    title: title,
+                    link: url,
+                    peerIds: peers.map(\.peerId),
+                    isRevoked: (flags & (1 << 0)) != 0
+                )
+            }
+        }
     }
     |> castError(EditChatFolderLinkError.self)
     |> switchToLatest
@@ -183,9 +194,9 @@ public enum RevokeChatFolderLinkError {
     case generic
 }
 
-func _internal_revokeChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
+func _internal_deleteChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
     return account.network.request(Api.functions.communities.deleteExportedInvite(community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug))
-    |> mapError { _ -> RevokeChatFolderLinkError in
+    |> mapError { error -> RevokeChatFolderLinkError in
         return .generic
     }
     |> ignoreValues
