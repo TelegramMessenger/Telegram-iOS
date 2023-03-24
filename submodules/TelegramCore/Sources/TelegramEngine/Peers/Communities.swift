@@ -178,9 +178,9 @@ public enum RevokeChatFolderLinkError {
     case generic
 }
 
-func _internal_revokeChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
+func _internal_deleteChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
     return account.network.request(Api.functions.communities.deleteExportedInvite(community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug))
-    |> mapError { _ -> RevokeChatFolderLinkError in
+    |> mapError { error -> RevokeChatFolderLinkError in
         return .generic
     }
     |> ignoreValues
