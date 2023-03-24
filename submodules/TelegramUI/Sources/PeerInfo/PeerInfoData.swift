@@ -183,7 +183,8 @@ final class PeerInfoScreenData {
     let chatPeer: Peer?
     let cachedData: CachedPeerData?
     let status: PeerInfoStatusData?
-    let notificationSettings: TelegramPeerNotificationSettings?
+    let peerNotificationSettings: TelegramPeerNotificationSettings?
+    let threadNotificationSettings: TelegramPeerNotificationSettings?
     let globalNotificationSettings: EngineGlobalNotificationSettings?
     let isContact: Bool
     let availablePanes: [PeerInfoPaneKey]
@@ -204,7 +205,8 @@ final class PeerInfoScreenData {
         chatPeer: Peer?,
         cachedData: CachedPeerData?,
         status: PeerInfoStatusData?,
-        notificationSettings: TelegramPeerNotificationSettings?,
+        peerNotificationSettings: TelegramPeerNotificationSettings?,
+        threadNotificationSettings: TelegramPeerNotificationSettings?,
         globalNotificationSettings: EngineGlobalNotificationSettings?,
         isContact: Bool,
         availablePanes: [PeerInfoPaneKey],
@@ -224,7 +226,8 @@ final class PeerInfoScreenData {
         self.chatPeer = chatPeer
         self.cachedData = cachedData
         self.status = status
-        self.notificationSettings = notificationSettings
+        self.peerNotificationSettings = peerNotificationSettings
+        self.threadNotificationSettings = threadNotificationSettings
         self.globalNotificationSettings = globalNotificationSettings
         self.isContact = isContact
         self.availablePanes = availablePanes
@@ -521,7 +524,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             chatPeer: peer,
             cachedData: peerView.cachedData,
             status: nil,
-            notificationSettings: nil,
+            peerNotificationSettings: nil,
+            threadNotificationSettings: nil,
             globalNotificationSettings: nil,
             isContact: false,
             availablePanes: [],
@@ -550,7 +554,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 chatPeer: nil,
                 cachedData: nil,
                 status: nil,
-                notificationSettings: nil,
+                peerNotificationSettings: nil,
+                threadNotificationSettings: nil,
                 globalNotificationSettings: nil,
                 isContact: false,
                 availablePanes: [],
@@ -683,7 +688,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     chatPeer: peerView.peers[peerId],
                     cachedData: peerView.cachedData,
                     status: status,
-                    notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
+                    peerNotificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
+                    threadNotificationSettings: nil,
                     globalNotificationSettings: globalNotificationSettings,
                     isContact: peerView.peerIsContact,
                     availablePanes: availablePanes ?? [],
@@ -761,7 +767,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     chatPeer: peerView.peers[peerId],
                     cachedData: peerView.cachedData,
                     status: status,
-                    notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
+                    peerNotificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings,
+                    threadNotificationSettings: nil,
                     globalNotificationSettings: globalNotificationSettings,
                     isContact: peerView.peerIsContact,
                     availablePanes: availablePanes ?? [],
@@ -948,12 +955,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                 }
                 
-                var notificationSettings: TelegramPeerNotificationSettings?
-                if let threadData = threadData {
-                    notificationSettings = threadData.notificationSettings
-                } else {
-                    notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings
-                }
+                let peerNotificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings
+                let threadNotificationSettings = threadData?.notificationSettings
                 
                 let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
               
@@ -962,7 +965,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     chatPeer: peerView.peers[groupId],
                     cachedData: peerView.cachedData,
                     status: status,
-                    notificationSettings: notificationSettings,
+                    peerNotificationSettings: peerNotificationSettings,
+                    threadNotificationSettings: threadNotificationSettings,
                     globalNotificationSettings: globalNotificationSettings,
                     isContact: peerView.peerIsContact,
                     availablePanes: availablePanes ?? [],
@@ -1304,4 +1308,43 @@ func peerInfoCanEdit(peer: Peer?, chatLocation: ChatLocation, threadData: Messag
         }
     }
     return false
+}
+
+func peerInfoIsChatMuted(peer: Peer?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?) -> Bool {
+    func isPeerMuted(peer: Peer?, peerNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?) -> Bool {
+        var peerIsMuted = false
+        if let peerNotificationSettings {
+            if case .muted = peerNotificationSettings.muteState {
+                peerIsMuted = true
+            } else if case .default = peerNotificationSettings.muteState, let globalNotificationSettings {
+                if let peer {
+                    if peer is TelegramUser {
+                        peerIsMuted = !globalNotificationSettings.privateChats.enabled
+                    } else if peer is TelegramGroup {
+                        peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                    } else if let channel = peer as? TelegramChannel {
+                        switch channel.info {
+                        case .group:
+                            peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                        case .broadcast:
+                            peerIsMuted = !globalNotificationSettings.channels.enabled
+                        }
+                    }
+                }
+            }
+        }
+        return peerIsMuted
+    }
+    
+    var chatIsMuted = false
+    if let threadNotificationSettings {
+        if case .muted = threadNotificationSettings.muteState {
+            chatIsMuted = true
+        } else if let peerNotificationSettings {
+            chatIsMuted = isPeerMuted(peer: peer, peerNotificationSettings: peerNotificationSettings, globalNotificationSettings: globalNotificationSettings)
+        }
+    } else {
+        chatIsMuted = isPeerMuted(peer: peer, peerNotificationSettings: peerNotificationSettings, globalNotificationSettings: globalNotificationSettings)
+    }
+    return chatIsMuted
 }
