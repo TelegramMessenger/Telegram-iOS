@@ -45,13 +45,13 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = ItemListReactionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-            
-            node.contentSize = layout.contentSize
-            node.insets = layout.insets
-            
             Queue.mainQueue().async {
+                let node = ItemListReactionItemNode()
+                let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                
+                node.contentSize = layout.contentSize
+                node.insets = layout.insets
+                
                 completion(node, {
                     return (nil, { _ in apply() })
                 })

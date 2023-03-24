@@ -113,7 +113,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self.textNode)
-        let (size, apply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "00:00,00", font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 200.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        let (size, apply) = makeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "0:00:00,00", font: Font.regular(15.0), textColor: theme.chat.inputPanel.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 200.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 1.0 + UIScreenPixel), size: size.size)
         return size.size
@@ -135,7 +135,12 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         if let parameters = parameters as? ChatTextInputAudioRecordingTimeNodeParameters {
             let currentAudioDurationSeconds = Int(parameters.timestamp)
             let currentAudioDurationMilliseconds = Int(parameters.timestamp * 100.0) % 100
-            let text = String(format: "%d:%02d,%02d", currentAudioDurationSeconds / 60, currentAudioDurationSeconds % 60, currentAudioDurationMilliseconds)
+            let text: String
+            if currentAudioDurationSeconds >= 60 * 60 {
+                text = String(format: "%d:%02d:%02d,%02d", currentAudioDurationSeconds / 3600, currentAudioDurationSeconds / 60 % 60, currentAudioDurationSeconds % 60, currentAudioDurationMilliseconds)
+            } else {
+                text = String(format: "%d:%02d,%02d", currentAudioDurationSeconds / 60, currentAudioDurationSeconds % 60, currentAudioDurationMilliseconds)
+            }
             let string = NSAttributedString(string: text, font: textFont, textColor: parameters.theme.chat.inputPanel.primaryTextColor)
             string.draw(at: CGPoint())
         }

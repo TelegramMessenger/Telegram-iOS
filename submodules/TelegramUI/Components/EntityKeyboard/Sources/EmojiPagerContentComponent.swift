@@ -8051,7 +8051,6 @@ public final class EmojiPagerContentComponent: Component {
             searchCategories
         )
         |> map { view, hasPremium, featuredStickerPacks, featuredStickersConfiguration, dismissedTrendingStickerPacks, peerSpecificPack, searchCategories -> EmojiPagerContentComponent in
-            let actuallyHasPremium = hasPremium
             let hasPremium = forceHasPremium || hasPremium
             struct ItemGroup {
                 var supergroupId: AnyHashable
@@ -8070,14 +8069,11 @@ public final class EmojiPagerContentComponent: Component {
             
             var savedStickers: OrderedItemListView?
             var recentStickers: OrderedItemListView?
-            var cloudPremiumStickers: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
                     recentStickers = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
                     savedStickers = orderedView
-                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudAllPremiumStickers {
-                    cloudPremiumStickers = orderedView
                 }
             }
             
@@ -8225,64 +8221,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
             }
-            
-            var premiumStickers: [StickerPackItem] = []
-            if hasPremium {
-                for entry in view.entries {
-                    guard let item = entry.item as? StickerPackItem else {
-                        continue
-                    }
-                    
-                    if item.file.isPremiumSticker {
-                        premiumStickers.append(item)
-                    }
-                }
-                
-                if let cloudPremiumStickers = cloudPremiumStickers, !cloudPremiumStickers.items.isEmpty, actuallyHasPremium {
-                    premiumStickers.append(contentsOf: cloudPremiumStickers.items.compactMap { item -> StickerPackItem? in guard let item = item.contents.get(RecentMediaItem.self) else {
-                            return nil
-                        }
-                        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: item.media, indexKeys: [])
-                    })
-                }
-            }
-            
-            if !premiumStickers.isEmpty {
-                var processedIds = Set<MediaId>()
-                for item in premiumStickers {
-                    if isPremiumDisabled && item.file.isPremiumSticker {
-                        continue
-                    }
-                    if processedIds.contains(item.file.fileId) {
-                        continue
-                    }
-                    processedIds.insert(item.file.fileId)
-                    
-                    var tintMode: Item.TintMode = .none
-                    if item.file.isCustomTemplateEmoji {
-                        tintMode = .primary
-                    }
-                    
-                    let animationData = EntityKeyboardAnimationData(file: item.file)
-                    let resultItem = EmojiPagerContentComponent.Item(
-                        animationData: animationData,
-                        content: .animation(animationData),
-                        itemFile: item.file,
-                        subgroupId: nil,
-                        icon: .none,
-                        tintMode: tintMode
-                    )
-                    
-                    let groupId = "premium"
-                    if let groupIndex = itemGroupIndexById[groupId] {
-                        itemGroups[groupIndex].items.append(resultItem)
-                    } else {
-                        itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitlePremiumStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, headerItem: nil, items: [resultItem]))
-                    }
-                }
-            }
-            
+              
             var avatarPeer: EnginePeer?
             if let peerSpecificPack = peerSpecificPack {
                 avatarPeer = peerSpecificPack.peer

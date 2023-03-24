@@ -361,7 +361,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var recentlyUsedInlineBotsDisposable: Disposable?
     
     private var unpinMessageDisposable: MetaDisposable?
-    
+        
     private let typingActivityPromise = Promise<Bool>(false)
     private var inputActivityDisposable: Disposable?
     private var recordingActivityValue: ChatRecordingActivity = .none
@@ -3875,16 +3875,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
                 |> mapToSignal { message -> Signal<(EngineMessage.Id, Int32?)?, NoError> in
-                    if let message = message, let sourceMessageId = message.forwardInfo?.sourceMessageId {
-                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: sourceMessageId.peerId))
+                    if let message {
+                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: message.id.peerId))
                         |> map { statsDatacenterId -> (EngineMessage.Id, Int32?)? in
-                            return (sourceMessageId, statsDatacenterId)
+                            return (message.id, statsDatacenterId)
                         }
                     } else {
-                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: id.peerId))
-                        |> map { statsDatacenterId -> (EngineMessage.Id, Int32?)? in
-                            return (id, statsDatacenterId)
-                        }
+                        return .complete()
                     }
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] messageIdAndStatsDatacenterId in
@@ -4106,7 +4103,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
                     }
                     
-                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, isInline: false, isSimple: false)
+                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, fromAttachMenu: false, isInline: false, isSimple: false)
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                         self?.openUrl(url, concealed: true, forceExternal: true)
                     }, getInputContainerNode: { [weak self] in
@@ -4161,7 +4158,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, isInline: isInline, isSimple: true)
+                        let params = WebAppParameters(peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: isInline, isSimple: true)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         }, requestSwitchInline: { [weak self] query, chatTypes, completion in
@@ -4201,7 +4198,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false, isInline: false, isSimple: false)
+                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         }, completion: { [weak self] in
@@ -12704,7 +12701,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, fromMenu: false, isInline: false, isSimple: false)
+            let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false)
             let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                 self?.openUrl(url, concealed: true, forceExternal: true)
             }, completion: { [weak self] in
@@ -13224,10 +13221,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 case let .app(bot, botName, _):
                     var payload: String?
+                    var fromAttachMenu = true
                     if case let .bot(_, botPayload, _) = subject {
                         payload = botPayload
+                        fromAttachMenu = false
                     }
-                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, isInline: false, isSimple: false)
+                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, replyToMessageId: replyMessageId, threadId: strongSelf.chatLocation.threadId)
                     controller.openUrl = { [weak self] url in
