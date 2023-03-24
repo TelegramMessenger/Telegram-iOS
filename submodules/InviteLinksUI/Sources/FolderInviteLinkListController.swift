@@ -437,7 +437,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             
             let _ = (context.engine.peers.editChatFolderLink(filterId: filterId, link: invite, title: nil, peerIds: nil, revoke: true)
             |> deliverOnMainQueue).start(completed: {
-                let _ = (context.engine.peers.revokeChatFolderLink(filterId: filterId, link: invite)
+                let _ = (context.engine.peers.deleteChatFolderLink(filterId: filterId, link: invite)
                 |> deliverOnMainQueue).start(completed: {
                     linkUpdated(nil)
                     dismissImpl?()
