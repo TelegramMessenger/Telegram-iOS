@@ -2793,11 +2793,8 @@ final class StorageUsageScreenComponent: Component {
                         return
                     }
                     let _ = self
-                }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
-                    guard let self else {
-                        return
-                    }
-                    let _ = self
+                }, editMedia: { _, _, _ in
+                }, updateCanReadHistory: { _ in
                 }),
                 centralItemUpdated: { [weak self] messageId in
                     //let _ = self?.paneContainerNode.requestExpandTabs?()

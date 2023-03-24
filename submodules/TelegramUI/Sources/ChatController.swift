@@ -1065,6 +1065,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                         }
                     })
+                }, updateCanReadHistory: { [weak self] canReadHistory in
+                    self?.canReadHistory.set(canReadHistory)
                 }),
                 getSourceRect: { [weak self] in
                     guard let strongSelf = self else {
@@ -1326,7 +1328,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         source = .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, selectAll: selectAll))
                     }
                     
+                    strongSelf.canReadHistory.set(false)
+                    
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: actionsSignal, recognizer: recognizer, gesture: gesture)
+                    controller.dismissed = { [weak self] in
+                        self?.canReadHistory.set(true)
+                    }
                     controller.immediateItemsTransitionAnimation = disableTransitionAnimations
                     controller.getOverlayViews = { [weak self] in
                         guard let strongSelf = self else {
@@ -1658,8 +1665,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+                strongSelf.canReadHistory.set(false)
                 
+                let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, engine: strongSelf.context.engine, message: message, contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+                controller.dismissed = { [weak self] in
+                    self?.canReadHistory.set(true)
+                }
                 dismissController = { [weak controller] completion in
                     controller?.dismiss(completion: {
                         completion()
@@ -3209,7 +3220,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let peerId = replyThreadMessage.messageId.peerId
                 strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, forceInCurrentChat: true, animated: true, completion: nil)
             case .feed:
-                //TODO:implement
                 break
             }
         }, requestRedeliveryOfFailedMessages: { [weak self] id in
@@ -3832,7 +3842,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                 
+                strongSelf.canReadHistory.set(false)
+                
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                contextController.dismissed = { [weak self] in
+                    self?.canReadHistory.set(true)
+                }
                 strongSelf.presentInGlobalOverlay(contextController)
             })
         }, openMessageReplies: { [weak self] messageId, isChannelPost, displayModalProgress in
@@ -4485,7 +4500,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                 
+                strongSelf.canReadHistory.set(false)
+                
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                contextController.dismissed = { [weak self] in
+                    self?.canReadHistory.set(true)
+                }
                 strongSelf.presentInGlobalOverlay(contextController)
             }
             chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
@@ -7903,7 +7923,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 var webpageUrl: String?
                                 for media in message.media {
                                     if media is TelegramMediaImage || media is TelegramMediaFile {
-                                        inputTextMaxLength = strongSelf.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
+                                        inputTextMaxLength = strongSelf.context.userLimits.maxCaptionLength
                                     } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                                         webpageUrl = content.url
                                     }
@@ -8320,7 +8340,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
 
+                strongSelf.canReadHistory.set(false)
+                
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
+                contextController.dismissed = { [weak self] in
+                    self?.canReadHistory.set(true)
+                }
                 contextController.dismissedForCancel = { [weak chatController] in
                     if let selectedMessageIds = (chatController as? ChatControllerImpl)?.selectedMessageIds {
                         var forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
@@ -12563,10 +12588,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return nil
             }
-            
-            let areCustomEmojiEnabled = strongSelf.presentationInterfaceState.customEmojiAvailable
-            
-            return EntityInputView(context: strongSelf.context, isDark: true, areCustomEmojiEnabled: areCustomEmojiEnabled)
+
+            return EntityInputView(context: strongSelf.context, isDark: true, areCustomEmojiEnabled: strongSelf.presentationInterfaceState.customEmojiAvailable)
         })
         inputPanelNode.interfaceInteraction = interfaceInteraction
         inputPanelNode.effectivePresentationInterfaceState = {
@@ -12965,15 +12988,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let currentFilesController = Atomic<AttachmentFileControllerImpl?>(value: nil)
             let currentLocationController = Atomic<LocationPickerController?>(value: nil)
             
+            strongSelf.canReadHistory.set(false)
+            
             let attachmentController = AttachmentController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: strongSelf.chatLocation, buttons: buttons, initialButton: initialButton, makeEntityInputView: { [weak self] in
                 guard let strongSelf = self else {
                     return nil
                 }
-                
-                let areCustomEmojiEnabled = strongSelf.presentationInterfaceState.customEmojiAvailable
-                
-                return EntityInputView(context: strongSelf.context, isDark: false, areCustomEmojiEnabled: areCustomEmojiEnabled)
+                return EntityInputView(context: strongSelf.context, isDark: false, areCustomEmojiEnabled: strongSelf.presentationInterfaceState.customEmojiAvailable)
             })
+            attachmentController.didDismiss = { [weak self] in
+                self?.attachmentController = nil
+                self?.canReadHistory.set(true)
+            }
             attachmentController.getSourceRect = { [weak self] in
                 if let strongSelf = self {
                     return strongSelf.chatDisplayNode.frameForAttachmentButton()?.offsetBy(dx: strongSelf.chatDisplayNode.supernode?.frame.minX ?? 0.0, dy: 0.0)

@@ -438,7 +438,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fitSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
-                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: item.stickerItem.file.resource, isVideo: item.stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: item.stickerItem.file.resource, isVideo: item.stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 }
             }
         }
