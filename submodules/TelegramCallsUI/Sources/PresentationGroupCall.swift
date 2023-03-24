@@ -116,12 +116,12 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
             activeSpeakers: Set(),
             groupCall: nil
         )))*/
-
+        
         let state = engine.calls.getGroupCallParticipants(callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
-                return .single(nil)
-            }
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
+            return .single(nil)
+        }
         
         self.disposable = (combineLatest(queue: .mainQueue(),
             state,
@@ -139,7 +139,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 state: state,
                 previousServiceState: nil
             )
-                        
+            
             strongSelf.participantsContext = context
             strongSelf.panelDataPromise.set(combineLatest(queue: .mainQueue(),
                 context.state,

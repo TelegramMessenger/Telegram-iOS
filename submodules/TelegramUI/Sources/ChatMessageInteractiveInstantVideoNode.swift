@@ -1601,7 +1601,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let duration: Double = 0.2
         
         node.alpha = 1.0
-        node.isHidden = false
+        if node.supernode == nil {
+            self.supernode?.insertSubnode(node, belowSubnode: self)
+        }
         
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
@@ -1715,7 +1717,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         
         node.alpha = 0.0
         node.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { _ in
-            node.isHidden = true
+            node.removeFromSupernode()
         })
         node.waveformView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
                 

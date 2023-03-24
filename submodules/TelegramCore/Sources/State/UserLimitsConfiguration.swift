@@ -3,6 +3,7 @@ import SwiftSignalKit
 
 public struct UserLimitsConfiguration: Equatable {
     public let maxPinnedChatCount: Int32
+    public let maxArchivedPinnedChatCount: Int32
     public let maxChannelsCount: Int32
     public let maxPublicLinksCount: Int32
     public let maxSavedGifCount: Int32
@@ -18,6 +19,7 @@ public struct UserLimitsConfiguration: Equatable {
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
             maxPinnedChatCount: 5,
+            maxArchivedPinnedChatCount: 100,
             maxChannelsCount: 500,
             maxPublicLinksCount: 10,
             maxSavedGifCount: 200,
@@ -34,6 +36,7 @@ public struct UserLimitsConfiguration: Equatable {
 
     public init(
         maxPinnedChatCount: Int32,
+        maxArchivedPinnedChatCount: Int32,
         maxChannelsCount: Int32,
         maxPublicLinksCount: Int32,
         maxSavedGifCount: Int32,
@@ -47,6 +50,7 @@ public struct UserLimitsConfiguration: Equatable {
         maxReactionsPerMessage: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
+        self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
         self.maxChannelsCount = maxChannelsCount
         self.maxPublicLinksCount = maxPublicLinksCount
         self.maxSavedGifCount = maxSavedGifCount
@@ -83,6 +87,7 @@ extension UserLimitsConfiguration {
         }
         
         self.maxPinnedChatCount = getValue("dialogs_pinned_limit", orElse: defaultValue.maxPinnedChatCount)
+        self.maxArchivedPinnedChatCount = getValue("dialogs_folder_pinned_limit", orElse: defaultValue.maxArchivedPinnedChatCount)
         self.maxChannelsCount = getValue("channels_limit", orElse: defaultValue.maxChannelsCount)
         self.maxPublicLinksCount = getValue("channels_public_limit", orElse: defaultValue.maxPublicLinksCount)
         self.maxSavedGifCount = getValue("saved_gifs_limit", orElse: defaultValue.maxSavedGifCount)

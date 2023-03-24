@@ -95,6 +95,7 @@ private final class TitleFieldComponent: Component {
     let iconColor: Int32
     let text: String
     let placeholderText: String
+    let isEditing: Bool
     let textUpdated: (String) -> Void
     let iconPressed: () -> Void
     
@@ -108,6 +109,7 @@ private final class TitleFieldComponent: Component {
         iconColor: Int32,
         text: String,
         placeholderText: String,
+        isEditing: Bool,
         textUpdated: @escaping (String) -> Void,
         iconPressed: @escaping () -> Void
     ) {
@@ -120,6 +122,7 @@ private final class TitleFieldComponent: Component {
         self.iconColor = iconColor
         self.text = text
         self.placeholderText = placeholderText
+        self.isEditing = isEditing
         self.textUpdated = textUpdated
         self.iconPressed = iconPressed
     }
@@ -150,6 +153,9 @@ private final class TitleFieldComponent: Component {
             return false
         }
         if lhs.placeholderText != rhs.placeholderText {
+            return false
+        }
+        if lhs.isEditing != rhs.isEditing {
             return false
         }
         return true
@@ -237,6 +243,7 @@ private final class TitleFieldComponent: Component {
                 iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
                 self.iconButton.isUserInteractionEnabled = false
             }
+            self.iconButton.isUserInteractionEnabled = !component.isEditing
             
             let placeholderSize = self.placeholderView.update(
                 transition: .easeInOut(duration: 0.2),
@@ -471,15 +478,26 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     let mode: ForumCreateTopicScreen.Mode
     let titleUpdated: (String) -> Void
     let iconUpdated: (Int64?) -> Void
+    let iconColorUpdated: (Int32) -> Void
     let isHiddenUpdated: (Bool) -> Void
     let openPremium: () -> Void
     
-    init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode, titleUpdated:  @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, isHiddenUpdated: @escaping (Bool) -> Void, openPremium: @escaping () -> Void) {
+    init(
+        context: AccountContext,
+        peerId: EnginePeer.Id,
+        mode: ForumCreateTopicScreen.Mode,
+        titleUpdated:  @escaping (String) -> Void,
+        iconUpdated: @escaping (Int64?) -> Void,
+        iconColorUpdated: @escaping (Int32) -> Void,
+        isHiddenUpdated: @escaping (Bool) -> Void,
+        openPremium: @escaping () -> Void
+    ) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
         self.titleUpdated = titleUpdated
         self.iconUpdated = iconUpdated
+        self.iconColorUpdated = iconColorUpdated
         self.isHiddenUpdated = isHiddenUpdated
         self.openPremium = openPremium
     }
@@ -501,6 +519,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         private let context: AccountContext
         private let titleUpdated: (String) -> Void
         private let iconUpdated: (Int64?) -> Void
+        private let iconColorUpdated: (Int32) -> Void
         private let isHiddenUpdated: (Bool) -> Void
         private let openPremium: () -> Void
         
@@ -520,10 +539,11 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         
         private var hasPremium: Bool = false
         
-        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, isHiddenUpdated: @escaping (Bool) -> Void, openPremium: @escaping () -> Void) {
+        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, iconColorUpdated: @escaping (Int32) -> Void, isHiddenUpdated: @escaping (Bool) -> Void, openPremium: @escaping () -> Void) {
             self.context = context
             self.titleUpdated = titleUpdated
             self.iconUpdated = iconUpdated
+            self.iconColorUpdated = iconColorUpdated
             self.isHiddenUpdated = isHiddenUpdated
             self.openPremium = openPremium
             
@@ -534,6 +554,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 self.fileId = 0
                 self.iconColor = ForumCreateTopicScreen.iconColors.randomElement() ?? 0x0
                 self.isHidden = false
+                iconColorUpdated(self.iconColor)
             case let .edit(threadId, info, isHidden):
                 self.isGeneral = threadId == 1
                 self.title = info.title
@@ -647,6 +668,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 self.iconColor = colors.first ?? 0
             }
             self.updated(transition: .immediate)
+            self.iconColorUpdated(self.iconColor)
             self.updateEmojiContent()
         }
         
@@ -678,6 +700,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             mode: self.mode,
             titleUpdated: self.titleUpdated,
             iconUpdated: self.iconUpdated,
+            iconColorUpdated: self.iconColorUpdated,
             isHiddenUpdated: self.isHiddenUpdated,
             openPremium: self.openPremium
         )
@@ -753,6 +776,11 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + titleBackground.size.height / 2.0))
             )
             
+            var isEditing = false
+            if case .edit = context.component.mode {
+                isEditing = true
+            }
+            
             let titleField = titleField.update(
                 component: TitleFieldComponent(
                     context: context.component.context,
@@ -764,6 +792,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     iconColor: state.iconColor,
                     text: state.title,
                     placeholderText: environment.strings.CreateTopic_EnterTopicTitlePlaceholder,
+                    isEditing: isEditing,
                     textUpdated: { [weak state] text in
                         state?.updateTitle(text)
                     },
@@ -999,8 +1028,8 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     
     private var doneBarItem: UIBarButtonItem?
     
-    private var state: (String, Int64?, Bool?) = ("", nil, nil)
-    public var completion: (String, Int64?, Bool?) -> Void = { _, _, _ in }
+    private var state: (title: String, icon: Int64?, iconColor: Int32, isHidden: Bool?) = ("", nil, 0, nil)
+    public var completion: (_ title: String, _ icon: Int64?, _ iconColor: Int32, _ isHidden: Bool?) -> Void = { _, _, _, _ in }
     
     public var isInProgress: Bool = false {
         didSet {
@@ -1021,6 +1050,7 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         
         var titleUpdatedImpl: ((String) -> Void)?
         var iconUpdatedImpl: ((Int64?) -> Void)?
+        var iconColorUpdatedImpl: ((Int32) -> Void)?
         var isHiddenUpdatedImpl: ((Bool) -> Void)?
         var openPremiumImpl: (() -> Void)?
         
@@ -1028,6 +1058,8 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             titleUpdatedImpl?(title)
         }, iconUpdated: { fileId in
             iconUpdatedImpl?(fileId)
+        }, iconColorUpdated: { iconColor in
+            iconColorUpdatedImpl?(iconColor)
         }, isHiddenUpdated: { isHidden in
             isHiddenUpdatedImpl?(isHidden)
         }, openPremium: {
@@ -1045,7 +1077,7 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             title = presentationData.strings.CreateTopic_EditTitle
             doneTitle = presentationData.strings.Common_Done
             
-            self.state = (topic.title, topic.icon, threadId == 1 ? isHidden : nil)
+            self.state = (topic.title, topic.icon, topic.iconColor, threadId == 1 ? isHidden : nil)
         }
         
         self.title = title
@@ -1066,23 +1098,28 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             }
             strongSelf.doneBarItem?.isEnabled = !title.isEmpty
             
-            strongSelf.state = (title, strongSelf.state.1, strongSelf.state.2)
+            strongSelf.state = (title, strongSelf.state.icon, strongSelf.state.iconColor, strongSelf.state.isHidden)
         }
         
         iconUpdatedImpl = { [weak self] fileId in
             guard let strongSelf = self else {
                 return
             }
-            
-            strongSelf.state = (strongSelf.state.0, fileId, strongSelf.state.2)
+            strongSelf.state = (strongSelf.state.title, fileId, strongSelf.state.iconColor, strongSelf.state.isHidden)
+        }
+        
+        iconColorUpdatedImpl = { [weak self] iconColor in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.state = (strongSelf.state.title, strongSelf.state.icon, iconColor, strongSelf.state.isHidden)
         }
         
         isHiddenUpdatedImpl = { [weak self] isHidden in
             guard let strongSelf = self else {
                 return
             }
-            
-            strongSelf.state = (strongSelf.state.0, strongSelf.state.1, isHidden)
+            strongSelf.state = (strongSelf.state.title, strongSelf.state.icon, strongSelf.state.iconColor, isHidden)
         }
         
         openPremiumImpl = { [weak self] in
@@ -1113,6 +1150,6 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     }
     
     @objc private func createPressed() {
-        self.completion(self.state.0, self.state.1, self.state.2)
+        self.completion(self.state.title, self.state.icon, self.state.iconColor, self.state.isHidden)
     }
 }

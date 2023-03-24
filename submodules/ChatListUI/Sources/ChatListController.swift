@@ -1205,10 +1205,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
                     
-                    controller.completion = { [weak controller] title, fileId, _ in
+                    controller.completion = { [weak controller] title, fileId, iconColor, _ in
                         controller?.isInProgress = true
                         
-                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
+                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).start()
                         }, error: { _ in
@@ -2441,10 +2441,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
                     
-                    controller.completion = { [weak controller] title, fileId, _ in
+                    controller.completion = { [weak controller] title, fileId, iconColor, _ in
                         controller?.isInProgress = true
                         
-                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
+                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             if let navigationController = (sourceController.navigationController as? NavigationController) {
                                 let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).start()

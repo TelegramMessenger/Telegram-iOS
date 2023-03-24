@@ -209,15 +209,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.cancel = cancel
                 
         self.effectView = UIVisualEffectView()
-        if #available(iOS 9.0, *) {
-        } else {
-            if self.presentationData.theme.rootController.keyboardColor == .dark {
-                self.effectView.effect = UIBlurEffect(style: .dark)
-            } else {
-                self.effectView.effect = UIBlurEffect(style: .light)
-            }
-            self.effectView.alpha = 0.0
-        }
         
         self.dimNode = ASDisplayNode()
         self.dimNode.alpha = 1.0
@@ -430,14 +421,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         self.presentationData = presentationData
         
-        if #available(iOS 9.0, *) {
-        } else {
-            if self.presentationData.theme.rootController.keyboardColor == .dark {
-                self.effectView.effect = UIBlurEffect(style: .dark)
-            } else {
-                self.effectView.effect = UIBlurEffect(style: .light)
-            }
-        }
+        self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
         
         self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
         
@@ -465,11 +449,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.textInputNode.textView.setContentOffset(self.textInputNode.textView.contentOffset, animated: false)
         
         UIView.animate(withDuration: 0.2, animations: {
-            if #available(iOS 9.0, *) {
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
-            } else {
-                self.effectView.alpha = 1.0
-            }
+            self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
         }, completion: { _ in })
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -562,12 +542,8 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             }
         }
         
-        UIView.animate(withDuration: 0.4, animations: {
-            if #available(iOS 9.0, *) {
-                self.effectView.effect = nil
-            } else {
-                self.effectView.alpha = 0.0
-            }
+        UIView.animate(withDuration: 0.2, animations: {
+            self.effectView.effect = nil
         }, completion: { _ in
             completedEffect = true
             intermediateCompletion()
@@ -596,7 +572,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         let duration = 0.4
-        
         self.sendButtonNode.layer.animatePosition(from: self.sendButtonNode.position, to: self.sendButtonFrame.center, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             completedButton = true
             intermediateCompletion()
