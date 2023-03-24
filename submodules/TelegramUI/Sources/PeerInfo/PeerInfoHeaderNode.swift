@@ -2554,7 +2554,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var currentCredibilityIcon: CredibilityIcon?
     
     private var currentPanelStatusData: PeerInfoStatusData?
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, notificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
         self.threadData = threadData
@@ -3494,28 +3494,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 buttonIcon = .voiceChat
             case .mute:
-                var peerIsMuted = false
-                if let notificationSettings {
-                    if case .muted = notificationSettings.muteState {
-                        peerIsMuted = true
-                    } else if case .default = notificationSettings.muteState, let globalNotificationSettings {
-                        if let peer {
-                            if peer is TelegramUser {
-                                peerIsMuted = !globalNotificationSettings.privateChats.enabled
-                            } else if peer is TelegramGroup {
-                                peerIsMuted = !globalNotificationSettings.groupChats.enabled
-                            } else if let channel = peer as? TelegramChannel {
-                                switch channel.info {
-                                case .group:
-                                    peerIsMuted = !globalNotificationSettings.groupChats.enabled
-                                case .broadcast:
-                                    peerIsMuted = !globalNotificationSettings.channels.enabled
-                                }
-                            }
-                        }
-                    }
-                }
-                if peerIsMuted {
+                let chatIsMuted = peerInfoIsChatMuted(peer: peer, peerNotificationSettings: peerNotificationSettings, threadNotificationSettings: threadNotificationSettings, globalNotificationSettings: globalNotificationSettings)
+                if chatIsMuted {
                     buttonText = presentationData.strings.PeerInfo_ButtonUnmute
                     buttonIcon = .unmute
                 } else {
