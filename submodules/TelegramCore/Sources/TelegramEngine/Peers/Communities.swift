@@ -84,17 +84,17 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
     }
 }
 
-func _internal_getExportedChatFolderLinks(account: Account, id: Int32) -> Signal<[ExportedChatFolderLink], NoError> {
+func _internal_getExportedChatFolderLinks(account: Account, id: Int32) -> Signal<[ExportedChatFolderLink]?, NoError> {
     return account.network.request(Api.functions.communities.getExportedInvites(community: .inputCommunityDialogFilter(filterId: id)))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.communities.ExportedInvites?, NoError> in
         return .single(nil)
     }
-    |> mapToSignal { result -> Signal<[ExportedChatFolderLink], NoError> in
+    |> mapToSignal { result -> Signal<[ExportedChatFolderLink]?, NoError> in
         guard let result = result else {
-            return .single([])
+            return .single(nil)
         }
-        return account.postbox.transaction { transaction -> [ExportedChatFolderLink] in
+        return account.postbox.transaction { transaction -> [ExportedChatFolderLink]? in
             switch result {
             case let .exportedInvites(invites, chats, users):
                 var peers: [Peer] = []
@@ -139,19 +139,27 @@ public enum EditChatFolderLinkError {
     case generic
 }
 
-func _internal_editChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink, title: String?, revoke: Bool) -> Signal<Never, EditChatFolderLinkError> {
-    var flags: Int32 = 0
-    if revoke {
-        flags |= 1 << 0
+func _internal_editChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink, title: String?, peerIds: [EnginePeer.Id]?, revoke: Bool) -> Signal<Never, EditChatFolderLinkError> {
+    return account.postbox.transaction { transaction -> Signal<Never, EditChatFolderLinkError> in
+        var flags: Int32 = 0
+        if revoke {
+            flags |= 1 << 0
+        }
+        if title != nil {
+            flags |= 1 << 1
+        }
+        var peers: [Api.InputPeer]?
+        if let peerIds = peerIds {
+            peers = peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
+        }
+        return account.network.request(Api.functions.communities.editExportedInvite(flags: flags, community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug, title: title, peers: peers))
+        |> mapError { _ -> EditChatFolderLinkError in
+            return .generic
+        }
+        |> ignoreValues
     }
-    if title != nil {
-        flags |= 1 << 1
-    }
-    return account.network.request(Api.functions.communities.editExportedInvite(flags: flags, community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug, title: title))
-    |> mapError { _ -> EditChatFolderLinkError in
-        return .generic
-    }
-    |> ignoreValues
+    |> castError(EditChatFolderLinkError.self)
+    |> switchToLatest
     
 }
 

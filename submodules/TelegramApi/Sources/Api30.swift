@@ -2943,14 +2943,19 @@ public extension Api.functions.communities {
                 }
 }
 public extension Api.functions.communities {
-                static func editExportedInvite(flags: Int32, community: Api.InputCommunity, slug: String, title: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedCommunityInvite>) {
+                static func editExportedInvite(flags: Int32, community: Api.InputCommunity, slug: String, title: String?, peers: [Api.InputPeer]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedCommunityInvite>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(873155725)
+                    buffer.appendInt32(655623442)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     community.serialize(buffer, true)
                     serializeString(slug, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "communities.editExportedInvite", parameters: [("flags", String(describing: flags)), ("community", String(describing: community)), ("slug", String(describing: slug)), ("title", String(describing: title))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedCommunityInvite? in
+                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peers!.count))
+                    for item in peers! {
+                        item.serialize(buffer, true)
+                    }}
+                    return (FunctionDescription(name: "communities.editExportedInvite", parameters: [("flags", String(describing: flags)), ("community", String(describing: community)), ("slug", String(describing: slug)), ("title", String(describing: title)), ("peers", String(describing: peers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedCommunityInvite? in
                         let reader = BufferReader(buffer)
                         var result: Api.ExportedCommunityInvite?
                         if let signature = reader.readInt32() {

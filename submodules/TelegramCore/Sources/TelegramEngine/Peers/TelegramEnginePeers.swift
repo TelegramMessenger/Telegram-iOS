@@ -1030,12 +1030,12 @@ public extension TelegramEngine {
             return _internal_exportChatFolder(account: self.account, filterId: filterId, title: title, peerIds: peerIds)
         }
         
-        public func getExportedChatFolderLinks(id: Int32) -> Signal<[ExportedChatFolderLink], NoError> {
+        public func getExportedChatFolderLinks(id: Int32) -> Signal<[ExportedChatFolderLink]?, NoError> {
             return _internal_getExportedChatFolderLinks(account: self.account, id: id)
         }
         
-        public func editChatFolderLink(filterId: Int32, link: ExportedChatFolderLink, title: String?, revoke: Bool) -> Signal<Never, EditChatFolderLinkError> {
-            return _internal_editChatFolderLink(account: self.account, filterId: filterId, link: link, title: title, revoke: revoke)
+        public func editChatFolderLink(filterId: Int32, link: ExportedChatFolderLink, title: String?, peerIds: [EnginePeer.Id]?, revoke: Bool) -> Signal<Never, EditChatFolderLinkError> {
+            return _internal_editChatFolderLink(account: self.account, filterId: filterId, link: link, title: title, peerIds: peerIds, revoke: revoke)
         }
         
         public func revokeChatFolderLink(filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
