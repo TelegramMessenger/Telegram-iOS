@@ -1823,6 +1823,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemAdmins = 105
             let ItemMemberRequests = 106
             let ItemReactions = 107
+            let ItemTopics = 108
+            let ItemTopicsText = 109
             
             var canViewAdminsAndBanned = false
             
@@ -1851,6 +1853,33 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                     interaction.editingOpenPreHistorySetup()
                 }))
+                
+                var canSetupTopics = false
+                if case .creator = group.role {
+                    canSetupTopics = true
+                }
+                var topicsLimitedReason: TopicsLimitedReason?
+                if let appConfiguration = data.appConfiguration {
+                    var minParticipants = 200
+                    if let data = appConfiguration.data, let value = data["forum_upgrade_participants_min"] as? Double {
+                        minParticipants = Int(value)
+                    }
+                    if Int(group.participantCount) < minParticipants {
+                        topicsLimitedReason = .participants(minParticipants)
+                    }
+                }
+                
+                if canSetupTopics {
+                    items[.peerPublicSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: presentationData.strings.PeerInfo_OptionTopics, value: false, icon: UIImage(bundleImageName: "Settings/Menu/Topics"), isLocked: topicsLimitedReason != nil, toggled: { value in
+                        if let topicsLimitedReason = topicsLimitedReason {
+                            interaction.displayTopicsLimited(topicsLimitedReason)
+                        } else {
+                            interaction.toggleForumTopics(value)
+                        }
+                    }))
+                    
+                    items[.peerPublicSettings]!.append(PeerInfoScreenCommentItem(id: ItemTopicsText, text: presentationData.strings.PeerInfo_OptionTopicsText))
+                }
                 
                 let label: String
                 if let cachedData = data.cachedData as? CachedGroupData, case let .known(allowedReactions) = cachedData.allowedReactions {
@@ -2228,7 +2257,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 guard let strongSelf = self else {
                     return
                 }
-                let _ = strongSelf.context.engine.peers.setChannelForumMode(id: strongSelf.peerId, isForum: value).start()
+                strongSelf.toggleForumTopics(isEnabled: value)
             },
             displayTopicsLimited: { [weak self] reason in
                 guard let self else {
@@ -6513,6 +6542,61 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             return
         }
         self.controller?.push(peerAllowedReactionListController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
+    }
+    
+    private func toggleForumTopics(isEnabled: Bool) {
+        guard let data = self.data, let peer = data.peer else {
+            return
+        }
+        if peer is TelegramGroup {
+            if isEnabled {
+                let context = self.context
+                let signal: Signal<EnginePeer.Id?, NoError> = self.context.engine.peers.convertGroupToSupergroup(peerId: self.peerId, additionalProcessing: { upgradedPeerId -> Signal<Never, NoError> in
+                    return context.engine.peers.setChannelForumMode(id: upgradedPeerId, isForum: isEnabled)
+                })
+                |> map(Optional.init)
+                |> `catch` { [weak self] error -> Signal<PeerId?, NoError> in
+                    switch error {
+                    case .tooManyChannels:
+                        Queue.mainQueue().async {
+                            self?.controller?.push(oldChannelsController(context: context, intent: .upgrade))
+                        }
+                    default:
+                        break
+                    }
+                    return .single(nil)
+                }
+                |> mapToSignal { upgradedPeerId -> Signal<PeerId?, NoError> in
+                    guard let upgradedPeerId = upgradedPeerId else {
+                        return .single(nil)
+                    }
+                    return .single(upgradedPeerId)
+                }
+                |> deliverOnMainQueue
+                
+                let _ = signal.start(next: { [weak self] resultPeerId in
+                    guard let self else {
+                        return
+                    }
+                    guard let resultPeerId else {
+                        return
+                    }
+                    
+                    let _ = (self.context.engine.peers.setChannelForumMode(id: resultPeerId, isForum: isEnabled)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let self, let controller = self.controller else {
+                            return
+                        }
+                        /*if let navigationController = controller.navigationController as? NavigationController {
+                            rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
+                        }*/
+                        controller.dismiss()
+                    })
+                })
+            }
+        } else {
+            let _ = self.context.engine.peers.setChannelForumMode(id: self.peerId, isForum: isEnabled).start()
+        }
     }
     
     private func editingToggleMessageSignatures(value: Bool) {

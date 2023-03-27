@@ -134,8 +134,8 @@ public extension TelegramEngine {
             return _internal_chatOnlineMembers(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }
 
-        public func convertGroupToSupergroup(peerId: PeerId) -> Signal<PeerId, ConvertGroupToSupergroupError> {
-            return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId)
+        public func convertGroupToSupergroup(peerId: PeerId, additionalProcessing: ((EnginePeer.Id) -> Signal<Never, NoError>)? = nil) -> Signal<PeerId, ConvertGroupToSupergroupError> {
+            return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId, additionalProcessing: additionalProcessing)
         }
 
         public func createGroup(title: String, peerIds: [PeerId], ttlPeriod: Int32?) -> Signal<CreateGroupResult?, CreateGroupError> {
