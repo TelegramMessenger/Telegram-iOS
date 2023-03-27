@@ -359,3 +359,70 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
         }
     }
 }
+
+public final class ChatFolderUpdates {
+    fileprivate let missingPeers: [Api.Peer]
+    fileprivate let chats: [Api.Chat]
+    fileprivate let users: [Api.User]
+    
+    public var availableChatsToJoin: Int {
+        return self.missingPeers.count
+    }
+    
+    fileprivate init(
+        missingPeers: [Api.Peer],
+        chats: [Api.Chat],
+        users: [Api.User]
+    ) {
+        self.missingPeers = missingPeers
+        self.chats = chats
+        self.users = users
+    }
+}
+
+func _internal_getChatFolderUpdates(account: Account, folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
+    return account.network.request(Api.functions.communities.getCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.communities.CommunityUpdates?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<ChatFolderUpdates?, NoError> in
+        guard let result = result else {
+            return .single(nil)
+        }
+        switch result {
+        case let .communityUpdates(missingPeers, chats, users):
+            return .single(ChatFolderUpdates(missingPeers: missingPeers, chats: chats, users: users))
+        }
+    }
+}
+
+func _internal_joinAvailableChatsInFolder(account: Account, folderId: Int32, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
+    return account.postbox.transaction { transaction -> [Api.InputPeer] in
+        return peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
+    }
+    |> castError(JoinChatFolderLinkError.self)
+    |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
+        return account.network.request(Api.functions.communities.joinCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId), peers: inputPeers))
+        |> mapError { error -> JoinChatFolderLinkError in
+            if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
+                return .limitExceeded
+            } else {
+                return .generic
+            }
+        }
+        |> mapToSignal { result -> Signal<Never, JoinChatFolderLinkError> in
+            account.stateManager.addUpdates(result)
+            
+            return .complete()
+        }
+    }
+}
+
+func _internal_hideChatFolderUpdates(account: Account, folderId: Int32) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.communities.hideCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> ignoreValues
+}

@@ -1049,6 +1049,18 @@ public extension TelegramEngine {
         public func joinChatFolderLink(slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
             return _internal_joinChatFolderLink(account: self.account, slug: slug, peerIds: peerIds)
         }
+        
+        public func getChatFolderUpdates(folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
+            return _internal_getChatFolderUpdates(account: self.account, folderId: folderId)
+        }
+
+        public func joinAvailableChatsInFolder(folderId: Int32, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
+            return _internal_joinAvailableChatsInFolder(account: self.account, folderId: folderId, peerIds: peerIds)
+        }
+        
+        public func hideChatFolderUpdates(folderId: Int32) -> Signal<Never, NoError> {
+            return _internal_hideChatFolderUpdates(account: self.account, folderId: folderId)
+        }
     }
 }
 
