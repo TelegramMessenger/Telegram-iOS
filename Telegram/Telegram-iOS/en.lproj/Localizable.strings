@@ -9092,3 +9092,8 @@ Sorry for the inconvenience.";
 "StickerPacksSettings.SuggestAnimatedEmojiInfo" = "Each time you enter an emoji you can replace it with an animated emoji.";
 
 "DialogList.DeleteBotClearHistory" = "Clear Chat History";
+
+"ChatList.ChatFolderUpdateCount_1" = "1 new chat";
+"ChatList.ChatFolderUpdateCount_any" = "%d new chats";
+"ChatList.ChatFolderUpdateHintTitle" = "You can join %@";
+"ChatList.ChatFolderUpdateHintText" = "Tap here to view them";

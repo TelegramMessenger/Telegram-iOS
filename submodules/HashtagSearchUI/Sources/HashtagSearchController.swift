@@ -94,6 +94,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, openStorageManagement: {
         }, openPasswordSetup: {
         }, openPremiumIntro: {
+        }, openChatFolderUpdates: {
         })
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)

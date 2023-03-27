@@ -753,7 +753,48 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .chatFolder(slug):
             if let navigationController = navigationController {
-                navigationController.pushViewController(ChatFolderLinkPreviewScreen(context: context, slug: slug))
+                let signal = context.engine.peers.checkChatFolderLink(slug: slug)
+                
+                var cancelImpl: (() -> Void)?
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    present(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.35, queue: Queue.mainQueue())
+                
+                let disposable = MetaDisposable()
+                let progressDisposable = progressSignal.start()
+                cancelImpl = {
+                    disposable.set(nil)
+                }
+                disposable.set((signal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak navigationController] result in
+                    guard let navigationController else {
+                        return
+                    }
+                    navigationController.pushViewController(ChatFolderLinkPreviewScreen(context: context, subject: .slug(slug), contents: result))
+                }, error: { error in
+                    let errorText: String
+                    switch error {
+                    case .generic:
+                        errorText = "The folder link has expired."
+                    }
+                    present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }))
+                dismissInput()
             }
     }
 }

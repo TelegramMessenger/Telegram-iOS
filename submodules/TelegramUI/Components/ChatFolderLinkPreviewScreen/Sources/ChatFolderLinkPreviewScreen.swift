@@ -21,16 +21,16 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let slug: String
+    let subject: ChatFolderLinkPreviewScreen.Subject
     let linkContents: ChatFolderLinkContents?
     
     init(
         context: AccountContext,
-        slug: String,
+        subject: ChatFolderLinkPreviewScreen.Subject,
         linkContents: ChatFolderLinkContents?
     ) {
         self.context = context
-        self.slug = slug
+        self.subject = subject
         self.linkContents = linkContents
     }
     
@@ -38,7 +38,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.slug != rhs.slug {
+        if lhs.subject != rhs.subject {
             return false
         }
         if lhs.linkContents !== rhs.linkContents {
@@ -660,7 +660,15 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                         
                         if let _ = component.linkContents {
                             if self.joinDisposable == nil, !self.selectedItems.isEmpty {
-                                self.joinDisposable = (component.context.engine.peers.joinChatFolderLink(slug: component.slug, peerIds: Array(self.selectedItems))
+                                let joinSignal: Signal<Never, JoinChatFolderLinkError>
+                                switch component.subject {
+                                case let .slug(slug):
+                                    joinSignal = component.context.engine.peers.joinChatFolderLink(slug: slug, peerIds: Array(self.selectedItems))
+                                case let .updates(updates):
+                                    joinSignal = component.context.engine.peers.joinAvailableChatsInFolder(updates: updates, peerIds: Array(self.selectedItems))
+                                }
+                                
+                                self.joinDisposable = (joinSignal
                                 |> deliverOnMainQueue).start(error: { [weak self] error in
                                     guard let self, let component = self.component, let controller = self.environment?.controller() else {
                                         return
@@ -782,29 +790,33 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
 }
 
 public class ChatFolderLinkPreviewScreen: ViewControllerComponentContainer {
+    public enum Subject: Equatable {
+        case slug(String)
+        case updates(ChatFolderUpdates)
+    }
+    
     private let context: AccountContext
-    private var linkContents: ChatFolderLinkContents?
     private var linkContentsDisposable: Disposable?
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, slug: String) {
+    public init(context: AccountContext, subject: Subject, contents: ChatFolderLinkContents) {
         self.context = context
         
-        super.init(context: context, component: ChatFolderLinkPreviewScreenComponent(context: context, slug: slug, linkContents: nil), navigationBarAppearance: .none)
+        super.init(context: context, component: ChatFolderLinkPreviewScreenComponent(context: context, subject: subject, linkContents: contents), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal
         self.blocksBackgroundWhenInOverlay = true
+        self.automaticallyControlPresentationContextLayout = false
         
-        self.linkContentsDisposable = (context.engine.peers.checkChatFolderLink(slug: slug)
+        /*self.linkContentsDisposable = (context.engine.peers.checkChatFolderLink(subject: subject)
         |> delay(0.2, queue: .mainQueue())
         |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let self else {
                 return
             }
-            self.linkContents = result
-            self.updateComponent(component: AnyComponent(ChatFolderLinkPreviewScreenComponent(context: context, slug: slug, linkContents: result)), transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)).withUserData(ChatFolderLinkPreviewScreenComponent.AnimationHint()))
+            self.updateComponent(component: AnyComponent(ChatFolderLinkPreviewScreenComponent(context: context, subject: subject, linkContents: result)), transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)).withUserData(ChatFolderLinkPreviewScreenComponent.AnimationHint()))
         }, error: { [weak self] _ in
             guard let self else {
                 return
@@ -812,9 +824,7 @@ public class ChatFolderLinkPreviewScreen: ViewControllerComponentContainer {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "The folder link has expired."), elevatedLayout: false, action: { _ in true }), in: .window(.root))
             self.dismiss()
-        })
-        
-        self.automaticallyControlPresentationContextLayout = false
+        })*/
     }
     
     required public init(coder aDecoder: NSCoder) {

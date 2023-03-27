@@ -89,6 +89,7 @@ swift_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/AvatarVideoNode:AvatarVideoNode",
         "//submodules/InviteLinksUI",
+        "//submodules/TelegramUI/Components/ChatFolderLinkPreviewScreen",
     ],
     visibility = [
         "//visibility:public",

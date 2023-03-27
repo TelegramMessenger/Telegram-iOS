@@ -346,7 +346,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
     |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
         return account.network.request(Api.functions.communities.joinCommunityInvite(slug: slug, peers: inputPeers))
         |> mapError { error -> JoinChatFolderLinkError in
-            if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
+            if error.errorDescription.hasPrefix("DIALOG_FILTERS_TOO_MUCH") {
                 return .limitExceeded
             } else {
                 return .generic
@@ -360,7 +360,9 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
     }
 }
 
-public final class ChatFolderUpdates {
+public final class ChatFolderUpdates: Equatable {
+    fileprivate let folderId: Int32
+    fileprivate let title: String
     fileprivate let missingPeers: [Api.Peer]
     fileprivate let chats: [Api.Chat]
     fileprivate let users: [Api.User]
@@ -369,14 +371,43 @@ public final class ChatFolderUpdates {
         return self.missingPeers.count
     }
     
+    public var chatFolderLinkContents: ChatFolderLinkContents {
+        var peers: [EnginePeer] = []
+        for missingPeer in self.missingPeers {
+            for chat in chats {
+                if chat.peerId == missingPeer.peerId {
+                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(EnginePeer(peer))
+                    }
+                }
+            }
+        }
+        
+        return ChatFolderLinkContents(localFilterId: self.folderId, title: self.title, peers: peers, alreadyMemberPeerIds: Set())
+    }
+    
     fileprivate init(
+        folderId: Int32,
+        title: String,
         missingPeers: [Api.Peer],
         chats: [Api.Chat],
         users: [Api.User]
     ) {
+        self.folderId = folderId
+        self.title = title
         self.missingPeers = missingPeers
         self.chats = chats
         self.users = users
+    }
+    
+    public static func ==(lhs: ChatFolderUpdates, rhs: ChatFolderUpdates) -> Bool {
+        if lhs.folderId != rhs.folderId {
+            return false
+        }
+        if lhs.missingPeers.map(\.peerId) != rhs.missingPeers.map(\.peerId) {
+            return false
+        }
+        return true
     }
 }
 
@@ -392,18 +423,25 @@ func _internal_getChatFolderUpdates(account: Account, folderId: Int32) -> Signal
         }
         switch result {
         case let .communityUpdates(missingPeers, chats, users):
-            return .single(ChatFolderUpdates(missingPeers: missingPeers, chats: chats, users: users))
+            return account.postbox.transaction { transaction -> ChatFolderUpdates? in
+                for filter in _internal_currentChatListFilters(transaction: transaction) {
+                    if case let .filter(id, title, _, _) = filter, id == folderId {
+                        return ChatFolderUpdates(folderId: folderId, title: title, missingPeers: missingPeers, chats: chats, users: users)
+                    }
+                }
+                return nil
+            }
         }
     }
 }
 
-func _internal_joinAvailableChatsInFolder(account: Account, folderId: Int32, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
+func _internal_joinAvailableChatsInFolder(account: Account, updates: ChatFolderUpdates, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
     return account.postbox.transaction { transaction -> [Api.InputPeer] in
         return peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
     }
     |> castError(JoinChatFolderLinkError.self)
     |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
-        return account.network.request(Api.functions.communities.joinCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId), peers: inputPeers))
+        return account.network.request(Api.functions.communities.joinCommunityUpdates(community: .inputCommunityDialogFilter(filterId: updates.folderId), peers: inputPeers))
         |> mapError { error -> JoinChatFolderLinkError in
             if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
                 return .limitExceeded
