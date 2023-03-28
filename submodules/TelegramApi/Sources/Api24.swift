@@ -896,16 +896,18 @@ public extension Api.channels {
 }
 public extension Api.communities {
     enum CommunityInvite: TypeConstructorDescription {
-        case communityInvite(title: String, peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+        case communityInvite(flags: Int32, title: String, emoticon: String?, peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
         case communityInviteAlready(filterId: Int32, missingPeers: [Api.Peer], alreadyPeers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .communityInvite(let title, let peers, let chats, let users):
+                case .communityInvite(let flags, let title, let emoticon, let peers, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-557919187)
+                        buffer.appendInt32(59080097)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(peers.count))
                     for item in peers {
@@ -953,34 +955,40 @@ public extension Api.communities {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .communityInvite(let title, let peers, let chats, let users):
-                return ("communityInvite", [("title", title as Any), ("peers", peers as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .communityInvite(let flags, let title, let emoticon, let peers, let chats, let users):
+                return ("communityInvite", [("flags", flags as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("peers", peers as Any), ("chats", chats as Any), ("users", users as Any)])
                 case .communityInviteAlready(let filterId, let missingPeers, let alreadyPeers, let chats, let users):
                 return ("communityInviteAlready", [("filterId", filterId as Any), ("missingPeers", missingPeers as Any), ("alreadyPeers", alreadyPeers as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     
         public static func parse_communityInvite(_ reader: BufferReader) -> CommunityInvite? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: [Api.Peer]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: [Api.Peer]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
             }
-            var _3: [Api.Chat]?
+            var _5: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _4: [Api.User]?
+            var _6: [Api.User]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.communities.CommunityInvite.communityInvite(title: _1!, peers: _2!, chats: _3!, users: _4!)
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.communities.CommunityInvite.communityInvite(flags: _1!, title: _2!, emoticon: _3, peers: _4!, chats: _5!, users: _6!)
             }
             else {
                 return nil

@@ -64,7 +64,10 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let titleLabelNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private var badgeIconNode: ASImageNode?
     private var animationNode: AnimationNode?
+    
+    private var currentBadge: (badge: ContextMenuActionBadge, image: UIImage)?
     
     private var iconDisposable: Disposable?
     
@@ -302,14 +305,66 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             iconSize = iconImage?.size
         }
         
+        let badgeSize: CGSize?
+        if let badge = self.item.badge {
+            var badgeImage: UIImage?
+            if let currentBadge = self.currentBadge, currentBadge.badge == badge {
+                badgeImage = currentBadge.image
+            } else {
+                let badgeTextColor: UIColor = presentationData.theme.list.itemCheckColors.foregroundColor
+                let badgeString = NSAttributedString(string: badge.value, font: Font.semibold(11.0), textColor: badgeTextColor)
+                let badgeTextBounds = badgeString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
+                let badgeSideInset: CGFloat = 3.0
+                let badgeVerticalInset: CGFloat = 1.0
+                let badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + ceil(badgeTextBounds.width), height: badgeVerticalInset * 2.0 + ceil(badgeTextBounds.height))
+                badgeImage = generateImage(badgeBackgroundSize, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                    context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 5.0).cgPath)
+                    context.fillPath()
+                    
+                    UIGraphicsPushContext(context)
+                    
+                    badgeString.draw(at: CGPoint(x: badgeTextBounds.minX + badgeSideInset + UIScreenPixel, y: badgeTextBounds.minY + badgeVerticalInset + UIScreenPixel))
+                    
+                    UIGraphicsPopContext()
+                })
+            }
+            
+            let badgeIconNode: ASImageNode
+            if let current = self.badgeIconNode {
+                badgeIconNode = current
+            } else {
+                badgeIconNode = ASImageNode()
+                self.badgeIconNode = badgeIconNode
+                self.addSubnode(badgeIconNode)
+            }
+            badgeIconNode.image = badgeImage
+            
+            badgeSize = badgeImage?.size
+        } else {
+            if let badgeIconNode = self.badgeIconNode {
+                self.badgeIconNode = nil
+                badgeIconNode.removeFromSupernode()
+            }
+            badgeSize = nil
+        }
+        
         var maxTextWidth: CGFloat = constrainedSize.width
         maxTextWidth -= sideInset
+        
         if let iconSize = iconSize {
             maxTextWidth -= max(standardIconWidth, iconSize.width)
             maxTextWidth -= iconSpacing
         } else {
             maxTextWidth -= sideInset
         }
+        
+        if let badgeSize = badgeSize {
+            maxTextWidth -= badgeSize.width
+            maxTextWidth -= 8.0
+        }
+        
         maxTextWidth = max(1.0, maxTextWidth)
         
         let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
@@ -350,6 +405,12 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             transition.updateFrame(node: self.highlightBackgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
             transition.updateFrameAdditive(node: self.titleLabelNode, frame: titleFrame)
             transition.updateFrameAdditive(node: self.subtitleNode, frame: subtitleFrame)
+            
+            if let badgeIconNode = self.badgeIconNode {
+                if let iconSize = badgeIconNode.image?.size {
+                    transition.updateFrame(node: badgeIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 8.0, y: titleFrame.minY + floor((titleFrame.height - iconSize.height) * 0.5)), size: iconSize))
+                }
+            }
             
             if let iconSize = iconSize {
                 let iconWidth = max(standardIconWidth, iconSize.width)

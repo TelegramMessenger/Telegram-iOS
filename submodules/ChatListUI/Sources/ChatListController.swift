@@ -1547,8 +1547,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
                                             if !data.includePeers.peers.isEmpty {
-                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, icon: { theme in
-                                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
+                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
+                                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
                                                     c.dismiss(completion: {
                                                         guard let strongSelf = self else {
@@ -2701,6 +2701,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func shareFolder(filterId: Int32, data: ChatListFilterData, title: String) {
+        openCreateChatListFolderLink(context: self.context, folderId: filterId, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
+            self?.push(c)
+        }, presentController: { [weak self] c in
+            self?.present(c, in: .window(.root))
+        }, linkUpdated: { _ in
+        })
+        
         /*self.push(folderInviteLinkListController(context: self.context, filterId: filterId, title: title, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { _ in
         }))*/
     }

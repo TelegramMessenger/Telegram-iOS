@@ -1050,8 +1050,20 @@ public extension TelegramEngine {
             return _internal_joinChatFolderLink(account: self.account, slug: slug, peerIds: peerIds)
         }
         
-        public func getChatFolderUpdates(folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
-            return _internal_getChatFolderUpdates(account: self.account, folderId: folderId)
+        public func pollChatFolderUpdates(folderId: Int32) -> Signal<Never, NoError> {
+            let signal = _internal_pollChatFolderUpdatesOnce(account: self.account, folderId: folderId)
+            return (
+                signal
+                |> then(
+                    Signal<Never, NoError>.complete()
+                    |> delay(10.0, queue: .concurrentDefaultQueue())
+                )
+            )
+            |> restart
+        }
+        
+        public func subscribedChatFolderUpdates(folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
+            return _internal_subscribedChatFolderUpdates(account: self.account, folderId: folderId)
         }
 
         public func joinAvailableChatsInFolder(updates: ChatFolderUpdates, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
