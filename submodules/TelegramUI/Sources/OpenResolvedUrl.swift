@@ -385,7 +385,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
                 let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, colors, intensity, rotation, nil))
-                present(galleryController, nil)
+                navigationController?.pushViewController(galleryController)
             }, error: { [weak controller] error in
                 controller?.dismiss()
             })

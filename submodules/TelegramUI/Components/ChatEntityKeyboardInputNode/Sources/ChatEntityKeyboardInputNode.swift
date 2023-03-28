@@ -1620,7 +1620,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
                 
                 if let (collection, result) = item.contextResult {
-                    let _ = controllerInteraction.sendBotContextResultAsGif(collection, result, view, rect, false)
+                    let _ = controllerInteraction.sendBotContextResultAsGif(collection, result, view, rect, false, false)
                 } else {
                     let _ = controllerInteraction.sendGif(item.file, view, rect, false, false)
                 }
@@ -2078,7 +2078,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 if isSaved {
                     let _ = self?.controllerInteraction?.sendGif(file, sourceView, sourceRect, false, false)
                 } else if let (collection, result) = contextResult {
-                    let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, false)
+                    let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, false, false)
                 }
             })))
             
@@ -2099,7 +2099,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 if isSaved {
                                     let _ = self?.controllerInteraction?.sendGif(file, sourceView, sourceRect, true, false)
                                 } else if let (collection, result) = contextResult {
-                                    let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, true)
+                                    let _ = self?.controllerInteraction?.sendBotContextResultAsGif(collection, result, sourceView, sourceRect, true, false)
                                 }
                             })))
                         }

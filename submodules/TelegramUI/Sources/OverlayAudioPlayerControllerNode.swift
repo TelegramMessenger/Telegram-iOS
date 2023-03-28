@@ -93,7 +93,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, sendEmoji: { _, _, _ in
         }, sendGif: { _, _, _, _, _ in
             return false
-        }, sendBotContextResultAsGif: { _, _, _, _, _ in
+        }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _ in

@@ -38,7 +38,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     private let backgroundNode: NavigationBackgroundNode
     private let checkNode: CheckNode
     private let colorNode: ASImageNode
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     
     private var textSize: CGSize?
     
@@ -73,16 +73,17 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         self._value = value
         self.title = title
         
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.3))
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xffffff, alpha: 0.4))
         self.backgroundNode.cornerRadius = 14.0
         
-        self.checkNode = CheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false, borderWidth: 1.5))
+        self.checkNode = CheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: true, borderWidth: 1.5))
         self.checkNode.isUserInteractionEnabled = false
         
         self.colorNode = ASImageNode()
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
         self.textNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: .white)
+        self.textNode.textShadowColor = UIColor(rgb: 0x000000, alpha: 0.1)
         
         super.init()
         
@@ -139,7 +140,11 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     
     var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
         didSet {
-            self.backgroundNode.updateColor(color: self.buttonColor, transition: .immediate)
+            if self.buttonColor == UIColor(rgb: 0x000000, alpha: 0.3) {
+                self.backgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45), transition: .immediate)
+            } else {
+                self.backgroundNode.updateColor(color: self.buttonColor, transition: .immediate)
+            }
         }
     }
     
@@ -221,7 +226,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     }
     
     override func measure(_ constrainedSize: CGSize) -> CGSize {
-        let size = self.textNode.measure(constrainedSize)
+        let size = self.textNode.updateLayout(constrainedSize)
         self.textSize = size
         return CGSize(width: ceil(size.width) + 48.0, height: 30.0)
     }

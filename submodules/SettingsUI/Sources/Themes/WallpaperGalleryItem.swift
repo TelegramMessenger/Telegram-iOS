@@ -95,6 +95,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private let blurredNode: BlurredImageNode
     let cropNode: WallpaperCropNode
     
+    private let cancelButtonBackgroundNode: NavigationBackgroundNode
+    private var cancelButtonNode: HighlightableButtonNode
+    
+    private let shareButtonBackgroundNode: NavigationBackgroundNode
+    private var shareButtonNode: HighlightableButtonNode
+
     private var blurButtonNode: WallpaperOptionButtonNode
     private var motionButtonNode: WallpaperOptionButtonNode
     private var patternButtonNode: WallpaperOptionButtonNode
@@ -157,6 +163,17 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
         self.colorsButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_WallpaperColors, value: .colors(false, [.clear]))
 
+        self.cancelButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(white: 0.0, alpha: 0.3))
+        self.cancelButtonNode = HighlightableButtonNode()
+        self.cancelButtonNode.insertSubnode(self.cancelButtonBackgroundNode, at: 0)
+        self.cancelButtonNode.setAttributedTitle(NSAttributedString(string: self.presentationData.strings.Common_Cancel, font: Font.semibold(15.0), textColor: .white), for: .normal)
+        self.cancelButtonNode.titleNode.textShadowColor = UIColor(rgb: 0x000000, alpha: 0.1)
+        
+        self.shareButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(white: 0.0, alpha: 0.3))
+        self.shareButtonNode = HighlightableButtonNode()
+        self.shareButtonNode.insertSubnode(self.shareButtonBackgroundNode, at: 0)
+        self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Share"), color: .white), for: .normal)
+        
         self.playButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(white: 0.0, alpha: 0.3))
         self.playButtonNode = HighlightableButtonNode()
         self.playButtonNode.insertSubnode(self.playButtonBackgroundNode, at: 0)
@@ -219,12 +236,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.addSubnode(self.patternButtonNode)
         self.addSubnode(self.colorsButtonNode)
         self.addSubnode(self.playButtonNode)
+        self.addSubnode(self.cancelButtonNode)
+        self.addSubnode(self.shareButtonNode)
         
         self.blurButtonNode.addTarget(self, action: #selector(self.toggleBlur), forControlEvents: .touchUpInside)
         self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
         self.patternButtonNode.addTarget(self, action: #selector(self.togglePattern), forControlEvents: .touchUpInside)
         self.colorsButtonNode.addTarget(self, action: #selector(self.toggleColors), forControlEvents: .touchUpInside)
         self.playButtonNode.addTarget(self, action: #selector(self.togglePlay), forControlEvents: .touchUpInside)
+        self.cancelButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
+        self.shareButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -252,6 +273,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     @objc private func actionPressed() {
         self.action?()
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss()
     }
     
     func setEntry(_ entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource) {
@@ -443,6 +468,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             } else {
                                 actionSignal = .single(defaultAction)
                             }
+                            colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                         case let .image(representations, _):
                             if let largestSize = largestImageRepresentation(representations) {
                                 contentSize = largestSize.dimensions.cgSize
@@ -494,6 +520,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 statusSignal = .single(.Local)
                                 subtitleSignal = .single(nil)
                             }
+                            colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                     }
                     self.cropNode.removeFromSupernode()
                 case let .asset(asset):
@@ -504,6 +531,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     fetchSignal = .complete()
                     statusSignal = .single(.Local)
                     subtitleSignal = .single(nil)
+                    colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                     self.wrapperNode.addSubnode(self.cropNode)
                 case let .contextResult(result):
                     var imageDimensions: CGSize?
@@ -556,6 +584,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         fetchSignal = .complete()
                         statusSignal = .single(.Local)
                     }
+                    colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                     subtitleSignal = .single(nil)
                     self.wrapperNode.addSubnode(self.cropNode)
             }
@@ -628,7 +657,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 strongSelf.motionButtonNode.buttonColor = color
                 strongSelf.colorsButtonNode.buttonColor = color
 
-                strongSelf.playButtonBackgroundNode.updateColor(color: color, transition: .immediate)
+                if color == UIColor(rgb: 0x000000, alpha: 0.3) {
+                    strongSelf.playButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45), transition: .immediate)
+                    strongSelf.cancelButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45), transition: .immediate)
+                    strongSelf.shareButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45), transition: .immediate)
+                } else {
+                    strongSelf.playButtonBackgroundNode.updateColor(color: color, transition: .immediate)
+                    strongSelf.cancelButtonBackgroundNode.updateColor(color: color, transition: .immediate)
+                    strongSelf.shareButtonBackgroundNode.updateColor(color: color, transition: .immediate)
+                }
             }))
         } else if self.arguments.patternEnabled != previousArguments.patternEnabled {
             self.patternButtonNode.isSelected = self.arguments.patternEnabled
@@ -901,9 +938,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
         let buttonSpacing: CGFloat = 18.0
         
-        let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - buttonSpacing) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
-        let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + buttonSpacing) + offset.x, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        let toolbarHeight: CGFloat = 66.0
+        
+        let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
+        let rightButtonFrame = CGRect(origin: CGPoint(x: ceil(layout.size.width / 2.0 + buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
         
         var patternAlpha: CGFloat = 0.0
         var patternFrame = centerButtonFrame
@@ -919,7 +958,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
         let playFrame = CGRect(origin: CGPoint(x: centerButtonFrame.midX - playButtonSize.width / 2.0, y: centerButtonFrame.midY - playButtonSize.height / 2.0), size: playButtonSize)
         var playAlpha: CGFloat = 0.0
-
+        
+        var cancelSize = self.cancelButtonNode.measure(layout.size)
+        cancelSize.width += 16.0
+        cancelSize.height = 28.0
+        let cancelFrame = CGRect(origin: CGPoint(x: 16.0 + offset.x, y: 16.0), size: cancelSize)
+        
+        let shareFrame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - 28.0 + offset.x, y: 16.0), size: CGSize(width: 28.0, height: 28.0))
+        
         let centerOffset: CGFloat = 32.0
         
         if let entry = self.entry {
@@ -1019,10 +1065,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.playButtonBackgroundNode.update(size: playFrame.size, cornerRadius: playFrame.size.height / 2.0, transition: transition)
         transition.updateAlpha(node: self.playButtonNode, alpha: playAlpha * alpha)
         transition.updateSublayerTransformScale(node: self.playButtonNode, scale: max(0.1, playAlpha))
+        
+        transition.updateFrame(node: self.cancelButtonNode, frame: cancelFrame)
+        transition.updateFrame(node: self.cancelButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: cancelFrame.size))
+        self.cancelButtonBackgroundNode.update(size: cancelFrame.size, cornerRadius: cancelFrame.size.height / 2.0, transition: transition)
+        
+        transition.updateFrame(node: self.shareButtonNode, frame: shareFrame)
+        transition.updateFrame(node: self.shareButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: shareFrame.size))
+        self.shareButtonBackgroundNode.update(size: shareFrame.size, cornerRadius: shareFrame.size.height / 2.0, transition: transition)
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
-        let bottomInset: CGFloat = 115.0
+        let bottomInset: CGFloat = 132.0
 
         if self.patternButtonNode.isSelected || self.colorsButtonNode.isSelected {
             //bottomInset = 350.0

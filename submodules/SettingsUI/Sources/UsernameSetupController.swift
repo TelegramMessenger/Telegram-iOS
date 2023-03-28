@@ -55,7 +55,7 @@ private enum UsernameSetupEntryId: Hashable {
 
 private enum UsernameSetupEntry: ItemListNodeEntry {
     case publicLinkHeader(PresentationTheme, String)
-    case editablePublicLink(PresentationTheme, PresentationStrings, String, String?, String)
+    case editablePublicLink(PresentationTheme, PresentationStrings, String, String?, String, Bool)
     case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String, String)
     case publicLinkInfo(PresentationTheme, String)
     
@@ -99,8 +99,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .editablePublicLink(lhsTheme, lhsStrings, lhsPrefix, lhsCurrentText, lhsText):
-                if case let .editablePublicLink(rhsTheme, rhsStrings, rhsPrefix, rhsCurrentText, rhsText) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPrefix == rhsPrefix, lhsCurrentText == rhsCurrentText, lhsText == rhsText {
+            case let .editablePublicLink(lhsTheme, lhsStrings, lhsPrefix, lhsCurrentText, lhsText, lhsEnabled):
+                if case let .editablePublicLink(rhsTheme, rhsStrings, rhsPrefix, rhsCurrentText, rhsText, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPrefix == rhsPrefix, lhsCurrentText == rhsCurrentText, lhsText == rhsText, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -197,8 +197,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
         switch self {
             case let .publicLinkHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .editablePublicLink(theme, _, prefix, currentText, text):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: .always, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
+            case let .editablePublicLink(theme, _, prefix, currentText, text, enabled):
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: enabled ? prefix : "", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: enabled ? .always : .none, enabled: enabled, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
                 })
@@ -292,7 +292,7 @@ private struct UsernameSetupControllerState: Equatable {
     }
 }
 
-private func usernameSetupControllerEntries(presentationData: PresentationData, view: PeerView, state: UsernameSetupControllerState, temporaryOrder: [String]?) -> [UsernameSetupEntry] {
+private func usernameSetupControllerEntries(presentationData: PresentationData, view: PeerView, state: UsernameSetupControllerState, temporaryOrder: [String]?, mode: UsernameSetupMode) -> [UsernameSetupEntry] {
     var entries: [UsernameSetupEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramUser {
@@ -308,7 +308,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
         }
         
         entries.append(.publicLinkHeader(presentationData.theme, presentationData.strings.Username_Username))
-        entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Username_Title, peer.editableUsername, currentUsername))
+        entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Username_Title, peer.editableUsername, currentUsername, mode == .account))
         if let status = state.addressNameValidationStatus {
             let statusText: String
             switch status {
@@ -348,16 +348,18 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
             entries.append(.publicLinkStatus(presentationData.theme, currentUsername, status, statusText, currentUsername))
         }
         
-        var infoText = presentationData.strings.Username_Help
-        
         let otherUsernames = peer.usernames.filter { !$0.flags.contains(.isEditable) }
-        
-        if otherUsernames.isEmpty {
-            infoText += "\n\n"
-            let hintText = presentationData.strings.Username_LinkHint(currentUsername.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).string.replacingOccurrences(of: "]", with: "]()")
-            infoText += hintText
+        if case .bot = mode {
+            entries.append(.publicLinkInfo(presentationData.theme, "This username cannot be edited."))
+        } else {
+            var infoText = presentationData.strings.Username_Help
+            if otherUsernames.isEmpty {
+                infoText += "\n\n"
+                let hintText = presentationData.strings.Username_LinkHint(currentUsername.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).string.replacingOccurrences(of: "]", with: "]()")
+                infoText += hintText
+            }
+            entries.append(.publicLinkInfo(presentationData.theme, infoText))
         }
-        entries.append(.publicLinkInfo(presentationData.theme, infoText))
         
         if !otherUsernames.isEmpty {
             entries.append(.additionalLinkHeader(presentationData.theme, presentationData.strings.Username_LinksOrder))
@@ -382,14 +384,26 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                 i += 1
             }
             
-            entries.append(.additionalLinkInfo(presentationData.theme, presentationData.strings.Username_LinksOrderInfo))
+            let text: String
+            switch mode {
+            case .account:
+                text = presentationData.strings.Username_LinksOrderInfo
+            case .bot:
+                text = presentationData.strings.Username_BotLinksOrderInfo
+            }
+            entries.append(.additionalLinkInfo(presentationData.theme, text))
         }
     }
     
     return entries
 }
 
-public func usernameSetupController(context: AccountContext) -> ViewController {
+public enum UsernameSetupMode: Equatable {
+    case account
+    case bot(PeerId)
+}
+
+public func usernameSetupController(context: AccountContext, mode: UsernameSetupMode = .account) -> ViewController {
     let statePromise = ValuePromise(UsernameSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UsernameSetupControllerState())
     let updateState: ((UsernameSetupControllerState) -> UsernameSetupControllerState) -> Void = { f in
@@ -408,6 +422,17 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     let updateAddressNameDisposable = MetaDisposable()
     actionsDisposable.add(updateAddressNameDisposable)
     
+    let peerId: PeerId
+    let domain: AddressNameDomain
+    switch mode {
+    case .account:
+        domain = .account
+        peerId = context.account.peerId
+    case let .bot(botPeerId):
+        domain = .bot(botPeerId)
+        peerId = botPeerId
+    }
+    
     let arguments = UsernameSetupControllerArguments(account: context.account, updatePublicLinkText: { currentText, text in
         if text.isEmpty {
             checkAddressNameDisposable.set(nil)
@@ -424,7 +449,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                 return state.withUpdatedEditingPublicLinkText(text)
             }
             
-            checkAddressNameDisposable.set((context.engine.peers.validateAddressNameInteractive(domain: .account, name: text)
+            checkAddressNameDisposable.set((context.engine.peers.validateAddressNameInteractive(domain: domain, name: text)
             |> deliverOnMainQueue).start(next: { result in
                 updateState { state in
                     return state.withUpdatedAddressNameValidationStatus(result)
@@ -432,7 +457,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
             }))
         }
     }, shareLink: {
-        let _ = (context.account.postbox.loadedPeerWithId(context.account.peerId)
+        let _ = (context.account.postbox.loadedPeerWithId(peerId)
         |> take(1)
         |> deliverOnMainQueue).start(next: { peer in
             var currentAddressName: String = peer.addressName ?? ""
@@ -456,7 +481,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         dismissInputImpl?()
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_ActivateAlertTitle, text: presentationData.strings.Username_ActivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_ActivateAlertShow, action: {
-            let _ = (context.engine.peers.toggleAddressNameActive(domain: .account, name: name, active: true)
+            let _ = (context.engine.peers.toggleAddressNameActive(domain: domain, name: name, active: true)
             |> deliverOnMainQueue).start(error: { error in
                 let errorText: String
                 switch error {
@@ -472,7 +497,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         dismissInputImpl?()
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_DeactivateAlertTitle, text: presentationData.strings.Username_DeactivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_DeactivateAlertHide, action: {
-            let _ = context.engine.peers.toggleAddressNameActive(domain: .account, name: name, active: false).start()
+            let _ = context.engine.peers.toggleAddressNameActive(domain: domain, name: name, active: false).start()
         })]), nil)
     }, openAuction: { username in
         dismissInputImpl?()
@@ -481,8 +506,8 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     })
     
     let temporaryOrder = Promise<[String]?>(nil)
-    
-    let peerView = context.account.viewTracker.peerView(context.account.peerId)
+        
+    let peerView = context.account.viewTracker.peerView(peerId)
     |> deliverOnMainQueue
     
     let signal = combineLatest(
@@ -522,7 +547,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                 }
                 
                 if let updatedAddressNameValue = updatedAddressNameValue {
-                    updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .account, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                    updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: domain, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                     |> deliverOnMainQueue).start(error: { _ in
                         updateState { state in
                             return state.withUpdatedUpdatingAddressName(false)
@@ -545,7 +570,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         })
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Username_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state, temporaryOrder: temporaryOrder), style: .blocks, focusItemTag: UsernameEntryTag.username, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state, temporaryOrder: temporaryOrder, mode: mode), style: .blocks, focusItemTag: mode == .account ? UsernameEntryTag.username : nil, animateChanges: true)
             
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -667,7 +692,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                 break
             }
         }
-        let _ = (context.engine.peers.reorderAddressNames(domain: .account, names: currentUsernames)
+        let _ = (context.engine.peers.reorderAddressNames(domain: domain, names: currentUsernames)
         |> deliverOnMainQueue).start(completed: {
             temporaryOrder.set(.single(nil))
         })

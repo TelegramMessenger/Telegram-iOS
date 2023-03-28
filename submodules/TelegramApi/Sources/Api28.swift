@@ -1,4 +1,58 @@
 public extension Api.messages {
+    enum StickerSetInstallResult: TypeConstructorDescription {
+        case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
+        case stickerSetInstallResultSuccess
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .stickerSetInstallResultArchive(let sets):
+                    if boxed {
+                        buffer.appendInt32(904138920)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sets.count))
+                    for item in sets {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .stickerSetInstallResultSuccess:
+                    if boxed {
+                        buffer.appendInt32(946083368)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerSetInstallResultArchive(let sets):
+                return ("stickerSetInstallResultArchive", [("sets", sets as Any)])
+                case .stickerSetInstallResultSuccess:
+                return ("stickerSetInstallResultSuccess", [])
+    }
+    }
+    
+        public static func parse_stickerSetInstallResultArchive(_ reader: BufferReader) -> StickerSetInstallResult? {
+            var _1: [Api.StickerSetCovered]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.StickerSetInstallResult.stickerSetInstallResultArchive(sets: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_stickerSetInstallResultSuccess(_ reader: BufferReader) -> StickerSetInstallResult? {
+            return Api.messages.StickerSetInstallResult.stickerSetInstallResultSuccess
+        }
+    
+    }
+}
+public extension Api.messages {
     enum Stickers: TypeConstructorDescription {
         case stickers(hash: Int64, stickers: [Api.Document])
         case stickersNotModified

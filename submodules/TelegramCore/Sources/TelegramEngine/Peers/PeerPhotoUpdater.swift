@@ -198,7 +198,16 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                         if let _ = videoEmojiMarkup {
                                             flags |= (1 << 4)
                                         }
-                                        request = network.request(Api.functions.photos.uploadProfilePhoto(flags: flags, file: photoFile, video: videoFile, videoStartTs: videoStartTimestamp, videoEmojiMarkup: videoEmojiMarkup))
+                                        request = network.request(Api.functions.photos.uploadProfilePhoto(flags: flags, bot: nil, file: photoFile, video: videoFile, videoStartTs: videoStartTimestamp, videoEmojiMarkup: videoEmojiMarkup))
+                                    } else if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit), let inputUser = apiInputUser(peer) {
+                                        if fallback {
+                                            flags |= (1 << 3)
+                                        }
+                                        if let _ = videoEmojiMarkup {
+                                            flags |= (1 << 4)
+                                        }
+                                        flags |= (1 << 5)
+                                        request = network.request(Api.functions.photos.uploadProfilePhoto(flags: flags, bot: inputUser, file: photoFile, video: videoFile, videoStartTs: videoStartTimestamp, videoEmojiMarkup: videoEmojiMarkup))
                                     } else if let inputUser = apiInputUser(peer) {
                                         if let customPeerPhotoMode = customPeerPhotoMode {
                                             switch customPeerPhotoMode {
@@ -408,14 +417,20 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                 }
             }
         } else {
-            if let _ = peer as? TelegramUser {
+            if let user = peer as? TelegramUser {
                 let request: Signal<Api.photos.Photo, MTRpcError>
                 if peer.id == accountPeerId {
                     var flags: Int32 = 0
                     if fallback {
                         flags |= (1 << 0)
                     }
-                    request = network.request(Api.functions.photos.updateProfilePhoto(flags: flags, id: Api.InputPhoto.inputPhotoEmpty))
+                    request = network.request(Api.functions.photos.updateProfilePhoto(flags: flags, bot: nil, id: Api.InputPhoto.inputPhotoEmpty))
+                } else if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit), let inputUser = apiInputUser(peer) {
+                    var flags: Int32 = (1 << 1)
+                    if fallback {
+                        flags |= (1 << 0)
+                    }
+                    request = network.request(Api.functions.photos.updateProfilePhoto(flags: flags, bot: inputUser, id: Api.InputPhoto.inputPhotoEmpty))
                 } else if let inputUser = apiInputUser(peer) {
                     let flags: Int32 = (1 << 4)
                     request = network.request(Api.functions.photos.uploadContactProfilePhoto(flags: flags, userId: inputUser, file: nil, video: nil, videoStartTs: nil, videoEmojiMarkup: nil))
@@ -557,18 +572,18 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
 
 func _internal_updatePeerPhotoExisting(network: Network, reference: TelegramMediaImageReference) -> Signal<TelegramMediaImage?, NoError> {
     switch reference {
-        case let .cloud(imageId, accessHash, fileReference):
-            return network.request(Api.functions.photos.updateProfilePhoto(flags: 0, id: .inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: fileReference))))
-            |> `catch` { _ -> Signal<Api.photos.Photo, NoError> in
+    case let .cloud(imageId, accessHash, fileReference):
+        return network.request(Api.functions.photos.updateProfilePhoto(flags: 0, bot: nil, id: .inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: fileReference))))
+        |> `catch` { _ -> Signal<Api.photos.Photo, NoError> in
+            return .complete()
+        }
+        |> mapToSignal { photo -> Signal<TelegramMediaImage?, NoError> in
+            if case let .photo(photo, _) = photo {
+                return .single(telegramMediaImageFromApiPhoto(photo))
+            } else {
                 return .complete()
             }
-            |> mapToSignal { photo -> Signal<TelegramMediaImage?, NoError> in
-                if case let .photo(photo, _) = photo {
-                    return .single(telegramMediaImageFromApiPhoto(photo))
-                } else {
-                    return .complete()
-                }
-            }
+        }
     }
 }
 
@@ -593,7 +608,7 @@ func _internal_removeAccountPhoto(account: Account, reference: TelegramMediaImag
         if fallback {
             flags |= (1 << 0)
         }
-        let api = Api.functions.photos.updateProfilePhoto(flags: flags, id: Api.InputPhoto.inputPhotoEmpty)
+        let api = Api.functions.photos.updateProfilePhoto(flags: flags, bot: nil, id: Api.InputPhoto.inputPhotoEmpty)
         return account.network.request(api)
         |> map { _ in }
         |> retryRequest
