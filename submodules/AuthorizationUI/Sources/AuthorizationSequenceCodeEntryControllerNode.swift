@@ -567,12 +567,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     let resetText: String
                     let interval = pendingDate - currentTime
                     if interval <= 0 {
-                        resetText = "Please wait..."
+                        resetText = self.strings.Login_Email_ResetingNow
                     } else if interval < 60 * 60 * 24 {
                         let minutes = interval / 60
                         let seconds = interval % 60
-                        let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
-                        resetText = "in \(timeString)"
+                        let timeString = String(format: "%d:%.02d", Int(minutes), Int(seconds))
+                        resetText = self.strings.Login_Email_ElapsedTime(timeString).string
                     } else {
                         resetText = unmuteIntervalString(strings: self.strings, value: interval)
                     }

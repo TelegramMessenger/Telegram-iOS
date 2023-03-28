@@ -474,6 +474,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let ready: Promise<Bool>
     let peerId: EnginePeer.Id
     let mode: ForumCreateTopicScreen.Mode
     let titleUpdated: (String) -> Void
@@ -484,6 +485,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     
     init(
         context: AccountContext,
+        ready: Promise<Bool>,
         peerId: EnginePeer.Id,
         mode: ForumCreateTopicScreen.Mode,
         titleUpdated:  @escaping (String) -> Void,
@@ -493,6 +495,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         openPremium: @escaping () -> Void
     ) {
         self.context = context
+        self.ready = ready
         self.peerId = peerId
         self.mode = mode
         self.titleUpdated = titleUpdated
@@ -517,6 +520,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     
     final class State: ComponentState {
         private let context: AccountContext
+        private let ready: Promise<Bool>
         private let titleUpdated: (String) -> Void
         private let iconUpdated: (Int64?) -> Void
         private let iconColorUpdated: (Int32) -> Void
@@ -539,8 +543,9 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         
         private var hasPremium: Bool = false
         
-        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, iconColorUpdated: @escaping (Int32) -> Void, isHiddenUpdated: @escaping (Bool) -> Void, openPremium: @escaping () -> Void) {
+        init(context: AccountContext, ready: Promise<Bool>, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, iconColorUpdated: @escaping (Int32) -> Void, isHiddenUpdated: @escaping (Bool) -> Void, openPremium: @escaping () -> Void) {
             self.context = context
+            self.ready = ready
             self.titleUpdated = titleUpdated
             self.iconUpdated = iconUpdated
             self.iconColorUpdated = iconColorUpdated
@@ -656,6 +661,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             |> deliverOnMainQueue).start(next: { [weak self] content in
                 self?.emojiContent = content
                 self?.updated(transition: .immediate)
+                
+                self?.ready.set(.single(true))
             }))
         }
         
@@ -697,6 +704,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     func makeState() -> State {
         return State(
             context: self.context,
+            ready: self.ready,
             mode: self.mode,
             titleUpdated: self.titleUpdated,
             iconUpdated: self.iconUpdated,
@@ -1044,6 +1052,11 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         }
     }
     
+    private let readyValue = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self.readyValue
+    }
+    
     public init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode) {
         self.context = context
         self.mode = mode
@@ -1054,7 +1067,8 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         var isHiddenUpdatedImpl: ((Bool) -> Void)?
         var openPremiumImpl: (() -> Void)?
         
-        super.init(context: context, component: ForumCreateTopicScreenComponent(context: context, peerId: peerId, mode: mode, titleUpdated: { title in
+        let componentReady = Promise<Bool>()
+        super.init(context: context, component: ForumCreateTopicScreenComponent(context: context, ready: componentReady, peerId: peerId, mode: mode, titleUpdated: { title in
             titleUpdatedImpl?(title)
         }, iconUpdated: { fileId in
             iconUpdatedImpl?(fileId)
@@ -1081,6 +1095,8 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         }
         
         self.title = title
+        
+        self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
