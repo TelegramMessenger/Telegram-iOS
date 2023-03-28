@@ -299,6 +299,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
+    var attemptNavigationImpl: ((@escaping () -> Void) -> Bool)?
     
     var dismissTooltipsImpl: (() -> Void)?
     
@@ -528,6 +529,40 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         EngineDataList(combinedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
     )
     
+    let applyChangesImpl: (() -> Void)? = {
+        let state = stateValue.with({ $0 })
+        if let currentLink = state.currentLink {
+            if currentLink.title != state.title || Set(currentLink.peerIds) != state.selectedPeerIds {
+                updateState { state in
+                    var state = state
+                    state.isSaving = true
+                    return state
+                }
+                actionsDisposable.add((context.engine.peers.editChatFolderLink(filterId: filterId, link: currentLink, title: state.title, peerIds: Array(state.selectedPeerIds), revoke: false)
+                |> deliverOnMainQueue).start(error: { _ in
+                    updateState { state in
+                        var state = state
+                        state.isSaving = false
+                        return state
+                    }
+                    
+                    dismissTooltipsImpl?()
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    //TODO:localize
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "An error occurred."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                }, completed: {
+                    linkUpdated(ExportedChatFolderLink(title: state.title ?? "", link: currentLink.link, peerIds: Array(state.selectedPeerIds), isRevoked: false))
+                    dismissImpl?()
+                }))
+            } else {
+                dismissImpl?()
+            }
+        } else {
+            dismissImpl?()
+        }
+        dismissImpl?()
+    }
+    
     let _ = (allPeers
     |> take(1)
     |> deliverOnMainQueue).start(next: { peers in
@@ -576,37 +611,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             doneButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
             doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
-                let state = stateValue.with({ $0 })
-                if let currentLink = state.currentLink {
-                    if currentLink.title != state.title || Set(currentLink.peerIds) != state.selectedPeerIds {
-                        updateState { state in
-                            var state = state
-                            state.isSaving = true
-                            return state
-                        }
-                        actionsDisposable.add((context.engine.peers.editChatFolderLink(filterId: filterId, link: currentLink, title: state.title, peerIds: Array(state.selectedPeerIds), revoke: false)
-                        |> deliverOnMainQueue).start(error: { _ in
-                            updateState { state in
-                                var state = state
-                                state.isSaving = false
-                                return state
-                            }
-                            
-                            dismissTooltipsImpl?()
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            //TODO:localize
-                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "An error occurred."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
-                        }, completed: {
-                            linkUpdated(ExportedChatFolderLink(title: state.title ?? "", link: currentLink.link, peerIds: Array(state.selectedPeerIds), isRevoked: false))
-                            dismissImpl?()
-                        }))
-                    } else {
-                        dismissImpl?()
-                    }
-                } else {
-                    dismissImpl?()
-                }
-                dismissImpl?()
+                applyChangesImpl?()
             })
         }
         
@@ -635,6 +640,43 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     controller.visibleBottomContentOffsetChanged = { offset in
         if case let .known(value) = offset, value < 40.0 {
             
+        }
+    }
+    controller.attemptNavigation = { f in
+        return attemptNavigationImpl?(f) ?? true
+    }
+    attemptNavigationImpl = { f in
+        if let currentInvitation {
+            let state = stateValue.with({ $0 })
+            
+            var hasChanges = false
+            if state.title != currentInvitation.title {
+                hasChanges = true
+            }
+            if state.selectedPeerIds != Set(currentInvitation.peerIds) {
+                hasChanges = true
+            }
+            
+            if hasChanges {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                //TODO:localize
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Unsaved Changes", text: "You have changed the settings of this folder. Apply changes?", actions: [
+                    TextAlertAction(type: .genericAction, title: "Discard", action: {
+                        f()
+                        dismissImpl?()
+                    }),
+                    TextAlertAction(type: .defaultAction, title: "Apply", action: {
+                        applyChangesImpl?()
+                    })
+                ]), nil)
+                return false
+            } else {
+                f()
+                return true
+            }
+        } else {
+            f()
+            return true
         }
     }
     pushControllerImpl = { [weak controller] c in
