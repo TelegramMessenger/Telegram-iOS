@@ -280,7 +280,9 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 alreadyMemberPeerIds.removeAll()
                 
                 return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds)
-            case let .communityInviteAlready(filterId, missingPeers, chats, users):
+            case let .communityInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
+                let _ = alreadyPeers
+                
                 var allPeers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
                 

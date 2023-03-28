@@ -172,6 +172,18 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .linksPerSharedFolder:
+            if case .linksPerSharedFolder = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .membershipInSharedFolders:
+            if case .membershipInSharedFolders = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -199,6 +211,8 @@ public enum PremiumSource: Equatable {
     case voiceToText
     case fasterDownload
     case translation
+    case linksPerSharedFolder
+    case membershipInSharedFolders
     
     var identifier: String? {
         switch self {
@@ -252,6 +266,10 @@ public enum PremiumSource: Equatable {
                 }
             case .translation:
                 return "translations"
+            case .linksPerSharedFolder:
+                return "double_limits__community_invites"
+            case .membershipInSharedFolders:
+                return "double_limits__communities_joined"
         }
     }
 }
