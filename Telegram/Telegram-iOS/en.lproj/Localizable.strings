@@ -9097,3 +9097,11 @@ Sorry for the inconvenience.";
 "ChatList.ChatFolderUpdateCount_any" = "%d new chats";
 "ChatList.ChatFolderUpdateHintTitle" = "You can join %@";
 "ChatList.ChatFolderUpdateHintText" = "Tap here to view them";
+
+"Premium.MaxSharedFolderMembershipText" = "You can only add **%1$@** shareable folders. Upgrade to **Telegram Premium** to increase this limit up to **%2$@**.";
+"Premium.MaxSharedFolderMembershipNoPremiumText" = "You can only add **%1$@** shareable folders. We are working to let you increase this limit in the future.";
+"Premium.MaxSharedFolderMembershipFinalText" = "Sorry, you can only add **%1$@** shareable folders.";
+
+"Premium.MaxSharedFolderLinksText" = "You can only create **%1$@** invite links. Upgrade to **Telegram Premium** to increase the links limit to **%2$@**.";
+"Premium.MaxSharedFolderLinksNoPremiumText" = "You can only create **%1$@** invite links. We are working to let you increase this limit in the future.";
+"Premium.MaxSharedFolderLinksFinalText" = "Sorry, you can only create **%1$@** invite links";

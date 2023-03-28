@@ -1334,7 +1334,14 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                             switch error {
                             case .generic:
                                 text = "An error occurred"
-                            case .limitExceeded:
+                            case let .limitExceeded(limit, premiumLimit):
+                                if limit < premiumLimit {
+                                    let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                                    })
+                                    pushControllerImpl?(limitController)
+                                    
+                                    return
+                                }
                                 text = "You can't create more links."
                             }
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }

@@ -44,6 +44,7 @@ import ComponentDisplayAdapters
 import ChatListHeaderComponent
 import ChatListTitleView
 import InviteLinksUI
+import ChatFolderLinkPreviewScreen
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -2735,7 +2736,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        let _ = (context.engine.peers.currentChatListFilters()
+        let _ = (self.context.engine.peers.currentChatListFilters()
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] filters in
             guard let self else {
@@ -2745,17 +2746,55 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            if case let .filter(_, _, _, data) = filter, data.isShared {
-                let presentationData = self.presentationData
-                
-                //TODO:localize
-                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
-                    TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
-                        apply()
-                    }),
-                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
-                    })
-                ]), in: .window(.root))
+            if case let .filter(_, title, _, data) = filter, data.isShared {
+                let _ = (self.context.engine.data.get(
+                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    guard let self else {
+                        return
+                    }
+                    
+                    let presentationData = self.presentationData
+                    
+                    //TODO:localize
+                    self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
+                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let previewScreen = ChatFolderLinkPreviewScreen(
+                                context: self.context,
+                                subject: .remove(folderId: id),
+                                contents: ChatFolderLinkContents(
+                                    localFilterId: id,
+                                    title: title,
+                                    peers: peers.compactMap { $0 }.filter { peer in
+                                        if case .channel = peer {
+                                            return true
+                                        } else {
+                                            return false
+                                        }
+                                    },
+                                    alreadyMemberPeerIds: Set()
+                                ),
+                                completion: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
+                                        self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
+                                        })
+                                    }
+                                }
+                            )
+                            self.push(previewScreen)
+                        }),
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                        })
+                    ]), in: .window(.root))
+                })
             } else {
                 let actionSheet = ActionSheetController(presentationData: self.presentationData)
                 

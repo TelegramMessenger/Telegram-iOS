@@ -49,6 +49,8 @@ public enum EngineConfiguration {
         public let maxAboutLength: Int32
         public let maxAnimatedEmojisInText: Int32
         public let maxReactionsPerMessage: Int32
+        public let maxSharedFolderInviteLinks: Int32
+        public let maxSharedFolderJoin: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -67,7 +69,9 @@ public enum EngineConfiguration {
             maxUploadFileParts: Int32,
             maxAboutLength: Int32,
             maxAnimatedEmojisInText: Int32,
-            maxReactionsPerMessage: Int32
+            maxReactionsPerMessage: Int32,
+            maxSharedFolderInviteLinks: Int32,
+            maxSharedFolderJoin: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -82,6 +86,8 @@ public enum EngineConfiguration {
             self.maxAboutLength = maxAboutLength
             self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
             self.maxReactionsPerMessage = maxReactionsPerMessage
+            self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
+            self.maxSharedFolderJoin = maxSharedFolderJoin
         }
     }
 }
@@ -131,7 +137,9 @@ public extension EngineConfiguration.UserLimits {
             maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts,
             maxAboutLength: userLimitsConfiguration.maxAboutLength,
             maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText,
-            maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage
+            maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage,
+            maxSharedFolderInviteLinks: userLimitsConfiguration.maxSharedFolderInviteLinks,
+            maxSharedFolderJoin: userLimitsConfiguration.maxSharedFolderJoin
         )
     }
 }

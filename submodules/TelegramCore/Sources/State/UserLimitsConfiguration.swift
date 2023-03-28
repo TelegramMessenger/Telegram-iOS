@@ -15,6 +15,8 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxAboutLength: Int32
     public let maxAnimatedEmojisInText: Int32
     public let maxReactionsPerMessage: Int32
+    public let maxSharedFolderInviteLinks: Int32
+    public let maxSharedFolderJoin: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -30,7 +32,9 @@ public struct UserLimitsConfiguration: Equatable {
             maxUploadFileParts: 4000,
             maxAboutLength: 70,
             maxAnimatedEmojisInText: 10,
-            maxReactionsPerMessage: 1
+            maxReactionsPerMessage: 1,
+            maxSharedFolderInviteLinks: 3,
+            maxSharedFolderJoin: 2
         )
     }
 
@@ -47,7 +51,9 @@ public struct UserLimitsConfiguration: Equatable {
         maxUploadFileParts: Int32,
         maxAboutLength: Int32,
         maxAnimatedEmojisInText: Int32,
-        maxReactionsPerMessage: Int32
+        maxReactionsPerMessage: Int32,
+        maxSharedFolderInviteLinks: Int32,
+        maxSharedFolderJoin: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -62,6 +68,8 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxAboutLength = maxAboutLength
         self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
         self.maxReactionsPerMessage = maxReactionsPerMessage
+        self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
+        self.maxSharedFolderJoin = maxSharedFolderJoin
     }
 }
 
@@ -99,5 +107,7 @@ extension UserLimitsConfiguration {
         self.maxAboutLength = getValue("about_length_limit", orElse: defaultValue.maxAboutLength)
         self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)
         self.maxReactionsPerMessage = getValue("reactions_user_max", orElse: 1)
+        self.maxSharedFolderInviteLinks = getValue("community_invites_limit", orElse: 3)
+        self.maxSharedFolderJoin = getValue("communities_joined_limit", orElse: 2)
     }
 }

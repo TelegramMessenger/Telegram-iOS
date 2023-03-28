@@ -2953,15 +2953,15 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.communities {
-                static func checkCommunityInvite(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.community.CommunityInvite>) {
+                static func checkCommunityInvite(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.communities.CommunityInvite>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1753956947)
+                    buffer.appendInt32(161196517)
                     serializeString(slug, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "communities.checkCommunityInvite", parameters: [("slug", String(describing: slug))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.community.CommunityInvite? in
+                    return (FunctionDescription(name: "communities.checkCommunityInvite", parameters: [("slug", String(describing: slug))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.communities.CommunityInvite? in
                         let reader = BufferReader(buffer)
-                        var result: Api.community.CommunityInvite?
+                        var result: Api.communities.CommunityInvite?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.community.CommunityInvite
+                            result = Api.parse(reader, signature: signature) as? Api.communities.CommunityInvite
                         }
                         return result
                     })
@@ -3103,6 +3103,26 @@ public extension Api.functions.communities {
                         item.serialize(buffer, true)
                     }
                     return (FunctionDescription(name: "communities.joinCommunityUpdates", parameters: [("community", String(describing: community)), ("peers", String(describing: peers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.communities {
+                static func leaveCommunity(community: Api.InputCommunity, peers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(903443807)
+                    community.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "communities.leaveCommunity", parameters: [("community", String(describing: community)), ("peers", String(describing: peers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

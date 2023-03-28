@@ -1061,6 +1061,10 @@ public extension TelegramEngine {
         public func hideChatFolderUpdates(folderId: Int32) -> Signal<Never, NoError> {
             return _internal_hideChatFolderUpdates(account: self.account, folderId: folderId)
         }
+        
+        public func leaveChatFolder(folderId: Int32, removePeerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
+            return _internal_leaveChatFolder(account: self.account, folderId: folderId, removePeerIds: removePeerIds)
+        }
     }
 }
 
