@@ -21,6 +21,7 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
 public enum ExportChatFolderError {
     case generic
     case limitExceeded
+    case limitFiltersExceeded
 }
 
 public struct ExportedChatFolderLink: Equatable {
@@ -62,6 +63,8 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
         |> mapError { error -> ExportChatFolderError in
             if error.errorDescription == "INVITES_TOO_MUCH" {
                 return .limitExceeded
+            } else if error.errorDescription == "FILTERS_TOO_MUCH" {
+                return .limitFiltersExceeded
             } else {
                 return .generic
             }
