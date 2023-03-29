@@ -1031,64 +1031,44 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         
                         let resultSignal = signal
                         |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                            var allEmoticons: [String: String] = [:]
+                            for keyword in keywords {
+                                for emoticon in keyword.emoticons {
+                                    allEmoticons[emoticon] = keyword.keyword
+                                }
+                            }
+                                                        
                             return combineLatest(
-                                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
-                                context.engine.stickers.availableReactions(),
-                                hasPremium
+                                hasPremium,
+                                context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
                             )
-                            |> take(1)
-                            |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
-                                var result: [(String, TelegramMediaFile?, String)] = []
-                                
-                                var allEmoticons: [String: String] = [:]
-                                for keyword in keywords {
-                                    for emoticon in keyword.emoticons {
-                                        allEmoticons[emoticon] = keyword.keyword
-                                    }
+                            |> mapToSignal { hasPremium, foundEmoji -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                                if foundEmoji.items.isEmpty && !foundEmoji.isFinalResult {
+                                    return .complete()
                                 }
-                                
-                                for entry in view.entries {
-                                    guard let item = entry.item as? StickerPackItem else {
-                                        continue
-                                    }
-                                    for attribute in item.file.attributes {
-                                        switch attribute {
-                                        case let .CustomEmoji(_, _, alt, _):
-                                            if !item.file.isPremiumEmoji || hasPremium {
-                                                if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                                    result.append((alt, item.file, keyword))
-                                                } else if alt == query {
-                                                    result.append((alt, item.file, alt))
-                                                }
-                                            }
-                                        default:
-                                            break
-                                        }
-                                    }
-                                }
-                                
                                 var items: [EmojiPagerContentComponent.Item] = []
                                 
                                 var existingIds = Set<MediaId>()
-                                for item in result {
-                                    if let itemFile = item.1 {
-                                        if existingIds.contains(itemFile.fileId) {
-                                            continue
-                                        }
-                                        existingIds.insert(itemFile.fileId)
-                                        let animationData = EntityKeyboardAnimationData(file: itemFile)
-                                        let item = EmojiPagerContentComponent.Item(
-                                            animationData: animationData,
-                                            content: .animation(animationData),
-                                            itemFile: itemFile, subgroupId: nil,
-                                            icon: .none,
-                                            tintMode: animationData.isTemplate ? .primary : .none
-                                        )
-                                        items.append(item)
+                                for itemFile in foundEmoji.items {
+                                    if existingIds.contains(itemFile.fileId) {
+                                        continue
                                     }
+                                    existingIds.insert(itemFile.fileId)
+                                    if itemFile.isPremiumEmoji && !hasPremium {
+                                        continue
+                                    }
+                                    let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                    let item = EmojiPagerContentComponent.Item(
+                                        animationData: animationData,
+                                        content: .animation(animationData),
+                                        itemFile: itemFile, subgroupId: nil,
+                                        icon: .none,
+                                        tintMode: animationData.isTemplate ? .primary : .none
+                                    )
+                                    items.append(item)
                                 }
-                                
-                                return [EmojiPagerContentComponent.ItemGroup(
+                            
+                                return .single([EmojiPagerContentComponent.ItemGroup(
                                     supergroupId: "search",
                                     groupId: "search",
                                     title: nil,
@@ -1103,7 +1083,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     headerItem: nil,
                                     fillWithLoadingPlaceholders: false,
                                     items: items
-                                )]
+                                )])
                             }
                         }
                         
@@ -1171,7 +1151,6 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         if group.items.isEmpty && !result.isFinalResult {
-                            //self.emojiSearchStateValue.isSearching = true
                             self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
                                 EmojiPagerContentComponent.ItemGroup(
                                     supergroupId: "search",
@@ -1192,10 +1171,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
                             return
                         }
-                        //DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
-                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
-                            version += 1
-                        //})
+                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                        version += 1
                     }))
                 }
             },
