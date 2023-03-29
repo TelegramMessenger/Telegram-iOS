@@ -3,12 +3,24 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-//communities.exportCommunityInvite#41fe69d9 community:InputCommunity title:string peers:Vector<InputPeer> = communities.ExportedCommunityInvite;
-//communities.exportedCommunityInvite#6b97a8ea filter:DialogFilter invite:ExportedCommunityInvite = communities.ExportedCommunityInvite;
-//exportedCommunityInvite#af7afb2f title:string url:string peers:Vector<Peer> = ExportedCommunityInvite;
+public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
+    var isEnabled = false
+    switch peer {
+    case let .channel(channel):
+        if channel.adminRights != nil && channel.hasPermission(.inviteMembers) {
+            isEnabled = true
+        } else if channel.username != nil {
+            isEnabled = true
+        }
+    default:
+        break
+    }
+    return isEnabled
+}
 
 public enum ExportChatFolderError {
     case generic
+    case limitExceeded(limit: Int32, premiumLimit: Int32)
 }
 
 public struct ExportedChatFolderLink: Equatable {
@@ -47,8 +59,25 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
     |> castError(ExportChatFolderError.self)
     |> mapToSignal { inputPeers -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
         return account.network.request(Api.functions.communities.exportCommunityInvite(community: .inputCommunityDialogFilter(filterId: filterId), title: title, peers: inputPeers))
-        |> mapError { _ -> ExportChatFolderError in
-            return .generic
+        |> `catch` { error -> Signal<Api.communities.ExportedCommunityInvite, ExportChatFolderError> in
+            if error.errorDescription == "INVITES_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(ExportChatFolderError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.communities.ExportedCommunityInvite, ExportChatFolderError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.limitExceeded(limit: userPremiumLimits.maxSharedFolderInviteLinks, premiumLimit: userPremiumLimits.maxSharedFolderInviteLinks))
+                    } else {
+                        return .fail(.limitExceeded(limit: userDefaultLimits.maxSharedFolderInviteLinks, premiumLimit: userPremiumLimits.maxSharedFolderInviteLinks))
+                    }
+                }
+            } else {
+                return .fail(.generic)
+            }
         }
         |> mapToSignal { result -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
             return account.postbox.transaction { transaction -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
@@ -178,9 +207,9 @@ public enum RevokeChatFolderLinkError {
     case generic
 }
 
-func _internal_revokeChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
+func _internal_deleteChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
     return account.network.request(Api.functions.communities.deleteExportedInvite(community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug))
-    |> mapError { _ -> RevokeChatFolderLinkError in
+    |> mapError { error -> RevokeChatFolderLinkError in
         return .generic
     }
     |> ignoreValues
@@ -248,9 +277,12 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                         }
                     }
                 }
+                alreadyMemberPeerIds.removeAll()
                 
                 return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds)
-            case let .communityInviteAlready(filterId, missingPeers, chats, users):
+            case let .communityInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
+                let _ = alreadyPeers
+                
                 var allPeers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
                 
@@ -272,10 +304,12 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 
                 let currentFilters = _internal_currentChatListFilters(transaction: transaction)
                 var currentFilterTitle: String?
+                var currentFilterPeers: [EnginePeer.Id] = []
                 if let index = currentFilters.firstIndex(where: { $0.id == filterId }) {
                     switch currentFilters[index] {
-                    case let .filter(_, title, _, _):
+                    case let .filter(_, title, _, data):
                         currentFilterTitle = title
+                        currentFilterPeers = data.includePeers.peers
                     default:
                         break
                     }
@@ -292,6 +326,20 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                         }
                     }
                 }
+                for peerId in currentFilterPeers {
+                    if resultPeers.contains(where: { $0.id == peerId }) {
+                        continue
+                    }
+                    if let peerValue = transaction.getPeer(peerId) {
+                        if canShareLinkToPeer(peer: EnginePeer(peerValue)) {
+                            resultPeers.append(EnginePeer(peerValue))
+                            
+                            if transaction.getPeerChatListIndex(peerId) != nil {
+                                alreadyMemberPeerIds.insert(peerId)
+                            }
+                        }
+                    }
+                }
                 
                 return ChatFolderLinkContents(localFilterId: filterId, title: currentFilterTitle, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds)
             }
@@ -302,6 +350,8 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
 
 public enum JoinChatFolderLinkError {
     case generic
+    case dialogFilterLimitExceeded(limit: Int32, premiumLimit: Int32)
+    case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
 }
 
 func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
@@ -311,13 +361,199 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
     |> castError(JoinChatFolderLinkError.self)
     |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
         return account.network.request(Api.functions.communities.joinCommunityInvite(slug: slug, peers: inputPeers))
-        |> mapError { _ -> JoinChatFolderLinkError in
-            return .generic
+        |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
+            if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.dialogFilterLimitExceeded(limit: userPremiumLimits.maxFoldersCount, premiumLimit: userPremiumLimits.maxFoldersCount))
+                    } else {
+                        return .fail(.dialogFilterLimitExceeded(limit: userDefaultLimits.maxFoldersCount, premiumLimit: userPremiumLimits.maxFoldersCount))
+                    }
+                }
+            } else if error.errorDescription == "FILTERS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.sharedFolderLimitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                    } else {
+                        return .fail(.sharedFolderLimitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                    }
+                }
+            } else {
+                return .fail(.generic)
+            }
         }
         |> mapToSignal { result -> Signal<Never, JoinChatFolderLinkError> in
             account.stateManager.addUpdates(result)
             
             return .complete()
+        }
+    }
+}
+
+public final class ChatFolderUpdates: Equatable {
+    fileprivate let folderId: Int32
+    fileprivate let title: String
+    fileprivate let missingPeers: [Api.Peer]
+    fileprivate let chats: [Api.Chat]
+    fileprivate let users: [Api.User]
+    
+    public var availableChatsToJoin: Int {
+        return self.missingPeers.count
+    }
+    
+    public var chatFolderLinkContents: ChatFolderLinkContents {
+        var peers: [EnginePeer] = []
+        for missingPeer in self.missingPeers {
+            for chat in chats {
+                if chat.peerId == missingPeer.peerId {
+                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(EnginePeer(peer))
+                    }
+                }
+            }
+        }
+        
+        return ChatFolderLinkContents(localFilterId: self.folderId, title: self.title, peers: peers, alreadyMemberPeerIds: Set())
+    }
+    
+    fileprivate init(
+        folderId: Int32,
+        title: String,
+        missingPeers: [Api.Peer],
+        chats: [Api.Chat],
+        users: [Api.User]
+    ) {
+        self.folderId = folderId
+        self.title = title
+        self.missingPeers = missingPeers
+        self.chats = chats
+        self.users = users
+    }
+    
+    public static func ==(lhs: ChatFolderUpdates, rhs: ChatFolderUpdates) -> Bool {
+        if lhs.folderId != rhs.folderId {
+            return false
+        }
+        if lhs.missingPeers.map(\.peerId) != rhs.missingPeers.map(\.peerId) {
+            return false
+        }
+        return true
+    }
+}
+
+func _internal_getChatFolderUpdates(account: Account, folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
+    return account.network.request(Api.functions.communities.getCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.communities.CommunityUpdates?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<ChatFolderUpdates?, NoError> in
+        guard let result = result else {
+            return .single(nil)
+        }
+        switch result {
+        case let .communityUpdates(missingPeers, chats, users):
+            return account.postbox.transaction { transaction -> ChatFolderUpdates? in
+                for filter in _internal_currentChatListFilters(transaction: transaction) {
+                    if case let .filter(id, title, _, _) = filter, id == folderId {
+                        return ChatFolderUpdates(folderId: folderId, title: title, missingPeers: missingPeers, chats: chats, users: users)
+                    }
+                }
+                return nil
+            }
+        }
+    }
+}
+
+func _internal_joinAvailableChatsInFolder(account: Account, updates: ChatFolderUpdates, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
+    return account.postbox.transaction { transaction -> [Api.InputPeer] in
+        return peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
+    }
+    |> castError(JoinChatFolderLinkError.self)
+    |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
+        return account.network.request(Api.functions.communities.joinCommunityUpdates(community: .inputCommunityDialogFilter(filterId: updates.folderId), peers: inputPeers))
+        |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
+            if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.dialogFilterLimitExceeded(limit: userPremiumLimits.maxFoldersCount, premiumLimit: userPremiumLimits.maxFoldersCount))
+                    } else {
+                        return .fail(.dialogFilterLimitExceeded(limit: userDefaultLimits.maxFoldersCount, premiumLimit: userPremiumLimits.maxFoldersCount))
+                    }
+                }
+            } else if error.errorDescription == "FILTERS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.sharedFolderLimitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                    } else {
+                        return .fail(.sharedFolderLimitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                    }
+                }
+            } else {
+                return .fail(.generic)
+            }
+        }
+        |> mapToSignal { result -> Signal<Never, JoinChatFolderLinkError> in
+            account.stateManager.addUpdates(result)
+            
+            return .complete()
+        }
+    }
+}
+
+func _internal_hideChatFolderUpdates(account: Account, folderId: Int32) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.communities.hideCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> ignoreValues
+}
+
+func _internal_leaveChatFolder(account: Account, folderId: Int32, removePeerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> [Api.InputPeer] in
+        return removePeerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeers -> Signal<Never, NoError> in
+        return account.network.request(Api.functions.communities.leaveCommunity(community: .inputCommunityDialogFilter(filterId: folderId), peers: inputPeers))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates = updates {
+                account.stateManager.addUpdates(updates)
+            }
+            return account.postbox.transaction { transaction -> Void in
+            }
+            |> ignoreValues
         }
     }
 }

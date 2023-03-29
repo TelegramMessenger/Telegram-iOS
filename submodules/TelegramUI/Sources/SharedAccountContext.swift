@@ -1676,6 +1676,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject =  .files
         case .accounts:
             mappedSubject =  .accounts
+        case .linksPerSharedFolder:
+            mappedSubject = .linksPerSharedFolder
+        case .membershipInSharedFolders:
+            mappedSubject = .membershipInSharedFolders
         }
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, action: action)
     }

@@ -15,29 +15,33 @@ import SolidRoundedButtonComponent
 import PresentationDataUtils
 import Markdown
 import UndoUI
+import PremiumUI
 
 private final class ChatFolderLinkPreviewScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let slug: String
+    let subject: ChatFolderLinkPreviewScreen.Subject
     let linkContents: ChatFolderLinkContents?
+    let completion: (() -> Void)?
     
     init(
         context: AccountContext,
-        slug: String,
-        linkContents: ChatFolderLinkContents?
+        subject: ChatFolderLinkPreviewScreen.Subject,
+        linkContents: ChatFolderLinkContents?,
+        completion: (() -> Void)?
     ) {
         self.context = context
-        self.slug = slug
+        self.subject = subject
         self.linkContents = linkContents
+        self.completion = completion
     }
     
     static func ==(lhs: ChatFolderLinkPreviewScreenComponent, rhs: ChatFolderLinkPreviewScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.slug != rhs.slug {
+        if lhs.subject != rhs.subject {
             return false
         }
         if lhs.linkContents !== rhs.linkContents {
@@ -66,6 +70,11 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         }
     }
     
+    final class AnimationHint {
+        init() {
+        }
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
         private let dimView: UIView
         private let backgroundLayer: SimpleLayer
@@ -82,6 +91,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         private let actionButton = ComponentView<Empty>()
         
         private let listHeaderText = ComponentView<Empty>()
+        private let listHeaderAction = ComponentView<Empty>()
         private let itemContainerView: UIView
         private var items: [AnyHashable: ComponentView<Empty>] = [:]
         
@@ -99,6 +109,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         private var topOffsetDistance: CGFloat?
         
         private var joinDisposable: Disposable?
+        
+        private var inProgress: Bool = false
         
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
@@ -240,7 +252,11 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
-            let animateOffset: CGFloat = self.backgroundLayer.frame.minY
+            if let controller = self.environment?.controller() {
+                controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
+            
+            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
             
             self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             self.scrollContentClippingView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
@@ -254,6 +270,13 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         }
         
         func update(component: ChatFolderLinkPreviewScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+            let animationHint = transition.userData(AnimationHint.self)
+            
+            var contentTransition = transition
+            if animationHint != nil {
+                contentTransition = .immediate
+            }
+            
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
             
@@ -282,7 +305,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             var contentHeight: CGFloat = 0.0
             
             let leftButtonSize = self.leftButton.update(
-                transition: transition,
+                transition: contentTransition,
                 component: AnyComponent(Button(
                     content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
                     action: { [weak self] in
@@ -304,10 +327,19 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             }
             
             let titleString: String
+            var allChatsAdded = false
             if let linkContents = component.linkContents {
                 //TODO:localize
-                if linkContents.localFilterId != nil {
-                    if self.selectedItems.count == 1 {
+                if case .remove = component.subject {
+                    titleString = "Remove Folder"
+                } else if linkContents.localFilterId != nil {
+                    if linkContents.alreadyMemberPeerIds == Set(linkContents.peers.map(\.id)) {
+                        allChatsAdded = true
+                    }
+                    
+                    if allChatsAdded {
+                        titleString = "Add Folder"
+                    } else if self.selectedItems.count == 1 {
                         titleString = "Add \(self.selectedItems.count) chat"
                     } else {
                         titleString = "Add \(self.selectedItems.count) chats"
@@ -331,19 +363,24 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 if titleView.superview == nil {
                     self.navigationBarContainer.addSubview(titleView)
                 }
-                transition.setFrame(view: titleView, frame: titleFrame)
+                contentTransition.setFrame(view: titleView, frame: titleFrame)
             }
             
             contentHeight += 44.0
             contentHeight += 14.0
             
+            var topBadge: String?
+            if !allChatsAdded, let linkContents = component.linkContents, linkContents.localFilterId != nil {
+                topBadge = "+\(linkContents.peers.count)"
+            }
+            
             let topIconSize = self.topIcon.update(
-                transition: transition,
+                transition: contentTransition,
                 component: AnyComponent(ChatFolderLinkHeaderComponent(
                     theme: environment.theme,
                     strings: environment.strings,
                     title: component.linkContents?.title ?? "Folder",
-                    badge: nil
+                    badge: topBadge
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset, height: 1000.0)
@@ -353,7 +390,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 if topIconView.superview == nil {
                     self.scrollContentView.addSubview(topIconView)
                 }
-                transition.setFrame(view: topIconView, frame: topIconFrame)
+                contentTransition.setFrame(view: topIconView, frame: topIconFrame)
                 topIconView.isHidden = component.linkContents == nil
             }
             
@@ -362,7 +399,11 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             let text: String
             if let linkContents = component.linkContents {
-                if linkContents.localFilterId == nil {
+                if case .remove = component.subject {
+                    text = "Do you want to quit the chats you joined when\nadding the folder \(linkContents.title ?? "Folder")?"
+                } else if allChatsAdded {
+                    text = "You have already added this\nfolder and its chats."
+                } else if linkContents.localFilterId == nil {
                     text = "Do you want to add a new chat folder\nand join its groups and channels?"
                 } else {
                     let chatCountString: String
@@ -404,7 +445,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 if descriptionTextView.superview == nil {
                     self.scrollContentView.addSubview(descriptionTextView)
                 }
-                transition.setFrame(view: descriptionTextView, frame: descriptionTextFrame)
+                contentTransition.setFrame(view: descriptionTextView, frame: descriptionTextFrame)
             }
             
             contentHeight += descriptionTextFrame.height
@@ -446,15 +487,34 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 selectionState: .editing(isSelected: self.selectedItems.contains(peer.id), isTinted: linkContents.alreadyMemberPeerIds.contains(peer.id)),
                                 hasNext: i != linkContents.peers.count - 1,
                                 action: { [weak self] peer in
-                                    guard let self else {
+                                    guard let self, let component = self.component, let linkContents = component.linkContents, let controller = self.environment?.controller() else {
                                         return
                                     }
-                                    if self.selectedItems.contains(peer.id) {
-                                        self.selectedItems.remove(peer.id)
+                                    
+                                    if case .remove = component.subject {
+                                        if self.selectedItems.contains(peer.id) {
+                                            self.selectedItems.remove(peer.id)
+                                        } else {
+                                            self.selectedItems.insert(peer.id)
+                                        }
+                                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                                    } else if linkContents.alreadyMemberPeerIds.contains(peer.id) {
+                                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                        let text: String
+                                        if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                            text = "You are already a member of this channel."
+                                        } else {
+                                            text = "You are already a member of this group."
+                                        }
+                                        controller.present(UndoOverlayController(presentationData: presentationData, content: .peers(context: component.context, peers: [peer], title: nil, text: text, customUndoText: nil), elevatedLayout: false, action: { _ in true }), in: .current)
                                     } else {
-                                        self.selectedItems.insert(peer.id)
+                                        if self.selectedItems.contains(peer.id) {
+                                            self.selectedItems.remove(peer.id)
+                                        } else {
+                                            self.selectedItems.insert(peer.id)
+                                        }
+                                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                                     }
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                                 }
                             )),
                             environment: {},
@@ -487,13 +547,39 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             }
             
             let listHeaderTitle: String
-            if self.selectedItems.count == 1 {
-                listHeaderTitle = "1 CHAT IN FOLDER TO JOIN"
+            if let linkContents = component.linkContents {
+                if case .remove = component.subject {
+                    if linkContents.peers.count == 1 {
+                        listHeaderTitle = "1 CHAT TO QUIT"
+                    } else {
+                        listHeaderTitle = "\(linkContents.peers.count) CHATS TO QUIT"
+                    }
+                } else if allChatsAdded {
+                    if linkContents.peers.count == 1 {
+                        listHeaderTitle = "1 CHAT IN THIS FOLDER"
+                    } else {
+                        listHeaderTitle = "\(linkContents.peers.count) CHATS IN THIS FOLDER"
+                    }
+                } else {
+                    if linkContents.peers.count == 1 {
+                        listHeaderTitle = "1 CHAT IN FOLDER TO JOIN"
+                    } else {
+                        listHeaderTitle = "\(linkContents.peers.count) CHATS IN FOLDER TO JOIN"
+                    }
+                }
             } else {
-                listHeaderTitle = "\(self.selectedItems.count) CHATS IN FOLDER TO JOIN"
+                listHeaderTitle = " "
+            }
+            
+            let listHeaderActionTitle: String
+            if self.selectedItems.count == self.items.count {
+                listHeaderActionTitle = "DESELECT ALL"
+            } else {
+                listHeaderActionTitle = "SELECT ALL"
             }
             
             let listHeaderBody = MarkdownAttributeSet(font: Font.with(size: 13.0, design: .regular, traits: [.monospacedNumbers]), textColor: environment.theme.list.freeTextColor)
+            let listHeaderActionBody = MarkdownAttributeSet(font: Font.with(size: 13.0, design: .regular, traits: [.monospacedNumbers]), textColor: environment.theme.list.itemAccentColor)
             
             let listHeaderTextSize = self.listHeaderText.update(
                 transition: .immediate,
@@ -517,14 +603,60 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     self.scrollContentView.addSubview(listHeaderTextView)
                 }
                 let listHeaderTextFrame = CGRect(origin: CGPoint(x: sideInset + 15.0, y: contentHeight), size: listHeaderTextSize)
-                transition.setPosition(view: listHeaderTextView, position: listHeaderTextFrame.origin)
+                contentTransition.setPosition(view: listHeaderTextView, position: listHeaderTextFrame.origin)
                 listHeaderTextView.bounds = CGRect(origin: CGPoint(), size: listHeaderTextFrame.size)
                 listHeaderTextView.isHidden = component.linkContents == nil
             }
+            
+            let listHeaderActionSize = self.listHeaderAction.update(
+                transition: .immediate,
+                component: AnyComponent(Button(
+                    content: AnyComponent(MultilineTextComponent(
+                        text: .markdown(
+                            text: listHeaderActionTitle,
+                            attributes: MarkdownAttributes(
+                                body: listHeaderActionBody,
+                                bold: listHeaderActionBody,
+                                link: listHeaderActionBody,
+                                linkAttribute: { _ in nil }
+                            )
+                        )
+                    )),
+                    action: { [weak self] in
+                        guard let self, let component = self.component, let linkContents = component.linkContents else {
+                            return
+                        }
+                        if self.selectedItems.count != linkContents.peers.count {
+                            for peer in linkContents.peers {
+                                self.selectedItems.insert(peer.id)
+                            }
+                        } else {
+                            self.selectedItems.removeAll()
+                            for peerId in linkContents.alreadyMemberPeerIds {
+                                self.selectedItems.insert(peerId)
+                            }
+                        }
+                        self.state?.updated(transition: .immediate)
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 15.0, height: 1000.0)
+            )
+            if let listHeaderActionView = self.listHeaderAction.view {
+                if listHeaderActionView.superview == nil {
+                    listHeaderActionView.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+                    self.scrollContentView.addSubview(listHeaderActionView)
+                }
+                let listHeaderActionFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - 15.0 - listHeaderActionSize.width, y: contentHeight), size: listHeaderActionSize)
+                contentTransition.setPosition(view: listHeaderActionView, position: CGPoint(x: listHeaderActionFrame.maxX, y: listHeaderActionFrame.minY))
+                listHeaderActionView.bounds = CGRect(origin: CGPoint(), size: listHeaderActionFrame.size)
+                listHeaderActionView.isHidden = component.linkContents == nil || allChatsAdded
+            }
+            
             contentHeight += listHeaderTextSize.height
             contentHeight += 6.0
             
-            transition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: itemsHeight)))
+            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: itemsHeight)))
             
             var initialContentHeight = contentHeight
             initialContentHeight += min(itemsHeight, floor(singleItemHeight * 2.5))
@@ -534,9 +666,21 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             initialContentHeight += 24.0
             
             let actionButtonTitle: String
-            if let linkContents = component.linkContents {
+            if case .remove = component.subject {
+                if self.selectedItems.isEmpty {
+                    actionButtonTitle = "Remove Folder"
+                } else {
+                    actionButtonTitle = "Remove Folder and Chats"
+                }
+            } else if allChatsAdded {
+                actionButtonTitle = "OK"
+            } else if let linkContents = component.linkContents {
                 if linkContents.localFilterId != nil {
-                    actionButtonTitle = "Join Chats"
+                    if self.selectedItems.isEmpty {
+                        actionButtonTitle = "Do Not Join Any Chats"
+                    } else {
+                        actionButtonTitle = "Join Chats"
+                    }
                 } else {
                     actionButtonTitle = "Add Folder"
                 }
@@ -548,57 +692,81 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SolidRoundedButtonComponent(
                     title: actionButtonTitle,
-                    badge: (self.selectedItems.isEmpty) ? nil : "\(self.selectedItems.count)",
+                    badge: (self.selectedItems.isEmpty || allChatsAdded) ? nil : "\(self.selectedItems.count)",
                     theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
                     font: .bold,
                     fontSize: 17.0,
                     height: 50.0,
                     cornerRadius: 11.0,
                     gloss: false,
-                    isEnabled: !self.selectedItems.isEmpty,
+                    isEnabled: !self.selectedItems.isEmpty || component.linkContents?.localFilterId != nil,
                     animationName: nil,
                     iconPosition: .right,
                     iconSpacing: 4.0,
-                    isLoading: component.linkContents == nil,
+                    isLoading: self.inProgress,
                     action: { [weak self] in
-                        guard let self, let component = self.component else {
+                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
                             return
                         }
                         
-                        if let _ = component.linkContents {
+                        if case let .remove(folderId) = component.subject {
+                            self.inProgress = true
+                            self.state?.updated(transition: .immediate)
+                            
+                            component.completion?()
+                            
+                            self.joinDisposable = (component.context.engine.peers.leaveChatFolder(folderId: folderId, removePeerIds: Array(self.selectedItems))
+                            |> deliverOnMainQueue).start(completed: { [weak self] in
+                                guard let self, let controller = self.environment?.controller() else {
+                                    return
+                                }
+                                controller.dismiss()
+                            })
+                        } else if allChatsAdded {
+                            controller.dismiss()
+                        } else if let _ = component.linkContents {
                             if self.joinDisposable == nil, !self.selectedItems.isEmpty {
-                                self.joinDisposable = (component.context.engine.peers.joinChatFolderLink(slug: component.slug, peerIds: Array(self.selectedItems))
-                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                let joinSignal: Signal<Never, JoinChatFolderLinkError>
+                                switch component.subject {
+                                case .remove:
+                                    return
+                                case let .slug(slug):
+                                    joinSignal = component.context.engine.peers.joinChatFolderLink(slug: slug, peerIds: Array(self.selectedItems))
+                                case let .updates(updates):
+                                    joinSignal = component.context.engine.peers.joinAvailableChatsInFolder(updates: updates, peerIds: Array(self.selectedItems))
+                                }
+                                
+                                self.inProgress = true
+                                self.state?.updated(transition: .immediate)
+                                
+                                self.joinDisposable = (joinSignal
+                                |> deliverOnMainQueue).start(error: { [weak self] error in
+                                    guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                                        return
+                                    }
+                                    
+                                    switch error {
+                                    case .generic:
+                                        controller.dismiss()
+                                    case let .dialogFilterLimitExceeded(limit, _):
+                                        let limitController = PremiumLimitScreen(context: component.context, subject: .folders, count: limit, action: {})
+                                        controller.push(limitController)
+                                        controller.dismiss()
+                                    case let .sharedFolderLimitExceeded(limit, _):
+                                        let limitController = PremiumLimitScreen(context: component.context, subject: .membershipInSharedFolders, count: limit, action: {})
+                                        controller.push(limitController)
+                                        controller.dismiss()
+                                    }
+                                }, completed: { [weak self] in
                                     guard let self, let controller = self.environment?.controller() else {
                                         return
                                     }
                                     controller.dismiss()
                                 })
+                            } else {
+                                controller.dismiss()
                             }
                         }
-                        
-                        /*if self.selectedItems.isEmpty {
-                            controller.dismiss()
-                        } else if let link = component.link {
-                            let selectedPeers = component.peers.filter { self.selectedItems.contains($0.id) }
-                            
-                            let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
-                            let text: String
-                            if selectedPeers.count == 1 {
-                                text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
-                            } else if selectedPeers.count == 2 {
-                                text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
-                            } else {
-                                text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
-                            }
-                            
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
-                            
-                            controller.dismiss()
-                        } else {
-                            controller.dismiss()
-                        }*/
                     }
                 )),
                 environment: {},
@@ -611,6 +779,19 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     self.addSubview(actionButtonView)
                 }
                 transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
+            }
+            
+            if let controller = environment.controller() {
+                let subLayout = ContainerViewLayout(
+                    size: availableSize, metrics: environment.metrics, deviceMetrics: environment.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: sideInset - 12.0, bottom: bottomPanelHeight, right: sideInset),
+                    safeInsets: UIEdgeInsets(),
+                    additionalInsets: UIEdgeInsets(),
+                    statusBarHeight: nil,
+                    inputHeight: nil,
+                    inputHeightIsInteractivellyChanging: false,
+                    inVoiceOver: false
+                )
+                controller.presentationContext.containerLayoutUpdated(subLayout, transition: transition.containedViewLayoutTransition)
             }
             
             contentHeight += bottomPanelHeight
@@ -660,30 +841,26 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
 }
 
 public class ChatFolderLinkPreviewScreen: ViewControllerComponentContainer {
+    public enum Subject: Equatable {
+        case slug(String)
+        case updates(ChatFolderUpdates)
+        case remove(folderId: Int32)
+    }
+    
     private let context: AccountContext
-    private var linkContents: ChatFolderLinkContents?
     private var linkContentsDisposable: Disposable?
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, slug: String) {
+    public init(context: AccountContext, subject: Subject, contents: ChatFolderLinkContents, completion: (() -> Void)? = nil) {
         self.context = context
         
-        super.init(context: context, component: ChatFolderLinkPreviewScreenComponent(context: context, slug: slug, linkContents: nil), navigationBarAppearance: .none)
+        super.init(context: context, component: ChatFolderLinkPreviewScreenComponent(context: context, subject: subject, linkContents: contents, completion: completion), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal
         self.blocksBackgroundWhenInOverlay = true
-        
-        self.linkContentsDisposable = (context.engine.peers.checkChatFolderLink(slug: slug)
-        //|> delay(0.2, queue: .mainQueue())
-        |> deliverOnMainQueue).start(next: { [weak self] result in
-            guard let self else {
-                return
-            }
-            self.linkContents = result
-            self.updateComponent(component: AnyComponent(ChatFolderLinkPreviewScreenComponent(context: context, slug: slug, linkContents: result)), transition: .immediate)
-        })
+        self.automaticallyControlPresentationContextLayout = false
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -692,6 +869,10 @@ public class ChatFolderLinkPreviewScreen: ViewControllerComponentContainer {
     
     deinit {
         self.linkContentsDisposable?.dispose()
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
     }
     
     override public func viewDidAppear(_ animated: Bool) {

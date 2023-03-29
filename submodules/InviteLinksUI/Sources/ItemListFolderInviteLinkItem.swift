@@ -34,12 +34,14 @@ public class ItemListFolderInviteLinkItem: ListViewItem, ItemListItem {
     let displayButton: Bool
     let enableButton: Bool
     let buttonTitle: String
+    let secondaryButtonTitle: String?
     let displayImporters: Bool
     let buttonColor: UIColor?
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let copyAction: (() -> Void)?
     let shareAction: (() -> Void)?
+    let secondaryAction: (() -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let viewAction: (() -> Void)?
     public let tag: ItemListItemTag?
@@ -53,12 +55,14 @@ public class ItemListFolderInviteLinkItem: ListViewItem, ItemListItem {
         displayButton: Bool,
         enableButton: Bool,
         buttonTitle: String,
+        secondaryButtonTitle: String?,
         displayImporters: Bool,
         buttonColor: UIColor?,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
         copyAction: (() -> Void)?,
         shareAction: (() -> Void)?,
+        secondaryAction: (() -> Void)?,
         contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?,
         viewAction: (() -> Void)?,
         tag: ItemListItemTag? = nil
@@ -71,12 +75,14 @@ public class ItemListFolderInviteLinkItem: ListViewItem, ItemListItem {
         self.displayButton = displayButton
         self.enableButton = enableButton
         self.buttonTitle = buttonTitle
+        self.secondaryButtonTitle = secondaryButtonTitle
         self.displayImporters = displayImporters
         self.buttonColor = buttonColor
         self.sectionId = sectionId
         self.style = style
         self.copyAction = copyAction
         self.shareAction = shareAction
+        self.secondaryAction = secondaryAction
         self.contextAction = contextAction
         self.viewAction = viewAction
         self.tag = tag
@@ -133,6 +139,7 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
     private let addressButtonIconNode: ASImageNode
     private var addressShimmerNode: ShimmerEffectNode?
     private var shareButtonNode: SolidRoundedButtonNode?
+    private var secondaryButtonNode: SolidRoundedButtonNode?
     
     private let avatarsButtonNode: HighlightTrackingButtonNode
     private let avatarsContext: AnimatedAvatarSetContext
@@ -465,12 +472,48 @@ public class ItemListFolderInviteLinkItemNode: ListViewItemNode, ItemListItemNod
                         strongSelf.addSubnode(shareButtonNode)
                         strongSelf.shareButtonNode = shareButtonNode
                     }
-                    
                     shareButtonNode.title = item.buttonTitle
                     
-                    let buttonWidth = contentSize.width - leftInset - rightInset
+                    if let secondaryButtonTitle = item.secondaryButtonTitle {
+                        let secondaryButtonNode: SolidRoundedButtonNode
+                        if let current = strongSelf.secondaryButtonNode {
+                            secondaryButtonNode = current
+                        } else {
+                            let buttonTheme: SolidRoundedButtonTheme
+                            if let buttonColor = item.buttonColor {
+                                buttonTheme = SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                            } else {
+                                buttonTheme = SolidRoundedButtonTheme(theme: item.presentationData.theme)
+                            }
+                            secondaryButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: 50.0, cornerRadius: 11.0)
+                            secondaryButtonNode.pressed = { [weak self] in
+                                self?.item?.secondaryAction?()
+                            }
+                            strongSelf.addSubnode(secondaryButtonNode)
+                            strongSelf.secondaryButtonNode = secondaryButtonNode
+                        }
+                        secondaryButtonNode.title = secondaryButtonTitle
+                    } else {
+                        if let secondaryButtonNode = strongSelf.secondaryButtonNode {
+                            strongSelf.secondaryButtonNode = nil
+                            secondaryButtonNode.removeFromSupernode()
+                        }
+                    }
+                    
+                    var buttonWidth = contentSize.width - leftInset - rightInset
+                    let totalButtonWidth = buttonWidth
+                    let buttonSpacing: CGFloat = 8.0
+                    if strongSelf.secondaryButtonNode != nil {
+                        buttonWidth = floor((buttonWidth - 8.0) / 2.0)
+                    }
+                    
                     let _ = shareButtonNode.updateLayout(width: buttonWidth, transition: .immediate)
                     shareButtonNode.frame = CGRect(x: leftInset, y: verticalInset + fieldHeight + fieldSpacing, width: buttonWidth, height: buttonHeight)
+                    
+                    if let secondaryButtonNode = strongSelf.secondaryButtonNode {
+                        let _ = secondaryButtonNode.updateLayout(width: totalButtonWidth - buttonWidth - buttonSpacing, transition: .immediate)
+                        secondaryButtonNode.frame = CGRect(x: leftInset + buttonWidth + buttonSpacing, y: verticalInset + fieldHeight + fieldSpacing, width: totalButtonWidth - buttonWidth - buttonSpacing, height: buttonHeight)
+                    }
                     
                     var totalWidth = invitedPeersLayout.size.width
                     var leftOrigin: CGFloat = floorToScreenPixels((params.width - invitedPeersLayout.size.width) / 2.0)

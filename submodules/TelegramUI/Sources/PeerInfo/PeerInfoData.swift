@@ -350,40 +350,42 @@ enum PeerInfoMembersData: Equatable {
 }
 
 private func peerInfoScreenInputData(context: AccountContext, peerId: EnginePeer.Id, isSettings: Bool) -> Signal<PeerInfoScreenInputData, NoError> {
-    return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-    |> map { peer -> PeerInfoScreenInputData in
-        guard let peer = peer else {
-            return .none
-        }
-        if case let .user(user) = peer {
-            if isSettings && user.id == context.account.peerId {
-                return .settings
-            } else {
-                let kind: PeerInfoScreenInputUserKind
-                if user.flags.contains(.isSupport) {
-                    kind = .support
-                } else if user.botInfo != nil {
-                    kind = .bot
+    return `deferred` {
+        return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> mapToSignal { peer -> Signal<PeerInfoScreenInputData, NoError> in
+            guard let peer = peer else {
+                return .single(.none)
+            }
+            if case let .user(user) = peer {
+                if isSettings && user.id == context.account.peerId {
+                    return .single(.settings)
                 } else {
-                    kind = .user
+                    let kind: PeerInfoScreenInputUserKind
+                    if user.flags.contains(.isSupport) {
+                        kind = .support
+                    } else if user.botInfo != nil {
+                        kind = .bot
+                    } else {
+                        kind = .user
+                    }
+                    return .single(.user(userId: user.id, secretChatId: nil, kind: kind))
                 }
-                return .user(userId: user.id, secretChatId: nil, kind: kind)
-            }
-        } else if case let .channel(channel) = peer {
-            if case .group = channel.info {
-                return .group(groupId: channel.id)
+            } else if case let .channel(channel) = peer {
+                if case .group = channel.info {
+                    return .single(.group(groupId: channel.id))
+                } else {
+                    return .single(.channel)
+                }
+            } else if case let .legacyGroup(group) = peer {
+                return .single(.group(groupId: group.id))
+            } else if case let .secretChat(secretChat) = peer {
+                return .single(.user(userId: secretChat.regularPeerId, secretChatId: peer.id, kind: .user))
             } else {
-                return .channel
+                return .single(.none)
             }
-        } else if case let .legacyGroup(group) = peer {
-            return .group(groupId: group.id)
-        } else if case let .secretChat(secretChat) = peer {
-            return .user(userId: secretChat.regularPeerId, secretChatId: peer.id, kind: .user)
-        } else {
-            return .none
         }
+        |> distinctUntilChanged
     }
-    |> distinctUntilChanged
 }
 
 func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Never, NoError> {
@@ -547,6 +549,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
 func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, isSettings: Bool, hintGroupInCommon: PeerId?, existingRequestsContext: PeerInvitationImportersContext?, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<PeerInfoScreenData, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: isSettings)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
+        let wasUpgradedGroup = Atomic<Bool?>(value: nil)
+        
         switch inputData {
         case .none, .settings:
             return .single(PeerInfoScreenData(
@@ -914,7 +918,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 threadData,
                 context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> PeerInfoScreenData in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> Signal<PeerInfoScreenData, NoError> in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -931,6 +935,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 var canManageInvitations = false
                 if let group = peerViewMainPeer(peerView) as? TelegramGroup {
+                    let previousValue = wasUpgradedGroup.swap(group.migrationReference != nil)
+                    if group.migrationReference != nil, let previousValue, !previousValue {
+                        return .never()
+                    }
+                    
                     if case .creator = group.role {
                         canManageInvitations = true
                     } else if case let .admin(rights, _) = group.role, rights.rights.contains(.canInviteUsers) {
@@ -960,7 +969,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
               
-                return PeerInfoScreenData(
+                return .single(PeerInfoScreenData(
                     peer: peerView.peers[groupId],
                     chatPeer: peerView.peers[groupId],
                     cachedData: peerView.cachedData,
@@ -981,7 +990,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     threadData: threadData,
                     appConfiguration: appConfiguration,
                     isPowerSavingEnabled: nil
-                )
+                ))
             }
         }
     }

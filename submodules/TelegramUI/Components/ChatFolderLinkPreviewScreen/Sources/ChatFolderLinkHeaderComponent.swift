@@ -7,6 +7,81 @@ import AccountContext
 import MultilineTextComponent
 import TelegramPresentationData
 
+final class BadgeComponent: Component {
+    let fillColor: UIColor
+    let content: AnyComponent<Empty>
+    
+    init(
+        fillColor: UIColor,
+        content: AnyComponent<Empty>
+    ) {
+        self.fillColor = fillColor
+        self.content = content
+    }
+    
+    static func ==(lhs: BadgeComponent, rhs: BadgeComponent) -> Bool {
+        if lhs.fillColor != rhs.fillColor {
+            return false
+        }
+        if lhs.content != rhs.content {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let backgroundLayer: SimpleLayer
+        private let content = ComponentView<Empty>()
+        
+        override init(frame: CGRect) {
+            self.backgroundLayer = SimpleLayer()
+            
+            super.init(frame: frame)
+            
+            self.layer.addSublayer(self.backgroundLayer)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: BadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let height: CGFloat = 20.0
+            let contentInset: CGFloat = 10.0
+            
+            let contentSize = self.content.update(
+                transition: transition,
+                component: component.content,
+                environment: {},
+                containerSize: availableSize
+            )
+            let backgroundWidth: CGFloat = max(height, contentSize.width + contentInset)
+            let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundWidth, height: height))
+            
+            transition.setFrame(layer: self.backgroundLayer, frame: backgroundFrame)
+            transition.setBackgroundColor(layer: self.backgroundLayer, color: component.fillColor)
+            transition.setCornerRadius(layer: self.backgroundLayer, cornerRadius: height / 2.0)
+            
+            if let contentView = self.content.view {
+                if contentView.superview == nil {
+                    self.addSubview(contentView)
+                }
+                transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: floor((backgroundFrame.width - contentSize.width) * 0.5), y: floor((backgroundFrame.height - contentSize.height) * 0.5)), size: contentSize))
+            }
+            
+            return backgroundFrame.size
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
 final class ChatFolderLinkHeaderComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -47,6 +122,8 @@ final class ChatFolderLinkHeaderComponent: Component {
         private let title = ComponentView<Empty>()
         private let separatorLayer = SimpleLayer()
         
+        private var badge: ComponentView<Empty>?
+        
         private var component: ChatFolderLinkHeaderComponent?
         
         override init(frame: CGRect) {
@@ -71,6 +148,7 @@ final class ChatFolderLinkHeaderComponent: Component {
             
             let height: CGFloat = 60.0
             let spacing: CGFloat = 16.0
+            let badgeSpacing: CGFloat = 6.0
             
             if themeUpdated {
                 //TODO:localize
@@ -143,6 +221,39 @@ final class ChatFolderLinkHeaderComponent: Component {
             )
             contentWidth += titleSize.width
             
+            var badgeSize: CGSize?
+            if let badge = component.badge {
+                let badgeContainer: ComponentView<Empty>
+                var badgeTransition = transition
+                if let current = self.badge {
+                    badgeContainer = current
+                } else {
+                    badgeTransition = .immediate
+                    badgeContainer = ComponentView()
+                    self.badge = badgeContainer
+                }
+                let badgeSizeValue = badgeContainer.update(
+                    transition: badgeTransition,
+                    component: AnyComponent(BadgeComponent(
+                        fillColor: component.theme.list.itemCheckColors.fillColor,
+                        content: AnyComponent(Text(text: badge, font: Font.semibold(12.0), color: component.theme.list.itemCheckColors.foregroundColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                badgeSize = badgeSizeValue
+                contentWidth += badgeSpacing + badgeSizeValue.width
+            } else {
+                if let badge = self.badge {
+                    self.badge = nil
+                    if let view = badge.view {
+                        transition.setScale(view: view, scale: 0.0001, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    }
+                }
+            }
+            
             contentWidth += spacing
             if let rightImage = self.rightView.image {
                 contentWidth += rightImage.size.width
@@ -163,9 +274,35 @@ final class ChatFolderLinkHeaderComponent: Component {
                 let titleFrame = CGRect(origin: CGPoint(x: contentOriginX, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
                 transition.setFrame(view: titleView, frame: titleFrame)
                 
-                transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + 9.0), size: CGSize(width: titleFrame.width, height: 3.0)))
+                var separatorWidth = titleFrame.width
+                
+                if let badgeSize, let badge = self.badge {
+                    let badgeFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + badgeSpacing, y: titleFrame.minY + 1.0 + floor((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize)
+                    
+                    separatorWidth += badgeSpacing + badgeSize.width
+                    
+                    if let badgeView = badge.view {
+                        var badgeTransition = transition
+                        var animateIn = false
+                        if badgeView.superview == nil {
+                            badgeTransition = .immediate
+                            self.addSubview(badgeView)
+                            animateIn = true
+                        }
+                        badgeTransition.setFrame(view: badgeView, frame: badgeFrame)
+                        if animateIn {
+                            transition.animateScale(view: badgeView, from: 0.0001, to: 1.0)
+                        }
+                    }
+                }
+                
+                transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + 9.0), size: CGSize(width: separatorWidth, height: 3.0)))
             }
             contentOriginX += titleSize.width
+            if let badgeSize {
+                contentOriginX += badgeSpacing
+                contentOriginX += badgeSize.width
+            }
             contentOriginX += spacing
             
             if let rightImage = self.rightView.image {

@@ -12,6 +12,7 @@ import ItemListPeerActionItem
 import ChatListFilterSettingsHeaderItem
 import PremiumUI
 import UndoUI
+import ChatFolderLinkPreviewScreen
 
 private final class ChatListFilterPresetListControllerArguments {
     let context: AccountContext
@@ -380,32 +381,75 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             return state
         }
     }, removePreset: { id in
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationData: presentationData)
-        
-        actionSheet.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: presentationData.strings.ChatList_RemoveFolderConfirmation),
-                ActionSheetButtonItem(title: presentationData.strings.ChatList_RemoveFolderAction, color: .destructive, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
+        let _ = (context.engine.peers.currentChatListFilters()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { filters in
+            guard let filter = filters.first(where: { $0.id == id }) else {
+                return
+            }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            if case let .filter(_, title, _, data) = filter, data.isShared {
+                let _ = (context.engine.data.get(
+                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                )
+                |> deliverOnMainQueue).start(next: { peers in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
-                    let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
-                        var filters = filters
-                        if let index = filters.firstIndex(where: { $0.id == id }) {
-                            filters.remove(at: index)
-                        }
-                        return filters
-                    }
-                    |> deliverOnMainQueue).start()
+                    //TODO:localize
+                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
+                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+                            let previewScreen = ChatFolderLinkPreviewScreen(
+                                context: context,
+                                subject: .remove(folderId: id),
+                                contents: ChatFolderLinkContents(
+                                    localFilterId: id,
+                                    title: title,
+                                    peers: peers.compactMap { $0 }.filter { peer in
+                                        if case .channel = peer {
+                                            return true
+                                        } else {
+                                            return false
+                                        }
+                                    },
+                                    alreadyMemberPeerIds: Set()
+                                )
+                            )
+                            pushControllerImpl?(previewScreen)
+                        }),
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                        })
+                    ]))
                 })
-            ]),
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])
-        ])
-        presentControllerImpl?(actionSheet)
+            } else {
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: presentationData.strings.ChatList_RemoveFolderConfirmation),
+                        ActionSheetButtonItem(title: presentationData.strings.ChatList_RemoveFolderAction, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            
+                            let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
+                                var filters = filters
+                                if let index = filters.firstIndex(where: { $0.id == id }) {
+                                    filters.remove(at: index)
+                                }
+                                return filters
+                            }
+                            |> deliverOnMainQueue).start()
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                presentControllerImpl?(actionSheet)
+            }
+        })
     })
         
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])

@@ -765,6 +765,36 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxChatsInFolderNoPremiumText("\(limit)").string
                     }
+                case .linksPerSharedFolder:
+                    //TODO:localize
+                    let limit = state.limits.maxSharedFolderInviteLinks
+                    let premiumLimit = state.premiumLimits.maxSharedFolderInviteLinks
+                    iconName = "Premium/Link"
+                    badgeText = "\(component.count)"
+                    string = component.count >= premiumLimit ? strings.Premium_MaxSharedFolderLinksFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderLinksText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = component.count > limit ? "\(limit)" : ""
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxSharedFolderLinksNoPremiumText("\(limit)").string
+                    }
+                case .membershipInSharedFolders:
+                    //TODO:localize
+                    let limit = state.limits.maxSharedFolderJoin
+                    let premiumLimit = state.premiumLimits.maxSharedFolderJoin
+                    iconName = "Premium/Folder"
+                    badgeText = "\(component.count)"
+                    string = component.count >= premiumLimit ? strings.Premium_MaxSharedFolderMembershipFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderMembershipText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = component.count > limit ? "\(limit)" : ""
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxSharedFolderMembershipNoPremiumText("\(limit)").string
+                    }
                 case .pins:
                     let limit = state.limits.maxPinnedChatCount
                     let premiumLimit = state.premiumLimits.maxPinnedChatCount
@@ -1048,6 +1078,8 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case pins
         case files
         case accounts
+        case linksPerSharedFolder
+        case membershipInSharedFolders
     }
     
     public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void) {

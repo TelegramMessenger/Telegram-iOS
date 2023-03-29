@@ -44,6 +44,7 @@ import ComponentDisplayAdapters
 import ChatListHeaderComponent
 import ChatListTitleView
 import InviteLinksUI
+import ChatFolderLinkPreviewScreen
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -1544,7 +1545,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     //TODO:localize
                                     
                                     for filter in filters {
-                                        if filter.id == filterId, case let .filter(_, _, _, data) = filter {
+                                        if filter.id == filterId, case let .filter(_, title, _, data) = filter {
                                             if !data.includePeers.peers.isEmpty {
                                                 items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
@@ -1553,7 +1554,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                         guard let strongSelf = self else {
                                                             return
                                                         }
-                                                        strongSelf.shareFolder(filterId: filterId, data: data)
+                                                        strongSelf.shareFolder(filterId: filterId, data: data, title: title)
                                                     })
                                                 })))
                                             }
@@ -2699,56 +2700,122 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    private func shareFolder(filterId: Int32, data: ChatListFilterData) {
-        self.push(folderInviteLinkListController(context: self.context, filterId: filterId, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { _ in
-        }))
+    private func shareFolder(filterId: Int32, data: ChatListFilterData, title: String) {
+        /*self.push(folderInviteLinkListController(context: self.context, filterId: filterId, title: title, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { _ in
+        }))*/
     }
     
     private func askForFilterRemoval(id: Int32) {
-        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        let apply: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let commit: () -> Void = {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
+                    if strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.currentState.editing {
+                        strongSelf.donePressed()
+                    }
+                }
+                
+                let _ = (strongSelf.context.engine.peers.updateChatListFiltersInteractively { filters in
+                    return filters.filter({ $0.id != id })
+                }).start()
+            }
+            
+            if strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
+                strongSelf.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
+                    commit()
+                })
+            } else {
+                commit()
+            }
+        }
         
-        actionSheet.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetTextItem(title: self.presentationData.strings.ChatList_RemoveFolderConfirmation),
-                ActionSheetButtonItem(title: self.presentationData.strings.ChatList_RemoveFolderAction, color: .destructive, action: { [weak self, weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    
-                    guard let strongSelf = self else {
+        let _ = (self.context.engine.peers.currentChatListFilters()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] filters in
+            guard let self else {
+                return
+            }
+            guard let filter = filters.first(where: { $0.id == id }) else {
+                return
+            }
+            
+            if case let .filter(_, title, _, data) = filter, data.isShared {
+                let _ = (self.context.engine.data.get(
+                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    guard let self else {
                         return
                     }
                     
-                    let commit: () -> Void = {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        if strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
-                            if strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.currentState.editing {
-                                    strongSelf.donePressed()
-                            }
-                        }
-                        
-                        let _ = (strongSelf.context.engine.peers.updateChatListFiltersInteractively { filters in
-                            return filters.filter({ $0.id != id })
-                        }).start()
-                    }
+                    let presentationData = self.presentationData
                     
-                    if strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
-                        strongSelf.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
-                            commit()
+                    //TODO:localize
+                    self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
+                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let previewScreen = ChatFolderLinkPreviewScreen(
+                                context: self.context,
+                                subject: .remove(folderId: id),
+                                contents: ChatFolderLinkContents(
+                                    localFilterId: id,
+                                    title: title,
+                                    peers: peers.compactMap { $0 }.filter { peer in
+                                        if case .channel = peer {
+                                            return true
+                                        } else {
+                                            return false
+                                        }
+                                    },
+                                    alreadyMemberPeerIds: Set()
+                                ),
+                                completion: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
+                                        self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
+                                        })
+                                    }
+                                }
+                            )
+                            self.push(previewScreen)
+                        }),
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
                         })
-                    } else {
-                        commit()
-                    }
+                    ]), in: .window(.root))
                 })
-            ]),
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])
-        ])
-        self.present(actionSheet, in: .window(.root))
+            } else {
+                let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: self.presentationData.strings.ChatList_RemoveFolderConfirmation),
+                        ActionSheetButtonItem(title: self.presentationData.strings.ChatList_RemoveFolderAction, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            
+                            apply()
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                self.present(actionSheet, in: .window(.root))
+            }
+        })
     }
     
     public private(set) var isSearchActive: Bool = false

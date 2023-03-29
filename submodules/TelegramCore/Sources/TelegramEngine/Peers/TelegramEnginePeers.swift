@@ -134,8 +134,8 @@ public extension TelegramEngine {
             return _internal_chatOnlineMembers(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }
 
-        public func convertGroupToSupergroup(peerId: PeerId) -> Signal<PeerId, ConvertGroupToSupergroupError> {
-            return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId)
+        public func convertGroupToSupergroup(peerId: PeerId, additionalProcessing: ((EnginePeer.Id) -> Signal<Never, NoError>)? = nil) -> Signal<PeerId, ConvertGroupToSupergroupError> {
+            return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId, additionalProcessing: additionalProcessing)
         }
 
         public func createGroup(title: String, peerIds: [PeerId], ttlPeriod: Int32?) -> Signal<CreateGroupResult?, CreateGroupError> {
@@ -1046,8 +1046,8 @@ public extension TelegramEngine {
             return _internal_editChatFolderLink(account: self.account, filterId: filterId, link: link, title: title, peerIds: peerIds, revoke: revoke)
         }
         
-        public func revokeChatFolderLink(filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
-            return _internal_revokeChatFolderLink(account: self.account, filterId: filterId, link: link)
+        public func deleteChatFolderLink(filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
+            return _internal_deleteChatFolderLink(account: self.account, filterId: filterId, link: link)
         }
         
         public func checkChatFolderLink(slug: String) -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> {
@@ -1056,6 +1056,22 @@ public extension TelegramEngine {
         
         public func joinChatFolderLink(slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
             return _internal_joinChatFolderLink(account: self.account, slug: slug, peerIds: peerIds)
+        }
+        
+        public func getChatFolderUpdates(folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
+            return _internal_getChatFolderUpdates(account: self.account, folderId: folderId)
+        }
+
+        public func joinAvailableChatsInFolder(updates: ChatFolderUpdates, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
+            return _internal_joinAvailableChatsInFolder(account: self.account, updates: updates, peerIds: peerIds)
+        }
+        
+        public func hideChatFolderUpdates(folderId: Int32) -> Signal<Never, NoError> {
+            return _internal_hideChatFolderUpdates(account: self.account, folderId: folderId)
+        }
+        
+        public func leaveChatFolder(folderId: Int32, removePeerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
+            return _internal_leaveChatFolder(account: self.account, folderId: folderId, removePeerIds: removePeerIds)
         }
     }
 }

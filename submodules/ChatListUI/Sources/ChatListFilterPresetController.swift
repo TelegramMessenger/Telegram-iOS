@@ -317,7 +317,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case includeExpand(String)
     case excludeExpand(String)
     case inviteLinkHeader
-    case inviteLinkCreate
+    case inviteLinkCreate(hasLinks: Bool)
     case inviteLink(Int, ExportedChatFolderLink)
     case inviteLinkInfo
     
@@ -518,10 +518,10 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             })
         case .inviteLinkHeader:
             //TODO:localize
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "INVITE LINK", sectionId: self.section)
-        case .inviteLinkCreate:
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: "INVITE LINK", badge: "NEW", sectionId: self.section)
+        case let.inviteLinkCreate(hasLinks):
             //TODO:localize
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: "Share Folder with Others", sectionId: self.section, editing: false, action: {
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: hasLinks ? "Create a New Link" : "Share Folder", sectionId: self.section, editing: false, action: {
                 arguments.createLink()
             })
         case let .inviteLink(_, link):
@@ -532,7 +532,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             }
         case .inviteLinkInfo:
             //TODO:localize
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("Give vour friends and colleagues access to the entire folder including all of its groups and channels where you have the necessary rights."), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .markdown("Share access to some of this folder's groups and channels with others."), sectionId: self.section)
         }
     }
 }
@@ -575,7 +575,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     }
 }
 
-private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer], isPremium: Bool, limit: Int32, inviteLinks: [ExportedChatFolderLink]?) -> [ChatListFilterPresetEntry] {
+private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, currentPreset: ChatListFilter?, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer], isPremium: Bool, limit: Int32, inviteLinks: [ExportedChatFolderLink]?) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
     if isNewFilter {
@@ -614,46 +614,49 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     
     entries.append(.includePeerInfo(presentationData.strings.ChatListFolder_IncludeSectionInfo))
     
-    entries.append(.excludePeersHeader(presentationData.strings.ChatListFolder_ExcludedSectionHeader))
-    entries.append(.addExcludePeer(title: presentationData.strings.ChatListFolder_AddChats))
-    
-    var excludeCategoryIndex = 0
-    for category in ChatListFilterExcludeCategory.allCases {
-        let isExcluded: Bool
-        switch category {
-        case .read:
-            isExcluded = state.excludeRead
-        case .muted:
-            isExcluded = state.excludeMuted
-        case .archived:
-            isExcluded = state.excludeArchived
+    if let currentPreset, let data = currentPreset.data, data.isShared {
+    } else {
+        entries.append(.excludePeersHeader(presentationData.strings.ChatListFolder_ExcludedSectionHeader))
+        entries.append(.addExcludePeer(title: presentationData.strings.ChatListFolder_AddChats))
+        
+        var excludeCategoryIndex = 0
+        for category in ChatListFilterExcludeCategory.allCases {
+            let isExcluded: Bool
+            switch category {
+            case .read:
+                isExcluded = state.excludeRead
+            case .muted:
+                isExcluded = state.excludeMuted
+            case .archived:
+                isExcluded = state.excludeArchived
+            }
+            
+            if isExcluded {
+                entries.append(.excludeCategory(index: excludeCategoryIndex, category: category, title: category.title(strings: presentationData.strings), isRevealed: state.revealedItemId == .excludeCategory(category)))
+            }
+            excludeCategoryIndex += 1
         }
         
-        if isExcluded {
-            entries.append(.excludeCategory(index: excludeCategoryIndex, category: category, title: category.title(strings: presentationData.strings), isRevealed: state.revealedItemId == .excludeCategory(category)))
-        }
-        excludeCategoryIndex += 1
-    }
-    
-    if !excludePeers.isEmpty {
-        var count = 0
-        for peer in excludePeers {
-            entries.append(.excludePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
-            count += 1
-            if excludePeers.count >= 7 && count == 5 && !state.expandedSections.contains(.exclude) {
-                break
+        if !excludePeers.isEmpty {
+            var count = 0
+            for peer in excludePeers {
+                entries.append(.excludePeer(index: entries.count, peer: peer, isRevealed: state.revealedItemId == .peer(peer.peerId)))
+                count += 1
+                if excludePeers.count >= 7 && count == 5 && !state.expandedSections.contains(.exclude) {
+                    break
+                }
+            }
+            if count < excludePeers.count {
+                entries.append(.excludeExpand(presentationData.strings.ChatListFilter_ShowMoreChats(Int32(excludePeers.count - count))))
             }
         }
-        if count < excludePeers.count {
-            entries.append(.excludeExpand(presentationData.strings.ChatListFilter_ShowMoreChats(Int32(excludePeers.count - count))))
-        }
+        
+        entries.append(.excludePeerInfo(presentationData.strings.ChatListFolder_ExcludeSectionInfo))
     }
-    
-    entries.append(.excludePeerInfo(presentationData.strings.ChatListFolder_ExcludeSectionInfo))
     
     if !isNewFilter, let inviteLinks {
         entries.append(.inviteLinkHeader)
-        entries.append(.inviteLinkCreate)
+        entries.append(.inviteLinkCreate(hasLinks: !inviteLinks.isEmpty))
         
         var index = 0
         for link in inviteLinks {
@@ -691,38 +694,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
     }
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let additionalCategories: [ChatListNodeAdditionalCategory] = [
-        ChatListNodeAdditionalCategory(
-            id: AdditionalCategoryId.contacts.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
-            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
-            title: presentationData.strings.ChatListFolder_CategoryContacts
-        ),
-        ChatListNodeAdditionalCategory(
-            id: AdditionalCategoryId.nonContacts.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .yellow),
-            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
-            title: presentationData.strings.ChatListFolder_CategoryNonContacts
-        ),
-        ChatListNodeAdditionalCategory(
-            id: AdditionalCategoryId.groups.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Group"), color: .white), cornerRadius: 12.0, color: .green),
-            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Group"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .green),
-            title: presentationData.strings.ChatListFolder_CategoryGroups
-        ),
-        ChatListNodeAdditionalCategory(
-            id: AdditionalCategoryId.channels.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), cornerRadius: 12.0, color: .red),
-            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .red),
-            title: presentationData.strings.ChatListFolder_CategoryChannels
-        ),
-        ChatListNodeAdditionalCategory(
-            id: AdditionalCategoryId.bots.rawValue,
-            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), cornerRadius: 12.0, color: .violet),
-            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .violet),
-            title: presentationData.strings.ChatListFolder_CategoryBots
-        )
-    ]
+    var additionalCategories: [ChatListNodeAdditionalCategory] = []
     var selectedCategories = Set<Int>()
     let categoryMapping: [ChatListFilterPeerCategories: AdditionalCategoryId] = [
         .contacts: .contacts,
@@ -731,9 +703,46 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         .channels: .channels,
         .bots: .bots
     ]
-    for (category, id) in categoryMapping {
-        if filterData.categories.contains(category) {
-            selectedCategories.insert(id.rawValue)
+    
+    if let data = filter.data, data.isShared {
+    } else {
+        additionalCategories = [
+            ChatListNodeAdditionalCategory(
+                id: AdditionalCategoryId.contacts.rawValue,
+                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
+                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
+                title: presentationData.strings.ChatListFolder_CategoryContacts
+            ),
+            ChatListNodeAdditionalCategory(
+                id: AdditionalCategoryId.nonContacts.rawValue,
+                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .yellow),
+                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
+                title: presentationData.strings.ChatListFolder_CategoryNonContacts
+            ),
+            ChatListNodeAdditionalCategory(
+                id: AdditionalCategoryId.groups.rawValue,
+                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Group"), color: .white), cornerRadius: 12.0, color: .green),
+                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Group"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .green),
+                title: presentationData.strings.ChatListFolder_CategoryGroups
+            ),
+            ChatListNodeAdditionalCategory(
+                id: AdditionalCategoryId.channels.rawValue,
+                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), cornerRadius: 12.0, color: .red),
+                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .red),
+                title: presentationData.strings.ChatListFolder_CategoryChannels
+            ),
+            ChatListNodeAdditionalCategory(
+                id: AdditionalCategoryId.bots.rawValue,
+                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), cornerRadius: 12.0, color: .violet),
+                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .violet),
+                title: presentationData.strings.ChatListFolder_CategoryBots
+            )
+        ]
+        
+        for (category, id) in categoryMapping {
+            if filterData.categories.contains(category) {
+                selectedCategories.insert(id.rawValue)
+            }
         }
     }
     
@@ -1059,8 +1068,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     
     let sharedLinks = Promise<[ExportedChatFolderLink]?>(nil)
     if let currentPreset {
-        sharedLinks.set(Signal<[ExportedChatFolderLink]?, NoError>.single(nil) |> then(context.engine.peers.getExportedChatFolderLinks(id: currentPreset.id)
-        |> map(Optional.init)))
+        sharedLinks.set(Signal<[ExportedChatFolderLink]?, NoError>.single(nil) |> then(context.engine.peers.getExportedChatFolderLinks(id: currentPreset.id)))
     }
     
     let currentPeers = Atomic<[PeerId: EngineRenderedPeer]>(value: [:])
@@ -1265,23 +1273,87 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             }
         },
         createLink: {
-            if let currentPreset, let data = currentPreset.data, !data.includePeers.peers.isEmpty {
-                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { updatedLink in
-                    let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
-                        guard var links else {
-                            return
-                        }
-                        
-                        if let updatedLink {
-                            links.insert(updatedLink, at: 0)
-                            sharedLinks.set(.single(links))
-                        }
-                    })
-                }))
+            let state = stateValue.with({ $0 })
+            
+            if let currentPreset, !state.additionallyIncludePeers.isEmpty {
+                let _ = (context.engine.data.get(
+                    EngineDataList(state.additionallyIncludePeers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                )
+                |> deliverOnMainQueue).start(next: { peers in
+                    let peers = peers.compactMap({ $0 })
+                    if peers.allSatisfy({ !canShareLinkToPeer(peer: $0) }) {
+                        pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, title: currentPreset.title, allPeerIds: state.additionallyIncludePeers, currentInvitation: nil, linkUpdated: { updatedLink in
+                            let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                                guard var links else {
+                                    return
+                                }
+                                
+                                if let updatedLink {
+                                    links.insert(updatedLink, at: 0)
+                                    sharedLinks.set(.single(links))
+                                }
+                            })
+                        }))
+                    } else {
+                        let _ = (context.engine.peers.exportChatFolder(filterId: currentPreset.id, title: "", peerIds: state.additionallyIncludePeers)
+                        |> deliverOnMainQueue).start(next: { link in
+                            let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                                guard var links else {
+                                    return
+                                }
+                                
+                                links.insert(link, at: 0)
+                                sharedLinks.set(.single(links))
+                            })
+                            
+                            pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, title: currentPreset.title, allPeerIds: state.additionallyIncludePeers, currentInvitation: link, linkUpdated: { updatedLink in
+                                if updatedLink != link {
+                                    let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                                        guard var links else {
+                                            return
+                                        }
+                                        
+                                        if let updatedLink {
+                                            if let index = links.firstIndex(where: { $0 == link }) {
+                                                links.remove(at: index)
+                                            }
+                                            links.insert(updatedLink, at: 0)
+                                            sharedLinks.set(.single(links))
+                                        } else {
+                                            if let index = links.firstIndex(where: { $0 == link }) {
+                                                links.remove(at: index)
+                                                sharedLinks.set(.single(links))
+                                            }
+                                        }
+                                    })
+                                }
+                            }))
+                        }, error: { error in
+                            //TODO:localize
+                            let text: String
+                            switch error {
+                            case .generic:
+                                text = "An error occurred"
+                            case let .limitExceeded(limit, premiumLimit):
+                                if limit < premiumLimit {
+                                    let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                                    })
+                                    pushControllerImpl?(limitController)
+                                    
+                                    return
+                                }
+                                text = "You can't create more links."
+                            }
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        })
+                    }
+                })
             }
         }, openLink: { link in
-            if let currentPreset, let data = currentPreset.data {
-                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, allPeerIds: data.includePeers.peers, currentInvitation: link, linkUpdated: { updatedLink in
+            if let currentPreset, let _ = currentPreset.data {
+                let state = stateValue.with({ $0 })
+                pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, title: currentPreset.title, allPeerIds: state.additionallyIncludePeers, currentInvitation: link, linkUpdated: { updatedLink in
                     if updatedLink != link {
                         let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
                             guard var links else {
@@ -1387,7 +1459,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? presentationData.strings.ChatListFolder_TitleEdit : presentationData.strings.ChatListFolder_TitleCreate), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount, inviteLinks: sharedLinks), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, currentPreset: currentPreset, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount, inviteLinks: sharedLinks), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
         skipStateAnimation = false
         
         return (controllerState, (listState, arguments))

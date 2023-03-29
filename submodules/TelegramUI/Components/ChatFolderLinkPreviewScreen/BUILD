@@ -29,6 +29,7 @@ swift_library(
         "//submodules/CheckNode",
         "//submodules/Markdown",
         "//submodules/UndoUI",
+        "//submodules/PremiumUI",
     ],
     visibility = [
         "//visibility:public",
