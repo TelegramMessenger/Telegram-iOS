@@ -1,4 +1,88 @@
 public extension Api.messages {
+    enum FeaturedStickers: TypeConstructorDescription {
+        case featuredStickers(flags: Int32, hash: Int64, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
+        case featuredStickersNotModified(count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .featuredStickers(let flags, let hash, let count, let sets, let unread):
+                    if boxed {
+                        buffer.appendInt32(-1103615738)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sets.count))
+                    for item in sets {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(unread.count))
+                    for item in unread {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .featuredStickersNotModified(let count):
+                    if boxed {
+                        buffer.appendInt32(-958657434)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .featuredStickers(let flags, let hash, let count, let sets, let unread):
+                return ("featuredStickers", [("flags", flags as Any), ("hash", hash as Any), ("count", count as Any), ("sets", sets as Any), ("unread", unread as Any)])
+                case .featuredStickersNotModified(let count):
+                return ("featuredStickersNotModified", [("count", count as Any)])
+    }
+    }
+    
+        public static func parse_featuredStickers(_ reader: BufferReader) -> FeaturedStickers? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: [Api.StickerSetCovered]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
+            }
+            var _5: [Int64]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.FeaturedStickers.featuredStickers(flags: _1!, hash: _2!, count: _3!, sets: _4!, unread: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_featuredStickersNotModified(_ reader: BufferReader) -> FeaturedStickers? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.FeaturedStickers.featuredStickersNotModified(count: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum ForumTopics: TypeConstructorDescription {
         case forumTopics(flags: Int32, count: Int32, topics: [Api.ForumTopic], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], pts: Int32)
     
@@ -1452,60 +1536,6 @@ public extension Api.messages {
         }
         public static func parse_stickerSetNotModified(_ reader: BufferReader) -> StickerSet? {
             return Api.messages.StickerSet.stickerSetNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum StickerSetInstallResult: TypeConstructorDescription {
-        case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
-        case stickerSetInstallResultSuccess
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .stickerSetInstallResultArchive(let sets):
-                    if boxed {
-                        buffer.appendInt32(904138920)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sets.count))
-                    for item in sets {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .stickerSetInstallResultSuccess:
-                    if boxed {
-                        buffer.appendInt32(946083368)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .stickerSetInstallResultArchive(let sets):
-                return ("stickerSetInstallResultArchive", [("sets", sets as Any)])
-                case .stickerSetInstallResultSuccess:
-                return ("stickerSetInstallResultSuccess", [])
-    }
-    }
-    
-        public static func parse_stickerSetInstallResultArchive(_ reader: BufferReader) -> StickerSetInstallResult? {
-            var _1: [Api.StickerSetCovered]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.StickerSetInstallResult.stickerSetInstallResultArchive(sets: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_stickerSetInstallResultSuccess(_ reader: BufferReader) -> StickerSetInstallResult? {
-            return Api.messages.StickerSetInstallResult.stickerSetInstallResultSuccess
         }
     
     }

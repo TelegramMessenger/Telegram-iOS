@@ -47,7 +47,7 @@ public final class QrCodeScreen: ViewController {
                 case let .invite(invite, _):
                     return invite.link ?? ""
                 case let .chatFolder(slug):
-                    return "https://t.me/folder/\(slug)"
+                    return "https://t.me/list/\(slug)"
             }
         }
         

@@ -151,6 +151,35 @@ public struct CachedUserFlags: OptionSet {
     public static let translationHidden = CachedUserFlags(rawValue: 1 << 0)
 }
 
+public final class EditableBotInfo: PostboxCoding, Equatable {
+    public let name: String
+    public let about: String
+    public let description: String
+    
+    public init(name: String, about: String, description: String) {
+        self.name = name
+        self.about = about
+        self.description = description
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.name = decoder.decodeStringForKey("n", orElse: "")
+        self.about = decoder.decodeStringForKey("a", orElse: "")
+        self.description = decoder.decodeStringForKey("d", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.name, forKey: "n")
+        encoder.encodeString(self.about, forKey: "a")
+        encoder.encodeString(self.description, forKey: "d")
+    }
+    
+    public static func ==(lhs: EditableBotInfo, rhs: EditableBotInfo) -> Bool {
+        return lhs.name == rhs.name && lhs.about == rhs.about && lhs.description == rhs.description
+    }
+}
+
+
 public final class CachedUserData: CachedPeerData {
     public let about: String?
     public let botInfo: BotInfo?

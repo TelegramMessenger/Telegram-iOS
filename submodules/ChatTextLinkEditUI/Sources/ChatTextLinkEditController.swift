@@ -176,9 +176,12 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
+    private var isEditing = false
+    
     init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, link: String?) {
         self.strings = strings
         self.text = text
+        self.isEditing = link != nil
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
@@ -264,7 +267,7 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
 
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.titleNode.attributedText = NSAttributedString(string: self.isEditing ? self.strings.TextFormat_EditLinkTitle : self.strings.TextFormat_AddLinkTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         self.textNode.attributedText = NSAttributedString(string: self.strings.TextFormat_AddLinkText(self.text).string, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
 
         self.actionNodesSeparator.backgroundColor = theme.separatorColor

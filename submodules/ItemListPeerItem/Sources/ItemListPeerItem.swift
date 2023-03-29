@@ -1326,7 +1326,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 overrideImage = .deletedIcon
                             }
                             strongSelf.avatarNode.imageNode.animateFirstTransition = item.animateFirstAvatarTransition
-                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                            
+                            var clipStyle: AvatarNodeClipStyle = .round
+                            if case let .channel(channel) = item.peer, channel.isForum {
+                                clipStyle = .roundedRect
+                            }
+                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad)
                         }
                     }
                     

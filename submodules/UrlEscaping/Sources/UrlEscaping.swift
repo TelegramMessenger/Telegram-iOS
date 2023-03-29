@@ -23,7 +23,7 @@ public extension CharacterSet {
 }
 
 public func isValidUrl(_ url: String, validSchemes: [String: Bool] = ["http": true, "https": true]) -> Bool {
-    if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: escapedUrl), let scheme = url.scheme, let requiresTopLevelDomain = validSchemes[scheme], let host = url.host, (!requiresTopLevelDomain || host.contains(".")) && url.user == nil {
+    if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: escapedUrl), let scheme = url.scheme?.lowercased(), let requiresTopLevelDomain = validSchemes[scheme], let host = url.host, (!requiresTopLevelDomain || host.contains(".")) && url.user == nil {
         if requiresTopLevelDomain {
             let components = host.components(separatedBy: ".")
             let domain = (components.first ?? "")

@@ -15,13 +15,13 @@ import SearchUI
 import HexColor
 import PresentationDataUtils
 
-final class ThemeGridController: ViewController {
+public final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
         return self.displayNode as! ThemeGridControllerNode
     }
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    public override var ready: Promise<Bool> {
         return self._ready
     }
     
@@ -38,13 +38,13 @@ final class ThemeGridController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
-    override var navigationBarRequiresEntireLayoutUpdate: Bool {
+    public override var navigationBarRequiresEntireLayoutUpdate: Bool {
         return false
     }
     
     private var previousContentOffset: GridNodeVisibleContentOffset?
     
-    init(context: AccountContext) {
+    public init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))
@@ -115,7 +115,7 @@ final class ThemeGridController: ViewController {
         }
     }
     
-    override func loadDisplayNode() {
+    public override func loadDisplayNode() {
         self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
                 let controller = WallpaperGalleryController(context: strongSelf.context, source: source)
@@ -137,12 +137,14 @@ final class ThemeGridController: ViewController {
                         })
                     }
                 }
-                self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
+                self?.push(controller)
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
                 presentCustomWallpaperPicker(context: strongSelf.context, present: { [weak self] controller in
                     self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
+                }, push: { [weak self] controller in
+                    self?.push(controller)
                 })
             }
         }, presentColors: { [weak self] in
@@ -408,7 +410,7 @@ final class ThemeGridController: ViewController {
         self.donePressed()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, transition: transition)

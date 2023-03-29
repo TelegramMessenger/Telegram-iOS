@@ -837,7 +837,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .setChatTheme:
                             strongSelf.presentThemeSelection()
                             return true
-                        case let .giftPremium(_, _, duration):
+                        case let .giftPremium(_, _, duration, _, _):
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
                             let toPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? message.id.peerId : strongSelf.context.account.peerId
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration))
@@ -2183,7 +2183,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             return true
-        }, sendBotContextResultAsGif: { [weak self] collection, result, sourceView, sourceRect, silentPosting in
+        }, sendBotContextResultAsGif: { [weak self] collection, result, sourceView, sourceRect, silentPosting, resetTextInputState in
             guard let strongSelf = self else {
                 return false
             }
@@ -2195,7 +2195,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
-            strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true, silentPosting: silentPosting)
+            strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true, silentPosting: silentPosting, resetTextInputState: resetTextInputState)
             
             return true
         }, requestMessageActionCallback: { [weak self] messageId, data, isGame, requiresPassword in
@@ -2604,7 +2604,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                     strongSelf.chatDisplayNode.dismissInput()
                     openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
-                        self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                        self?.push(c)
                     })
                 })
             }
@@ -8488,8 +8488,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         if let currentMessage = currentMessage {
                             let currentEntities = currentMessage.textEntitiesAttribute?.entities ?? []
-                            if currentMessage.text != text.string || currentEntities != entities || updatingMedia {
-                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers,  disableUrlPreview: disableUrlPreview)
+                            if currentMessage.text != text.string || currentEntities != entities || updatingMedia || disableUrlPreview {
+                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview)
                             }
                         }
                         
@@ -15040,7 +15040,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false) {
+    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {
         if !canSendMessagesToChat(self.presentationInterfaceState) {
             return
         }
@@ -15066,12 +15066,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                             var state = state
-                            state = state.updatedInterfaceState { interfaceState in
-                                var interfaceState = interfaceState
-                                interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
-                                interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
-                                interfaceState = interfaceState.withUpdatedComposeDisableUrlPreview(nil)
-                                return interfaceState
+                            if resetTextInputState {
+                                state = state.updatedInterfaceState { interfaceState in
+                                    var interfaceState = interfaceState
+                                    interfaceState = interfaceState.withUpdatedReplyMessageId(nil)
+                                    interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
+                                    interfaceState = interfaceState.withUpdatedComposeDisableUrlPreview(nil)
+                                    return interfaceState
+                                }
                             }
                             state = state.updatedInputMode { current in
                                 if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
@@ -18430,22 +18432,42 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
             let selectedEmoticon: String? = themeEmoticon
             
-            let controller = ChatThemeScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, animatedEmojiStickers: animatedEmojiStickers, initiallySelectedEmoticon: selectedEmoticon, peerName: strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "", previewTheme: { [weak self] emoticon, dark in
-                if let strongSelf = self {
-                    strongSelf.presentCrossfadeSnapshot()
-                    strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, dark)))
-                }
-            }, completion: { [weak self] emoticon in
-                guard let strongSelf = self, let peerId = peerId else {
-                    return
-                }
-                strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon ?? "", nil)))
-                let _ = context.engine.themes.setChatTheme(peerId: peerId, emoticon: emoticon).start(completed: { [weak self] in
+            let controller = ChatThemeScreen(
+                context: context,
+                updatedPresentationData: strongSelf.updatedPresentationData,
+                animatedEmojiStickers: animatedEmojiStickers,
+                initiallySelectedEmoticon: selectedEmoticon,
+                peerName: strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "",
+                previewTheme: { [weak self] emoticon, dark in
                     if let strongSelf = self {
-                        strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((nil, nil)))
+                        strongSelf.presentCrossfadeSnapshot()
+                        strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, dark)))
                     }
-                })
-            })
+                },
+                changeWallpaper: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let themeController = strongSelf.themeScreen {
+                        strongSelf.themeScreen = nil
+                        themeController.dimTapped()
+                    }
+                    let controller = ThemeGridController(context: strongSelf.context)
+                    controller.navigationPresentation = .modal
+                    strongSelf.push(controller)
+                },
+                completion: { [weak self] emoticon in
+                    guard let strongSelf = self, let peerId = peerId else {
+                        return
+                    }
+                    strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon ?? "", nil)))
+                    let _ = context.engine.themes.setChatTheme(peerId: peerId, emoticon: emoticon).start(completed: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((nil, nil)))
+                        }
+                    })
+                }
+            )
             controller.passthroughHitTestImpl = { [weak self] _ in
                 if let strongSelf = self {
                     return strongSelf.chatDisplayNode.historyNode.view

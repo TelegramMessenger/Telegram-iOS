@@ -181,16 +181,41 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
             }
             
             if rawPeerId == accountPeerId {
-                return (.inputUserSelf, transaction.getPeer(rawPeerId), rawPeerId)
+                return (.inputUserSelf, rawPeer, rawPeerId)
             } else {
                 return (apiInputUser(peer), peer, peer.id)
             }
         }
         |> mapToSignal { inputUser, maybePeer, peerId -> Signal<Bool, NoError> in
             if let inputUser = inputUser {
-                return network.request(Api.functions.users.getFullUser(id: inputUser))
-                |> retryRequest
-                |> mapToSignal { result -> Signal<Bool, NoError> in
+                let editableBotInfo: Signal<EditableBotInfo?, NoError>
+                if let user = maybePeer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                    let flags: Int32 = (1 << 0)
+                    editableBotInfo = network.request(Api.functions.bots.getBotInfo(flags: flags, bot: inputUser, langCode: ""))
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Api.bots.BotInfo?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { result -> Signal<EditableBotInfo?, NoError> in
+                        if let result = result {
+                            switch result {
+                            case let .botInfo(name, about, description):
+                                return .single(EditableBotInfo(name: name, about: about, description: description))
+                            }
+                        } else {
+                            return .single(nil)
+                        }
+                    }
+                } else {
+                    editableBotInfo = .single(nil)
+                }
+
+                return combineLatest(
+                    network.request(Api.functions.users.getFullUser(id: inputUser))
+                    |> retryRequest,
+                    editableBotInfo
+                )
+                |> mapToSignal { result, editableBotInfo -> Signal<Bool, NoError> in
                     return postbox.transaction { transaction -> Bool in
                         switch result {
                         case let .userFull(fullUser, chats, users):
@@ -241,7 +266,6 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let canPinMessages = (userFullFlags & (1 << 7)) != 0
                                         let pinnedMessageId = userFullPinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                                     
-
                                         let peerStatusSettings = PeerStatusSettings(apiSettings: userFullSettings)
                                         
                                         let hasScheduledMessages = (userFullFlags & 1 << 12) != 0
@@ -266,7 +290,17 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             premiumGiftOptions = []
                                         }
                                     
-                                        return previous.withUpdatedAbout(userFullAbout).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFullCommonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                        return previous.withUpdatedAbout(userFullAbout)
+                                            .withUpdatedBotInfo(botInfo)
+                                            .withUpdatedCommonGroupCount(userFullCommonChatsCount)
+                                            .withUpdatedIsBlocked(isBlocked)
+                                            .withUpdatedVoiceCallsAvailable(voiceCallsAvailable)
+                                            .withUpdatedVideoCallsAvailable(videoCallsAvailable)
+                                            .withUpdatedCallsPrivate(callsPrivate)
+                                            .withUpdatedCanPinMessages(canPinMessages)
+                                            .withUpdatedPeerStatusSettings(peerStatusSettings)
+                                            .withUpdatedPinnedMessageId(pinnedMessageId)
+                                            .withUpdatedHasScheduledMessages(hasScheduledMessages)
                                             .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                             .withUpdatedThemeEmoticon(userFullThemeEmoticon)
                                             .withUpdatedPhoto(.known(photo))

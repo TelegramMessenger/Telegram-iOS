@@ -1,3 +1,69 @@
+public extension Api.help {
+    enum UserInfo: TypeConstructorDescription {
+        case userInfo(message: String, entities: [Api.MessageEntity], author: String, date: Int32)
+        case userInfoEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .userInfo(let message, let entities, let author, let date):
+                    if boxed {
+                        buffer.appendInt32(32192344)
+                    }
+                    serializeString(message, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities.count))
+                    for item in entities {
+                        item.serialize(buffer, true)
+                    }
+                    serializeString(author, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+                case .userInfoEmpty:
+                    if boxed {
+                        buffer.appendInt32(-206688531)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .userInfo(let message, let entities, let author, let date):
+                return ("userInfo", [("message", message as Any), ("entities", entities as Any), ("author", author as Any), ("date", date as Any)])
+                case .userInfoEmpty:
+                return ("userInfoEmpty", [])
+    }
+    }
+    
+        public static func parse_userInfo(_ reader: BufferReader) -> UserInfo? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.MessageEntity]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.help.UserInfo.userInfo(message: _1!, entities: _2!, author: _3!, date: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_userInfoEmpty(_ reader: BufferReader) -> UserInfo? {
+            return Api.help.UserInfo.userInfoEmpty
+        }
+    
+    }
+}
 public extension Api.messages {
     enum AffectedFoundMessages: TypeConstructorDescription {
         case affectedFoundMessages(pts: Int32, ptsCount: Int32, offset: Int32, messages: [Int32])
@@ -1308,90 +1374,6 @@ public extension Api.messages {
         }
         public static func parse_favedStickersNotModified(_ reader: BufferReader) -> FavedStickers? {
             return Api.messages.FavedStickers.favedStickersNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum FeaturedStickers: TypeConstructorDescription {
-        case featuredStickers(flags: Int32, hash: Int64, count: Int32, sets: [Api.StickerSetCovered], unread: [Int64])
-        case featuredStickersNotModified(count: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .featuredStickers(let flags, let hash, let count, let sets, let unread):
-                    if boxed {
-                        buffer.appendInt32(-1103615738)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sets.count))
-                    for item in sets {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(unread.count))
-                    for item in unread {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }
-                    break
-                case .featuredStickersNotModified(let count):
-                    if boxed {
-                        buffer.appendInt32(-958657434)
-                    }
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .featuredStickers(let flags, let hash, let count, let sets, let unread):
-                return ("featuredStickers", [("flags", flags as Any), ("hash", hash as Any), ("count", count as Any), ("sets", sets as Any), ("unread", unread as Any)])
-                case .featuredStickersNotModified(let count):
-                return ("featuredStickersNotModified", [("count", count as Any)])
-    }
-    }
-    
-        public static func parse_featuredStickers(_ reader: BufferReader) -> FeaturedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: [Api.StickerSetCovered]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
-            }
-            var _5: [Int64]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.FeaturedStickers.featuredStickers(flags: _1!, hash: _2!, count: _3!, sets: _4!, unread: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_featuredStickersNotModified(_ reader: BufferReader) -> FeaturedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.FeaturedStickers.featuredStickersNotModified(count: _1!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

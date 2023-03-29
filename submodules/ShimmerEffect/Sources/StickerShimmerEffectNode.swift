@@ -114,7 +114,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         self.currentSize = size
         
         self.backgroundNode.backgroundColor = foregroundColor
-        self.backgroundNode.isHidden = true//!enableEffect
+        //self.backgroundNode.isHidden = true//!enableEffect
         
         if enableEffect {
             self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true, effectSize: nil, globalTimeOffset: true, duration: nil)

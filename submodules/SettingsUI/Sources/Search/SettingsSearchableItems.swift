@@ -822,6 +822,8 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
         SettingsSearchableItem(id: .appearance(4), title: strings.Wallpaper_SetCustomBackground, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_ChatBackground_Custom), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Settings_ChatBackground], present: { context, _, present in
             presentCustomWallpaperPicker(context: context, present: { controller in
                 present(.immediate, controller)
+            }, push: { controller in
+                present(.push, controller)
             })
         }),
         SettingsSearchableItem(id: .appearance(5), title: strings.Appearance_AutoNightTheme, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_AutoNightTheme), icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, _, present in

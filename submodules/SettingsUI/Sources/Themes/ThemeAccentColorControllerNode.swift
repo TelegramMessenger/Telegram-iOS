@@ -843,7 +843,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
-        }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {})
+        }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {
+        })
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
 
         func makeChatListItem(
@@ -1180,12 +1181,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
         
         transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
-        self.colorPanelNode.updateLayout(size: colorPanelFrame.size, transition: transition)
+        self.colorPanelNode.updateLayout(size: colorPanelFrame.size, bottomInset: 0.0, transition: transition)
         
         let patternPanelAlpha: CGFloat = self.state.displayPatternPanel ? 1.0 : 0.0
         let patternPanelFrame = colorPanelFrame
         transition.updateFrame(node: self.patternPanelNode, frame: patternPanelFrame)
-        self.patternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)
+        self.patternPanelNode.updateLayout(size: patternPanelFrame.size, bottomInset: 0.0, transition: transition)
         self.patternPanelNode.isUserInteractionEnabled = self.state.displayPatternPanel
         transition.updateAlpha(node: self.patternPanelNode, alpha: patternPanelAlpha)
         

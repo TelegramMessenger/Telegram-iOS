@@ -89,7 +89,7 @@ public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, forcePro
     
     let clipStyle: AvatarNodeClipStyle
     if round {
-        if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+        if case let .channel(channel) = peer, channel.isForum {
             clipStyle = .roundedRect
         } else {
             clipStyle = .round

@@ -9054,6 +9054,8 @@ Sorry for the inconvenience.";
 "Login.Email.WillBeResetIn" = "Email will be reset %@";
 "Login.Email.PremiumRequiredTitle" = "Telegram Premium Required";
 "Login.Email.PremiumRequiredText" = "Due to high cost of SMS in your country, you need to have a **Telegram Premium** account to reset this email via an SMS code.\n\nYou can ask a friend to gift a Premium subscription for your account\n**%@**";
+"Login.Email.ElapsedTime" = "in %@";
+"Login.Email.ResetingNow" = "Please wait...";
 
 "ChatList.StartMessaging" = "Select a chat to start messaging";
 
@@ -9092,3 +9094,26 @@ Sorry for the inconvenience.";
 "StickerPacksSettings.SuggestAnimatedEmojiInfo" = "Each time you enter an emoji you can replace it with an animated emoji.";
 
 "DialogList.DeleteBotClearHistory" = "Clear Chat History";
+
+"TextFormat.EditLinkTitle" = "Edit Link";
+
+"PeerInfo.Username" = "Username";
+"Username.BotLinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on the bot info page.";
+
+"Wallpaper.ApplyForAll" = "Apply For All Chats";
+"Wallpaper.ApplyForChat" = "Apply For This Chat";
+
+"ChatList.ChatFolderUpdateCount_1" = "1 new chat";
+"ChatList.ChatFolderUpdateCount_any" = "%d new chats";
+"ChatList.ChatFolderUpdateHintTitle" = "You can join %@";
+"ChatList.ChatFolderUpdateHintText" = "Tap here to view them";
+
+"Premium.MaxSharedFolderMembershipText" = "You can only add **%1$@** shareable folders. Upgrade to **Telegram Premium** to increase this limit up to **%2$@**.";
+"Premium.MaxSharedFolderMembershipNoPremiumText" = "You can only add **%1$@** shareable folders. We are working to let you increase this limit in the future.";
+"Premium.MaxSharedFolderMembershipFinalText" = "Sorry, you can only add **%1$@** shareable folders.";
+
+"Premium.MaxSharedFolderLinksText" = "You can only create **%1$@** invite links. Upgrade to **Telegram Premium** to increase the links limit to **%2$@**.";
+"Premium.MaxSharedFolderLinksNoPremiumText" = "You can only create **%1$@** invite links. We are working to let you increase this limit in the future.";
+"Premium.MaxSharedFolderLinksFinalText" = "Sorry, you can only create **%1$@** invite links";
+
+"Premium.GiftedTitle.Someone" = "Someone";

@@ -710,7 +710,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case let .webViewData(text):
                 attributedString = NSAttributedString(string: strings.Notification_WebAppSentData(text).string, font: titleFont, textColor: primaryTextColor)
-            case let .giftPremium(currency, amount, _):
+            case let .giftPremium(currency, amount, _, _, _):
                 let price = formatCurrencyAmount(amount, currency: currency)
                 if message.author?.id == accountPeerId {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])

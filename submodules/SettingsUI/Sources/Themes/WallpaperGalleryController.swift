@@ -100,6 +100,14 @@ class WallpaperGalleryControllerNode: GalleryControllerNode {
 
     override func didLoad() {
         super.didLoad()
+        
+        self.scrollView.isScrollEnabled = false
+        self.view.interactiveTransitionGestureRecognizerTest = { point in
+            if point.x < 44.0 {
+                return false
+            }
+            return true
+        }
 
         //self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
     }
@@ -208,10 +216,12 @@ public class WallpaperGalleryController: ViewController {
         self.source = source
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: nil)
+        
+        self.navigationPresentation = .modal
         
         self.title = self.presentationData.strings.WallpaperPreview_Title
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        //self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         var entries: [WallpaperGalleryEntry] = []
@@ -323,11 +333,11 @@ public class WallpaperGalleryController: ViewController {
     }
     
     func dismiss(forceAway: Bool) {
-        let completion: () -> Void = { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-        }
-        
-        self.galleryNode.modalAnimateOut(completion: completion)
+//        let completion: () -> Void = { [weak self] in
+//            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+//        }
+        self.presentingViewController?.dismiss(animated: true, completion: nil)
+        //self.galleryNode.modalAnimateOut(completion: completion)
     }
     
     private func updateTransaction(entries: [WallpaperGalleryEntry], arguments: WallpaperGalleryItemArguments) -> GalleryPagerTransaction {
@@ -603,7 +613,7 @@ public class WallpaperGalleryController: ViewController {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.galleryNode.modalAnimateIn()
+        //self.galleryNode.modalAnimateIn()
         self.bindCentralItemNode(animated: false, updated: false)
 
         if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
@@ -642,7 +652,6 @@ public class WallpaperGalleryController: ViewController {
                     }
                     strongSelf.patternPanelNode?.serviceBackgroundColor = serviceColor(for: (initialWallpaper, nil))
                     strongSelf.patternPanelEnabled = enabled
-                    strongSelf.galleryNode.scrollView.isScrollEnabled = !enabled
                     if enabled {
                         strongSelf.patternPanelNode?.updateWallpapers()
                         strongSelf.patternPanelNode?.didAppear(initialWallpaper: strongSelf.savedPatternWallpaper, intensity: strongSelf.savedPatternIntensity)
@@ -670,7 +679,6 @@ public class WallpaperGalleryController: ViewController {
                 if let strongSelf = self, let (layout, _) = strongSelf.validLayout, let colors = colors, let itemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                     strongSelf.patternPanelEnabled = false
                     strongSelf.colorsPanelEnabled = !strongSelf.colorsPanelEnabled
-                    strongSelf.galleryNode.scrollView.isScrollEnabled = !strongSelf.colorsPanelEnabled
                     if !strongSelf.colorsPanelEnabled {
                         strongSelf.colorsPanelNode?.view.endEditing(true)
                     }
@@ -804,8 +812,6 @@ public class WallpaperGalleryController: ViewController {
         self.galleryNode.pager.transaction(self.updateTransaction(entries: updatedEntries, arguments: WallpaperGalleryItemArguments(colorPreview: preview, isColorsList: true, patternEnabled: self.patternPanelEnabled)))
     }
     
-   
-    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let hadLayout = self.validLayout != nil
         
@@ -823,10 +829,11 @@ public class WallpaperGalleryController: ViewController {
         self.galleryNode.containerLayoutUpdated(pagerLayout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         self.overlayNode?.frame = self.galleryNode.bounds
         
-        transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 49.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
-        self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
+        let toolbarHeight: CGFloat = 66.0
+        transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))
+        self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: toolbarHeight), layout: layout, transition: transition)
         
-        var bottomInset = layout.intrinsicInsets.bottom + 49.0
+        var bottomInset = toolbarHeight + layout.intrinsicInsets.bottom
         
         let currentPatternPanelNode: WallpaperPatternPanelNode
         if let patternPanelNode = self.patternPanelNode {
@@ -899,6 +906,7 @@ public class WallpaperGalleryController: ViewController {
             }
         }
 
+        let originalBottomInset = bottomInset
         var patternPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: panelHeight)
         if self.patternPanelEnabled {
             patternPanelFrame.origin = CGPoint(x: 0.0, y: layout.size.height - max((layout.inputHeight ?? 0.0) - panelHeight + 44.0, bottomInset) - panelHeight)
@@ -906,7 +914,7 @@ public class WallpaperGalleryController: ViewController {
         }
         
         transition.updateFrame(node: currentPatternPanelNode, frame: patternPanelFrame)
-        currentPatternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)
+        currentPatternPanelNode.updateLayout(size: patternPanelFrame.size, bottomInset: originalBottomInset, transition: transition)
 
         var colorsPanelFrame = CGRect(x: 0.0, y: layout.size.height, width: layout.size.width, height: panelHeight)
         if self.colorsPanelEnabled {
@@ -914,8 +922,10 @@ public class WallpaperGalleryController: ViewController {
             bottomInset += panelHeight
         }
 
-        transition.updateFrame(node: currentColorsPanelNode, frame: colorsPanelFrame)
-        currentColorsPanelNode.updateLayout(size: colorsPanelFrame.size, transition: transition)
+        transition.updateFrame(node: currentColorsPanelNode, frame: CGRect(origin: colorsPanelFrame.origin, size: CGSize(width: colorsPanelFrame.width, height: colorsPanelFrame.height + originalBottomInset)))
+        currentColorsPanelNode.updateLayout(size: colorsPanelFrame.size, bottomInset: originalBottomInset, transition: transition)
+        
+        self.toolbarNode?.setDoneIsSolid(self.patternPanelEnabled || self.colorsPanelEnabled, transition: transition)
 
         bottomInset += 66.0
         

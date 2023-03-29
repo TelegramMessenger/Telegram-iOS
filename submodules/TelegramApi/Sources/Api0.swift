@@ -2,9 +2,9 @@
 public enum Api {
     public enum account {}
     public enum auth {}
+    public enum bots {}
     public enum channels {}
     public enum communities {}
-    public enum community {}
     public enum contacts {}
     public enum help {}
     public enum messages {}
@@ -991,15 +991,17 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2113903484] = { return Api.auth.SentCodeType.parse_sentCodeTypeMissedCall($0) }
     dict[-1521934870] = { return Api.auth.SentCodeType.parse_sentCodeTypeSetUpEmailRequired($0) }
     dict[-1073693790] = { return Api.auth.SentCodeType.parse_sentCodeTypeSms($0) }
+    dict[-391678544] = { return Api.bots.BotInfo.parse_botInfo($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
     dict[-266911767] = { return Api.channels.ChannelParticipants.parse_channelParticipantsNotModified($0) }
     dict[-191450938] = { return Api.channels.SendAsPeers.parse_sendAsPeers($0) }
+    dict[59080097] = { return Api.communities.CommunityInvite.parse_communityInvite($0) }
+    dict[-951718393] = { return Api.communities.CommunityInvite.parse_communityInviteAlready($0) }
+    dict[-414818125] = { return Api.communities.CommunityUpdates.parse_communityUpdates($0) }
     dict[1805101290] = { return Api.communities.ExportedCommunityInvite.parse_exportedCommunityInvite($0) }
     dict[-2662489] = { return Api.communities.ExportedInvites.parse_exportedInvites($0) }
-    dict[988463765] = { return Api.community.CommunityInvite.parse_communityInvite($0) }
-    dict[74184410] = { return Api.community.CommunityInvite.parse_communityInviteAlready($0) }
     dict[182326673] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-513392236] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
     dict[-353862078] = { return Api.contacts.Contacts.parse_contacts($0) }
@@ -1789,6 +1791,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.auth.SentCodeType:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.bots.BotInfo:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.channels.AdminLogResults:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.ChannelParticipant:
@@ -1797,11 +1801,13 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.SendAsPeers:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.communities.CommunityInvite:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.communities.CommunityUpdates:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.communities.ExportedCommunityInvite:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.communities.ExportedInvites:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.community.CommunityInvite:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Blocked:
                 _1.serialize(buffer, boxed)

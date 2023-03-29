@@ -555,6 +555,7 @@ final class ChatThemeScreen: ViewController {
     private let initiallySelectedEmoticon: String?
     private let peerName: String
     private let previewTheme: (String?, Bool?) -> Void
+    fileprivate let changeWallpaper: () -> Void
     private let completion: (String?) -> Void
     
     private var presentationData: PresentationData
@@ -570,13 +571,23 @@ final class ChatThemeScreen: ViewController {
         }
     }
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), animatedEmojiStickers: [String: [StickerPackItem]], initiallySelectedEmoticon: String?, peerName: String, previewTheme: @escaping (String?, Bool?) -> Void, completion: @escaping (String?) -> Void) {
+    init(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>),
+        animatedEmojiStickers: [String: [StickerPackItem]],
+        initiallySelectedEmoticon: String?,
+        peerName: String,
+        previewTheme: @escaping (String?, Bool?) -> Void,
+        changeWallpaper: @escaping () -> Void,
+        completion: @escaping (String?) -> Void
+    ) {
         self.context = context
         self.presentationData = updatedPresentationData.initial
         self.animatedEmojiStickers = animatedEmojiStickers
         self.initiallySelectedEmoticon = initiallySelectedEmoticon
         self.peerName = peerName
         self.previewTheme = previewTheme
+        self.changeWallpaper = changeWallpaper
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
@@ -713,6 +724,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     private let animationContainerNode: ASDisplayNode
     private var animationNode: AnimationNode
     private let doneButton: SolidRoundedButtonNode
+    private let wallpaperButton: HighlightableButtonNode
     
     private let listNode: ListView
     private var entries: [ThemeSettingsThemeEntry]?
@@ -807,6 +819,9 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
         self.doneButton.title = initiallySelectedEmoticon == nil ? self.presentationData.strings.Conversation_Theme_DontSetTheme : self.presentationData.strings.Conversation_Theme_Apply
         
+        self.wallpaperButton = HighlightableButtonNode()
+        self.wallpaperButton.setTitle("Set Background from Gallery", with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
@@ -829,6 +844,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.textNode)
         self.contentContainerNode.addSubnode(self.doneButton)
+        self.contentContainerNode.addSubnode(self.wallpaperButton)
         
         self.topContentContainerNode.addSubnode(self.animationContainerNode)
         self.animationContainerNode.addSubnode(self.animationNode)
@@ -844,6 +860,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 strongSelf.completion?(strongSelf.selectedEmoticon)
             }
         }
+        self.wallpaperButton.addTarget(self, action: #selector(self.wallpaperButtonPressed), forControlEvents: .touchUpInside)
         
         self.disposable.set(combineLatest(queue: Queue.mainQueue(), self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).start(next: { [weak self] themes, selectedEmoticon, isDarkAppearance in
             guard let strongSelf = self else {
@@ -1018,6 +1035,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     
     @objc func cancelButtonPressed() {
         self.cancel?()
+    }
+    
+    @objc func wallpaperButtonPressed() {
+        self.controller?.changeWallpaper()
     }
     
     func dimTapped() {
@@ -1197,7 +1218,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
-        let contentHeight = titleHeight + bottomInset + 188.0
+        let contentHeight = titleHeight + bottomInset + 188.0 + 50.0
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
@@ -1235,7 +1256,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         let buttonInset: CGFloat = 16.0
         let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
+        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - 50.0 - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
+        
+        let wallpaperButtonSize = self.wallpaperButton.measure(CGSize(width: contentFrame.width - buttonInset * 2.0, height: .greatestFiniteMagnitude))
+        transition.updateFrame(node: self.wallpaperButton, frame: CGRect(origin: CGPoint(x: floor((contentFrame.width - wallpaperButtonSize.width) / 2.0), y: contentHeight - wallpaperButtonSize.height - insets.bottom - 6.0 - 9.0), size: wallpaperButtonSize))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.topContentContainerNode, frame: contentContainerFrame)
