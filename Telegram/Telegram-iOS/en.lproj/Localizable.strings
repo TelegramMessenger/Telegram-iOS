@@ -9115,3 +9115,5 @@ Sorry for the inconvenience.";
 "Premium.MaxSharedFolderLinksText" = "You can only create **%1$@** invite links. Upgrade to **Telegram Premium** to increase the links limit to **%2$@**.";
 "Premium.MaxSharedFolderLinksNoPremiumText" = "You can only create **%1$@** invite links. We are working to let you increase this limit in the future.";
 "Premium.MaxSharedFolderLinksFinalText" = "Sorry, you can only create **%1$@** invite links";
+
+"Premium.GiftedTitle.Someone" = "Someone";
