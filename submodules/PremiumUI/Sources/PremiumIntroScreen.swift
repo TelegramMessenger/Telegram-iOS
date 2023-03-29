@@ -2360,26 +2360,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: context.transition
             )
-            
-            let textColor = environment.theme.list.itemPrimaryTextColor
-            let accentColor: UIColor
-            if case .emojiStatus = context.component.source {
-                accentColor = environment.theme.list.itemAccentColor
-            } else {
-                accentColor = UIColor(rgb: 0x597cf5)
-            }
-            
-            let textFont = Font.bold(18.0)
-            let boldTextFont = Font.bold(18.0)
-            
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { _ in
-                return nil
-            })
-            
+
             var loadedEmojiPack: LoadedStickerPack?
             var highlightableLinks = false
             let secondaryTitleText: String
-            if let otherPeerName = state.otherPeerName {
+            var isAnonymous = false
+            if var otherPeerName = state.otherPeerName {
                 if case let .emojiStatus(_, _, file, maybeEmojiPack) = context.component.source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
                     loadedEmojiPack = maybeEmojiPack
                     highlightableLinks = true
@@ -2411,6 +2397,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                             secondaryTitleText = ""
                         }
                     } else {
+                        if fromPeerId.namespace == Namespaces.Peer.CloudUser && fromPeerId.id._internalGetInt64Value() == 777000 {
+                            isAnonymous = true
+                            otherPeerName = environment.strings.Premium_GiftedTitle_Someone
+                        }
                         if duration == 12 {
                             secondaryTitleText = environment.strings.Premium_GiftedTitle_12Month(otherPeerName).string
                         } else if duration == 6 {
@@ -2427,6 +2417,20 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             } else {
                 secondaryTitleText = ""
             }
+            
+            let textColor = environment.theme.list.itemPrimaryTextColor
+            let accentColor: UIColor
+            if case .emojiStatus = context.component.source {
+                accentColor = environment.theme.list.itemAccentColor
+            } else {
+                accentColor = UIColor(rgb: 0x597cf5)
+            }
+            
+            let textFont = Font.bold(18.0)
+            let boldTextFont = Font.bold(18.0)
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: isAnonymous ? textColor : accentColor), linkAttribute: { _ in
+                return nil
+            })
             
             let secondaryAttributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(secondaryTitleText, attributes: markdownAttributes))
             if let emojiFile = state.emojiFile {
