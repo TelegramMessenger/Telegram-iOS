@@ -872,14 +872,29 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
 }
 
 struct ChatListFiltersState: Codable, Equatable {
+    struct ChatListFilterUpdates: Codable, Equatable {
+        var folderId: Int32
+        var timestamp: Int32
+        var peerIds: [PeerId]
+        
+        init(folderId: Int32, timestamp: Int32, peerIds: [PeerId]) {
+            self.folderId = folderId
+            self.timestamp = timestamp
+            self.peerIds = peerIds
+        }
+    }
+    
     var filters: [ChatListFilter]
     var remoteFilters: [ChatListFilter]?
     
-    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil)
+    var updates: [ChatListFilterUpdates]
     
-    fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?) {
+    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil, updates: [])
+    
+    fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?, updates: [ChatListFilterUpdates]) {
         self.filters = filters
         self.remoteFilters = remoteFilters
+        self.updates = updates
     }
     
     public init(from decoder: Decoder) throws {
@@ -887,6 +902,7 @@ struct ChatListFiltersState: Codable, Equatable {
 
         self.filters = try container.decode([ChatListFilter].self, forKey: "filters")
         self.remoteFilters = try container.decodeIfPresent([ChatListFilter].self, forKey: "remoteFilters")
+        self.updates = try container.decodeIfPresent([ChatListFilterUpdates].self, forKey: "updates") ?? []
     }
     
     func encode(to encoder: Encoder) throws {
@@ -894,6 +910,14 @@ struct ChatListFiltersState: Codable, Equatable {
 
         try container.encode(self.filters, forKey: "filters")
         try container.encodeIfPresent(self.remoteFilters, forKey: "remoteFilters")
+        try container.encode(self.updates, forKey: "updates")
+    }
+    
+    mutating func normalize() {
+        if self.updates.isEmpty {
+            return
+        }
+        self.updates.removeAll(where: { update in !self.filters.contains(where: { $0.id == update.folderId }) })
     }
 }
 
@@ -918,6 +942,9 @@ func _internal_updateChatListFiltersInteractively(postbox: Postbox, _ f: @escapi
                 hasUpdates = true
             }
             updated = updatedFilters
+            
+            state.normalize()
+            
             return PreferencesEntry(state)
         })
         if hasUpdates {
@@ -936,6 +963,7 @@ func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f:
             state.filters = updatedFilters
             hasUpdates = true
         }
+        state.normalize()
         return PreferencesEntry(state)
     })
     if hasUpdates {
@@ -943,12 +971,20 @@ func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f:
     }
 }
 
-
 func _internal_updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
     |> map { preferences -> [ChatListFilter] in
         let filtersState = preferences.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
         return filtersState.filters
+    }
+    |> distinctUntilChanged
+}
+
+func _internal_updatedChatListFiltersState(postbox: Postbox) -> Signal<ChatListFiltersState, NoError> {
+    return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
+    |> map { preferences -> ChatListFiltersState in
+        let filtersState = preferences.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
+        return filtersState
     }
     |> distinctUntilChanged
 }
@@ -982,11 +1018,17 @@ func _internal_currentChatListFilters(transaction: Transaction) -> [ChatListFilt
     return settings.filters
 }
 
+func _internal_currentChatListFiltersState(transaction: Transaction) -> ChatListFiltersState {
+    let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters)?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
+    return settings
+}
+
 func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersState) -> ChatListFiltersState) -> ChatListFiltersState {
     var result: ChatListFiltersState?
     transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in
         let settings = entry?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
-        let updated = f(settings)
+        var updated = f(settings)
+        updated.normalize()
         result = updated
         return PreferencesEntry(updated)
     })

@@ -97,6 +97,7 @@ public final class ChatListNodeInteraction {
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
     let openChatFolderUpdates: () -> Void
+    let hideChatFolderUpdates: () -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -142,7 +143,8 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
-        openChatFolderUpdates: @escaping () -> Void
+        openChatFolderUpdates: @escaping () -> Void,
+        hideChatFolderUpdates: @escaping () -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -176,6 +178,7 @@ public final class ChatListNodeInteraction {
         self.openPasswordSetup = openPasswordSetup
         self.openPremiumIntro = openPremiumIntro
         self.openChatFolderUpdates = openChatFolderUpdates
+        self.hideChatFolderUpdates = hideChatFolderUpdates
     }
 }
 
@@ -616,16 +619,26 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
             case let .ArchiveIntro(presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] in
-                    switch notice {
-                    case .clearStorage:
-                        nodeInteraction?.openStorageManagement()
-                    case .setupPassword:
-                        nodeInteraction?.openPasswordSetup()
-                    case .premiumUpgrade, .premiumAnnualDiscount:
-                        nodeInteraction?.openPremiumIntro()
-                    case .chatFolderUpdates:
-                        nodeInteraction?.openChatFolderUpdates()
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                    switch action {
+                    case .activate:
+                        switch notice {
+                        case .clearStorage:
+                            nodeInteraction?.openStorageManagement()
+                        case .setupPassword:
+                            nodeInteraction?.openPasswordSetup()
+                        case .premiumUpgrade, .premiumAnnualDiscount:
+                            nodeInteraction?.openPremiumIntro()
+                        case .chatFolderUpdates:
+                            nodeInteraction?.openChatFolderUpdates()
+                        }
+                    case .hide:
+                        switch notice {
+                        case .chatFolderUpdates:
+                            nodeInteraction?.hideChatFolderUpdates()
+                        default:
+                            break
+                        }
                     }
                 }), directionHint: entry.directionHint)
         }
@@ -871,16 +884,26 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
             case let .ArchiveIntro(presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListArchiveInfoItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] in
-                    switch notice {
-                    case .clearStorage:
-                        nodeInteraction?.openStorageManagement()
-                    case .setupPassword:
-                        nodeInteraction?.openPasswordSetup()
-                    case .premiumUpgrade, .premiumAnnualDiscount:
-                        nodeInteraction?.openPremiumIntro()
-                    case .chatFolderUpdates:
-                        nodeInteraction?.openChatFolderUpdates()
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                    switch action {
+                    case .activate:
+                        switch notice {
+                        case .clearStorage:
+                            nodeInteraction?.openStorageManagement()
+                        case .setupPassword:
+                            nodeInteraction?.openPasswordSetup()
+                        case .premiumUpgrade, .premiumAnnualDiscount:
+                            nodeInteraction?.openPremiumIntro()
+                        case .chatFolderUpdates:
+                            nodeInteraction?.openChatFolderUpdates()
+                        }
+                    case .hide:
+                        switch notice {
+                        case .chatFolderUpdates:
+                            nodeInteraction?.hideChatFolderUpdates()
+                        default:
+                            break
+                        }
                     }
                 }), directionHint: entry.directionHint)
             case .HeaderEntry:
@@ -1076,8 +1099,9 @@ public final class ChatListNode: ListView {
     
     let hideArhiveIntro = ValuePromise<Bool>(false, ignoreRepeated: true)
     
-    private let chatFolderUpdates = Promise<ChatFolderUpdates?>(nil)
+    private let chatFolderUpdates = Promise<ChatFolderUpdates?>()
     private var pollFilterUpdatesDisposable: Disposable?
+    private var chatFilterUpdatesDisposable: Disposable?
     
     public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
         self.context = context
@@ -1412,6 +1436,21 @@ public final class ChatListNode: ListView {
                 }
                 
                 self.push?(ChatFolderLinkPreviewScreen(context: self.context, subject: .updates(result), contents: result.chatFolderLinkContents))
+            })
+        }, hideChatFolderUpdates: { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = (self.chatFolderUpdates.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let self, let result else {
+                    return
+                }
+                
+                if let localFilterId = result.chatFolderLinkContents.localFilterId {
+                    let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: localFilterId).start()
+                }
             })
         })
         nodeInteraction.isInlineMode = isInlineMode
@@ -1973,6 +2012,7 @@ public final class ChatListNode: ListView {
                 var didIncludeRemovingPeerId = false
                 var didIncludeHiddenByDefaultArchive = false
                 var didIncludeHiddenThread = false
+                var didIncludeNotice = false
                 if let previous = previousView {
                     for entry in previous.filteredEntries {
                         if case let .PeerEntry(peerEntry) = entry {
@@ -1999,12 +2039,15 @@ public final class ChatListNode: ListView {
                             }
                         } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
                             didIncludeHiddenByDefaultArchive = hiddenByDefault
+                        } else if case .Notice = entry {
+                            didIncludeNotice = true
                         }
                     }
                 }
                 var doesIncludeRemovingPeerId = false
                 var doesIncludeArchive = false
                 var doesIncludeHiddenByDefaultArchive = false
+                var doesIncludeNotice = false
                 
                 var doesIncludeHiddenThread = false
                 for entry in processedView.filteredEntries {
@@ -2033,6 +2076,8 @@ public final class ChatListNode: ListView {
                     } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
                         doesIncludeArchive = true
                         doesIncludeHiddenByDefaultArchive = hiddenByDefault
+                    } else if case .Notice = entry {
+                        doesIncludeNotice = true
                     }
                 }
                 if previousPinnedChats != updatedPinnedChats || previousPinnedThreads != updatedPinnedThreads {
@@ -2057,6 +2102,9 @@ public final class ChatListNode: ListView {
                     disableAnimations = false
                 }
                 if didIncludeHiddenThread != doesIncludeHiddenThread {
+                    disableAnimations = false
+                }
+                if didIncludeNotice != doesIncludeNotice {
                     disableAnimations = false
                 }
             }
@@ -2578,7 +2626,7 @@ public final class ChatListNode: ListView {
             }
         }
         
-        self.pollFilterUpdates(shouldDelay: false)
+        self.pollFilterUpdates()
         self.resetFilter()
         
         let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
@@ -2596,6 +2644,7 @@ public final class ChatListNode: ListView {
         self.activityStatusesDisposable?.dispose()
         self.updatedFilterDisposable.dispose()
         self.pollFilterUpdatesDisposable?.dispose()
+        self.chatFilterUpdatesDisposable?.dispose()
     }
     
     func updateFilter(_ filter: ChatListFilter?) {
@@ -2605,17 +2654,18 @@ public final class ChatListNode: ListView {
         }
     }
     
-    private func pollFilterUpdates(shouldDelay: Bool) {
+    private func pollFilterUpdates() {
         guard let chatListFilter, case let .filter(id, _, _, data) = chatListFilter, data.isShared else {
+            self.chatFolderUpdates.set(.single(nil))
             return
         }
-        self.pollFilterUpdatesDisposable = (context.engine.peers.getChatFolderUpdates(folderId: id)
-        |> delay(shouldDelay ? 5.0 : 0.0, queue: .mainQueue())).start(next: { [weak self] result in
+        self.pollFilterUpdatesDisposable = self.context.engine.peers.pollChatFolderUpdates(folderId: id).start()
+        self.chatFilterUpdatesDisposable = (self.context.engine.peers.subscribedChatFolderUpdates(folderId: id)
+        |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let self else {
                 return
             }
             self.chatFolderUpdates.set(.single(result))
-            self.pollFilterUpdates(shouldDelay: true)
         })
     }
     

@@ -118,6 +118,7 @@ private class PremiumLimitAnimationComponent: Component {
             self.activeContainer.masksToBounds = true
             
             self.activeBackground = SimpleLayer()
+            self.activeBackground.anchorPoint = CGPoint()
             
             self.badgeView = UIView()
             self.badgeView.alpha = 0.0
@@ -244,13 +245,16 @@ private class PremiumLimitAnimationComponent: Component {
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - lineHeight), size: CGSize(width: availableSize.width, height: lineHeight))
             self.container.frame = containerFrame
             
+            let activityPosition: CGFloat = floor(containerFrame.width * component.badgePosition)
+            let activeWidth: CGFloat = containerFrame.width - activityPosition
+            
             if !component.isPremiumDisabled {
-                self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
-                self.activeContainer.frame = CGRect(origin: CGPoint(x: containerFrame.width / 2.0, y: 0.0), size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
+                self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight))
+                self.activeContainer.frame = CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight))
                 
-                self.activeBackground.bounds = CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 3.0 / 2.0, height: lineHeight))
+                self.activeBackground.frame = CGRect(origin: .zero, size: CGSize(width: activeWidth * (1.0 + 0.35), height: lineHeight))
                 if self.activeBackground.animation(forKey: "movement") == nil {
-                    self.activeBackground.position = CGPoint(x: containerFrame.width * 3.0 / 4.0 - self.activeBackground.frame.width * 0.35, y: lineHeight / 2.0)
+                    self.activeBackground.position = CGPoint(x: -self.activeContainer.frame.width * 0.35, y: lineHeight / 2.0)
                 }
             }
             
@@ -306,7 +310,7 @@ private class PremiumLimitAnimationComponent: Component {
                 if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
                     
                 } else {
-                    self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * badgePosition, y: 82.0)
+                    self.badgeView.center = CGPoint(x: availableSize.width * badgePosition, y: 82.0)
                 }
                 
                 if self.badgeView.frame.maxX > availableSize.width {
@@ -375,14 +379,16 @@ private class PremiumLimitAnimationComponent: Component {
                 }
                 self.badgeForeground.position = CGPoint(x: badgeNewValue, y: self.badgeForeground.bounds.size.height / 2.0)
                 
-                let lineOffset = (self.activeBackground.frame.width - self.activeContainer.bounds.width) / 2.0
+                let lineOffset = 0.0
                 let linePreviousValue = self.activeBackground.position.x
                 var lineNewValue: CGFloat = lineOffset
-                if lineOffset - linePreviousValue < self.activeBackground.frame.width * 0.25 {
-                    lineNewValue -= self.activeBackground.frame.width * 0.35
+                if linePreviousValue < 0.0 {
+                    lineNewValue = 0.0
+                } else {
+                    lineNewValue = -self.activeContainer.bounds.width * 0.35
                 }
-                self.activeBackground.position = CGPoint(x: lineNewValue, y: self.activeBackground.bounds.size.height / 2.0)
-                                
+                self.activeBackground.position = CGPoint(x: lineNewValue, y: 0.0)
+                
                 let badgeAnimation = CABasicAnimation(keyPath: "position.x")
                 badgeAnimation.duration = 4.5
                 badgeAnimation.fromValue = badgePreviousValue
@@ -585,16 +591,25 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     transition: context.transition
                 )
                 
+                let activityPosition = floor(context.availableSize.width * component.badgePosition)
+                
+                var inactiveValueOpacity: CGFloat = 1.0
+                if inactiveValue.size.width + inactiveTitle.size.width >= activityPosition - 8.0 {
+                    inactiveValueOpacity = 0.0
+                }
+                
                 context.add(inactiveTitle
                     .position(CGPoint(x: inactiveTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
+                    .opacity(inactiveValueOpacity)
                 )
                 
                 context.add(inactiveValue
-                    .position(CGPoint(x: context.availableSize.width / 2.0 - inactiveValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
+                    .position(CGPoint(x: activityPosition - inactiveValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
+                    .opacity(inactiveValueOpacity)
                 )
                 
                 context.add(activeTitle
-                    .position(CGPoint(x: context.availableSize.width / 2.0 + activeTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
+                    .position(CGPoint(x: activityPosition + activeTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
                 )
                 
                 context.add(activeValue
@@ -766,22 +781,26 @@ private final class LimitSheetContent: CombinedComponent {
                         string = strings.Premium_MaxChatsInFolderNoPremiumText("\(limit)").string
                     }
                 case .linksPerSharedFolder:
-                    //TODO:localize
-                    let limit = state.limits.maxSharedFolderInviteLinks
-                    let premiumLimit = state.premiumLimits.maxSharedFolderInviteLinks
+                    /*let count: Int32 = 5 + Int32("".count)// component.count
+                    let limit: Int32 = 5 + Int32("".count)//state.limits.maxSharedFolderInviteLinks
+                    let premiumLimit: Int32 = 100 + Int32("".count)//state.premiumLimits.maxSharedFolderInviteLinks*/
+                
+                    let count: Int32 = component.count
+                    let limit: Int32 = state.limits.maxSharedFolderInviteLinks
+                    let premiumLimit: Int32 = state.premiumLimits.maxSharedFolderInviteLinks
+                
                     iconName = "Premium/Link"
-                    badgeText = "\(component.count)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxSharedFolderLinksFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderLinksText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    badgeText = "\(count)"
+                    string = count >= premiumLimit ? strings.Premium_MaxSharedFolderLinksFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderLinksText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = count > limit ? "\(limit)" : ""
+                    premiumValue = count >= premiumLimit ? "" : "\(premiumLimit)"
+                    badgePosition = max(0.1, CGFloat(count) / CGFloat(premiumLimit))
                 
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxSharedFolderLinksNoPremiumText("\(limit)").string
                     }
                 case .membershipInSharedFolders:
-                    //TODO:localize
                     let limit = state.limits.maxSharedFolderJoin
                     let premiumLimit = state.premiumLimits.maxSharedFolderJoin
                     iconName = "Premium/Folder"

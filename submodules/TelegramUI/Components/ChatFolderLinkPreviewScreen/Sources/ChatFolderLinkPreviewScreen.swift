@@ -370,7 +370,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             contentHeight += 14.0
             
             var topBadge: String?
-            if !allChatsAdded, let linkContents = component.linkContents, linkContents.localFilterId != nil {
+            if case .remove = component.subject {
+            } else if !allChatsAdded, let linkContents = component.linkContents, linkContents.localFilterId != nil {
                 topBadge = "+\(linkContents.peers.count)"
             }
             
