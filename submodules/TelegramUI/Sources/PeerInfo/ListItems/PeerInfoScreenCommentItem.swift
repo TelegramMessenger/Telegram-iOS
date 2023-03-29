@@ -1,6 +1,8 @@
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import TextFormat
+import Markdown
 
 final class PeerInfoScreenCommentItem: PeerInfoScreenItem {
     let id: AnyHashable
@@ -47,8 +49,16 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         let verticalInset: CGFloat = 7.0
         
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor)
-        self.activateArea.accessibilityLabel = item.text
+        
+        let textFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
+        let textColor = presentationData.theme.list.freeTextColor
+        
+        let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+            return (TelegramTextAttributes.URL, contents)
+        }))
+        
+        self.textNode.attributedText = attributedText
+        self.activateArea.accessibilityLabel = attributedText.string
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
         

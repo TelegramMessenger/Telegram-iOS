@@ -1000,7 +1000,9 @@ func canEditPeerInfo(context: AccountContext, peer: Peer?, chatLocation: ChatLoc
     if context.account.peerId == peer?.id {
         return true
     }
-    if let channel = peer as? TelegramChannel {
+    if let user = peer as? TelegramUser, let botInfo = user.botInfo {
+        return botInfo.flags.contains(.canEdit)
+    } else if let channel = peer as? TelegramChannel {
         if let threadData = threadData {
             if chatLocation.threadId == 1 {
                 return false
@@ -1278,6 +1280,9 @@ func peerInfoCanEdit(peer: Peer?, chatLocation: ChatLocation, threadData: Messag
     if let user = peer as? TelegramUser {
         if user.isDeleted {
             return false
+        }
+        if let botInfo = user.botInfo {
+            return botInfo.flags.contains(.canEdit)
         }
         if let isContact = isContact, !isContact {
             return false

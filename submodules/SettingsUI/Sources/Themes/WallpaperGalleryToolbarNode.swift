@@ -31,13 +31,13 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         }
     }
     
-    private let cancelButton = HighlightTrackingButtonNode()
-    private let cancelHighlightBackgroundNode = ASDisplayNode()
     private let doneButton = HighlightTrackingButtonNode()
-    private let doneHighlightBackgroundNode = ASDisplayNode()
-    private let backgroundNode = NavigationBackgroundNode(color: .clear)
-    private let separatorNode = ASDisplayNode()
-    private let topSeparatorNode = ASDisplayNode()
+    private let doneButtonBackgroundNode: NavigationBackgroundNode
+    private let doneButtonBackgroundView: UIVisualEffectView
+    private let doneButtonTitleNode: ImmediateTextNode
+    
+    private let doneButtonSolidBackgroundNode: ASDisplayNode
+    private let doneButtonSolidTitleNode: ImmediateTextNode
     
     var cancel: (() -> Void)?
     var done: (() -> Void)?
@@ -48,46 +48,82 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.cancelButtonType = cancelButtonType
         self.doneButtonType = doneButtonType
         
-        self.cancelHighlightBackgroundNode.alpha = 0.0
-        self.doneHighlightBackgroundNode.alpha = 0.0
+        self.doneButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45))
+        self.doneButtonBackgroundNode.cornerRadius = 14.0
         
+        let blurEffect: UIBlurEffect
+        if #available(iOS 13.0, *) {
+            blurEffect = UIBlurEffect(style: .systemUltraThinMaterialLight)
+        } else {
+            blurEffect = UIBlurEffect(style: .light)
+        }
+        
+        self.doneButtonBackgroundView = UIVisualEffectView(effect: blurEffect)
+        self.doneButtonBackgroundView.clipsToBounds = true
+        self.doneButtonBackgroundView.layer.cornerRadius = 14.0
+        self.doneButtonBackgroundView.isUserInteractionEnabled = false
+        
+        self.doneButtonTitleNode = ImmediateTextNode()
+        self.doneButtonTitleNode.displaysAsynchronously = false
+        self.doneButtonTitleNode.textShadowColor = UIColor(rgb: 0x000000, alpha: 0.1)
+        self.doneButtonTitleNode.isUserInteractionEnabled = false
+        
+        self.doneButtonSolidBackgroundNode = ASDisplayNode()
+        self.doneButtonSolidBackgroundNode.alpha = 0.0
+        self.doneButtonSolidBackgroundNode.clipsToBounds = true
+        self.doneButtonSolidBackgroundNode.layer.cornerRadius = 14.0
+        if #available(iOS 13.0, *) {
+            self.doneButtonSolidBackgroundNode.layer.cornerCurve = .continuous
+        }
+        self.doneButtonSolidBackgroundNode.isUserInteractionEnabled = false
+        
+        self.doneButtonSolidTitleNode = ImmediateTextNode()
+        self.doneButtonSolidTitleNode.alpha = 0.0
+        self.doneButtonSolidTitleNode.displaysAsynchronously = false
+        self.doneButtonSolidTitleNode.isUserInteractionEnabled = false
+
         super.init()
 
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.cancelHighlightBackgroundNode)
-        self.addSubnode(self.cancelButton)
-        self.addSubnode(self.doneHighlightBackgroundNode)
+        self.addSubnode(self.doneButtonBackgroundNode)
+        self.addSubnode(self.doneButtonTitleNode)
+        
+        self.addSubnode(self.doneButtonSolidBackgroundNode)
+        self.addSubnode(self.doneButtonSolidTitleNode)
+        
         self.addSubnode(self.doneButton)
-        self.addSubnode(self.separatorNode)
-        self.addSubnode(self.topSeparatorNode)
         
         self.updateThemeAndStrings(theme: theme, strings: strings)
-        
-        self.cancelButton.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.cancelHighlightBackgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.cancelHighlightBackgroundNode.alpha = 1.0
-                } else {
-                    strongSelf.cancelHighlightBackgroundNode.alpha = 0.0
-                    strongSelf.cancelHighlightBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                }
-            }
-        }
         
         self.doneButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.doneHighlightBackgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.doneHighlightBackgroundNode.alpha = 1.0
+                    if strongSelf.isSolid {
+                        strongSelf.doneButtonSolidBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.doneButtonSolidBackgroundNode.alpha = 0.55
+                        strongSelf.doneButtonSolidTitleNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.doneButtonSolidTitleNode.alpha = 0.55
+                    } else {
+                        strongSelf.doneButtonBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.doneButtonBackgroundNode.alpha = 0.55
+                        strongSelf.doneButtonTitleNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.doneButtonTitleNode.alpha = 0.55
+                    }
                 } else {
-                    strongSelf.doneHighlightBackgroundNode.alpha = 0.0
-                    strongSelf.doneHighlightBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    if strongSelf.isSolid {
+                        strongSelf.doneButtonSolidBackgroundNode.alpha = 1.0
+                        strongSelf.doneButtonSolidBackgroundNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.doneButtonSolidTitleNode.alpha = 1.0
+                        strongSelf.doneButtonSolidTitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    } else {
+                        strongSelf.doneButtonBackgroundNode.alpha = 1.0
+                        strongSelf.doneButtonBackgroundNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.doneButtonTitleNode.alpha = 1.0
+                        strongSelf.doneButtonTitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                    }
                 }
             }
         }
         
-        self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         self.doneButton.addTarget(self, action: #selector(self.donePressed), forControlEvents: .touchUpInside)
     }
     
@@ -96,25 +132,26 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.doneButton.isUserInteractionEnabled = enabled
     }
     
+    private var isSolid = false
+    func setDoneIsSolid(_ isSolid: Bool, transition: ContainedViewLayoutTransition) {
+        guard self.isSolid != isSolid else {
+            return
+        }
+        self.isSolid = isSolid
+        
+        transition.updateAlpha(node: self.doneButtonBackgroundNode, alpha: isSolid ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.doneButtonSolidBackgroundNode, alpha: isSolid ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.doneButtonTitleNode, alpha: isSolid ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.doneButtonSolidTitleNode, alpha: isSolid ? 1.0 : 0.0)
+    }
+    
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
-        self.backgroundNode.updateColor(color: theme.rootController.tabBar.backgroundColor, transition: .immediate)
-        self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
-        self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
-        self.cancelHighlightBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
-        self.doneHighlightBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
-        
-        let cancelTitle: String
-        switch self.cancelButtonType {
-            case .cancel:
-                cancelTitle = strings.Common_Cancel
-            case .discard:
-                cancelTitle = strings.WallpaperPreview_PatternPaternDiscard
-        }
+                
         let doneTitle: String
         switch self.doneButtonType {
             case .set:
-                doneTitle = strings.Wallpaper_Set
+                doneTitle = strings.Wallpaper_ApplyForAll
             case .proceed:
                 doneTitle = strings.Theme_Colors_Proceed
             case .apply:
@@ -123,19 +160,30 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
                 doneTitle = ""
                 self.doneButton.isUserInteractionEnabled = false
         }
-        self.cancelButton.setTitle(cancelTitle, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
-        self.doneButton.setTitle(doneTitle, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
+        self.doneButtonTitleNode.attributedText = NSAttributedString(string: doneTitle, font: Font.semibold(17.0), textColor: .white)
+        
+        self.doneButtonSolidBackgroundNode.backgroundColor = theme.list.itemCheckColors.fillColor
+        self.doneButtonSolidTitleNode.attributedText = NSAttributedString(string: doneTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
     }
     
     func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        self.cancelButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width / 2.0), height: size.height))
-        self.cancelHighlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width / 2.0), height: size.height))
-        self.doneButton.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: size.width - floor(size.width / 2.0), height: size.height))
-        self.doneHighlightBackgroundNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: size.width - floor(size.width / 2.0), height: size.height))
-        self.separatorNode.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: UIScreenPixel, height: size.height + layout.intrinsicInsets.bottom))
-        self.topSeparatorNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: UIScreenPixel))
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.backgroundNode.update(size: CGSize(width: size.width, height: size.height + layout.intrinsicInsets.bottom), transition: .immediate)
+        let inset: CGFloat = 16.0
+        let buttonHeight: CGFloat = 50.0
+        
+        let doneFrame = CGRect(origin: CGPoint(x: inset, y: 2.0), size: CGSize(width: size.width - inset * 2.0, height: buttonHeight))
+        self.doneButton.frame = doneFrame
+        self.doneButtonBackgroundNode.frame = doneFrame
+        self.doneButtonBackgroundNode.update(size: doneFrame.size, cornerRadius: 14.0, transition: transition)
+        self.doneButtonBackgroundView.frame = doneFrame
+        
+        self.doneButtonSolidBackgroundNode.frame = doneFrame
+        
+        let doneTitleSize = self.doneButtonTitleNode.updateLayout(doneFrame.size)
+        self.doneButtonTitleNode.frame = CGRect(origin: CGPoint(x: doneFrame.minX + floorToScreenPixels((doneFrame.width - doneTitleSize.width) / 2.0), y: doneFrame.minY + floorToScreenPixels((doneFrame.height - doneTitleSize.height) / 2.0)), size: doneTitleSize)
+        
+        let _ = self.doneButtonSolidTitleNode.updateLayout(doneFrame.size)
+        self.doneButtonSolidTitleNode.frame = self.doneButtonTitleNode.frame
+
     }
     
     @objc func cancelPressed() {

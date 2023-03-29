@@ -2120,11 +2120,17 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
             contentHeight += 32.0
         }
         
+        var isEditableBot = false
+        if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+            isEditableBot = true
+        }
         var fieldKeys: [PeerInfoHeaderTextFieldNodeKey] = []
         if let user = peer as? TelegramUser {
             if !user.isDeleted {
                 fieldKeys.append(.firstName)
-                if user.botInfo == nil {
+                if isEditableBot {
+                    fieldKeys.append(.description)
+                } else if user.botInfo == nil {
                     fieldKeys.append(.lastName)
                 }
             }
@@ -2160,6 +2166,8 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
                         updateText = cachedData.about ?? ""
                     } else if let cachedData = cachedData as? CachedGroupData {
                         updateText = cachedData.about ?? ""
+                    } else if let cachedData = cachedData as? CachedUserData {
+                        updateText = cachedData.about ?? ""
                     } else {
                         updateText = ""
                     }
@@ -2179,7 +2187,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
             switch key {
             case .firstName:
                 placeholder = presentationData.strings.UserInfo_FirstNamePlaceholder
-                isEnabled = isContact || isSettings
+                isEnabled = isContact || isSettings || isEditableBot
             case .lastName:
                 placeholder = presentationData.strings.UserInfo_LastNamePlaceholder
                 isEnabled = isContact || isSettings
@@ -2192,7 +2200,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
                 isEnabled = canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
             case .description:
                 placeholder = presentationData.strings.Channel_Edit_AboutItem
-                isEnabled = canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
+                isEnabled = canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData) || isEditableBot
             }
             let itemHeight = itemNode.update(width: width, safeInset: safeInset, isSettings: isSettings, hasPrevious: hasPrevious, hasNext: key != fieldKeys.last, placeholder: placeholder, isEnabled: isEnabled, presentationData: presentationData, updateText: updateText)
             transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: itemHeight)))

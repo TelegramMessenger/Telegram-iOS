@@ -136,9 +136,12 @@ private class TextField: UITextField, UIScrollViewDelegate {
         return super.becomeFirstResponder()
     }
     
+    private var prefixPosition: CGFloat?
     private func updatePrefixPosition(transition: ContainedViewLayoutTransition = .immediate) {
         if let scrollView = self.scrollView {
-            transition.updateFrame(node: self.prefixLabel, frame: CGRect(origin: CGPoint(x: -scrollView.contentOffset.x - scrollView.contentInset.left, y: self.prefixLabel.frame.minY), size: self.prefixLabel.frame.size))
+            let prefixPosition = -scrollView.contentOffset.x - scrollView.contentInset.left
+            self.prefixPosition = prefixPosition
+            transition.updateFrame(node: self.prefixLabel, frame: CGRect(origin: CGPoint(x: prefixPosition, y: self.prefixLabel.frame.minY), size: self.prefixLabel.frame.size))
         }
     }
         
@@ -198,7 +201,7 @@ private class TextField: UITextField, UIScrollViewDelegate {
         
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
-        self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: floorToScreenPixels((bounds.height - prefixSize.height) / 2.0)), size: prefixSize)
+        self.prefixLabel.frame = CGRect(origin: CGPoint(x: self.prefixPosition ?? prefixBounds.minX, y: floorToScreenPixels((bounds.height - prefixSize.height) / 2.0)), size: prefixSize)
         self.updatePrefixWidth(prefixSize.width + 3.0)
     }
 }
@@ -510,8 +513,11 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
+        self.titleNode.displaysAsynchronously = false
+        
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 8
+        self.textNode.displaysAsynchronously = false
         
         self.activityIndicator = ActivityIndicator(type: .custom(ptheme.rootController.navigationBar.secondaryTextColor, 20.0, 1.5, false), speed: .slow)
         self.activityIndicator.isHidden = true
