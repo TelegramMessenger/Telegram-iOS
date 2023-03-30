@@ -24,6 +24,7 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
 
 public enum ExportChatFolderError {
     case generic
+    case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
     case limitExceeded(limit: Int32, premiumLimit: Int32)
 }
 
@@ -75,9 +76,9 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                     
                     if error.errorDescription == "COMMUNITIES_TOO_MUCH" {
                         if isPremium {
-                            return .fail(.limitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                            return .fail(.sharedFolderLimitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                         } else {
-                            return .fail(.limitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                            return .fail(.sharedFolderLimitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                         }
                     } else {
                         if isPremium {
