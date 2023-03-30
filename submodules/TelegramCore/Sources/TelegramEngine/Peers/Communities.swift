@@ -448,23 +448,36 @@ public final class ChatFolderUpdates: Equatable {
     }
 }
 
+private struct FirstTimeFolderUpdatesKey: Hashable {
+    var accountId: AccountRecordId
+    var folderId: Int32
+}
+private var firstTimeFolderUpdates = Set<FirstTimeFolderUpdatesKey>()
+
 func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> ChatListFiltersState in
         return _internal_currentChatListFiltersState(transaction: transaction)
     }
     |> mapToSignal { state -> Signal<Never, NoError> in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        if let current = state.updates.first(where: { $0.folderId == folderId }) {
-            let updateInterval: Int32
-            #if DEBUG
-            updateInterval = 5
-            #else
-            updateInterval = 60 * 60
-            #endif
-            
-            if current.timestamp + updateInterval >= timestamp {
-                return .complete()
+        let key = FirstTimeFolderUpdatesKey(accountId: account.id, folderId: folderId)
+        
+        if firstTimeFolderUpdates.contains(key) {
+            if let current = state.updates.first(where: { $0.folderId == folderId }) {
+                let updateInterval: Int32
+#if DEBUG
+                updateInterval = 5
+#else
+                updateInterval = 60 * 60
+#endif
+                
+                if current.timestamp + updateInterval >= timestamp {
+                    
+                    return .complete()
+                }
             }
+        } else {
+            firstTimeFolderUpdates.insert(key)
         }
             
         return account.network.request(Api.functions.communities.getCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
