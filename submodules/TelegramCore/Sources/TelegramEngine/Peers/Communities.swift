@@ -60,7 +60,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
     |> mapToSignal { inputPeers -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
         return account.network.request(Api.functions.communities.exportCommunityInvite(community: .inputCommunityDialogFilter(filterId: filterId), title: title, peers: inputPeers))
         |> `catch` { error -> Signal<Api.communities.ExportedCommunityInvite, ExportChatFolderError> in
-            if error.errorDescription == "INVITES_TOO_MUCH" || error.errorDescription == "FILTERS_TOO_MUCH" {
+            if error.errorDescription == "INVITES_TOO_MUCH" || error.errorDescription == "COMMUNITIES_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
@@ -69,7 +69,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                     let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
                     let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
                     
-                    if error.errorDescription == "FILTERS_TOO_MUCH" {
+                    if error.errorDescription == "COMMUNITIES_TOO_MUCH" {
                         if isPremium {
                             return .fail(.limitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                         } else {
