@@ -1353,6 +1353,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 needsShareButton = false
             }
         }
+        
+        if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            needsShareButton = false
+        }
                 
         var tmpWidth: CGFloat
         if allowFullWidth {

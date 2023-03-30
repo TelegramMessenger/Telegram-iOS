@@ -2124,7 +2124,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
             
             if let startCallContacts = startCallContacts {
-                let startCall: (PeerId) -> Void = { userId in
+                let startCall: (PeerId) -> Void = { peerId in
                     self.startCallWhenReady(accountId: nil, peerId: peerId, isVideo: isVideo)
                 }
                 
