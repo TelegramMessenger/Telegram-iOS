@@ -391,36 +391,52 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             if case let .filter(_, title, _, data) = filter, data.isShared {
-                let _ = (context.engine.data.get(
-                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                let _ = (combineLatest(
+                    context.engine.data.get(
+                        EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                    ),
+                    context.engine.peers.getExportedChatFolderLinks(id: id)
                 )
-                |> deliverOnMainQueue).start(next: { peers in
+                |> deliverOnMainQueue).start(next: { peers, links in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
-                    //TODO:localize
-                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
-                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
-                            let previewScreen = ChatFolderLinkPreviewScreen(
-                                context: context,
-                                subject: .remove(folderId: id),
-                                contents: ChatFolderLinkContents(
-                                    localFilterId: id,
-                                    title: title,
-                                    peers: peers.compactMap { $0 }.filter { peer in
-                                        if case .channel = peer {
-                                            return true
-                                        } else {
-                                            return false
-                                        }
-                                    },
-                                    alreadyMemberPeerIds: Set()
-                                )
+                    var hasLinks = false
+                    if let links, !links.isEmpty {
+                        hasLinks = true
+                    }
+                    
+                    let confirmDeleteFolder: () -> Void = {
+                        let previewScreen = ChatFolderLinkPreviewScreen(
+                            context: context,
+                            subject: .remove(folderId: id),
+                            contents: ChatFolderLinkContents(
+                                localFilterId: id,
+                                title: title,
+                                peers: peers.compactMap { $0 }.filter { peer in
+                                    if case .channel = peer {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                },
+                                alreadyMemberPeerIds: Set()
                             )
-                            pushControllerImpl?(previewScreen)
-                        }),
-                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
-                        })
-                    ]))
+                        )
+                        pushControllerImpl?(previewScreen)
+                    }
+                    
+                    if hasLinks {
+                        //TODO:localize
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
+                            TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+                                confirmDeleteFolder()
+                            }),
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                            })
+                        ]))
+                    } else {
+                        confirmDeleteFolder()
+                    }
                 })
             } else {
                 let actionSheet = ActionSheetController(presentationData: presentationData)

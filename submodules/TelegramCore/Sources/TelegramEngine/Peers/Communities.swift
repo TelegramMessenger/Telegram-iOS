@@ -12,6 +12,10 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
         } else if channel.username != nil {
             isEnabled = true
         }
+    case let .legacyGroup(group):
+        if !group.hasBannedPermission(.banAddMembers) {
+            isEnabled = true
+        }
     default:
         break
     }
