@@ -362,6 +362,7 @@ public enum JoinChatFolderLinkError {
     case generic
     case dialogFilterLimitExceeded(limit: Int32, premiumLimit: Int32)
     case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
+    case tooManyChannels
 }
 
 func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
@@ -372,7 +373,9 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
     |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
         return account.network.request(Api.functions.communities.joinCommunityInvite(slug: slug, peers: inputPeers))
         |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
-            if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
+            if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
+                return .fail(.tooManyChannels)
+            } else if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
