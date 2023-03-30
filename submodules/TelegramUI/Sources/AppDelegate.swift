@@ -2114,18 +2114,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         if #available(iOS 10.0, *) {
             var startCallContacts: [INPerson]?
-            var startCallIsVideo = false
+            var isVideo = false
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
                 startCallContacts = startCallIntent.contacts
-                startCallIsVideo = false
+                isVideo = false
             } else if let startCallIntent = userActivity.interaction?.intent as? SupportedStartVideoCallIntent {
                 startCallContacts = startCallIntent.contacts
-                startCallIsVideo = true
+                isVideo = true
             }
             
             if let startCallContacts = startCallContacts {
-                let startCall: (Int64) -> Void = { userId in
-                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), isVideo: startCallIsVideo)
+                let startCall: (PeerId) -> Void = { userId in
+                    self.startCallWhenReady(accountId: nil, peerId: peerId, isVideo: isVideo)
                 }
                 
                 func cleanPhoneNumber(_ text: String) -> String {
@@ -2163,20 +2163,20 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     let _ = (contactByIdentifier |> deliverOnMainQueue).start(next: { peerByContact in
                         var processed = false
                         if let peerByContact = peerByContact {
-                            startCall(peerByContact.id.id._internalGetInt64Value())
+                            startCall(peerByContact.id)
                             processed = true
                         } else if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                             let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                            if let userId = Int64(string) {
-                                startCall(userId)
+                            if let value = Int64(string) {
+                                startCall(PeerId(value))
                                 processed = true
                             }
                         }
                         if !processed, let handle = contact.personHandle, let value = handle.value {
                             switch handle.type {
                                 case .unknown:
-                                    if let userId = Int64(value) {
-                                        startCall(userId)
+                                    if let value = Int64(value) {
+                                        startCall(PeerId(value))
                                         processed = true
                                     }
                                 case .phoneNumber:
@@ -2200,7 +2200,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                         }
                                         |> deliverOnMainQueue).start(next: { peerId in
                                             if let peerId = peerId {
-                                                startCall(peerId.id._internalGetInt64Value())
+                                                startCall(peerId)
                                             }
                                         })
                                         processed = true
@@ -2216,8 +2216,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let userId = Int64(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), threadId: nil, activateInput: true)
+                    if let value = Int64(string) {
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(value), threadId: nil, activateInput: true)
                     }
                 }
             }
