@@ -390,7 +390,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
                         return .fail(.dialogFilterLimitExceeded(limit: userDefaultLimits.maxFoldersCount, premiumLimit: userPremiumLimits.maxFoldersCount))
                     }
                 }
-            } else if error.errorDescription == "FILTERS_TOO_MUCH" {
+            } else if error.errorDescription == "COMMUNITIES_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
