@@ -840,6 +840,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.subtitleNode.alpha = 0.0
         self.subtitleNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
         
+        self.badgeNode?.alpha = 0.0
+        self.badgeNode?.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
+        
         self.shimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.borderShimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
@@ -872,6 +875,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.subtitleNode.alpha = 1.0
         self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.badgeNode?.alpha = 1.0
+        self.badgeNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         self.shimmerView?.layer.removeAllAnimations()
         self.shimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1282,6 +1288,9 @@ public final class SolidRoundedButtonView: UIView {
         self.subtitleNode.alpha = 0.0
         self.subtitleNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
         
+        self.badgeNode?.alpha = 0.0
+        self.badgeNode?.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
+        
         self.shimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.borderShimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
@@ -1314,6 +1323,9 @@ public final class SolidRoundedButtonView: UIView {
         
         self.subtitleNode.alpha = 1.0
         self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.badgeNode?.alpha = 1.0
+        self.badgeNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         self.shimmerView?.layer.removeAllAnimations()
         self.shimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1475,6 +1487,7 @@ public final class SolidRoundedButtonView: UIView {
                 badgeNode = current
             } else {
                 badgeNode = BadgeNode(fillColor: self.theme.foregroundColor, strokeColor: .clear, textColor: self.theme.backgroundColor)
+                badgeNode.alpha = self.titleNode.alpha
                 self.badgeNode = badgeNode
                 self.addSubnode(badgeNode)
             }

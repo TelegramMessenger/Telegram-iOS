@@ -2701,15 +2701,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func shareFolder(filterId: Int32, data: ChatListFilterData, title: String) {
-        openCreateChatListFolderLink(context: self.context, folderId: filterId, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
+        openCreateChatListFolderLink(context: self.context, folderId: filterId, checkIfExists: true, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
             self?.push(c)
         }, presentController: { [weak self] c in
             self?.present(c, in: .window(.root))
         }, linkUpdated: { _ in
         })
-        
-        /*self.push(folderInviteLinkListController(context: self.context, filterId: filterId, title: title, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { _ in
-        }))*/
     }
     
     private func askForFilterRemoval(id: Int32) {
@@ -2754,53 +2751,69 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             if case let .filter(_, title, _, data) = filter, data.isShared {
-                let _ = (self.context.engine.data.get(
-                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                let _ = (combineLatest(
+                    self.context.engine.data.get(
+                        EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                    ),
+                    self.context.engine.peers.getExportedChatFolderLinks(id: id)
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] peers in
+                |> deliverOnMainQueue).start(next: { [weak self] peers, links in
                     guard let self else {
                         return
                     }
                     
                     let presentationData = self.presentationData
                     
-                    //TODO:localize
-                    self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
-                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            
-                            let previewScreen = ChatFolderLinkPreviewScreen(
-                                context: self.context,
-                                subject: .remove(folderId: id),
-                                contents: ChatFolderLinkContents(
-                                    localFilterId: id,
-                                    title: title,
-                                    peers: peers.compactMap { $0 }.filter { peer in
-                                        if case .channel = peer {
-                                            return true
-                                        } else {
-                                            return false
-                                        }
-                                    },
-                                    alreadyMemberPeerIds: Set()
-                                ),
-                                completion: { [weak self] in
-                                    guard let self else {
-                                        return
+                    var hasLinks = false
+                    if let links, !links.isEmpty {
+                        hasLinks = true
+                    }
+                    
+                    let confirmDeleteFolder: () -> Void = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        
+                        let previewScreen = ChatFolderLinkPreviewScreen(
+                            context: self.context,
+                            subject: .remove(folderId: id),
+                            contents: ChatFolderLinkContents(
+                                localFilterId: id,
+                                title: title,
+                                peers: peers.compactMap { $0 }.filter { peer in
+                                    if case .channel = peer {
+                                        return true
+                                    } else {
+                                        return false
                                     }
-                                    if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
-                                        self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
-                                        })
-                                    }
+                                },
+                                alreadyMemberPeerIds: Set()
+                            ),
+                            completion: { [weak self] in
+                                guard let self else {
+                                    return
                                 }
-                            )
-                            self.push(previewScreen)
-                        }),
-                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
-                        })
-                    ]), in: .window(.root))
+                                if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
+                                    self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
+                                    })
+                                }
+                            }
+                        )
+                        self.push(previewScreen)
+                    }
+                    
+                    if hasLinks {
+                        //TODO:localize
+                        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
+                            TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+                                confirmDeleteFolder()
+                            }),
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                            })
+                        ]), in: .window(.root))
+                    } else {
+                        confirmDeleteFolder()
+                    }
                 })
             } else {
                 let actionSheet = ActionSheetController(presentationData: self.presentationData)

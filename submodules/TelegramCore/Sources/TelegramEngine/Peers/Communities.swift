@@ -12,6 +12,10 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
         } else if channel.username != nil {
             isEnabled = true
         }
+    case let .legacyGroup(group):
+        if !group.hasBannedPermission(.banAddMembers) {
+            isEnabled = true
+        }
     default:
         break
     }
@@ -60,7 +64,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
     |> mapToSignal { inputPeers -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
         return account.network.request(Api.functions.communities.exportCommunityInvite(community: .inputCommunityDialogFilter(filterId: filterId), title: title, peers: inputPeers))
         |> `catch` { error -> Signal<Api.communities.ExportedCommunityInvite, ExportChatFolderError> in
-            if error.errorDescription == "INVITES_TOO_MUCH" || error.errorDescription == "FILTERS_TOO_MUCH" {
+            if error.errorDescription == "INVITES_TOO_MUCH" || error.errorDescription == "COMMUNITIES_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
@@ -69,7 +73,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                     let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
                     let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
                     
-                    if error.errorDescription == "FILTERS_TOO_MUCH" {
+                    if error.errorDescription == "COMMUNITIES_TOO_MUCH" {
                         if isPremium {
                             return .fail(.limitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                         } else {
@@ -362,6 +366,7 @@ public enum JoinChatFolderLinkError {
     case generic
     case dialogFilterLimitExceeded(limit: Int32, premiumLimit: Int32)
     case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
+    case tooManyChannels(limit: Int32, premiumLimit: Int32)
 }
 
 func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
@@ -372,7 +377,22 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
     |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
         return account.network.request(Api.functions.communities.joinCommunityInvite(slug: slug, peers: inputPeers))
         |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
-            if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
+            if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.tooManyChannels(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                    } else {
+                        return .fail(.tooManyChannels(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                    }
+                }
+            } else if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
@@ -387,7 +407,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
                         return .fail(.dialogFilterLimitExceeded(limit: userDefaultLimits.maxFoldersCount, premiumLimit: userPremiumLimits.maxFoldersCount))
                     }
                 }
-            } else if error.errorDescription == "FILTERS_TOO_MUCH" {
+            } else if error.errorDescription == "COMMUNITIES_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
@@ -448,23 +468,36 @@ public final class ChatFolderUpdates: Equatable {
     }
 }
 
+private struct FirstTimeFolderUpdatesKey: Hashable {
+    var accountId: AccountRecordId
+    var folderId: Int32
+}
+private var firstTimeFolderUpdates = Set<FirstTimeFolderUpdatesKey>()
+
 func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> ChatListFiltersState in
         return _internal_currentChatListFiltersState(transaction: transaction)
     }
     |> mapToSignal { state -> Signal<Never, NoError> in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        if let current = state.updates.first(where: { $0.folderId == folderId }) {
-            let updateInterval: Int32
-            #if DEBUG
-            updateInterval = 5
-            #else
-            updateInterval = 60 * 60
-            #endif
-            
-            if current.timestamp + updateInterval >= timestamp {
-                return .complete()
+        let key = FirstTimeFolderUpdatesKey(accountId: account.id, folderId: folderId)
+        
+        if firstTimeFolderUpdates.contains(key) {
+            if let current = state.updates.first(where: { $0.folderId == folderId }) {
+                let updateInterval: Int32
+#if DEBUG
+                updateInterval = 5
+#else
+                updateInterval = 60 * 60
+#endif
+                
+                if current.timestamp + updateInterval >= timestamp {
+                    
+                    return .complete()
+                }
             }
+        } else {
+            firstTimeFolderUpdates.insert(key)
         }
             
         return account.network.request(Api.functions.communities.getCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
