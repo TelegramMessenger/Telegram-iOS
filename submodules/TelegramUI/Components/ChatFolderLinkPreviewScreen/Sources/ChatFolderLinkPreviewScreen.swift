@@ -188,11 +188,13 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             }
             
             var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
-            topOffset = max(0.0, topOffset)
-            
-            if topOffset < topOffsetDistance {
-                targetContentOffset.pointee.y = scrollView.contentOffset.y
-                scrollView.setContentOffset(CGPoint(x: 0.0, y: itemLayout.topInset), animated: true)
+            if topOffset > 0.0 {
+                topOffset = max(0.0, topOffset)
+                
+                if topOffset < topOffsetDistance {
+                    targetContentOffset.pointee.y = scrollView.contentOffset.y
+                    scrollView.setContentOffset(CGPoint(x: 0.0, y: itemLayout.topInset), animated: true)
+                }
             }
         }
         
