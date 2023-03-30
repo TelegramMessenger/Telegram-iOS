@@ -440,11 +440,10 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             });
         };
         
-        NSTimeInterval delta = CFAbsoluteTimeGetCurrent() - _captureStartTime;
-        if (CFAbsoluteTimeGetCurrent() - _captureStartTime > 0.8)
+        if (CFAbsoluteTimeGetCurrent() - _captureStartTime > 1.5)
             startRecording();
         else
-            TGDispatchAfter(0.8 - delta, [[PGCamera cameraQueue] _dispatch_queue], startRecording);
+            TGDispatchAfter(1.5, [[PGCamera cameraQueue] _dispatch_queue], startRecording);
         
         TGDispatchOnMainThread(^
         {
@@ -500,6 +499,8 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         [[PGCamera cameraQueue] dispatch:^
         {
             strongSelf.captureSession.currentMode = cameraMode;
+            
+            _captureStartTime = CFAbsoluteTimeGetCurrent();
              
             if (strongSelf.finishedModeChange != nil)
                 strongSelf.finishedModeChange();

@@ -1575,15 +1575,18 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                     switch error {
                     case .generic:
                         text = "An error occurred"
-                    case let .limitExceeded(limit, premiumLimit):
-                        if limit < premiumLimit {
-                            let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
-                            })
-                            pushController(limitController)
-                            
-                            return
-                        }
-                        text = "You can't create more links."
+                    case let .sharedFolderLimitExceeded(limit, _):
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .membershipInSharedFolders, count: limit, action: {
+                        })
+                        pushController(limitController)
+                        
+                        return
+                    case let .limitExceeded(limit, _):
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                        })
+                        pushController(limitController)
+                        
+                        return
                     }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     presentController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))

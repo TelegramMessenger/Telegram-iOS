@@ -6760,6 +6760,7 @@ Sorry for the inconvenience.";
 
 "Conversation.ForwardOptions.Text" = "What whould you like to do with %1$@ from %2$@?";
 "Conversation.ForwardOptions.TextPersonal" = "What whould you like to do with %1$@ from your chat with %2$@?";
+"Conversation.ForwardOptions.TextSaved" = "What whould you like to do with %1$@ from your Saved Messages?";
 "Conversation.ForwardOptions.ShowOptions" = "Show Forwarding Options";
 "Conversation.ForwardOptions.CancelForwarding" = "Cancel Forwarding";
 
