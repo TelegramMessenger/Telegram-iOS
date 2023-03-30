@@ -757,6 +757,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                         let limitController = PremiumLimitScreen(context: component.context, subject: .membershipInSharedFolders, count: limit, action: {})
                                         controller.push(limitController)
                                         controller.dismiss()
+                                    case let .tooManyChannels(limit, _):
+                                        let limitController = PremiumLimitScreen(context: component.context, subject: .chatsPerFolder, count: limit, action: {})
+                                        controller.push(limitController)
+                                        controller.dismiss()
                                     }
                                 }, completed: { [weak self] in
                                     guard let self, let controller = self.environment?.controller() else {

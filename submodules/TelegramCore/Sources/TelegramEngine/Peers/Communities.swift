@@ -362,7 +362,7 @@ public enum JoinChatFolderLinkError {
     case generic
     case dialogFilterLimitExceeded(limit: Int32, premiumLimit: Int32)
     case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
-    case tooManyChannels
+    case tooManyChannels(limit: Int32, premiumLimit: Int32)
 }
 
 func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
@@ -374,7 +374,20 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
         return account.network.request(Api.functions.communities.joinCommunityInvite(slug: slug, peers: inputPeers))
         |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
             if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
-                return .fail(.tooManyChannels)
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.tooManyChannels(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                    } else {
+                        return .fail(.tooManyChannels(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                    }
+                }
             } else if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
