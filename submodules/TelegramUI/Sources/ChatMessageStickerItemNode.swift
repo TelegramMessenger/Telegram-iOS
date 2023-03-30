@@ -513,6 +513,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
+            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                needsShareButton = false
+            }
+            
             var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             if dateHeaderAtBottom {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight

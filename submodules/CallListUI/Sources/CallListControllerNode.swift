@@ -710,6 +710,9 @@ final class CallListControllerNode: ASDisplayNode {
         self.emptyButtonTextNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.25)
         self.emptyButtonNode.isUserInteractionEnabled = !isHidden
         
+        self.listNode.alpha = 1.0 - alpha
+        self.listNode.layer.animateAlpha(from: 1.0 - previousAlpha, to: 1.0 - alpha, duration: 0.25)
+        
         if !isHidden {
             let type = self.currentLocationAndType.scope
             let emptyText: String

@@ -3702,9 +3702,24 @@ private class DynamicIslandBlurNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private let fadeNode = ASDisplayNode()
     private let gradientNode = ASImageNode()
+
+    private var hierarchyTrackingNode: HierarchyTrackingNode?
+    
+    deinit {
+        self.animator?.stopAnimation(true)
+    }
     
     override func didLoad() {
         super.didLoad()
+        
+        let hierarchyTrackingNode = HierarchyTrackingNode({ [weak self] value in
+            if !value {
+                self?.animator?.stopAnimation(true)
+                self?.animator = nil
+            }
+        })
+        self.hierarchyTrackingNode = hierarchyTrackingNode
+        self.addSubnode(hierarchyTrackingNode)
         
         self.fadeNode.backgroundColor = .black
         self.fadeNode.alpha = 0.0
@@ -3733,25 +3748,33 @@ private class DynamicIslandBlurNode: ASDisplayNode {
         self.addSubnode(self.fadeNode)
     }
     
-    func prepare() {
-        guard let effectView = self.effectView, effectView.layer.animation(forKey: "effect") == nil else {
-            return
+    private var animator: UIViewPropertyAnimator?
+    
+    func prepare() -> Bool {
+        guard self.animator == nil else {
+            return false
         }
-        UIView.animate(withDuration: 1.0) {
-            effectView.effect = UIBlurEffect(style: .dark)
+        let animator =  UIViewPropertyAnimator(duration: 1.0, curve: .linear)
+        self.animator = animator
+        self.effectView?.effect = nil
+        animator.addAnimations { [weak self] in
+            self?.effectView?.effect = UIBlurEffect(style: .dark)
         }
-        effectView.layer.speed = 0.0
+        return true
     }
     
     func update(_ value: CGFloat) {
         let fadeAlpha = min(1.0, max(0.0, -0.25 + value * 1.55))
         if value > 0.0 {
-            self.prepare()
-            self.effectView?.layer.timeOffset = max(0.0, -0.1 + value * 1.1)
+            var value = value
+            let updated = self.prepare()
+            if value > 0.99 && updated {
+                value = 0.99
+            }
+            self.animator?.fractionComplete = max(0.0, -0.1 + value * 1.1)
         } else {
-            self.effectView?.layer.removeAllAnimations()
-            self.effectView?.layer.speed = 1.0
-            self.effectView?.layer.timeOffset = 0.0
+            self.animator?.stopAnimation(true)
+            self.animator = nil
             self.effectView?.effect = nil
         }
         self.fadeNode.alpha = fadeAlpha
