@@ -108,7 +108,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {
         for entity in textEntities {
             switch entity.type {
-                case .Url, .Email:
+                case .Url, .TextUrl, .Email:
                     if media.isEmpty || !(media.first is TelegramMediaWebpage) {
                         tags.insert(.webPage)
                     }

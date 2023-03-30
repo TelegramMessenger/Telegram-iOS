@@ -1297,7 +1297,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                         return
                     }
                     
-                    openCreateChatListFolderLink(context: context, folderId: currentPreset.id, title: currentPreset.title, peerIds: state.additionallyIncludePeers, pushController: { c in
+                    openCreateChatListFolderLink(context: context, folderId: currentPreset.id, checkIfExists: false, title: currentPreset.title, peerIds: state.additionallyIncludePeers, pushController: { c in
                         pushControllerImpl?(c)
                     }, presentController: { c in
                         presentControllerImpl?(c, nil)
@@ -1504,42 +1504,91 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     return controller
 }
 
-func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, title: String, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
+func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, checkIfExists: Bool, title: String, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
     if peerIds.isEmpty {
         return
     }
-    let _ = (context.engine.data.get(
-        EngineDataList(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
-    )
-    |> deliverOnMainQueue).start(next: { peers in
-        let peers = peers.compactMap({ $0 })
-        if peers.allSatisfy({ !canShareLinkToPeer(peer: $0) }) {
-            pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: nil, linkUpdated: linkUpdated))
-        } else {
-            let _ = (context.engine.peers.exportChatFolder(filterId: folderId, title: "", peerIds: peerIds)
-            |> deliverOnMainQueue).start(next: { link in
-                linkUpdated(link)
-                
-                pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: link.peerIds, currentInvitation: link, linkUpdated: linkUpdated))
-            }, error: { error in
-                //TODO:localize
-                let text: String
-                switch error {
-                case .generic:
-                    text = "An error occurred"
-                case let .limitExceeded(limit, premiumLimit):
-                    if limit < premiumLimit {
-                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
-                        })
-                        pushController(limitController)
-                        
-                        return
-                    }
-                    text = "You can't create more links."
+    
+    let existingLink: Signal<ExportedChatFolderLink?, NoError>
+    if checkIfExists {
+        existingLink = combineLatest(
+            context.engine.peers.getExportedChatFolderLinks(id: folderId),
+            context.engine.data.get(
+                EngineDataList(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+            )
+        )
+        |> map { result, peers -> ExportedChatFolderLink? in
+            var enabledPeerIds: [EnginePeer.Id] = []
+            for peer in peers {
+                if let peer, canShareLinkToPeer(peer: peer) {
+                    enabledPeerIds.append(peer.id)
                 }
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
-            })
+            }
+            
+            guard let result else {
+                return nil
+            }
+            
+            for link in result {
+                if Set(link.peerIds) == Set(enabledPeerIds) {
+                    return link
+                }
+            }
+            
+            return nil
         }
+    } else {
+        existingLink = .single(nil)
+    }
+    
+    let _ = (existingLink
+    |> deliverOnMainQueue).start(next: { existingLink in
+        if let existingLink {
+            pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: existingLink, linkUpdated: linkUpdated))
+            
+            return
+        }
+        
+        let _ = (context.engine.data.get(
+            EngineDataList(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+        )
+        |> deliverOnMainQueue).start(next: { peers in
+            let peers = peers.compactMap({ $0 })
+            if peers.allSatisfy({ !canShareLinkToPeer(peer: $0) }) {
+                pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: nil, linkUpdated: linkUpdated))
+            } else {
+                var enabledPeerIds: [EnginePeer.Id] = []
+                for peer in peers {
+                    if canShareLinkToPeer(peer: peer) {
+                        enabledPeerIds.append(peer.id)
+                    }
+                }
+                
+                let _ = (context.engine.peers.exportChatFolder(filterId: folderId, title: "", peerIds: enabledPeerIds)
+                |> deliverOnMainQueue).start(next: { link in
+                    linkUpdated(link)
+                    
+                    pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: link, linkUpdated: linkUpdated))
+                }, error: { error in
+                    //TODO:localize
+                    let text: String
+                    switch error {
+                    case .generic:
+                        text = "An error occurred"
+                    case let .limitExceeded(limit, premiumLimit):
+                        if limit < premiumLimit {
+                            let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                            })
+                            pushController(limitController)
+                            
+                            return
+                        }
+                        text = "You can't create more links."
+                    }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    presentController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                })
+            }
+        })
     })
 }

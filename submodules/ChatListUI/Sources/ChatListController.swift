@@ -2701,15 +2701,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func shareFolder(filterId: Int32, data: ChatListFilterData, title: String) {
-        openCreateChatListFolderLink(context: self.context, folderId: filterId, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
+        openCreateChatListFolderLink(context: self.context, folderId: filterId, checkIfExists: true, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
             self?.push(c)
         }, presentController: { [weak self] c in
             self?.present(c, in: .window(.root))
         }, linkUpdated: { _ in
         })
-        
-        /*self.push(folderInviteLinkListController(context: self.context, filterId: filterId, title: title, allPeerIds: data.includePeers.peers, currentInvitation: nil, linkUpdated: { _ in
-        }))*/
     }
     
     private func askForFilterRemoval(id: Int32) {
