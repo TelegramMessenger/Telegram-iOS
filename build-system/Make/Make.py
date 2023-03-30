@@ -30,6 +30,7 @@ class BazelCommandLine:
             override_bazel_version=override_bazel_version,
             override_xcode_version=override_xcode_version
         )
+        self.bazel = bazel
         self.bazel_user_root = bazel_user_root
         self.remote_cache = None
         self.cache_dir = None
@@ -497,7 +498,7 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
         print('Could not find a valid aps-environment entitlement in the provided provisioning profiles')
         sys.exit(1)
 
-    build_configuration.write_to_variables_file(aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
+    build_configuration.write_to_variables_file(bazel_path=bazel_command_line.bazel, aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
 
     provisioning_profile_files = []
     for file_name in os.listdir(provisioning_path):
