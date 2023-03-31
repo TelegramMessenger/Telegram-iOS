@@ -1,15 +1,15 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
-http_archive(
+'''http_archive(
     name = "com_google_protobuf",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.14.0.zip"],
-    sha256 = "bf0e5070b4b99240183b29df78155eee335885e53a8af8683964579c214ad301",
-    strip_prefix = "protobuf-3.14.0",
+    urls = ["https://github.com/protocolbuffers/protobuf/releases/download/v22.2/protobuf-22.2.zip"],
+    sha256 = "bf1f92aebd619651220711e97b3d560cdc2484718cd56d95161bfb2fadb8628e",
+    strip_prefix = "protobuf-22.2",
     type = "zip",
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-protobuf_deps()
+protobuf_deps()'''
 
 local_repository(
     name = "build_bazel_rules_apple",
@@ -24,6 +24,11 @@ local_repository(
 local_repository(
     name = "build_bazel_apple_support",
     path = "build-system/bazel-rules/apple_support",
+)
+
+local_repository(
+    name = "rules_xcodeproj",
+    path = "build-system/bazel-rules/rules_xcodeproj",
 )
 
 load(
@@ -46,6 +51,13 @@ load(
 )
 
 apple_support_dependencies()
+
+load(
+    "@rules_xcodeproj//xcodeproj:repositories.bzl",
+    "xcodeproj_rules_dependencies",
+)
+
+xcodeproj_rules_dependencies()
 
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
