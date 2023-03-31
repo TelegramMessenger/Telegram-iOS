@@ -25,12 +25,19 @@ load("@build_bazel_rules_swift//swift:swift.bzl",
     "swift_library",
 )
 
+load(
+    "@rules_xcodeproj//xcodeproj:defs.bzl",
+    "top_level_target",
+    "xcodeproj",
+)
+
 load("//build-system/bazel-utils:plist_fragment.bzl",
     "plist_fragment",
 )
 
 load(
     "@build_configuration//:variables.bzl",
+    "telegram_bazel_path",
     "telegram_bundle_id",
     "telegram_aps_environment",
     "telegram_team_id",
@@ -1010,29 +1017,6 @@ plist_fragment(
     )
 )
 
-ios_framework(
-    name = "AsyncDisplayKitFramework",
-    bundle_id = "{telegram_bundle_id}.AsyncDisplayKit".format(
-        telegram_bundle_id = telegram_bundle_id,
-    ),
-    families = [
-        "iphone",
-        "ipad",
-    ],
-    infoplists = [
-        ":AsyncDisplayKitInfoPlist",
-        ":BuildNumberInfoPlist",
-        ":VersionInfoPlist",
-        ":RequiredDeviceCapabilitiesPlist",
-    ],
-    minimum_os_version = minimum_os_version,
-    extension_safe = True,
-    ipa_post_processor = strip_framework,
-    deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-    ],
-)
-
 plist_fragment(
     name = "DisplayInfoPlist",
     extension = "plist",
@@ -1094,33 +1078,6 @@ sh_binary(
     srcs = [":GenerateAddAlternateIcons"],
 )
 
-ios_framework(
-    name = "DisplayFramework",
-    bundle_id = "{telegram_bundle_id}.Display".format(
-        telegram_bundle_id = telegram_bundle_id,
-    ),
-    families = [
-        "iphone",
-        "ipad",
-    ],
-    infoplists = [
-        ":DisplayInfoPlist",
-        ":BuildNumberInfoPlist",
-        ":VersionInfoPlist",
-        ":RequiredDeviceCapabilitiesPlist",
-    ],
-    frameworks = [
-        ":SwiftSignalKitFramework",
-        ":AsyncDisplayKitFramework",
-    ],
-    minimum_os_version = minimum_os_version,
-    extension_safe = True,
-    ipa_post_processor = strip_framework,
-    deps = [
-        "//submodules/Display:Display",
-    ],
-)
-
 plist_fragment(
     name = "TelegramUIInfoPlist",
     extension = "plist",
@@ -1159,8 +1116,6 @@ ios_framework(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":TelegramCoreFramework",
-        ":AsyncDisplayKitFramework",
-        ":DisplayFramework",
     ],
     minimum_os_version = minimum_os_version,
     extension_safe = True,
@@ -1997,8 +1952,6 @@ ios_application(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":TelegramCoreFramework",
-        ":AsyncDisplayKitFramework",
-        ":DisplayFramework",
         ":TelegramUIFramework",
     ],
     strings = [
@@ -2022,6 +1975,18 @@ ios_application(
     deps = [
         ":Main",
         ":Lib",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+xcodeproj(
+    name = "Telegram_xcodeproj",
+    build_mode = "bazel",
+    bazel_path = telegram_bazel_path,
+    project_name = "Telegram",
+    tags = ["manual"],
+    top_level_targets = [
+        ":Telegram",
     ],
 )
 

@@ -593,7 +593,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .startAttach(peerId, payload, choose):
             let presentError: (String) -> Void = { errorText in
-                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText, timeout: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
                     return true
                 }), nil)
             }

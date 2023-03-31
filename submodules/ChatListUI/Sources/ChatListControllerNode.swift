@@ -513,7 +513,16 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     
     private var itemNodes: [ChatListFilterTabEntryId: ChatListContainerItemNode] = [:]
     private var pendingItemNode: (ChatListFilterTabEntryId, ChatListContainerItemNode, Disposable)?
-    private(set) var availableFilters: [ChatListContainerNodeFilter] = [.all]
+    private(set) var availableFilters: [ChatListContainerNodeFilter] = [.all] {
+        didSet {
+            self.availableFiltersPromise.set(self.availableFilters)
+        }
+    }
+    private let availableFiltersPromise = ValuePromise<[ChatListContainerNodeFilter]>([.all], ignoreRepeated: true)
+    var availableFiltersSignal: Signal<[ChatListContainerNodeFilter], NoError> {
+        return self.availableFiltersPromise.get()
+    }
+    
     private var filtersLimit: Int32? = nil
     private var selectedId: ChatListFilterTabEntryId
     

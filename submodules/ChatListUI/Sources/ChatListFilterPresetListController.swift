@@ -393,12 +393,22 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             if case let .filter(_, title, _, data) = filter, data.isShared {
                 let _ = (combineLatest(
                     context.engine.data.get(
-                        EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                        EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))),
+                        EngineDataMap(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init(id:)))
                     ),
-                    context.engine.peers.getExportedChatFolderLinks(id: id)
+                    context.engine.peers.getExportedChatFolderLinks(id: id),
+                    context.engine.peers.requestLeaveChatFolderSuggestions(folderId: id)
                 )
-                |> deliverOnMainQueue).start(next: { peers, links in
+                |> deliverOnMainQueue).start(next: { peerData, links, defaultSelectedPeerIds in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    
+                    let peers = peerData.0
+                    var memberCounts: [EnginePeer.Id: Int] = [:]
+                    for (id, count) in peerData.1 {
+                        if let count {
+                            memberCounts[id] = count
+                        }
+                    }
                     
                     var hasLinks = false
                     if let links, !links.isEmpty {
@@ -408,7 +418,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     let confirmDeleteFolder: () -> Void = {
                         let previewScreen = ChatFolderLinkPreviewScreen(
                             context: context,
-                            subject: .remove(folderId: id),
+                            subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
                             contents: ChatFolderLinkContents(
                                 localFilterId: id,
                                 title: title,
@@ -419,7 +429,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                                         return false
                                     }
                                 },
-                                alreadyMemberPeerIds: Set()
+                                alreadyMemberPeerIds: Set(),
+                                memberCounts: memberCounts
                             )
                         )
                         pushControllerImpl?(previewScreen)

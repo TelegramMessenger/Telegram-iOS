@@ -66,7 +66,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
     case requestHeader(PresentationTheme, String, String, Bool)
     case request(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool)
     case importerHeader(PresentationTheme, String, String, Bool)
-    case importer(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool)
+    case importer(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool, Bool)
     
     var stableId: InviteLinkViewEntryId {
         switch self {
@@ -82,7 +82,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 return .request(peer.id)
             case .importerHeader:
                 return .importerHeader
-            case let .importer(_, _, _, peer, _, _):
+            case let .importer(_, _, _, peer, _, _, _):
                 return .importer(peer.id)
         }
     }
@@ -125,8 +125,8 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .importer(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate, lhsLoading):
-                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate, lhsLoading == rhsLoading {
+            case let .importer(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate, lhsJoinedViaFolderLink, lhsLoading):
+                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsJoinedViaFolderLink, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate, lhsJoinedViaFolderLink == rhsJoinedViaFolderLink, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
@@ -180,11 +180,11 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     case .importer:
                         return true
                 }
-            case let .importer(lhsIndex, _, _, _, _, _):
+            case let .importer(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
                     case .link, .creatorHeader, .creator, .importerHeader, .request, .requestHeader:
                         return false
-                    case let .importer(rhsIndex, _, _, _, _, _):
+                    case let .importer(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -224,7 +224,18 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     additionalText = .none
                 }
                 return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title, additionalText: additionalText)
-            case let .importer(_, _, dateTimeFormat, peer, date, loading), let .request(_, _, dateTimeFormat, peer, date, loading):
+            case let .importer(_, _, dateTimeFormat, peer, date, joinedViaFolderLink, loading):
+                let dateString: String
+                if joinedViaFolderLink {
+                    //TODO:localize
+                    dateString = "joined via a folder invite link"
+                } else {
+                    dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
+                }
+                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
+                    interaction.openPeer(peer.id)
+                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil, shimmering: loading ? ItemListPeerItemShimmering(alternationIndex: 0) : nil)
+            case let .request(_, _, dateTimeFormat, peer, date, loading):
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
@@ -753,14 +764,14 @@ public final class InviteLinkViewController: ViewController {
                             loading = true
                             let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
                             for i in 0 ..< count {
-                                entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
+                                entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, false, true))
                             }
                         } else {
                             count = min(4, Int32(state.importers.count))
                             loading = false
                             for importer in state.importers {
                                 if let peer = importer.peer.peer {
-                                    entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+                                    entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, importer.joinedViaFolderLink, false))
                                 }
                                 index += 1
                             }

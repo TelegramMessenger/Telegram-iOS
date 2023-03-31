@@ -164,7 +164,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                                     return true
                                 }
-                        case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite), let .participantJoinByRequest(invite, _):
+                            case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite, _), let .participantJoinByRequest(invite, _):
                                 if let inviteLink = invite.link, !inviteLink.hasSuffix("...") {
                                     if invite.isPermanent {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)

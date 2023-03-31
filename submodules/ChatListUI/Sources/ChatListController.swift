@@ -1546,7 +1546,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
-                                            if !data.includePeers.peers.isEmpty {
+                                            if !data.includePeers.peers.isEmpty && data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty {
                                                 items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
@@ -2709,6 +2709,37 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
     }
     
+    public func navigateToFolder(folderId: Int32, completion: @escaping () -> Void) {
+        let _ = (self.chatListDisplayNode.mainContainerNode.availableFiltersSignal
+        |> filter { filters in
+            return filters.contains(where: { item in
+                if case let .filter(filter) = item, filter.id == folderId {
+                    return true
+                } else {
+                    return false
+                }
+            })
+        }
+        |> take(1)
+        |> map { _ -> Bool in
+            return true
+        }
+        |> timeout(1.0, queue: .mainQueue(), alternate: .single(false))
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id != folderId {
+                self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .filter(folderId), completion: {
+                    completion()
+                })
+            } else {
+                completion()
+            }
+        })
+    }
+    
     private func askForFilterRemoval(id: Int32) {
         let apply: () -> Void = { [weak self] in
             guard let strongSelf = self else {
@@ -2753,16 +2784,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if case let .filter(_, title, _, data) = filter, data.isShared {
                 let _ = (combineLatest(
                     self.context.engine.data.get(
-                        EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                        EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))),
+                        EngineDataMap(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init(id:)))
                     ),
-                    self.context.engine.peers.getExportedChatFolderLinks(id: id)
+                    self.context.engine.peers.getExportedChatFolderLinks(id: id),
+                    self.context.engine.peers.requestLeaveChatFolderSuggestions(folderId: id)
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] peers, links in
+                |> deliverOnMainQueue).start(next: { [weak self] peerData, links, defaultSelectedPeerIds in
                     guard let self else {
                         return
                     }
                     
                     let presentationData = self.presentationData
+                    
+                    let peers = peerData.0
+                    
+                    var memberCounts: [EnginePeer.Id: Int] = [:]
+                    for (id, count) in peerData.1 {
+                        if let count {
+                            memberCounts[id] = count
+                        }
+                    }
                     
                     var hasLinks = false
                     if let links, !links.isEmpty {
@@ -2776,7 +2818,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let previewScreen = ChatFolderLinkPreviewScreen(
                             context: self.context,
-                            subject: .remove(folderId: id),
+                            subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
                             contents: ChatFolderLinkContents(
                                 localFilterId: id,
                                 title: title,
@@ -2787,7 +2829,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         return false
                                     }
                                 },
-                                alreadyMemberPeerIds: Set()
+                                alreadyMemberPeerIds: Set(),
+                                memberCounts: memberCounts
                             ),
                             completion: { [weak self] in
                                 guard let self else {

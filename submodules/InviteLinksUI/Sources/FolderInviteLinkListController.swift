@@ -69,7 +69,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     case mainLink(link: ExportedChatFolderLink?, isGenerating: Bool)
     
     case peersHeader(String)
-    case peer(index: Int, peer: EnginePeer, isSelected: Bool, isEnabled: Bool)
+    case peer(index: Int, peer: EnginePeer, isSelected: Bool, disabledReasonText: String?)
     case peersInfo(String)
     
     var section: ItemListSectionId {
@@ -149,8 +149,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .peer(index, peer, isSelected, isEnabled):
-            if case .peer(index, peer, isSelected, isEnabled) = rhs {
+        case let .peer(index, peer, isSelected, disabledReasonText):
+            if case .peer(index, peer, isSelected, disabledReasonText) = rhs {
                 return true
             } else {
                 return false
@@ -195,7 +195,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .peersInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-        case let .peer(_, peer, isSelected, isEnabled):
+        case let .peer(_, peer, isSelected, disabledReasonText):
             //TODO:localize
             return ItemListPeerItem(
                 presentationData: presentationData,
@@ -204,16 +204,16 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 context: arguments.context,
                 peer: peer,
                 presence: nil,
-                text: .text(isEnabled ? "you can invite others here" : "you can't invite others here", .secondary),
+                text: .text(disabledReasonText ?? "you can invite others here", .secondary),
                 label: .none,
                 editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false),
-                switchValue: ItemListPeerItemSwitch(value: isSelected, style: .leftCheck, isEnabled: isEnabled),
+                switchValue: ItemListPeerItemSwitch(value: isSelected, style: .leftCheck, isEnabled: disabledReasonText == nil),
                 enabled: true,
                 selectable: true,
                 highlightable: false,
                 sectionId: self.section,
                 action: {
-                    arguments.peerAction(peer, isEnabled)
+                    arguments.peerAction(peer, disabledReasonText == nil)
                 },
                 setPeerIdWithRevealedOptions: { _, _ in
                 },
@@ -274,8 +274,19 @@ private func folderInviteLinkListControllerEntries(
     }
     
     for peer in sortedPeers {
-        let isEnabled = canShareLinkToPeer(peer: peer)
-        entries.append(.peer(index: entries.count, peer: peer, isSelected: state.selectedPeerIds.contains(peer.id), isEnabled: isEnabled))
+        var disabledReasonText: String?
+        if !canShareLinkToPeer(peer: peer) {
+            if case let .user(user) = peer {
+                if user.botInfo != nil {
+                    disabledReasonText = "you can't share chats with bots"
+                } else {
+                    disabledReasonText = "you can't share private chats"
+                }
+            } else {
+                disabledReasonText = "you can't invite other here"
+            }
+        }
+        entries.append(.peer(index: entries.count, peer: peer, isSelected: state.selectedPeerIds.contains(peer.id), disabledReasonText: disabledReasonText))
     }
     
     if let infoString {
@@ -391,7 +402,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             
             let state = stateValue.with({ $0 })
             
-            let promptController = promptController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, text: "Link title", value: state.title ?? "", apply: { value in
+            let promptController = promptController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, text: "Name This Link", titleFont: .bold, value: state.title ?? "", apply: { value in
                 if let value {
                     updateState { state in
                         var state = state
@@ -458,7 +469,10 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     state.selectedPeerIds.remove(peer.id)
                 } else {
                     state.selectedPeerIds.insert(peer.id)
-                    added = true
+                    
+                    if let currentInvitation, !currentInvitation.peerIds.contains(peer.id) {
+                        added = true
+                    }
                 }
                 
                 return state
@@ -469,7 +483,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                 
                 dismissTooltipsImpl?()
                 //TODO:localize
-                displayTooltipImpl?(.info(title: nil, text: "People who already used the invite link will be able to join newly added chats."))
+                displayTooltipImpl?(.info(title: nil, text: "People who already used the invite link will be able to join newly added chats.", timeout: 8))
             }
         } else {
             //TODO:localize
@@ -549,7 +563,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     dismissTooltipsImpl?()
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     //TODO:localize
-                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "An error occurred."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "An error occurred.", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }, completed: {
                     linkUpdated(ExportedChatFolderLink(title: state.title ?? "", link: currentLink.link, peerIds: Array(state.selectedPeerIds), isRevoked: false))
                     dismissImpl?()
@@ -587,6 +601,8 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         }
     })
     
+    let previousState = Atomic<FolderInviteLinkListControllerState?>(value: nil)
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(queue: .mainQueue(),
         presentationData,
@@ -595,7 +611,13 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     )
     |> map { presentationData, state, allPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let crossfade = false
-        let animateChanges = false
+        
+        var animateChanges = false
+        
+        let previousStateValue = previousState.swap(state)
+        if let previousStateValue, previousStateValue.selectedPeerIds != state.selectedPeerIds {
+            animateChanges = true
+        }
         
         //TODO:localize
         let title: ItemListControllerTitle
@@ -610,7 +632,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         if state.isSaving {
             doneButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
-            doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+            doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Save), style: .bold, enabled: !state.selectedPeerIds.isEmpty, action: {
                 applyChangesImpl?()
             })
         }

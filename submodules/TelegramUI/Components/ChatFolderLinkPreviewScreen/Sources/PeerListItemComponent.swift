@@ -182,7 +182,7 @@ final class PeerListItemComponent: Component {
                     if themeUpdated {
                         var theme = CheckNodeTheme(theme: component.theme, style: .plain)
                         if isTinted {
-                            theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.35)
+                            theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.5)
                         }
                         checkLayer.theme = theme
                     }
@@ -190,7 +190,7 @@ final class PeerListItemComponent: Component {
                 } else {
                     var theme = CheckNodeTheme(theme: component.theme, style: .plain)
                     if isTinted {
-                        theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.35)
+                        theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.5)
                     }
                     checkLayer = CheckLayer(theme: theme)
                     self.checkLayer = checkLayer

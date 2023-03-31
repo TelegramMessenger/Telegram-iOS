@@ -6080,7 +6080,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         |> deliverOnMainQueue).start(completed: { [weak self] in
                             if let strongSelf = self, let peer = strongSelf.data?.peer {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Conversation_DeletedFromContacts(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false })
+                                let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Conversation_DeletedFromContacts(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false })
                                 controller.keepOnParentDismissal = true
                                 strongSelf.controller?.present(controller, in: .window(.root))
                                 

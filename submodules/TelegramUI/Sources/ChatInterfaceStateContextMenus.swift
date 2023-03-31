@@ -815,7 +815,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 let _ = context.engine.messages.rateAudioTranscription(messageId: message.id, id: audioTranscription.id, isGood: value).start()
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let content: UndoOverlayContent = .info(title: nil, text: presentationData.strings.Chat_AudioTranscriptionFeedbackTip)
+                let content: UndoOverlayContent = .info(title: nil, text: presentationData.strings.Chat_AudioTranscriptionFeedbackTip, timeout: nil)
                 controllerInteraction.displayUndo(content)
             }), false), at: 0)
             actions.insert(.separator, at: 1)
@@ -842,9 +842,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             
                             let settings = NotificationSoundSettings.extract(from: context.currentAppConfiguration.with({ $0 }))
                             if size > settings.maxSize {
-                                controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string))
+                                controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string, timeout: nil))
                             } else if Double(duration) > Double(settings.maxDuration) {
-                                controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
+                                controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string, timeout: nil))
                             } else {
                                 let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
                                          |> deliverOnMainQueue).start(completed: {

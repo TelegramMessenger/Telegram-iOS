@@ -238,6 +238,10 @@ public final class QrCodeScreen: ViewController {
                 case let .invite(_, isGroup):
                     title = self.presentationData.strings.InviteLink_QRCode_Title
                     text = isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel
+                case .chatFolder:
+                    //TODO:localize
+                    title = "Invite by QR Code"
+                    text = "Everyone on Telegram can scan this code to join your folder."
                 default:
                     title = ""
                     text = ""

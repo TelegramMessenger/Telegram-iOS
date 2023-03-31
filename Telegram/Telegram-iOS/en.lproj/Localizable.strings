@@ -9122,3 +9122,7 @@ Sorry for the inconvenience.";
 "Notification.ChangedWallpaper" = "%1$@ set a new background for this chat";
 "Notification.YouChangedWallpaper" = "You set a new background for this chat";
 "Notification.Wallpaper.View" = "View Background";
+
+"Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
+
+"Conversation.OpenChatFolder" = "Open Shared Folder";
