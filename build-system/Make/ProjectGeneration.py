@@ -39,10 +39,6 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
     call_executable(['open', xcodeproj_path])
 
 
-def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
-    generate_xcodeproj(build_environment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name)
-
-
 def generate_tulsi(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
     project_path = os.path.join(build_environment.base_path, 'build-input/gen/project')
 
@@ -174,3 +170,9 @@ def generate_tulsi(build_environment: BuildEnvironment, disable_extensions, disa
     xcodeproj_path = '{project}/{target}.xcodeproj'.format(project=project_path, target=app_target_clean)
 
     call_executable(['open', xcodeproj_path])
+
+
+def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
+    generate_xcodeproj(build_environment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name)
+    #generate_tulsi(build_environment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name)
+
