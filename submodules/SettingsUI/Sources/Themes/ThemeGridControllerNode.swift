@@ -141,6 +141,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
 
     private let context: AccountContext
     private var presentationData: PresentationData
+    private let mode: ThemeGridController.Mode
     private var controllerInteraction: ThemeGridControllerInteraction?
     
     private let presentPreviewController: (WallpaperListSource) -> Void
@@ -192,8 +193,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, presentationData: PresentationData, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, resetWallpapers: @escaping () -> Void, popViewController: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, mode: ThemeGridController.Mode, presentPreviewController: @escaping (WallpaperListSource) -> Void, presentGallery: @escaping () -> Void, presentColors: @escaping () -> Void, emptyStateUpdated: @escaping (Bool) -> Void, deleteWallpapers: @escaping ([TelegramWallpaper], @escaping () -> Void) -> Void, shareWallpapers: @escaping ([TelegramWallpaper]) -> Void, resetWallpapers: @escaping () -> Void, popViewController: @escaping () -> Void) {
         self.context = context
+        self.mode = mode
         self.presentationData = presentationData
         self.presentPreviewController = presentPreviewController
         self.presentGallery = presentGallery
@@ -338,12 +340,19 @@ final class ThemeGridControllerNode: ASDisplayNode {
         })
         self.controllerInteraction = interaction
         
+        var selectFirst = true
+        if case .peer = self.mode {
+            selectFirst = false
+        }
+        
         let transition = combineLatest(self.wallpapersPromise.get(), deletedWallpaperIdsPromise.get(), context.sharedContext.presentationData)
         |> map { wallpapers, deletedWallpaperIds, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
 
-            entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: false, isSelected: true), at: 0)
+            if selectFirst {
+                entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: false, isSelected: true), at: 0)
+            }
             
             var defaultWallpaper: TelegramWallpaper?
             if !presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {

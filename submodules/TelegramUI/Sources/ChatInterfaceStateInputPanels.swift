@@ -182,7 +182,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             }
                         }
                     }
-                } else if let isGeneralThreadClosed = chatPresentationInterfaceState.isGeneralThreadClosed, isGeneralThreadClosed {
+                } else if let isGeneralThreadClosed = chatPresentationInterfaceState.isGeneralThreadClosed, isGeneralThreadClosed && chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
                     if !canManage {
                         if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                             return (currentPanel, nil)

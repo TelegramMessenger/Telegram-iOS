@@ -45,3 +45,18 @@ final class WallpaperPreviewMedia: Media {
         return self.isEqual(to: other)
     }
 }
+
+extension WallpaperPreviewMedia {
+    convenience init?(wallpaper: TelegramWallpaper) {
+        switch wallpaper {
+        case let .color(color):
+            self.init(content: .color(UIColor(rgb: color)))
+        case let .gradient(gradient):
+            self.init(content: .gradient(gradient.colors, gradient.settings.rotation))
+        case let .file(file):
+            self.init(content: .file(file: file.file, colors: file.settings.colors, rotation: file.settings.rotation, intensity: file.settings.intensity, false, false))
+        default:
+            return nil
+        }
+    }
+}

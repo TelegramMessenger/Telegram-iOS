@@ -658,9 +658,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 strongSelf.colorsButtonNode.buttonColor = color
 
                 if color == UIColor(rgb: 0x000000, alpha: 0.3) {
-                    strongSelf.playButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45), transition: .immediate)
-                    strongSelf.cancelButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45), transition: .immediate)
-                    strongSelf.shareButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45), transition: .immediate)
+                    strongSelf.playButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.55), transition: .immediate)
+                    strongSelf.cancelButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.55), transition: .immediate)
+                    strongSelf.shareButtonBackgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.55), transition: .immediate)
                 } else {
                     strongSelf.playButtonBackgroundNode.updateColor(color: color, transition: .immediate)
                     strongSelf.cancelButtonBackgroundNode.updateColor(color: color, transition: .immediate)

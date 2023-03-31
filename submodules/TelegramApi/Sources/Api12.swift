@@ -261,6 +261,7 @@ public extension Api {
         case messageActionSecureValuesSent(types: [Api.SecureValueType])
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSetChatTheme(emoticon: String)
+        case messageActionSetChatWallPaper(wallpaper: Api.WallPaper)
         case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
@@ -506,6 +507,12 @@ public extension Api {
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
+                case .messageActionSetChatWallPaper(let wallpaper):
+                    if boxed {
+                        buffer.appendInt32(-1136350937)
+                    }
+                    wallpaper.serialize(buffer, true)
+                    break
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                     if boxed {
                         buffer.appendInt32(1007897979)
@@ -619,6 +626,8 @@ public extension Api {
                 return ("messageActionSecureValuesSentMe", [("values", values as Any), ("credentials", credentials as Any)])
                 case .messageActionSetChatTheme(let emoticon):
                 return ("messageActionSetChatTheme", [("emoticon", emoticon as Any)])
+                case .messageActionSetChatWallPaper(let wallpaper):
+                return ("messageActionSetChatWallPaper", [("wallpaper", wallpaper as Any)])
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                 return ("messageActionSetMessagesTTL", [("flags", flags as Any), ("period", period as Any), ("autoSettingFrom", autoSettingFrom as Any)])
                 case .messageActionSuggestProfilePhoto(let photo):
@@ -1038,6 +1047,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.MessageAction.messageActionSetChatTheme(emoticon: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionSetChatWallPaper(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.WallPaper?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.WallPaper
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSetChatWallPaper(wallpaper: _1!)
             }
             else {
                 return nil

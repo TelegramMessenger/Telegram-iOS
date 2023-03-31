@@ -1406,7 +1406,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }))
                 
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: "Edit Intro", icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
-                    interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: user.addressName ?? "", behavior: .interactive)))
+                    interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: "\(user.addressName ?? "")-intro", behavior: .interactive)))
                 }))
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemCommands, text: "Edit Commands", icon: UIImage(bundleImageName: "Peer Info/BotCommands"), action: {
                     interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: "\(user.addressName ?? "")-commands", behavior: .interactive)))
@@ -4132,7 +4132,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     }
                 case let .withBotStartPayload(startPayload):
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), botStart: startPayload))
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), botStart: startPayload, keepStack: .always))
                 case let .withAttachBot(attachBotStart):
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
                 case let .withBotApp(botAppStart):
