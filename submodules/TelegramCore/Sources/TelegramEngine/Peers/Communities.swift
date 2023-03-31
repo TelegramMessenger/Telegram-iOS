@@ -7,7 +7,7 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
     var isEnabled = false
     switch peer {
     case let .channel(channel):
-        if channel.adminRights != nil && channel.hasPermission(.inviteMembers) {
+        if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
             isEnabled = true
         } else if channel.username != nil {
             isEnabled = true
@@ -237,17 +237,20 @@ public final class ChatFolderLinkContents {
     public let title: String?
     public let peers: [EnginePeer]
     public let alreadyMemberPeerIds: Set<EnginePeer.Id>
+    public let memberCounts: [EnginePeer.Id: Int]
     
     public init(
         localFilterId: Int32?,
         title: String?,
         peers: [EnginePeer],
-        alreadyMemberPeerIds: Set<EnginePeer.Id>
+        alreadyMemberPeerIds: Set<EnginePeer.Id>,
+        memberCounts: [EnginePeer.Id: Int]
     ) {
         self.localFilterId = localFilterId
         self.title = title
         self.peers = peers
         self.alreadyMemberPeerIds = alreadyMemberPeerIds
+        self.memberCounts = memberCounts
     }
 }
 
@@ -264,6 +267,7 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 
                 var allPeers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
+                var memberCounts: [PeerId: Int] = [:]
                 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
@@ -273,6 +277,11 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 for chat in chats {
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         allPeers.append(peer)
+                    }
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
+                        if let participantsCount = participantsCount {
+                            memberCounts[chat.peerId] = Int(participantsCount)
+                        }
                     }
                 }
                 
@@ -294,12 +303,13 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 }
                 alreadyMemberPeerIds.removeAll()
                 
-                return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds)
+                return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
             case let .communityInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
                 let _ = alreadyPeers
                 
                 var allPeers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
+                var memberCounts: [PeerId: Int] = [:]
                 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
@@ -309,6 +319,11 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 for chat in chats {
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         allPeers.append(peer)
+                    }
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
+                        if let participantsCount = participantsCount {
+                            memberCounts[chat.peerId] = Int(participantsCount)
+                        }
                     }
                 }
                 
@@ -356,7 +371,7 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                     }
                 }
                 
-                return ChatFolderLinkContents(localFilterId: filterId, title: currentFilterTitle, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds)
+                return ChatFolderLinkContents(localFilterId: filterId, title: currentFilterTitle, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
             }
         }
         |> castError(CheckChatFolderLinkError.self)
@@ -370,12 +385,31 @@ public enum JoinChatFolderLinkError {
     case tooManyChannels(limit: Int32, premiumLimit: Int32)
 }
 
-func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
-    return account.postbox.transaction { transaction -> [Api.InputPeer] in
-        return peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
+public final class JoinChatFolderResult {
+    public let folderId: Int32
+    public let title: String
+    public let newChatCount: Int
+    
+    public init(folderId: Int32, title: String, newChatCount: Int) {
+        self.folderId = folderId
+        self.title = title
+        self.newChatCount = newChatCount
+    }
+}
+
+func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> {
+    return account.postbox.transaction { transaction -> ([Api.InputPeer], Int) in
+        var newChatCount = 0
+        for peerId in peerIds {
+            if transaction.getPeerChatListIndex(peerId) != nil {
+                newChatCount += 1
+            }
+        }
+        
+        return (peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer), newChatCount)
     }
     |> castError(JoinChatFolderLinkError.self)
-    |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
+    |> mapToSignal { inputPeers, newChatCount -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> in
         return account.network.request(Api.functions.communities.joinCommunityInvite(slug: slug, peers: inputPeers))
         |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
             if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
@@ -427,10 +461,36 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
                 return .fail(.generic)
             }
         }
-        |> mapToSignal { result -> Signal<Never, JoinChatFolderLinkError> in
+        |> mapToSignal { result -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> in
             account.stateManager.addUpdates(result)
             
-            return .complete()
+            var folderResult: JoinChatFolderResult?
+            for update in result.allUpdates {
+                if case let .updateDialogFilter(_, id, data) = update {
+                    if let data = data, case let .filter(_, title, _, _) = ChatListFilter(apiFilter: data) {
+                        folderResult = JoinChatFolderResult(folderId: id, title: title, newChatCount: newChatCount)
+                    }
+                    break
+                }
+            }
+            
+            if let folderResult = folderResult {
+                return _internal_updatedChatListFilters(postbox: account.postbox)
+                |> castError(JoinChatFolderLinkError.self)
+                |> filter { filters -> Bool in
+                    if filters.contains(where: { $0.id == folderResult.folderId }) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                |> take(1)
+                |> map { _ -> JoinChatFolderResult in
+                    return folderResult
+                }
+            } else {
+                return .fail(.generic)
+            }
         }
     }
 }
@@ -439,23 +499,26 @@ public final class ChatFolderUpdates: Equatable {
     fileprivate let folderId: Int32
     fileprivate let title: String
     fileprivate let missingPeers: [EnginePeer]
+    fileprivate let memberCounts: [EnginePeer.Id: Int]
     
     public var availableChatsToJoin: Int {
         return self.missingPeers.count
     }
     
     public var chatFolderLinkContents: ChatFolderLinkContents {
-        return ChatFolderLinkContents(localFilterId: self.folderId, title: self.title, peers: self.missingPeers, alreadyMemberPeerIds: Set())
+        return ChatFolderLinkContents(localFilterId: self.folderId, title: self.title, peers: self.missingPeers, alreadyMemberPeerIds: Set(), memberCounts: self.memberCounts)
     }
     
     fileprivate init(
         folderId: Int32,
         title: String,
-        missingPeers: [EnginePeer]
+        missingPeers: [EnginePeer],
+        memberCounts: [EnginePeer.Id: Int]
     ) {
         self.folderId = folderId
         self.title = title
         self.missingPeers = missingPeers
+        self.memberCounts = memberCounts
     }
     
     public static func ==(lhs: ChatFolderUpdates, rhs: ChatFolderUpdates) -> Bool {
@@ -513,7 +576,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                         var state = state
                         
                         state.updates.removeAll(where: { $0.folderId == folderId })
-                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: []))
+                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: [], memberCounts: []))
                         
                         return state
                     })
@@ -525,6 +588,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                 return account.postbox.transaction { transaction -> Void in
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: Api.User] = [:]
+                    var memberCounts: [ChatListFiltersState.ChatListFilterUpdates.MemberCount] = []
                     
                     for user in users {
                         let telegramUser = TelegramUser(user: user)
@@ -534,6 +598,11 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                     for chat in chats {
                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                             peers.append(peer)
+                        }
+                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
+                            if let participantsCount = participantsCount {
+                                memberCounts.append(ChatListFiltersState.ChatListFilterUpdates.MemberCount(id: chat.peerId, count: participantsCount))
+                            }
                         }
                     }
                     
@@ -546,7 +615,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                         var state = state
                         
                         state.updates.removeAll(where: { $0.folderId == folderId })
-                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: missingPeers.map(\.peerId)))
+                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: missingPeers.map(\.peerId), memberCounts: memberCounts))
                         
                         return state
                     })
@@ -561,6 +630,7 @@ func _internal_subscribedChatFolderUpdates(account: Account, folderId: Int32) ->
     struct InternalData: Equatable {
         var title: String
         var peerIds: [EnginePeer.Id]
+        var memberCounts: [EnginePeer.Id: Int]
     }
     
     return _internal_updatedChatListFiltersState(postbox: account.postbox)
@@ -575,7 +645,11 @@ func _internal_subscribedChatFolderUpdates(account: Account, folderId: Int32) ->
             return nil
         }
         let filteredPeerIds: [PeerId] = update.peerIds.filter { !data.includePeers.peers.contains($0) }
-        return InternalData(title: title, peerIds: filteredPeerIds)
+        var memberCounts: [PeerId: Int] = [:]
+        for item in update.memberCounts {
+            memberCounts[item.id] = Int(item.count)
+        }
+        return InternalData(title: title, peerIds: filteredPeerIds, memberCounts: memberCounts)
     }
     |> distinctUntilChanged
     |> mapToSignal { internalData -> Signal<ChatFolderUpdates?, NoError> in
@@ -592,7 +666,7 @@ func _internal_subscribedChatFolderUpdates(account: Account, folderId: Int32) ->
                     peers.append(EnginePeer(peer))
                 }
             }
-            return ChatFolderUpdates(folderId: folderId, title: internalData.title, missingPeers: peers)
+            return ChatFolderUpdates(folderId: folderId, title: internalData.title, missingPeers: peers, memberCounts: internalData.memberCounts)
         }
     }
 }

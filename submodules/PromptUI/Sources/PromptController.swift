@@ -150,6 +150,7 @@ private final class PromptInputFieldNode: ASDisplayNode, ASEditableTextNodeDeleg
 private final class PromptAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     private let text: String
+    private let titleFont: PromptControllerTitleFont
 
     private let textNode: ASTextNode
     let inputFieldNode: PromptInputFieldNode
@@ -174,9 +175,10 @@ private final class PromptAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, value: String?) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], text: String, titleFont: PromptControllerTitleFont, value: String?) {
         self.strings = strings
         self.text = text
+        self.titleFont = titleFont
         
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 2
@@ -244,7 +246,14 @@ private final class PromptAlertContentNode: AlertContentNode {
     }
 
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        let titleFontValue: UIFont
+        switch self.titleFont {
+        case .regular:
+            titleFontValue = Font.regular(13.0)
+        case .bold:
+            titleFontValue = Font.semibold(17.0)
+        }
+        self.textNode.attributedText = NSAttributedString(string: self.text, font: titleFontValue, textColor: theme.primaryColor, paragraphAlignment: .center)
 
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -379,7 +388,12 @@ private final class PromptAlertContentNode: AlertContentNode {
     }
 }
 
-public func promptController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, text: String, value: String?, apply: @escaping (String?) -> Void) -> AlertController {
+public enum PromptControllerTitleFont {
+    case regular
+    case bold
+}
+
+public func promptController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, text: String, titleFont: PromptControllerTitleFont = .regular, value: String?, apply: @escaping (String?) -> Void) -> AlertController {
     let presentationData = updatedPresentationData?.initial ?? sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: ((Bool) -> Void)?
@@ -393,7 +407,7 @@ public func promptController(sharedContext: SharedAccountContext, updatedPresent
         applyImpl?()
     })]
     
-    let contentNode = PromptAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, value: value)
+    let contentNode = PromptAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, text: text, titleFont: titleFont, value: value)
     contentNode.complete = {
         applyImpl?()
     }

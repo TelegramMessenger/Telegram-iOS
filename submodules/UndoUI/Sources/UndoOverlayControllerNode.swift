@@ -173,7 +173,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 5
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .info(title, text):
+            case let .info(title, text, timeout):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -193,11 +193,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 10
                 displayUndo = false
-                self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
+                if let timeout {
+                    self.originalRemainingSeconds = timeout
+                } else {
+                    self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
+                }
             
                 if text.contains("](") {
                     isUserInteractionEnabled = true
                 }
+            
             case let .actionSucceeded(title, text, cancel):
                 self.avatarNode = nil
                 self.iconNode = nil

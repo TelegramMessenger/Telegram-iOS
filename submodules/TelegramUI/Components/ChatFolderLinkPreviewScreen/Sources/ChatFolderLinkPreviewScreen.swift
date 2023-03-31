@@ -55,12 +55,14 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         var containerInset: CGFloat
         var bottomInset: CGFloat
         var topInset: CGFloat
+        var contentHeight: CGFloat
         
-        init(containerSize: CGSize, containerInset: CGFloat, bottomInset: CGFloat, topInset: CGFloat) {
+        init(containerSize: CGSize, containerInset: CGFloat, bottomInset: CGFloat, topInset: CGFloat, contentHeight: CGFloat) {
             self.containerSize = containerSize
             self.containerInset = containerInset
             self.bottomInset = bottomInset
             self.topInset = topInset
+            self.contentHeight = contentHeight
         }
     }
     
@@ -82,6 +84,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         private let scrollView: ScrollView
         private let scrollContentClippingView: SparseContainerView
         private let scrollContentView: UIView
+        private let bottomBackgroundLayer: SimpleLayer
+        private let bottomSeparatorLayer: SimpleLayer
         
         private let topIcon = ComponentView<Empty>()
         
@@ -134,6 +138,9 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             self.itemContainerView.clipsToBounds = true
             self.itemContainerView.layer.cornerRadius = 10.0
             
+            self.bottomBackgroundLayer = SimpleLayer()
+            self.bottomSeparatorLayer = SimpleLayer()
+            
             super.init(frame: frame)
             
             self.addSubview(self.dimView)
@@ -164,6 +171,9 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             self.scrollView.addSubview(self.scrollContentView)
             
             self.scrollContentView.addSubview(self.itemContainerView)
+            
+            self.layer.addSublayer(self.bottomBackgroundLayer)
+            self.layer.addSublayer(self.bottomSeparatorLayer)
             
             self.dimView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         }
@@ -231,6 +241,15 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             topOffset = max(0.0, topOffset)
             transition.setTransform(layer: self.backgroundLayer, transform: CATransform3DMakeTranslation(0.0, topOffset + itemLayout.containerInset, 0.0))
             
+            let bottomDistance = itemLayout.contentHeight - self.scrollView.bounds.maxY
+            let bottomAlphaDistance: CGFloat = 30.0
+            var bottomAlpha: CGFloat = bottomDistance / bottomAlphaDistance
+            bottomAlpha = max(0.0, min(1.0, bottomAlpha))
+            
+            let bottomOverlayAlpha: CGFloat = bottomAlpha
+            transition.setAlpha(layer: self.bottomBackgroundLayer, alpha: bottomOverlayAlpha)
+            transition.setAlpha(layer: self.bottomSeparatorLayer, alpha: bottomOverlayAlpha)
+            
             transition.setPosition(view: self.navigationBarContainer, position: CGPoint(x: 0.0, y: topOffset + itemLayout.containerInset))
             
             let topOffsetDistance: CGFloat = min(200.0, floor(itemLayout.containerSize.height * 0.25))
@@ -244,10 +263,12 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         
         func animateIn() {
             self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            let animateOffset: CGFloat = self.backgroundLayer.frame.minY
+            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
             self.scrollContentClippingView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.backgroundLayer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.bottomBackgroundLayer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.bottomSeparatorLayer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             if let actionButtonView = self.actionButton.view {
                 actionButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             }
@@ -265,6 +286,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 completion()
             })
             self.backgroundLayer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
+            self.bottomBackgroundLayer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
+            self.bottomSeparatorLayer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             if let actionButtonView = self.actionButton.view {
                 actionButtonView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
@@ -308,6 +331,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 self.dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
                 self.backgroundLayer.backgroundColor = environment.theme.list.blocksBackgroundColor.cgColor
                 self.itemContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
+                self.bottomBackgroundLayer.backgroundColor = environment.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor
+                self.bottomSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
             }
             
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
@@ -485,6 +510,13 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             self.items[id] = item
                         }
                         
+                        var subtitle: String?
+                        if linkContents.alreadyMemberPeerIds.contains(peer.id) {
+                            subtitle = "You are already a member"
+                        } else if let memberCount = linkContents.memberCounts[peer.id] {
+                            subtitle = "\(memberCount) participants"
+                        }
+                        
                         let itemSize = item.update(
                             transition: itemTransition,
                             component: AnyComponent(PeerListItemComponent(
@@ -494,7 +526,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 sideInset: 0.0,
                                 title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                                 peer: peer,
-                                subtitle: nil,
+                                subtitle: subtitle,
                                 selectionState: .editing(isSelected: self.selectedItems.contains(peer.id), isTinted: linkContents.alreadyMemberPeerIds.contains(peer.id)),
                                 hasNext: i != linkContents.peers.count - 1,
                                 action: { [weak self] peer in
@@ -647,7 +679,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 self.selectedItems.insert(peerId)
                             }
                         }
-                        self.state?.updated(transition: .immediate)
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                     }
                 )),
                 environment: {},
@@ -737,21 +769,72 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             controller.dismiss()
                         } else if let _ = component.linkContents {
                             if self.joinDisposable == nil, !self.selectedItems.isEmpty {
-                                let joinSignal: Signal<Never, JoinChatFolderLinkError>
+                                let joinSignal: Signal<JoinChatFolderResult?, JoinChatFolderLinkError>
                                 switch component.subject {
                                 case .remove:
                                     return
                                 case let .slug(slug):
                                     joinSignal = component.context.engine.peers.joinChatFolderLink(slug: slug, peerIds: Array(self.selectedItems))
+                                    |> map(Optional.init)
                                 case let .updates(updates):
+                                    var result: JoinChatFolderResult?
+                                    if let localFilterId = updates.chatFolderLinkContents.localFilterId, let title = updates.chatFolderLinkContents.title {
+                                        result = JoinChatFolderResult(folderId: localFilterId, title: title, newChatCount: self.selectedItems.count)
+                                    }
                                     joinSignal = component.context.engine.peers.joinAvailableChatsInFolder(updates: updates, peerIds: Array(self.selectedItems))
+                                    |> map { _ -> JoinChatFolderResult? in
+                                    }
+                                    |> then(Signal<JoinChatFolderResult?, JoinChatFolderLinkError>.single(result))
                                 }
                                 
                                 self.inProgress = true
                                 self.state?.updated(transition: .immediate)
                                 
                                 self.joinDisposable = (joinSignal
-                                |> deliverOnMainQueue).start(error: { [weak self] error in
+                                |> deliverOnMainQueue).start(next: { [weak self] result in
+                                    guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                                        return
+                                    }
+                                    
+                                    if let result, let navigationController = controller.navigationController as? NavigationController {
+                                        var chatListController: ChatListController?
+                                        for viewController in navigationController.viewControllers {
+                                            if let rootController = viewController as? TabBarController {
+                                                for c in rootController.controllers {
+                                                    if let c = c as? ChatListController {
+                                                        chatListController = c
+                                                        break
+                                                    }
+                                                }
+                                            } else if let c = viewController as? ChatListController {
+                                                chatListController = c
+                                                break
+                                            }
+                                        }
+                                            
+                                        if let chatListController  {
+                                            navigationController.popToRoot(animated: true)
+                                            let context = component.context
+                                            chatListController.navigateToFolder(folderId: result.folderId, completion: { [weak context, weak chatListController] in
+                                                guard let context, let chatListController else {
+                                                    return
+                                                }
+                                                
+                                                //TODO:localize
+                                                let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                                                if case .updates = component.subject {
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Updated", text: "You have joined \(result.newChatCount) new chats", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                } else if result.newChatCount != 0 {
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Added", text: "You also joined \(result.newChatCount) chats", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                } else {
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Folder \(result.title) Added", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                }
+                                            })
+                                        }
+                                    }
+                                    
+                                    controller.dismiss()
+                                }, error: { [weak self] error in
                                     guard let self, let component = self.component, let controller = self.environment?.controller() else {
                                         return
                                     }
@@ -772,11 +855,6 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                         controller.push(limitController)
                                         controller.dismiss()
                                     }
-                                }, completed: { [weak self] in
-                                    guard let self, let controller = self.environment?.controller() else {
-                                        return
-                                    }
-                                    controller.dismiss()
                                 })
                             } else {
                                 controller.dismiss()
@@ -795,6 +873,9 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 }
                 transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
             }
+            
+            transition.setFrame(layer: self.bottomBackgroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: availableSize.width, height: bottomPanelHeight)))
+            transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             
             if let controller = environment.controller() {
                 let subLayout = ContainerViewLayout(
@@ -817,16 +898,16 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             let scrollContentHeight = max(topInset + contentHeight, availableSize.height - containerInset)
             
-            self.scrollContentClippingView.layer.cornerRadius = 10.0
+            //self.scrollContentClippingView.layer.cornerRadius = 10.0
             
-            self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: environment.safeInsets.bottom, topInset: topInset)
+            self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: environment.safeInsets.bottom, topInset: topInset, contentHeight: scrollContentHeight)
             
             transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: availableSize.width, height: contentHeight)))
             
             transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
             transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: availableSize))
             
-            let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset + 56.0), size: CGSize(width: availableSize.width - sideInset * 2.0, height: actionButtonFrame.minY - 24.0 - (containerInset + 56.0)))
+            let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset + 56.0), size: CGSize(width: availableSize.width - sideInset * 2.0, height: actionButtonFrame.minY - 8.0 - (containerInset + 56.0)))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
             
@@ -876,6 +957,7 @@ public class ChatFolderLinkPreviewScreen: ViewControllerComponentContainer {
         self.navigationPresentation = .flatModal
         self.blocksBackgroundWhenInOverlay = true
         self.automaticallyControlPresentationContextLayout = false
+        self.lockOrientation = true
     }
     
     required public init(coder aDecoder: NSCoder) {

@@ -1054,7 +1054,7 @@ public extension TelegramEngine {
             return _internal_checkChatFolderLink(account: self.account, slug: slug)
         }
         
-        public func joinChatFolderLink(slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
+        public func joinChatFolderLink(slug: String, peerIds: [EnginePeer.Id]) -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> {
             return _internal_joinChatFolderLink(account: self.account, slug: slug, peerIds: peerIds)
         }
         

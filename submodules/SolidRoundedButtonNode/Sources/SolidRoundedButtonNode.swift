@@ -1487,7 +1487,7 @@ public final class SolidRoundedButtonView: UIView {
                 badgeNode = current
             } else {
                 badgeNode = BadgeNode(fillColor: self.theme.foregroundColor, strokeColor: .clear, textColor: self.theme.backgroundColor)
-                badgeNode.alpha = self.titleNode.alpha
+                badgeNode.alpha = self.titleNode.alpha == 0.0 ? 0.0 : 1.0
                 self.badgeNode = badgeNode
                 self.addSubnode(badgeNode)
             }

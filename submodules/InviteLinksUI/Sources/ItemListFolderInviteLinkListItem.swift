@@ -38,6 +38,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let tapAction: ((ExportedChatFolderLink) -> Void)?
+    let removeAction: ((ExportedChatFolderLink) -> Void)?
     let contextAction: ((ExportedChatFolderLink, ASDisplayNode, ContextGesture?) -> Void)?
     public let tag: ItemListItemTag?
     
@@ -48,6 +49,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
         sectionId: ItemListSectionId,
         style: ItemListStyle,
         tapAction: ((ExportedChatFolderLink) -> Void)?,
+        removeAction: ((ExportedChatFolderLink) -> Void)?,
         contextAction: ((ExportedChatFolderLink, ASDisplayNode, ContextGesture?) -> Void)?,
         tag: ItemListItemTag? = nil
     ) {
@@ -57,6 +59,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.tapAction = tapAction
+        self.removeAction = removeAction
         self.contextAction = contextAction
         self.tag = tag
     }
@@ -125,7 +128,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
     }
 }
 
-public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListItemNode {
+public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -506,6 +509,15 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
                         strongSelf.placeholderNode = nil
                         shimmerNode.removeFromSupernode()
                     }
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    if item.removeAction != nil {
+                        //TODO:localize
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: "Delete", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                    } else {
+                        strongSelf.setRevealOptions((left: [], right: []))
+                    }
                 }
             })
         }
@@ -564,6 +576,21 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
         if let shimmerNode = self.placeholderNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)
         }
+    }
+    
+    override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        transition.updateSublayerTransformOffset(layer: self.containerNode.layer, offset: CGPoint(x: offset, y: 0.0))
+    }
+    
+    override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        if let item = self.layoutParams?.0, let invite = item.invite {
+            item.removeAction?(invite)
+        }
+        
+        self.setRevealOptionsOpened(false, animated: true)
+        self.revealOptionsInteractivelyClosed()
     }
 }
 

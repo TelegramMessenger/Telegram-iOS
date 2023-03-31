@@ -9118,3 +9118,5 @@ Sorry for the inconvenience.";
 "Premium.MaxSharedFolderLinksFinalText" = "Sorry, you can only create **%1$@** invite links";
 
 "Premium.GiftedTitle.Someone" = "Someone";
+
+"Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";

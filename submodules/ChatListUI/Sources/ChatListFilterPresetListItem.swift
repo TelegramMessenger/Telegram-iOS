@@ -215,7 +215,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                 } else {
                     updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
                 }
-                updatedSharedIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Share"), color: item.presentationData.theme.list.disclosureArrowColor)
+                updatedSharedIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat List/SharedFolderListIcon"), color: item.presentationData.theme.list.disclosureArrowColor)
             }
             
             let peerRevealOptions: [ItemListRevealOption]
