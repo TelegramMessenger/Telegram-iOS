@@ -498,7 +498,8 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
         print('Could not find a valid aps-environment entitlement in the provided provisioning profiles')
         sys.exit(1)
 
-    build_configuration.write_to_variables_file(bazel_path=bazel_command_line.bazel, aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
+    if bazel_command_line is not None:
+        build_configuration.write_to_variables_file(bazel_path=bazel_command_line.bazel, aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
 
     provisioning_profile_files = []
     for file_name in os.listdir(provisioning_path):
