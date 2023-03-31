@@ -35,8 +35,9 @@ class BuildConfiguration:
         self.enable_siri = enable_siri
         self.enable_icloud = enable_icloud
 
-    def write_to_variables_file(self, aps_environment, path):
+    def write_to_variables_file(self, bazel_path, aps_environment, path):
         string = ''
+        string += 'telegram_bazel_path = "{}"\n'.format(bazel_path)
         string += 'telegram_bundle_id = "{}"\n'.format(self.bundle_id)
         string += 'telegram_api_id = "{}"\n'.format(self.api_id)
         string += 'telegram_api_hash = "{}"\n'.format(self.api_hash)
