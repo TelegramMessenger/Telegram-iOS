@@ -9120,3 +9120,5 @@ Sorry for the inconvenience.";
 "Premium.GiftedTitle.Someone" = "Someone";
 
 "Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
+
+"Conversation.OpenChatFolder" = "Open Shared Folder";
