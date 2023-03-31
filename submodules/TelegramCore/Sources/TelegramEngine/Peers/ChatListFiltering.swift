@@ -403,16 +403,28 @@ extension ChatListFilter {
                 if emoticon != nil {
                     flags |= 1 << 25
                 }
-                return .dialogFilter(flags: flags, id: id, title: title, emoticon: emoticon, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
-                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
-                }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
-                    if data.includePeers.pinnedPeers.contains(peerId) {
-                        return nil
-                    }
-                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
-                }, excludePeers: data.excludePeers.compactMap { peerId -> Api.InputPeer? in
-                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
-                })
+                if data.isShared {
+                    return .dialogFilterCommunity(flags: flags, id: id, title: title, emoticon: emoticon, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                    }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
+                        if data.includePeers.pinnedPeers.contains(peerId) {
+                            return nil
+                        }
+                        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                    })
+                } else {
+                    return .dialogFilter(flags: flags, id: id, title: title, emoticon: emoticon, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                    }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
+                        if data.includePeers.pinnedPeers.contains(peerId) {
+                            return nil
+                        }
+                        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                    }, excludePeers: data.excludePeers.compactMap { peerId -> Api.InputPeer? in
+                        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                    })
+                }
+                
         }
     }
 }
