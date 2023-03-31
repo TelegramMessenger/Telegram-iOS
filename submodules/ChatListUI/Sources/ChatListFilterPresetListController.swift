@@ -395,9 +395,10 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     context.engine.data.get(
                         EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
                     ),
-                    context.engine.peers.getExportedChatFolderLinks(id: id)
+                    context.engine.peers.getExportedChatFolderLinks(id: id),
+                    context.engine.peers.requestLeaveChatFolderSuggestions(folderId: id)
                 )
-                |> deliverOnMainQueue).start(next: { peers, links in
+                |> deliverOnMainQueue).start(next: { peers, links, defaultSelectedPeerIds in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
                     var hasLinks = false
@@ -408,7 +409,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     let confirmDeleteFolder: () -> Void = {
                         let previewScreen = ChatFolderLinkPreviewScreen(
                             context: context,
-                            subject: .remove(folderId: id),
+                            subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
                             contents: ChatFolderLinkContents(
                                 localFilterId: id,
                                 title: title,

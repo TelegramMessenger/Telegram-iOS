@@ -1085,6 +1085,10 @@ public extension TelegramEngine {
         public func leaveChatFolder(folderId: Int32, removePeerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
             return _internal_leaveChatFolder(account: self.account, folderId: folderId, removePeerIds: removePeerIds)
         }
+        
+        public func requestLeaveChatFolderSuggestions(folderId: Int32) -> Signal<[EnginePeer.Id], NoError> {
+            return _internal_requestLeaveChatFolderSuggestions(account: self.account, folderId: folderId)
+        }
     }
 }
 

@@ -686,3 +686,13 @@ func _internal_leaveChatFolder(account: Account, folderId: Int32, removePeerIds:
         }
     }
 }
+
+func _internal_requestLeaveChatFolderSuggestions(account: Account, folderId: Int32) -> Signal<[EnginePeer.Id], NoError> {
+    return account.network.request(Api.functions.communities.getLeaveCommunitySuggestions(community: .inputCommunityDialogFilter(filterId: folderId)))
+    |> map { result -> [EnginePeer.Id] in
+        return result.map(\.peerId)
+    }
+    |> `catch` { _ -> Signal<[EnginePeer.Id], NoError> in
+        return .single([])
+    }
+}

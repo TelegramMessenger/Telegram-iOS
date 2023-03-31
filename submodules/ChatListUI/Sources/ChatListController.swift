@@ -2755,9 +2755,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     self.context.engine.data.get(
                         EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
                     ),
-                    self.context.engine.peers.getExportedChatFolderLinks(id: id)
+                    self.context.engine.peers.getExportedChatFolderLinks(id: id),
+                    self.context.engine.peers.requestLeaveChatFolderSuggestions(folderId: id)
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] peers, links in
+                |> deliverOnMainQueue).start(next: { [weak self] peers, links, defaultSelectedPeerIds in
                     guard let self else {
                         return
                     }
@@ -2776,7 +2777,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let previewScreen = ChatFolderLinkPreviewScreen(
                             context: self.context,
-                            subject: .remove(folderId: id),
+                            subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
                             contents: ChatFolderLinkContents(
                                 localFilterId: id,
                                 title: title,

@@ -3058,6 +3058,21 @@ public extension Api.functions.communities {
                 }
 }
 public extension Api.functions.communities {
+                static func getLeaveCommunitySuggestions(community: Api.InputCommunity) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Peer]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-296838430)
+                    community.serialize(buffer, true)
+                    return (FunctionDescription(name: "communities.getLeaveCommunitySuggestions", parameters: [("community", String(describing: community))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.Peer]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.Peer]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.communities {
                 static func hideCommunityUpdates(community: Api.InputCommunity) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(224889775)
@@ -6856,6 +6871,23 @@ public extension Api.functions.messages {
                     peer.serialize(buffer, true)
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "messages.setChatTheme", parameters: [("peer", String(describing: peer)), ("emoticon", String(describing: emoticon))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func setChatWallPaper(peer: Api.InputPeer, wallpaper: Api.InputWallPaper, settings: Api.WallPaperSettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1109557590)
+                    peer.serialize(buffer, true)
+                    wallpaper.serialize(buffer, true)
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.setChatWallPaper", parameters: [("peer", String(describing: peer)), ("wallpaper", String(describing: wallpaper)), ("settings", String(describing: settings))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

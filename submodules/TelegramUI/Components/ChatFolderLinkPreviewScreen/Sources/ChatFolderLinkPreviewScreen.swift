@@ -287,8 +287,16 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             let sideInset: CGFloat = 16.0
             
             if self.component?.linkContents == nil, let linkContents = component.linkContents {
-                for peer in linkContents.peers {
-                    self.selectedItems.insert(peer.id)
+                if case let .remove(_, defaultSelectedPeerIds) = component.subject {
+                    for peer in linkContents.peers {
+                        if defaultSelectedPeerIds.contains(peer.id) {
+                            self.selectedItems.insert(peer.id)
+                        }
+                    }
+                } else {
+                    for peer in linkContents.peers {
+                        self.selectedItems.insert(peer.id)
+                    }
                 }
             }
             
@@ -712,7 +720,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             return
                         }
                         
-                        if case let .remove(folderId) = component.subject {
+                        if case let .remove(folderId, _) = component.subject {
                             self.inProgress = true
                             self.state?.updated(transition: .immediate)
                             
@@ -851,7 +859,7 @@ public class ChatFolderLinkPreviewScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case slug(String)
         case updates(ChatFolderUpdates)
-        case remove(folderId: Int32)
+        case remove(folderId: Int32, defaultSelectedPeerIds: [EnginePeer.Id])
     }
     
     private let context: AccountContext
