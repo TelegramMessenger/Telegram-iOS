@@ -375,10 +375,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     
                     if allChatsAdded {
                         titleString = "Add Folder"
-                    } else if self.selectedItems.count == 1 {
-                        titleString = "Add \(self.selectedItems.count) chat"
+                    } else if linkContents.peers.count == 1 {
+                        titleString = "Add \(linkContents.peers.count) chat"
                     } else {
-                        titleString = "Add \(self.selectedItems.count) chats"
+                        titleString = "Add \(linkContents.peers.count) chats"
                     }
                 } else {
                     titleString = "Add Folder"
@@ -444,10 +444,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     text = "Do you want to add a new chat folder\nand join its groups and channels?"
                 } else {
                     let chatCountString: String
-                    if self.selectedItems.count == 1 {
+                    if linkContents.peers.count == 1 {
                         chatCountString = "1 chat"
                     } else {
-                        chatCountString = "\(self.selectedItems.count) chats"
+                        chatCountString = "\(linkContents.peers.count) chats"
                     }
                     if let title = linkContents.title {
                         text = "Do you want to add **\(chatCountString)** to your\nfolder **\(title)**?"
@@ -482,7 +482,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 if descriptionTextView.superview == nil {
                     self.scrollContentView.addSubview(descriptionTextView)
                 }
-                contentTransition.setFrame(view: descriptionTextView, frame: descriptionTextFrame)
+                descriptionTextView.bounds = CGRect(origin: CGPoint(), size: descriptionTextFrame.size)
+                contentTransition.setPosition(view: descriptionTextView, position: descriptionTextFrame.center)
             }
             
             contentHeight += descriptionTextFrame.height
@@ -694,7 +695,12 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 let listHeaderActionFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - 15.0 - listHeaderActionSize.width, y: contentHeight), size: listHeaderActionSize)
                 contentTransition.setPosition(view: listHeaderActionView, position: CGPoint(x: listHeaderActionFrame.maxX, y: listHeaderActionFrame.minY))
                 listHeaderActionView.bounds = CGRect(origin: CGPoint(), size: listHeaderActionFrame.size)
-                listHeaderActionView.isHidden = component.linkContents == nil || allChatsAdded
+                
+                if let linkContents = component.linkContents, !allChatsAdded, linkContents.peers.count > 1 {
+                    listHeaderActionView.isHidden = false
+                } else {
+                    listHeaderActionView.isHidden = true
+                }
             }
             
             contentHeight += listHeaderTextSize.height

@@ -529,8 +529,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: "SHARE FOLDER", badge: hasLinks ? nil : "NEW", sectionId: self.section)
         case let .inviteLinkCreate(hasLinks):
             //TODO:localize
-            let _ = hasLinks
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: "Create an Invite Link", sectionId: self.section, editing: false, action: {
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: hasLinks ? "Create a new Link" : "Create an Invite Link", sectionId: self.section, editing: false, action: {
                 arguments.createLink()
             })
         case let .inviteLink(_, link):
@@ -583,7 +582,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     }
 }
 
-private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, currentPreset: ChatListFilter?, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer], isPremium: Bool, limit: Int32, inviteLinks: [ExportedChatFolderLink]?) -> [ChatListFilterPresetEntry] {
+private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, currentPreset: ChatListFilter?, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer], isPremium: Bool, limit: Int32, inviteLinks: [ExportedChatFolderLink]?, hadLinks: Bool) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
     if isNewFilter {
@@ -667,7 +666,7 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         hasLinks = true
     }
     
-    entries.append(.inviteLinkHeader(hasLinks: hasLinks))
+    entries.append(.inviteLinkHeader(hasLinks: hasLinks || hadLinks))
     entries.append(.inviteLinkCreate(hasLinks: hasLinks))
     
     if let inviteLinks {
@@ -1027,6 +1026,8 @@ private extension ChatListFilter {
 }
 
 func chatListFilterPresetController(context: AccountContext, currentPreset: ChatListFilter?, updated: @escaping ([ChatListFilter]) -> Void) -> ViewController {
+    var currentPreset = currentPreset
+    
     let initialName: String
     if let currentPreset = currentPreset {
         initialName = currentPreset.title
@@ -1304,11 +1305,11 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                         //TODO:localize
                         var unavailableText: String?
                         if !data.categories.isEmpty {
-                            unavailableText = "You can’t share folders with include chat types."
+                            unavailableText = "You can’t share folders which have chat types or excluded chats."
                         } else if data.excludeArchived || data.excludeRead || data.excludeMuted {
-                            unavailableText = "You can only share folders without chat types and excluded chats."
+                            unavailableText = "You can’t share folders which have chat types or excluded chats."
                         } else if !data.excludePeers.isEmpty {
-                            unavailableText = "You can’t share folders with excluded chats"
+                            unavailableText = "You can’t share folders which have chat types or excluded chats."
                         }
                         if let unavailableText {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1431,6 +1432,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                     }
                     filters.append(updatedFilter)
                 }
+                currentPreset = updatedFilter
             } else {
                 filters.append(updatedFilter)
             }
@@ -1443,6 +1445,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     }
     
     var previousState = stateValue.with { $0 }
+    var previousSharedLinks: [ExportedChatFolderLink]?
+    var hadLinks: Bool = false
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
@@ -1475,9 +1479,17 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         if previousStateValue.expandedSections != state.expandedSections {
             skipStateAnimation = true
         }
+        if previousSharedLinks == nil && sharedLinks != nil {
+            skipStateAnimation = true
+        }
+        previousSharedLinks = sharedLinks
+        
+        if let sharedLinks, !sharedLinks.isEmpty {
+            hadLinks = true
+        }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? presentationData.strings.ChatListFolder_TitleEdit : presentationData.strings.ChatListFolder_TitleCreate), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, currentPreset: currentPreset, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount, inviteLinks: sharedLinks), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, currentPreset: currentPreset, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount, inviteLinks: sharedLinks, hadLinks: hadLinks), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
         skipStateAnimation = false
         
         return (controllerState, (listState, arguments))
@@ -1522,7 +1534,11 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             TextAlertAction(type: .genericAction, title: presentationData.strings.ChatListFolder_DiscardDiscard, action: {
                 dismissImpl?()
             }),
-            TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatListFolder_DiscardCancel, action: {
+            //TODO:localize
+            TextAlertAction(type: .defaultAction, title: "Save", action: {
+                applyImpl?({
+                    dismissImpl?()
+                })
         })]), nil)
     }
     attemptNavigationImpl = {

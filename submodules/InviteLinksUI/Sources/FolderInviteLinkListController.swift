@@ -245,13 +245,13 @@ private func folderInviteLinkListControllerEntries(
         chatCountString = "There are no chats in this folder that you can share with others."
         peersHeaderString = "THESE CHATS CANNOT BE SHARED"
     } else if state.selectedPeerIds.isEmpty {
-        chatCountString = "Anyone with this link can add \(title) folder and the chats selected below."
+        chatCountString = "Anyone with this link can add **\(title)** folder and the chats selected below."
         peersHeaderString = "CHATS"
     } else if state.selectedPeerIds.count == 1 {
-        chatCountString = "Anyone with this link can add \(title) folder and the 1 chat selected below."
+        chatCountString = "Anyone with this link can add **\(title)** folder and the 1 chat selected below."
         peersHeaderString = "1 CHAT SELECTED"
     } else {
-        chatCountString = "Anyone with this link can add \(title) folder and the \(state.selectedPeerIds.count) chats selected below."
+        chatCountString = "Anyone with this link can add **\(title)** folder and the \(state.selectedPeerIds.count) chats selected below."
         peersHeaderString = "\(state.selectedPeerIds.count) CHATS SELECTED"
     }
     entries.append(.header(chatCountString))
@@ -283,7 +283,7 @@ private func folderInviteLinkListControllerEntries(
                     disabledReasonText = "you can't share private chats"
                 }
             } else {
-                disabledReasonText = "you can't invite other here"
+                disabledReasonText = "you can't invite others here"
             }
         }
         entries.append(.peer(index: entries.count, peer: peer, isSelected: state.selectedPeerIds.contains(peer.id), disabledReasonText: disabledReasonText))
@@ -402,7 +402,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             
             let state = stateValue.with({ $0 })
             
-            let promptController = promptController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, text: "Name This Link", titleFont: .bold, value: state.title ?? "", apply: { value in
+            let promptController = promptController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, text: "Name This Link", titleFont: .bold, value: state.title ?? "", characterLimit: 32, apply: { value in
                 if let value {
                     updateState { state in
                         var state = state
@@ -487,12 +487,15 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             }
         } else {
             //TODO:localize
-            var text = "You can't invite others here."
-            switch peer {
-            case .channel:
-                text = "You don't have the admin rights to share invite links to this group chat."
-            default:
-                break
+            let text: String
+            if case let .user(user) = peer {
+                if user.botInfo != nil {
+                    text = "You can't share chats with bots"
+                } else {
+                    text = "You can't share private chats"
+                }
+            } else {
+                text = "you can't invite others here"
             }
             dismissTooltipsImpl?()
             displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil))
