@@ -16,6 +16,7 @@ import PresentationDataUtils
 import Markdown
 import UndoUI
 import PremiumUI
+import ButtonComponent
 
 private final class ChatFolderLinkPreviewScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -733,20 +734,22 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
-                component: AnyComponent(SolidRoundedButtonComponent(
-                    title: actionButtonTitle,
-                    badge: (self.selectedItems.isEmpty || allChatsAdded) ? nil : "\(self.selectedItems.count)",
-                    theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 11.0,
-                    gloss: false,
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        color: environment.theme.list.itemCheckColors.fillColor,
+                        pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                    ),
+                    content: AnyComponentWithIdentity(
+                        id: actionButtonTitle,
+                        component: AnyComponent(ButtonTextContentComponent(
+                            text: actionButtonTitle,
+                            badge: self.selectedItems.count,
+                            textColor: environment.theme.list.itemCheckColors.foregroundColor,
+                            badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
+                            badgeForeground: environment.theme.list.itemCheckColors.fillColor
+                        ))
+                    ),
                     isEnabled: !self.selectedItems.isEmpty || component.linkContents?.localFilterId != nil,
-                    animationName: nil,
-                    iconPosition: .right,
-                    iconSpacing: 4.0,
-                    isLoading: self.inProgress,
                     action: { [weak self] in
                         guard let self, let component = self.component, let controller = self.environment?.controller() else {
                             return
@@ -865,6 +868,29 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
             )
+            /*let actionButtonSize = self.actionButton.update(
+                transition: transition,
+                component: AnyComponent(SolidRoundedButtonComponent(
+                    title: actionButtonTitle,
+                    badge: (self.selectedItems.isEmpty || allChatsAdded) ? nil : "\(self.selectedItems.count)",
+                    theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
+                    font: .bold,
+                    fontSize: 17.0,
+                    height: 50.0,
+                    cornerRadius: 11.0,
+                    gloss: false,
+                    isEnabled: !self.selectedItems.isEmpty || component.linkContents?.localFilterId != nil,
+                    animationName: nil,
+                    iconPosition: .right,
+                    iconSpacing: 4.0,
+                    isLoading: self.inProgress,
+                    action: { [weak self] in
+                        
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
+            )*/
             let bottomPanelHeight = 14.0 + environment.safeInsets.bottom + actionButtonSize.height
             let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
             if let actionButtonView = self.actionButton.view {

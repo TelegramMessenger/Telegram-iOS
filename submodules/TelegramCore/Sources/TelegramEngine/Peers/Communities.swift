@@ -401,7 +401,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
     return account.postbox.transaction { transaction -> ([Api.InputPeer], Int) in
         var newChatCount = 0
         for peerId in peerIds {
-            if transaction.getPeerChatListIndex(peerId) != nil {
+            if transaction.getPeerChatListIndex(peerId) == nil {
                 newChatCount += 1
             }
         }
