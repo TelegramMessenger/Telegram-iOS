@@ -1547,7 +1547,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
                                             if !data.includePeers.peers.isEmpty && data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty {
-                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
+                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: data.hasSharedLinks ? nil : ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
                                                     c.dismiss(completion: {

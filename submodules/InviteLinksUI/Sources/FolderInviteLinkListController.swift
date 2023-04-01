@@ -30,7 +30,7 @@ private final class FolderInviteLinkListControllerArguments {
     let copyLink: (String) -> Void
     let mainLinkContextAction: (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void
     let peerAction: (EnginePeer, Bool) -> Void
-    let generateLink: () -> Void
+    let toggleAllSelected: () -> Void
     
     init(
         context: AccountContext,
@@ -39,7 +39,7 @@ private final class FolderInviteLinkListControllerArguments {
         copyLink: @escaping (String) -> Void,
         mainLinkContextAction: @escaping (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void,
         peerAction: @escaping (EnginePeer, Bool) -> Void,
-        generateLink: @escaping () -> Void
+        toggleAllSelected: @escaping () -> Void
     ) {
         self.context = context
         self.shareMainLink = shareMainLink
@@ -47,7 +47,7 @@ private final class FolderInviteLinkListControllerArguments {
         self.copyLink = copyLink
         self.mainLinkContextAction = mainLinkContextAction
         self.peerAction = peerAction
-        self.generateLink = generateLink
+        self.toggleAllSelected = toggleAllSelected
     }
 }
 
@@ -68,7 +68,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     case mainLinkHeader(String)
     case mainLink(link: ExportedChatFolderLink?, isGenerating: Bool)
     
-    case peersHeader(String)
+    case peersHeader(String, String?)
     case peer(index: Int, peer: EnginePeer, isSelected: Bool, disabledReasonText: String?)
     case peersInfo(String)
     
@@ -137,8 +137,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .peersHeader(text):
-            if case .peersHeader(text) = rhs {
+        case let .peersHeader(text, action):
+            if case .peersHeader(text, action) = rhs {
                 return true
             } else {
                 return false
@@ -177,8 +177,6 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             }, shareAction: {
                 if let link {
                     arguments.copyLink(link.link)
-                } else {
-                    arguments.generateLink()
                 }
             }, secondaryAction: {
                 if let link {
@@ -191,8 +189,10 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     arguments.openMainLink(link.link)
                 }
             })
-        case let .peersHeader(text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .peersHeader(text, action):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, actionText: action, action: action == nil ? nil : {
+                arguments.toggleAllSelected()
+            }, sectionId: self.section)
         case let .peersInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .peer(_, peer, isSelected, disabledReasonText):
@@ -239,6 +239,9 @@ private func folderInviteLinkListControllerEntries(
     let peersHeaderString: String
     
     let canShareChats = !allPeers.allSatisfy({ !canShareLinkToPeer(peer: $0) })
+    let allSelected = allPeers.filter({ canShareLinkToPeer(peer: $0) }).allSatisfy({ state.selectedPeerIds.contains($0.id) })
+    
+    var selectAllString: String?
     
     if !canShareChats {
         infoString = "You can only share groups and channels in which you are allowed to create invite links."
@@ -247,12 +250,21 @@ private func folderInviteLinkListControllerEntries(
     } else if state.selectedPeerIds.isEmpty {
         chatCountString = "Anyone with this link can add **\(title)** folder and the chats selected below."
         peersHeaderString = "CHATS"
+        if allPeers.count > 1 {
+            selectAllString = allSelected ? "DESELECT ALL" : "SELECT ALL"
+        }
     } else if state.selectedPeerIds.count == 1 {
         chatCountString = "Anyone with this link can add **\(title)** folder and the 1 chat selected below."
         peersHeaderString = "1 CHAT SELECTED"
+        if allPeers.count > 1 {
+            selectAllString = allSelected ? "DESELECT ALL" : "SELECT ALL"
+        }
     } else {
         chatCountString = "Anyone with this link can add **\(title)** folder and the \(state.selectedPeerIds.count) chats selected below."
         peersHeaderString = "\(state.selectedPeerIds.count) CHATS SELECTED"
+        if allPeers.count > 1 {
+            selectAllString = allSelected ? "DESELECT ALL" : "SELECT ALL"
+        }
     }
     entries.append(.header(chatCountString))
     
@@ -263,7 +275,7 @@ private func folderInviteLinkListControllerEntries(
         entries.append(.mainLink(link: state.currentLink, isGenerating: state.generatingLink))
     }
     
-    entries.append(.peersHeader(peersHeaderString))
+    entries.append(.peersHeader(peersHeaderString, selectAllString))
     
     var sortedPeers: [EnginePeer] = []
     for peer in allPeers.filter({ canShareLinkToPeer(peer: $0) }) {
@@ -337,6 +349,20 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     var displayTooltipImpl: ((UndoOverlayContent) -> Void)?
     
     var didDisplayAddPeerNotice: Bool = false
+    
+    var combinedPeerIds: [EnginePeer.Id] = []
+    if let currentInvitation {
+        for peerId in currentInvitation.peerIds {
+            if !combinedPeerIds.contains(peerId) {
+                combinedPeerIds.append(peerId)
+            }
+        }
+    }
+    for peerId in allPeerIds {
+        if !combinedPeerIds.contains(peerId) {
+            combinedPeerIds.append(peerId)
+        }
+    }
     
     let arguments = FolderInviteLinkListControllerArguments(context: context, shareMainLink: { inviteLink in
         let shareController = ShareController(context: context, subject: .url(inviteLink), updatedPresentationData: updatedPresentationData)
@@ -500,47 +526,33 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             dismissTooltipsImpl?()
             displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil))
         }
-    }, generateLink: {
-        let currentState = stateValue.with({ $0 })
-        if !currentState.generatingLink {
+    }, toggleAllSelected: {
+        let _ = (context.engine.data.get(
+            EngineDataList(combinedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+        )
+        |> deliverOnMainQueue).start(next: { allPeers in
+            let allPeers = allPeers.compactMap({ $0 })
+            
+            let selectablePeers = allPeers.filter({ canShareLinkToPeer(peer: $0) })
+            let state = stateValue.with({ $0 })
+            let allSelected = selectablePeers.allSatisfy({ state.selectedPeerIds.contains($0.id) })
+            
             updateState { state in
                 var state = state
                 
-                state.generatingLink = true
+                if allSelected {
+                    state.selectedPeerIds.removeAll()
+                } else {
+                    state.selectedPeerIds.removeAll()
+                    for peer in selectablePeers {
+                        state.selectedPeerIds.insert(peer.id)
+                    }
+                }
                 
                 return state
             }
-            
-            actionsDisposable.add((context.engine.peers.exportChatFolder(filterId: filterId, title: "", peerIds: Array(currentState.selectedPeerIds))
-            |> deliverOnMainQueue).start(next: { result in
-                linkUpdated(result)
-                
-                updateState { state in
-                    var state = state
-                    
-                    state.generatingLink = false
-                    state.currentLink = result
-                    
-                    return state
-                }
-            }, error: { _ in
-            }))
-        }
+        })
     })
-    
-    var combinedPeerIds: [EnginePeer.Id] = []
-    if let currentInvitation {
-        for peerId in currentInvitation.peerIds {
-            if !combinedPeerIds.contains(peerId) {
-                combinedPeerIds.append(peerId)
-            }
-        }
-    }
-    for peerId in allPeerIds {
-        if !combinedPeerIds.contains(peerId) {
-            combinedPeerIds.append(peerId)
-        }
-    }
     
     let allPeers = context.engine.data.subscribe(
         EngineDataList(combinedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))

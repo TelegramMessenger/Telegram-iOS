@@ -539,24 +539,29 @@ private struct FirstTimeFolderUpdatesKey: Hashable {
 private var firstTimeFolderUpdates = Set<FirstTimeFolderUpdatesKey>()
 
 func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> ChatListFiltersState in
-        return _internal_currentChatListFiltersState(transaction: transaction)
+    return account.postbox.transaction { transaction -> (ChatListFiltersState, AppConfiguration) in
+        return (_internal_currentChatListFiltersState(transaction: transaction), currentAppConfiguration(transaction: transaction))
     }
-    |> mapToSignal { state -> Signal<Never, NoError> in
+    |> mapToSignal { state, appConfig -> Signal<Never, NoError> in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
         let key = FirstTimeFolderUpdatesKey(accountId: account.id, folderId: folderId)
         
         if firstTimeFolderUpdates.contains(key) {
             if let current = state.updates.first(where: { $0.folderId == folderId }) {
-                let updateInterval: Int32
+                var updateInterval: Int32 = 3600
+                
+                if let data = appConfig.data {
+                    if let value = data["community_update_period"] as? Double {
+                        updateInterval = Int32(value)
+                    }
+                }
 #if DEBUG
-                updateInterval = 5
-#else
-                updateInterval = 60 * 60
+                if "".isEmpty {
+                    updateInterval = 5
+                }
 #endif
                 
                 if current.timestamp + updateInterval >= timestamp {
-                    
                     return .complete()
                 }
             }

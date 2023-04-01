@@ -1044,7 +1044,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 var includePeers = ChatListFilterIncludePeers()
                 includePeers.setPeers(state.additionallyIncludePeers)
-                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, hasSharedLinks: currentPreset?.data?.hasSharedLinks ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
                 if let data = filter.data {
                     switch chatListFilterType(data) {
                     case .generic:
@@ -1189,7 +1189,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 let state = stateValue.with { $0 }
                 var includePeers = ChatListFilterIncludePeers()
                 includePeers.setPeers(state.additionallyIncludePeers)
-                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, hasSharedLinks: currentPreset?.data?.hasSharedLinks ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
                 
                 let _ = (context.engine.peers.currentChatListFilters()
                 |> deliverOnMainQueue).start(next: { filters in
@@ -1211,7 +1211,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             let state = stateValue.with { $0 }
             var includePeers = ChatListFilterIncludePeers()
             includePeers.setPeers(state.additionallyIncludePeers)
-            let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+            let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, hasSharedLinks: currentPreset?.data?.hasSharedLinks ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
             let _ = (context.engine.peers.currentChatListFilters()
             |> deliverOnMainQueue).start(next: { filters in
@@ -1328,9 +1328,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                             previousLink = updatedLink
                             
                             let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
-                                guard var links else {
-                                    return
-                                }
+                                var links = links ?? []
                                 
                                 if let updatedLink {
                                     if let index = links.firstIndex(where: { $0.link == updatedLink.link }) {
@@ -1356,9 +1354,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                     pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, title: currentPreset.title, allPeerIds: state.additionallyIncludePeers, currentInvitation: link, linkUpdated: { updatedLink in
                         if updatedLink != link {
                             let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
-                                guard var links else {
-                                    return
-                                }
+                                var links = links ?? []
                                 
                                 if let updatedLink {
                                     if let index = links.firstIndex(where: { $0.link == link.link }) {
@@ -1381,9 +1377,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         removeLink: { link in
             if let currentPreset {
                 let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
-                    guard var links else {
-                        return
-                    }
+                    var links = links ?? []
                     
                     if let index = links.firstIndex(where: { $0.link == link.link }) {
                         links.remove(at: index)
@@ -1407,7 +1401,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             if currentPreset == nil {
                 filterId = context.engine.peers.generateNewChatListFilterId(filters: filters)
             }
-            var updatedFilter: ChatListFilter = .filter(id: filterId, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+            var updatedFilter: ChatListFilter = .filter(id: filterId, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(isShared: currentPreset?.data?.isShared ?? false, hasSharedLinks: currentPreset?.data?.hasSharedLinks ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
             var filters = filters
             if let _ = currentPreset {
@@ -1554,7 +1548,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             
             var includePeers = ChatListFilterIncludePeers()
             includePeers.setPeers(state.additionallyIncludePeers)
-            let filter: ChatListFilter = .filter(id: currentPreset.id, title: state.name, emoticon: currentPreset.emoticon, data: ChatListFilterData(isShared: currentPreset.data?.isShared ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+            let filter: ChatListFilter = .filter(id: currentPreset.id, title: state.name, emoticon: currentPreset.emoticon, data: ChatListFilterData(isShared: currentPreset.data?.isShared ?? false, hasSharedLinks: currentPreset.data?.hasSharedLinks ?? false, categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             if currentPresetWithoutPinnedPeers != filter {
                 displaySaveAlert()
                 return false
