@@ -165,12 +165,17 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
 }
 
 public class WallpaperGalleryController: ViewController {
+    public enum Mode {
+        case `default`
+        case peer(EnginePeer.Id)
+    }
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }
     
     private let context: AccountContext
     private let source: WallpaperListSource
+    private let mode: Mode
     public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
     
     private let _ready = Promise<Bool>()
@@ -211,9 +216,10 @@ public class WallpaperGalleryController: ViewController {
     private var savedPatternWallpaper: TelegramWallpaper?
     private var savedPatternIntensity: Int32?
     
-    public init(context: AccountContext, source: WallpaperListSource) {
+    public init(context: AccountContext, source: WallpaperListSource, mode: Mode = .default) {
         self.context = context
         self.source = source
+        self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
@@ -378,6 +384,9 @@ public class WallpaperGalleryController: ViewController {
 
         (self.displayNode as? WallpaperGalleryControllerNode)?.nativeStatusBar = self.statusBar
         
+        self.galleryNode.galleryController = { [weak self] in
+            return self
+        }
         self.galleryNode.navigationBar = self.navigationBar
         self.galleryNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -423,6 +432,9 @@ public class WallpaperGalleryController: ViewController {
         default:
             break
         }
+        if case .peer = self.mode {
+            doneButtonType = .setPeer
+        }
                 
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
         self.toolbarNode = toolbarNode
@@ -439,6 +451,13 @@ public class WallpaperGalleryController: ViewController {
                     let options = centralItemNode.options
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
+                        
+                        if case .peer = strongSelf.mode {
+                            strongSelf.apply?(entry, options, centralItemNode.cropRect)
+                            return
+                        }
+                        
+                        
                         switch entry {
                             case let .wallpaper(wallpaper, _):
                                 var resource: MediaResource?
@@ -1042,17 +1061,5 @@ public class WallpaperGalleryController: ViewController {
             }
             self.present(controller, in: .window(.root), blockInteraction: true)
         }
-    }
-}
-
-private extension GalleryControllerNode {
-    func modalAnimateIn(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-    }
-    
-    func modalAnimateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
-            completion?()
-        })
     }
 }

@@ -11,6 +11,7 @@ enum WallpaperGalleryToolbarCancelButtonType {
 
 enum WallpaperGalleryToolbarDoneButtonType {
     case set
+    case setPeer
     case proceed
     case apply
     case none
@@ -48,7 +49,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.cancelButtonType = cancelButtonType
         self.doneButtonType = doneButtonType
         
-        self.doneButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45))
+        self.doneButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xf2f2f2, alpha: 0.55))
         self.doneButtonBackgroundNode.cornerRadius = 14.0
         
         let blurEffect: UIBlurEffect
@@ -152,6 +153,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         switch self.doneButtonType {
             case .set:
                 doneTitle = strings.Wallpaper_ApplyForAll
+            case .setPeer:
+                doneTitle = strings.Wallpaper_ApplyForChat
             case .proceed:
                 doneTitle = strings.Theme_Colors_Proceed
             case .apply:

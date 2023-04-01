@@ -14,8 +14,23 @@ import ShareController
 import SearchUI
 import HexColor
 import PresentationDataUtils
+import MediaPickerUI
 
 public final class ThemeGridController: ViewController {
+    public enum Mode: Equatable {
+        case `default`
+        case peer(EnginePeer.Id, TelegramWallpaper?)
+        
+        var galleryMode: WallpaperGalleryController.Mode {
+            switch self {
+            case .default:
+                return .default
+            case let .peer(peerId, _):
+                return .peer(peerId)
+            }
+        }
+    }
+    
     private var controllerNode: ThemeGridControllerNode {
         return self.displayNode as! ThemeGridControllerNode
     }
@@ -26,6 +41,7 @@ public final class ThemeGridController: ViewController {
     }
     
     private let context: AccountContext
+    private let mode: Mode
     
     private var presentationData: PresentationData
     private let presentationDataPromise = Promise<PresentationData>()
@@ -44,8 +60,9 @@ public final class ThemeGridController: ViewController {
     
     private var previousContentOffset: GridNodeVisibleContentOffset?
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, mode: Mode = .default) {
         self.context = context
+        self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))
         
@@ -116,83 +133,81 @@ public final class ThemeGridController: ViewController {
     }
     
     public override func loadDisplayNode() {
-        self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
+        let dismissControllers = { [weak self] in
+            if let self, let navigationController = self.navigationController as? NavigationController {
+                let controllers = navigationController.viewControllers.filter({ controller in
+                    if controller is ThemeGridController || controller is WallpaperGalleryController || controller is MediaPickerScreen {
+                        return false
+                    }
+                    return true
+                })
+                navigationController.setViewControllers(controllers, animated: true)
+            }
+        }
+        self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
-                let controller = WallpaperGalleryController(context: strongSelf.context, source: source)
-                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
-                    if let strongSelf = self {
-                        uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: mode, cropRect: cropRect, completion: { [weak self, weak controller] in
-                            if let strongSelf = self {
-                                strongSelf.deactivateSearch(animated: false)
-                                strongSelf.controllerNode.scrollToTop(animated: false)
-                            }
-                            if let controller = controller {
-                                switch wallpaper {
+                let controller = WallpaperGalleryController(context: strongSelf.context, source: source, mode: strongSelf.mode.galleryMode)
+                controller.apply = { [weak self, weak controller] wallpaper, options, cropRect in
+                    if let strongSelf = self, case let .wallpaper(wallpaperValue, _) = wallpaper {
+                        switch strongSelf.mode {
+                        case .default:
+                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, completion: { [weak self, weak controller] in
+                                if let strongSelf = self {
+                                    strongSelf.deactivateSearch(animated: false)
+                                    strongSelf.controllerNode.scrollToTop(animated: false)
+                                }
+                                if let controller = controller {
+                                    switch wallpaper {
                                     case .asset, .contextResult:
-                                        controller.dismiss(forceAway: true)
+                                        controller.dismiss(animated: true)
                                     default:
                                         break
+                                    }
                                 }
-                            }
-                        })
+                            })
+                        case let .peer(peerId, _):
+                            let _ = (strongSelf.context.engine.themes.setChatWallpaper(peerId: peerId, wallpaper: wallpaperValue)
+                            |> deliverOnMainQueue).start(completed: {
+                                dismissControllers()
+                            })
+                        }
                     }
                 }
                 self?.push(controller)
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
-                presentCustomWallpaperPicker(context: strongSelf.context, present: { [weak self] controller in
-                    self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
-                }, push: { [weak self] controller in
-                    self?.push(controller)
-                })
+                let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, true))
+                controller.customSelection = { [weak self] asset in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: strongSelf.mode.galleryMode)
+                    controller.apply = { [weak self, weak controller] wallpaper, options, cropRect in
+                        if let strongSelf = self, let controller = controller {
+                            switch strongSelf.mode {
+                            case .default:
+                                uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, completion: { [weak controller] in
+                                    if let controller = controller {
+                                        controller.dismiss(forceAway: true)
+                                    }
+                                })
+                            case let .peer(peerId, _):
+                                uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, peerId: peerId, completion: {
+                                    dismissControllers()
+                                })
+                            }
+                        }
+                    }
+                    strongSelf.push(controller)
+                }
+                self?.push(controller)
             }
         }, presentColors: { [weak self] in
             if let strongSelf = self {
                 let controller = ThemeColorsGridController(context: strongSelf.context)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
-
-            /*if let strongSelf = self {
-                let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] sharedData in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
-
-                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
-                    let themeReference: PresentationThemeReference
-                    if autoNightModeTriggered {
-                        themeReference = settings.automaticThemeSwitchSetting.theme
-                    } else {
-                        themeReference = settings.theme
-                    }
-
-                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference))
-                    controller.completion = { [weak self] in
-                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { controller in
-                                if controller is ThemeColorsGridController {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(controllers, animated: false)
-                            controllers = controllers.filter { controller in
-                                if controller is ThemeAccentColorController {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(controllers, animated: true)
-                        }
-                    }
-                    strongSelf.push(controller)
-                })
-            }*/
         }, emptyStateUpdated: { [weak self] empty in
             if let strongSelf = self {
                 if empty != strongSelf.isEmpty {
