@@ -792,7 +792,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             
                             var chatListController: ChatListController?
                             if let navigationController = controller.navigationController as? NavigationController {
-                                for viewController in navigationController.viewControllers {
+                                for viewController in navigationController.viewControllers.reversed() {
                                     if let rootController = viewController as? TabBarController {
                                         for c in rootController.controllers {
                                             if let c = c as? ChatListController {
@@ -804,6 +804,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                         chatListController = c
                                         break
                                     }
+                                    
+                                    break
                                 }
                             }
                             
