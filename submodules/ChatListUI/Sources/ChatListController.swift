@@ -3217,7 +3217,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let text = strongSelf.presentationData.strings.ChatList_DeletedThreads(Int32(threadIds.count))
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                         guard let strongSelf = self else {
                             return false
                         }
@@ -3301,7 +3301,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                         guard let strongSelf = self else {
                             return false
                         }
@@ -3646,7 +3646,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return true
                             })
                             
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: strongSelf.presentationData.strings.Undo_ChatCleared, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                                 guard let strongSelf = self else {
                                     return false
                                 }
@@ -3868,7 +3868,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let statusText = self.presentationData.strings.Undo_DeletedTopic
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
             guard let self else {
                 return false
             }
@@ -4156,7 +4156,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return true
         })
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
             guard let strongSelf = self else {
                 return false
             }

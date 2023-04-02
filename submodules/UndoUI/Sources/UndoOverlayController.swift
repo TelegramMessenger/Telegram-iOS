@@ -7,7 +7,7 @@ import AccountContext
 import ComponentFlow
 
 public enum UndoOverlayContent {
-    case removedChat(text: String)
+    case removedChat(title: String, text: String?)
     case archivedChat(peerId: Int64, title: String, text: String, undo: Bool)
     case hidArchive(title: String, text: String, undo: Bool)
     case revealedArchive(title: String, text: String, undo: Bool)

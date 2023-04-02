@@ -510,7 +510,7 @@ public extension TelegramEngine {
         }
 
         public func updatedChatListFilters() -> Signal<[ChatListFilter], NoError> {
-            return _internal_updatedChatListFilters(postbox: self.account.postbox)
+            return _internal_updatedChatListFilters(postbox: self.account.postbox, hiddenIds: self.account.viewTracker.hiddenChatListFilterIds)
         }
 
         public func updatedChatListFiltersInfo() -> Signal<(filters: [ChatListFilter], synchronized: Bool), NoError> {

@@ -1000,11 +1000,20 @@ func _internal_updateChatListFiltersInteractively(transaction: Transaction, _ f:
     }
 }
 
-func _internal_updatedChatListFilters(postbox: Postbox) -> Signal<[ChatListFilter], NoError> {
-    return postbox.preferencesView(keys: [PreferencesKeys.chatListFilters])
-    |> map { preferences -> [ChatListFilter] in
+func _internal_updatedChatListFilters(postbox: Postbox, hiddenIds: Signal<Set<Int32>, NoError> = .single(Set())) -> Signal<[ChatListFilter], NoError> {
+    return combineLatest(
+        postbox.preferencesView(keys: [PreferencesKeys.chatListFilters]),
+        hiddenIds
+    )
+    |> map { preferences, hiddenIds -> [ChatListFilter] in
         let filtersState = preferences.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
-        return filtersState.filters
+        return filtersState.filters.filter { filter in
+            if hiddenIds.contains(filter.id) {
+                return false
+            } else {
+                return true
+            }
+        }
     }
     |> distinctUntilChanged
 }

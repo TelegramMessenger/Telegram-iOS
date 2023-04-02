@@ -316,7 +316,7 @@ private struct FolderInviteLinkListControllerState: Equatable {
     var isSaving: Bool = false
 }
 
-public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: String, allPeerIds: [PeerId], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) -> ViewController {
+public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: String, allPeerIds: [PeerId], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void, presentController parentPresentController: ((ViewController) -> Void)?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     let _ = pushControllerImpl
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
@@ -346,7 +346,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         
     var getControllerImpl: (() -> ViewController?)?
     
-    var displayTooltipImpl: ((UndoOverlayContent) -> Void)?
+    var displayTooltipImpl: ((UndoOverlayContent, Bool) -> Void)?
     
     var didDisplayAddPeerNotice: Bool = false
     
@@ -439,11 +439,6 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     }
                 }
             })
-            /*promptController.dismissed = { byOutsideTap in
-                if byOutsideTap {
-                    completionHandler(nil)
-                }
-            }*/
             presentControllerImpl?(promptController, nil)
         })))
 
@@ -509,7 +504,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                 
                 dismissTooltipsImpl?()
                 //TODO:localize
-                displayTooltipImpl?(.info(title: nil, text: "People who already used the invite link will be able to join newly added chats.", timeout: 8))
+                displayTooltipImpl?(.info(title: nil, text: "People who already used the invite link will be able to join newly added chats.", timeout: 8), true)
             }
         } else {
             //TODO:localize
@@ -532,7 +527,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                 }
             }
             dismissTooltipsImpl?()
-            displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil))
+            displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil), true)
         }
     }, toggleAllSelected: {
         let _ = (context.engine.data.get(
@@ -605,6 +600,9 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "An error occurred.", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }, completed: {
                     linkUpdated(ExportedChatFolderLink(title: state.title ?? "", link: currentLink.link, peerIds: Array(state.selectedPeerIds), isRevoked: false))
+                    //TODO:localize
+                    displayTooltipImpl?(.info(title: nil, text: "Link updated", timeout: 3), false)
+                    
                     dismissImpl?()
                 }))
             } else {
@@ -613,7 +611,6 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         } else {
             dismissImpl?()
         }
-        dismissImpl?()
     }
     
     let _ = (allPeers
@@ -768,18 +765,15 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     getControllerImpl = { [weak controller] in
         return controller
     }
-    displayTooltipImpl = { [weak controller] c in
-        if let controller = controller {
-            let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+    displayTooltipImpl = { [weak controller] c, inCurrentContext in
+        let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+        if let controller = controller, inCurrentContext {
             controller.present(UndoOverlayController(presentationData: presentationData, content: c, elevatedLayout: false, action: { _ in return false }), in: .current)
+        } else if !inCurrentContext {
+            parentPresentController?(UndoOverlayController(presentationData: presentationData, content: c, elevatedLayout: false, action: { _ in return false }))
         }
     }
     dismissTooltipsImpl = { [weak controller] in
-        controller?.window?.forEachController({ controller in
-            if let controller = controller as? UndoOverlayController {
-                controller.dismissWithCommitAction()
-            }
-        })
         controller?.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()

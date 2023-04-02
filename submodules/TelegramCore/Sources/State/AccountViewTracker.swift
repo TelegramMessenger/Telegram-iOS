@@ -333,6 +333,12 @@ public final class AccountViewTracker {
     
     public let chatListPreloadItems = Promise<Set<ChatHistoryPreloadItem>>([])
     
+    private let hiddenChatListFilterIdsValue = Atomic<[Int32: Bag<Void>]>(value: [:])
+    private let hiddenChatListFilterIdsPromise = ValuePromise<Set<Int32>>(Set())
+    public var hiddenChatListFilterIds: Signal<Set<Int32>, NoError> {
+        return self.hiddenChatListFilterIdsPromise.get()
+    }
+    
     var resetPeerHoleManagement: ((PeerId) -> Void)?
     
     init(account: Account) {
@@ -2160,6 +2166,54 @@ public final class AccountViewTracker {
             ))
         } else {
             return .never()
+        }
+    }
+    
+    public func addHiddenChatListFilterIds(_ ids: [Int32]) -> Disposable {
+        var indices: [Int32: Int] = [:]
+        var updatedIds = Set<Int32>()
+        let _ = self.hiddenChatListFilterIdsValue.modify { value in
+            var value = value
+            for id in ids {
+                let bag: Bag<Void>
+                if let current = value[id] {
+                    bag = current
+                } else {
+                    bag = Bag()
+                    value[id] = bag
+                }
+                indices[id] = bag.add(Void())
+            }
+            for (id, bag) in value {
+                if !bag.isEmpty {
+                    updatedIds.insert(id)
+                }
+            }
+            return value
+        }
+        self.hiddenChatListFilterIdsPromise.set(updatedIds)
+        
+        return ActionDisposable { [weak self] in
+            DispatchQueue.main.async {
+                guard let `self` = self else {
+                    return
+                }
+                var updatedIds = Set<Int32>()
+                let _ = self.hiddenChatListFilterIdsValue.modify { value in
+                    for id in ids {
+                        if let bag = value[id], let index = indices[id] {
+                            bag.remove(index)
+                        }
+                    }
+                    for (id, bag) in value {
+                        if !bag.isEmpty {
+                            updatedIds.insert(id)
+                        }
+                    }
+                    return value
+                }
+                self.hiddenChatListFilterIdsPromise.set(updatedIds)
+            }
         }
     }
 }

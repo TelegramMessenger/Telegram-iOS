@@ -437,7 +437,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             let text: String
             if let linkContents = component.linkContents {
                 if case .remove = component.subject {
-                    text = "Do you want to quit the chats you joined when\nadding the folder \(linkContents.title ?? "Folder")?"
+                    text = "Do you also want to quit the chats included in this folder?"
                 } else if allChatsAdded {
                     text = "You have already added this\nfolder and its chats."
                 } else if linkContents.localFilterId == nil {
@@ -763,7 +763,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     isEnabled: !self.selectedItems.isEmpty || component.linkContents?.localFilterId != nil,
                     displaysProgress: self.inProgress,
                     action: { [weak self] in
-                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                        guard let self, let component = self.component, let linkContents = component.linkContents, let controller = self.environment?.controller() else {
                             return
                         }
                         
@@ -773,13 +773,78 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             
                             component.completion?()
                             
-                            self.joinDisposable = (component.context.engine.peers.leaveChatFolder(folderId: folderId, removePeerIds: Array(self.selectedItems))
+                            let disposable = DisposableSet()
+                            disposable.add(component.context.account.postbox.addHiddenChatIds(peerIds: Array(self.selectedItems)))
+                            disposable.add(component.context.account.viewTracker.addHiddenChatListFilterIds([folderId]))
+                            
+                            let folderTitle = linkContents.title ?? ""
+                            
+                            var additionalText: String?
+                            if !self.selectedItems.isEmpty {
+                                if self.selectedItems.count == 1 {
+                                    additionalText = "You also left **1** chat"
+                                } else {
+                                    additionalText = "You also left **\(self.selectedItems.count)** chats"
+                                }
+                            }
+                            
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                            
+                            var chatListController: ChatListController?
+                            if let navigationController = controller.navigationController as? NavigationController {
+                                for viewController in navigationController.viewControllers {
+                                    if let rootController = viewController as? TabBarController {
+                                        for c in rootController.controllers {
+                                            if let c = c as? ChatListController {
+                                                chatListController = c
+                                                break
+                                            }
+                                        }
+                                    } else if let c = viewController as? ChatListController {
+                                        chatListController = c
+                                        break
+                                    }
+                                }
+                            }
+                            
+                            let context = component.context
+                            let selectedItems = self.selectedItems
+                            let undoOverlayController = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .removedChat(title: "Folder \(folderTitle) deleted", text: additionalText),
+                                elevatedLayout: false,
+                                action: { value in
+                                    if case .commit = value {
+                                        let _ = (context.engine.peers.leaveChatFolder(folderId: folderId, removePeerIds: Array(selectedItems))
+                                        |> deliverOnMainQueue).start(completed: {
+                                            Queue.mainQueue().after(1.0, {
+                                                disposable.dispose()
+                                            })
+                                        })
+                                        return true
+                                    } else if case .undo = value {
+                                        disposable.dispose()
+                                        return true
+                                    }
+                                    return false
+                                }
+                            )
+                            
+                            if let chatListController, chatListController.view.window != nil {
+                                chatListController.present(undoOverlayController, in: .current)
+                            } else {
+                                controller.present(undoOverlayController, in: .window(.root))
+                            }
+                            
+                            controller.dismiss()
+                            
+                            /*self.joinDisposable = (component.context.engine.peers.leaveChatFolder(folderId: folderId, removePeerIds: Array(self.selectedItems))
                             |> deliverOnMainQueue).start(completed: { [weak self] in
                                 guard let self, let controller = self.environment?.controller() else {
                                     return
                                 }
                                 controller.dismiss()
-                            })
+                            })*/
                         } else if allChatsAdded {
                             controller.dismiss()
                         } else if let _ = component.linkContents {

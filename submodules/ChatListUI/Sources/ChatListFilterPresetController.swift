@@ -15,6 +15,10 @@ import AvatarNode
 import ChatListFilterSettingsHeaderItem
 import PremiumUI
 import InviteLinksUI
+import QrCodeUI
+import ContextUI
+import AsyncDisplayKit
+import UndoUI
 
 private enum FilterSection: Int32, Hashable {
     case include
@@ -37,6 +41,7 @@ private final class ChatListFilterPresetControllerArguments {
     let createLink: () -> Void
     let openLink: (ExportedChatFolderLink) -> Void
     let removeLink: (ExportedChatFolderLink) -> Void
+    let linkContextAction: (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void
     
     init(
         context: AccountContext,
@@ -53,7 +58,8 @@ private final class ChatListFilterPresetControllerArguments {
         expandSection: @escaping (FilterSection) -> Void,
         createLink: @escaping () -> Void,
         openLink: @escaping (ExportedChatFolderLink) -> Void,
-        removeLink: @escaping (ExportedChatFolderLink) -> Void
+        removeLink: @escaping (ExportedChatFolderLink) -> Void,
+        linkContextAction: @escaping (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void
     ) {
         self.context = context
         self.updateState = updateState
@@ -70,6 +76,7 @@ private final class ChatListFilterPresetControllerArguments {
         self.createLink = createLink
         self.openLink = openLink
         self.removeLink = removeLink
+        self.linkContextAction = linkContextAction
     }
 }
 
@@ -537,7 +544,9 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.openLink(invite)
             }, removeAction: { invite in
                 arguments.removeLink(invite)
-            }, contextAction: nil)
+            }, contextAction: { link, node, gesture in
+                arguments.linkContextAction(link, node, gesture)
+            })
         case let .inviteLinkInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
@@ -624,7 +633,8 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     if let currentPreset, let data = currentPreset.data, data.isShared {
     } else {
         entries.append(.excludePeersHeader(presentationData.strings.ChatListFolder_ExcludedSectionHeader))
-        entries.append(.addExcludePeer(title: presentationData.strings.ChatListFolder_AddChats))
+        //TODO:localize
+        entries.append(.addExcludePeer(title: "Add Chats to Exclude"))
         
         var excludeCategoryIndex = 0
         for category in ChatListFilterExcludeCategory.allCases {
@@ -1085,6 +1095,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     var focusOnNameImpl: (() -> Void)?
     var clearFocusImpl: (() -> Void)?
     var applyImpl: ((Bool, @escaping () -> Void) -> Void)?
+    var getControllerImpl: (() -> ViewController?)?
+    var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
     
     let sharedLinks = Promise<[ExportedChatFolderLink]?>(nil)
     if let currentPreset {
@@ -1375,9 +1387,10 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                                 
                                 if let updatedLink {
                                     if let index = links.firstIndex(where: { $0.link == link.link }) {
-                                        links.remove(at: index)
+                                        links[index] = updatedLink
+                                    } else {
+                                        links.insert(updatedLink, at: 0)
                                     }
-                                    links.insert(updatedLink, at: 0)
                                     sharedLinks.set(.single(links))
                                 } else {
                                     if let index = links.firstIndex(where: { $0.link == link.link }) {
@@ -1387,6 +1400,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                                 }
                             })
                         }
+                    }, presentController: { c in
+                        presentControllerImpl?(c, nil)
                     }))
                 })
             }
@@ -1404,6 +1419,59 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                     actionsDisposable.add(context.engine.peers.deleteChatFolderLink(filterId: currentPreset.id, link: link).start())
                 })
             }
+        },
+        linkContextAction: { invite, node, gesture in
+            guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?(), let invite = invite, let currentPreset else {
+                return
+            }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            var items: [ContextMenuItem] = []
+
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextCopy, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.default)
+                
+                //dismissTooltipsImpl?()
+                
+                UIPasteboard.general.string = invite.link
+
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                
+                presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: nil, subject: .chatFolder(slug: invite.slug)), nil)
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextRevoke, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                
+                let _ = (sharedLinks.get() |> take(1) |> deliverOnMainQueue).start(next: { links in
+                    var links = links ?? []
+                    if let index = links.firstIndex(where: { $0.link == invite.link }) {
+                        links.remove(at: index)
+                    }
+                    sharedLinks.set(.single(links))
+                })
+                
+                let _ = (context.engine.peers.editChatFolderLink(filterId: currentPreset.id, link: invite, title: nil, peerIds: nil, revoke: true)
+                |> deliverOnMainQueue).start(completed: {
+                    let _ = (context.engine.peers.deleteChatFolderLink(filterId: currentPreset.id, link: invite)
+                    |> deliverOnMainQueue).start(completed: {
+                    })
+                })
+            })))
+
+            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            presentInGlobalOverlayImpl?(contextController)
         }
     )
         
@@ -1577,6 +1645,14 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 })
         })]), nil)
     }
+    getControllerImpl = { [weak controller] in
+        return controller
+    }
+    presentInGlobalOverlayImpl = { [weak controller] c in
+        if let controller = controller {
+            controller.presentInGlobalOverlay(c)
+        }
+    }
     attemptNavigationImpl = {
         let state = stateValue.with { $0 }
         if let currentPreset = currentPreset, case let .filter(currentId, currentTitle, currentEmoticon, currentData) = currentPreset {
@@ -1652,7 +1728,9 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
     |> deliverOnMainQueue).start(next: { existingLink in
         if let existingLink {
             completed()
-            pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: existingLink, linkUpdated: linkUpdated))
+            pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: existingLink, linkUpdated: linkUpdated, presentController: { c in
+                presentController(c)
+            }))
             
             return
         }
@@ -1672,7 +1750,9 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
             })
             if peers.allSatisfy({ !canShareLinkToPeer(peer: $0) }) {
                 completed()
-                pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: nil, linkUpdated: linkUpdated))
+                pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: nil, linkUpdated: linkUpdated, presentController: { c in
+                    presentController(c)
+                }))
             } else {
                 var enabledPeerIds: [EnginePeer.Id] = []
                 for peer in peers {
@@ -1686,7 +1766,9 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                     completed()
                     linkUpdated(link)
                     
-                    pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: link, linkUpdated: linkUpdated))
+                    pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: link, linkUpdated: linkUpdated, presentController: { c in
+                        presentController(c)
+                    }))
                 }, error: { error in
                     completed()
                     //TODO:localize
@@ -1713,4 +1795,18 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
             }
         })
     })
+}
+
+private final class InviteLinkContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
 }

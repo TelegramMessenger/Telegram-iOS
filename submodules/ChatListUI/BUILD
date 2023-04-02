@@ -91,6 +91,7 @@ swift_library(
         "//submodules/InviteLinksUI",
         "//submodules/TelegramUI/Components/ChatFolderLinkPreviewScreen",
         "//submodules/ItemListUI",
+        "//submodules/QrCodeUI",
     ],
     visibility = [
         "//visibility:public",
