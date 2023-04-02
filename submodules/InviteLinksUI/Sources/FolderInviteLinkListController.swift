@@ -521,7 +521,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     text = "You can't share private chats"
                 }
             } else {
-                text = "you can't invite others here"
+                text = "You don't have the admin rights to share invite links to this group chat."
             }
             dismissTooltipsImpl?()
             displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil))
@@ -560,6 +560,11 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     
     let applyChangesImpl: (() -> Void)? = {
         let state = stateValue.with({ $0 })
+        
+        if state.selectedPeerIds.isEmpty {
+            return
+        }
+        
         if let currentLink = state.currentLink {
             if currentLink.title != state.title || Set(currentLink.peerIds) != state.selectedPeerIds {
                 updateState { state in
@@ -625,6 +630,8 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         allPeers
     )
     |> map { presentationData, state, allPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let allPeers = allPeers.compactMap { $0 }
+        
         let crossfade = false
         
         var animateChanges = false
@@ -644,7 +651,12 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         title = .text(folderTitle)
         
         var doneButton: ItemListNavigationButton?
-        if state.isSaving {
+        
+        let canShareChats = !allPeers.allSatisfy({ !canShareLinkToPeer(peer: $0) })
+        
+        if !canShareChats {
+            doneButton = nil
+        } else if state.isSaving {
             doneButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
             doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Save), style: .bold, enabled: !state.selectedPeerIds.isEmpty, action: {
@@ -657,7 +669,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             presentationData: presentationData,
             state: state,
             title: filterTitle,
-            allPeers: allPeers.compactMap { $0 }
+            allPeers: allPeers
         ), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))

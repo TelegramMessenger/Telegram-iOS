@@ -832,9 +832,23 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                 //TODO:localize
                                                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
                                                 if case .updates = component.subject {
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Updated", text: "You have joined \(result.newChatCount) new chats", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    let chatCountString: String
+                                                    if result.newChatCount == 1 {
+                                                        chatCountString = "1 new chat"
+                                                    } else {
+                                                        chatCountString = "\(result.newChatCount) new chats"
+                                                    }
+                                                    
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Updated", text: "You have joined \(chatCountString)", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else if result.newChatCount != 0 {
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Added", text: "You also joined \(result.newChatCount) chats", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    let chatCountString: String
+                                                    if result.newChatCount == 1 {
+                                                        chatCountString = "1 chat"
+                                                    } else {
+                                                        chatCountString = "\(result.newChatCount) chats"
+                                                    }
+                                                    
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Added", text: "You also joined \(chatCountString)", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else {
                                                     chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Folder \(result.title) Added", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 }

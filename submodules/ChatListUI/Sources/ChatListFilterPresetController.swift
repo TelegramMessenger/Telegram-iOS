@@ -665,6 +665,9 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     if let inviteLinks, !inviteLinks.isEmpty {
         hasLinks = true
     }
+    if let currentPreset, let data = currentPreset.data, data.hasSharedLinks {
+        hasLinks = true
+    }
     
     entries.append(.inviteLinkHeader(hasLinks: hasLinks || hadLinks))
     entries.append(.inviteLinkCreate(hasLinks: hasLinks))
@@ -1393,9 +1396,11 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     var attemptNavigationImpl: (() -> Bool)?
     applyImpl = { completed in
         let state = stateValue.with { $0 }
+        
+        var includePeers = ChatListFilterIncludePeers()
+        includePeers.setPeers(state.additionallyIncludePeers)
+        
         let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
-            var includePeers = ChatListFilterIncludePeers()
-            includePeers.setPeers(state.additionallyIncludePeers)
             
             var filterId = currentPreset?.id ?? -1
             if currentPreset == nil {
@@ -1434,7 +1439,29 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         }
         |> deliverOnMainQueue).start(next: { filters in
             updated(filters)
-            completed()
+            
+            if let currentPreset {
+                let _ = (context.engine.peers.updatedChatListFilters()
+                |> filter { filters -> Bool in
+                    for filter in filters {
+                        if filter.id == currentPreset.id {
+                            if let data = filter.data {
+                                if Set(data.includePeers.peers) == Set(includePeers.peers) {
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                    return true
+                }
+                |> take(1)
+                |> delay(1.0, queue: .mainQueue())
+                |> deliverOnMainQueue).start(next: { _ in
+                    completed()
+                })
+            } else {
+                completed()
+            }
         })
     }
     
@@ -1473,8 +1500,10 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         if previousStateValue.expandedSections != state.expandedSections {
             skipStateAnimation = true
         }
+        var crossfadeAnimation = false
         if previousSharedLinks == nil && sharedLinks != nil {
             skipStateAnimation = true
+            crossfadeAnimation = true
         }
         previousSharedLinks = sharedLinks
         
@@ -1483,7 +1512,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? presentationData.strings.ChatListFolder_TitleEdit : presentationData.strings.ChatListFolder_TitleCreate), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, currentPreset: currentPreset, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount, inviteLinks: sharedLinks, hadLinks: hadLinks), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, currentPreset: currentPreset, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount, inviteLinks: sharedLinks, hadLinks: hadLinks), style: .blocks, emptyStateItem: nil, crossfadeState: crossfadeAnimation, animateChanges: !skipStateAnimation)
         skipStateAnimation = false
         
         return (controllerState, (listState, arguments))

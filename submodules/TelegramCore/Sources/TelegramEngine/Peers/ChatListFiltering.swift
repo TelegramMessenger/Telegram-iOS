@@ -350,7 +350,7 @@ extension ChatListFilter {
                     }
                 )
             )
-        case let .dialogFilterCommunity(flags, id, title, emoticon, pinnedPeers, includePeers):
+        case let .dialogFilterChatlist(flags, id, title, emoticon, pinnedPeers, includePeers):
             self = .filter(
                 id: id,
                 title: title,
@@ -401,7 +401,7 @@ extension ChatListFilter {
                 if emoticon != nil {
                     flags |= 1 << 25
                 }
-                return .dialogFilterCommunity(flags: flags, id: id, title: title, emoticon: emoticon, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                return .dialogFilterChatlist(flags: flags, id: id, title: title, emoticon: emoticon, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
                     if data.includePeers.pinnedPeers.contains(peerId) {
@@ -539,7 +539,7 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                             }
                         }
                     }
-                case let .dialogFilterCommunity(_, _, _, _, pinnedPeers, includePeers):
+                case let .dialogFilterChatlist(_, _, _, _, pinnedPeers, includePeers):
                     for peer in pinnedPeers + includePeers {
                         var peerId: PeerId?
                         switch peer {

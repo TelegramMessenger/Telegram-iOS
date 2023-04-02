@@ -894,16 +894,16 @@ public extension Api.channels {
     
     }
 }
-public extension Api.communities {
-    enum CommunityInvite: TypeConstructorDescription {
-        case communityInvite(flags: Int32, title: String, emoticon: String?, peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
-        case communityInviteAlready(filterId: Int32, missingPeers: [Api.Peer], alreadyPeers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+public extension Api.chatlists {
+    enum ChatlistInvite: TypeConstructorDescription {
+        case chatlistInvite(flags: Int32, title: String, emoticon: String?, peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+        case chatlistInviteAlready(filterId: Int32, missingPeers: [Api.Peer], alreadyPeers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .communityInvite(let flags, let title, let emoticon, let peers, let chats, let users):
+                case .chatlistInvite(let flags, let title, let emoticon, let peers, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(59080097)
+                        buffer.appendInt32(500007837)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -924,9 +924,9 @@ public extension Api.communities {
                         item.serialize(buffer, true)
                     }
                     break
-                case .communityInviteAlready(let filterId, let missingPeers, let alreadyPeers, let chats, let users):
+                case .chatlistInviteAlready(let filterId, let missingPeers, let alreadyPeers, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-951718393)
+                        buffer.appendInt32(-91752871)
                     }
                     serializeInt32(filterId, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -955,14 +955,14 @@ public extension Api.communities {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .communityInvite(let flags, let title, let emoticon, let peers, let chats, let users):
-                return ("communityInvite", [("flags", flags as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("peers", peers as Any), ("chats", chats as Any), ("users", users as Any)])
-                case .communityInviteAlready(let filterId, let missingPeers, let alreadyPeers, let chats, let users):
-                return ("communityInviteAlready", [("filterId", filterId as Any), ("missingPeers", missingPeers as Any), ("alreadyPeers", alreadyPeers as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .chatlistInvite(let flags, let title, let emoticon, let peers, let chats, let users):
+                return ("chatlistInvite", [("flags", flags as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("peers", peers as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .chatlistInviteAlready(let filterId, let missingPeers, let alreadyPeers, let chats, let users):
+                return ("chatlistInviteAlready", [("filterId", filterId as Any), ("missingPeers", missingPeers as Any), ("alreadyPeers", alreadyPeers as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     
-        public static func parse_communityInvite(_ reader: BufferReader) -> CommunityInvite? {
+        public static func parse_chatlistInvite(_ reader: BufferReader) -> ChatlistInvite? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -988,13 +988,13 @@ public extension Api.communities {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.communities.CommunityInvite.communityInvite(flags: _1!, title: _2!, emoticon: _3, peers: _4!, chats: _5!, users: _6!)
+                return Api.chatlists.ChatlistInvite.chatlistInvite(flags: _1!, title: _2!, emoticon: _3, peers: _4!, chats: _5!, users: _6!)
             }
             else {
                 return nil
             }
         }
-        public static func parse_communityInviteAlready(_ reader: BufferReader) -> CommunityInvite? {
+        public static func parse_chatlistInviteAlready(_ reader: BufferReader) -> ChatlistInvite? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: [Api.Peer]?
@@ -1019,7 +1019,7 @@ public extension Api.communities {
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.communities.CommunityInvite.communityInviteAlready(filterId: _1!, missingPeers: _2!, alreadyPeers: _3!, chats: _4!, users: _5!)
+                return Api.chatlists.ChatlistInvite.chatlistInviteAlready(filterId: _1!, missingPeers: _2!, alreadyPeers: _3!, chats: _4!, users: _5!)
             }
             else {
                 return nil
@@ -1028,15 +1028,15 @@ public extension Api.communities {
     
     }
 }
-public extension Api.communities {
-    enum CommunityUpdates: TypeConstructorDescription {
-        case communityUpdates(missingPeers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+public extension Api.chatlists {
+    enum ChatlistUpdates: TypeConstructorDescription {
+        case chatlistUpdates(missingPeers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .communityUpdates(let missingPeers, let chats, let users):
+                case .chatlistUpdates(let missingPeers, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-414818125)
+                        buffer.appendInt32(-1816295539)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(missingPeers.count))
@@ -1059,12 +1059,12 @@ public extension Api.communities {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .communityUpdates(let missingPeers, let chats, let users):
-                return ("communityUpdates", [("missingPeers", missingPeers as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .chatlistUpdates(let missingPeers, let chats, let users):
+                return ("chatlistUpdates", [("missingPeers", missingPeers as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     
-        public static func parse_communityUpdates(_ reader: BufferReader) -> CommunityUpdates? {
+        public static func parse_chatlistUpdates(_ reader: BufferReader) -> ChatlistUpdates? {
             var _1: [Api.Peer]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
@@ -1081,7 +1081,7 @@ public extension Api.communities {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.communities.CommunityUpdates.communityUpdates(missingPeers: _1!, chats: _2!, users: _3!)
+                return Api.chatlists.ChatlistUpdates.chatlistUpdates(missingPeers: _1!, chats: _2!, users: _3!)
             }
             else {
                 return nil
@@ -1090,15 +1090,15 @@ public extension Api.communities {
     
     }
 }
-public extension Api.communities {
-    enum ExportedCommunityInvite: TypeConstructorDescription {
-        case exportedCommunityInvite(filter: Api.DialogFilter, invite: Api.ExportedCommunityInvite)
+public extension Api.chatlists {
+    enum ExportedChatlistInvite: TypeConstructorDescription {
+        case exportedChatlistInvite(filter: Api.DialogFilter, invite: Api.ExportedChatlistInvite)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .exportedCommunityInvite(let filter, let invite):
+                case .exportedChatlistInvite(let filter, let invite):
                     if boxed {
-                        buffer.appendInt32(1805101290)
+                        buffer.appendInt32(283567014)
                     }
                     filter.serialize(buffer, true)
                     invite.serialize(buffer, true)
@@ -1108,24 +1108,24 @@ public extension Api.communities {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .exportedCommunityInvite(let filter, let invite):
-                return ("exportedCommunityInvite", [("filter", filter as Any), ("invite", invite as Any)])
+                case .exportedChatlistInvite(let filter, let invite):
+                return ("exportedChatlistInvite", [("filter", filter as Any), ("invite", invite as Any)])
     }
     }
     
-        public static func parse_exportedCommunityInvite(_ reader: BufferReader) -> ExportedCommunityInvite? {
+        public static func parse_exportedChatlistInvite(_ reader: BufferReader) -> ExportedChatlistInvite? {
             var _1: Api.DialogFilter?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.DialogFilter
             }
-            var _2: Api.ExportedCommunityInvite?
+            var _2: Api.ExportedChatlistInvite?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.ExportedCommunityInvite
+                _2 = Api.parse(reader, signature: signature) as? Api.ExportedChatlistInvite
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.communities.ExportedCommunityInvite.exportedCommunityInvite(filter: _1!, invite: _2!)
+                return Api.chatlists.ExportedChatlistInvite.exportedChatlistInvite(filter: _1!, invite: _2!)
             }
             else {
                 return nil
