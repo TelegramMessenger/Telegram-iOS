@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import AnimatedTextComponent
+import ActivityIndicator
 
 public final class ButtonBadgeComponent: Component {
     let fillColor: UIColor
@@ -267,15 +268,18 @@ public final class ButtonTextContentComponent: Component {
 public final class ButtonComponent: Component {
     public struct Background: Equatable {
         public var color: UIColor
+        public var foreground: UIColor
         public var pressedColor: UIColor
         public var cornerRadius: CGFloat
 
         public init(
             color: UIColor,
+            foreground: UIColor,
             pressedColor: UIColor,
             cornerRadius: CGFloat = 10.0
         ) {
             self.color = color
+            self.foreground = foreground
             self.pressedColor = pressedColor
             self.cornerRadius = cornerRadius
         }
@@ -284,17 +288,20 @@ public final class ButtonComponent: Component {
     public let background: Background
     public let content: AnyComponentWithIdentity<Empty>
     public let isEnabled: Bool
+    public let displaysProgress: Bool
     public let action: () -> Void
     
     public init(
         background: Background,
         content: AnyComponentWithIdentity<Empty>,
         isEnabled: Bool,
+        displaysProgress: Bool,
         action: @escaping () -> Void
     ) {
         self.background = background
         self.content = content
         self.isEnabled = isEnabled
+        self.displaysProgress = displaysProgress
         self.action = action
     }
 
@@ -306,6 +313,9 @@ public final class ButtonComponent: Component {
             return false
         }
         if lhs.isEnabled != rhs.isEnabled {
+            return false
+        }
+        if lhs.displaysProgress != rhs.displaysProgress {
             return false
         }
         return true
@@ -325,6 +335,8 @@ public final class ButtonComponent: Component {
         private weak var componentState: EmptyComponentState?
 
         private var contentItem: ContentItem?
+        
+        private var activityIndicator: ActivityIndicator?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -363,10 +375,17 @@ public final class ButtonComponent: Component {
             self.component = component
             self.componentState = state
             
-            self.isEnabled = component.isEnabled
+            self.isEnabled = component.isEnabled && !component.displaysProgress
             
             transition.setBackgroundColor(view: self, color: component.background.color)
             transition.setCornerRadius(layer: self.layer, cornerRadius: component.background.cornerRadius)
+            
+            var contentAlpha: CGFloat = 1.0
+            if component.displaysProgress {
+                contentAlpha = 0.0
+            } else if !component.isEnabled {
+                contentAlpha = 0.7
+            }
 
             var previousContentItem: ContentItem?
             let contentItem: ContentItem
@@ -398,11 +417,11 @@ public final class ButtonComponent: Component {
                 let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - contentSize.width) * 0.5), y: floor((availableSize.height - contentSize.height) * 0.5)), size: contentSize)
                 
                 contentTransition.setFrame(view: contentView, frame: contentFrame)
-                contentTransition.setAlpha(view: contentView, alpha: component.isEnabled ? 1.0 : 0.7)
+                contentTransition.setAlpha(view: contentView, alpha: contentAlpha)
                 
                 if animateIn && previousContentItem != nil && !transition.animation.isImmediate {
                     contentView.layer.animateScale(from: 0.4, to: 1.0, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring)
-                    contentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    contentView.layer.animateAlpha(from: 0.0, to: contentAlpha, duration: 0.1)
                     contentView.layer.animatePosition(from: CGPoint(x: 0.0, y: -availableSize.height * 0.15), to: CGPoint(), duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                 }
             }
@@ -410,12 +429,36 @@ public final class ButtonComponent: Component {
             if let previousContentItem, let previousContentView = previousContentItem.view.view {
                 if !transition.animation.isImmediate {
                     previousContentView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    previousContentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousContentView] _ in
+                    previousContentView.layer.animateAlpha(from: contentAlpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousContentView] _ in
                         previousContentView?.removeFromSuperview()
                     })
                     previousContentView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: availableSize.height * 0.35), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                 } else {
                     previousContentView.removeFromSuperview()
+                }
+            }
+            
+            if component.displaysProgress {
+                let activityIndicator: ActivityIndicator
+                var activityIndicatorTransition = transition
+                if let current = self.activityIndicator {
+                    activityIndicator = current
+                } else {
+                    activityIndicatorTransition = .immediate
+                    activityIndicator = ActivityIndicator(type: .custom(component.background.foreground, 22.0, 2.0, true))
+                    activityIndicator.view.alpha = 0.0
+                    self.activityIndicator = activityIndicator
+                    self.addSubview(activityIndicator.view)
+                }
+                let indicatorSize = CGSize(width: 22.0, height: 22.0)
+                transition.setAlpha(view: activityIndicator.view, alpha: 1.0)
+                activityIndicatorTransition.setFrame(view: activityIndicator.view, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - indicatorSize.width) / 2.0), y: floor((availableSize.height - indicatorSize.height) / 2.0)), size: indicatorSize))
+            } else {
+                if let activityIndicator = self.activityIndicator {
+                    self.activityIndicator = nil
+                    transition.setAlpha(view: activityIndicator.view, alpha: 0.0, completion: { [weak activityIndicator] _ in
+                        activityIndicator?.view.removeFromSuperview()
+                    })
                 }
             }
             

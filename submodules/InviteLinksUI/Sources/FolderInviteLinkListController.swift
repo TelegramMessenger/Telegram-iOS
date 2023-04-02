@@ -521,7 +521,15 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     text = "You can't share private chats"
                 }
             } else {
-                text = "You don't have the admin rights to share invite links to this group chat."
+                var isGroup = true
+                if case let .channel(channel) = peer, case .broadcast = channel.info {
+                    isGroup = false
+                }
+                if isGroup {
+                    text = "You don't have the admin rights to share invite links to this group chat."
+                } else {
+                    text = "You don't have the admin rights to share invite links to this channel."
+                }
             }
             dismissTooltipsImpl?()
             displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil))
@@ -557,6 +565,17 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     let allPeers = context.engine.data.subscribe(
         EngineDataList(combinedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
     )
+    |> map { peers -> [EnginePeer] in
+        return peers.compactMap({ peer -> EnginePeer? in
+            guard let peer else {
+                return nil
+            }
+            if case let .legacyGroup(group) = peer, group.migrationReference != nil {
+                return nil
+            }
+            return peer
+        })
+    }
     
     let applyChangesImpl: (() -> Void)? = {
         let state = stateValue.with({ $0 })
@@ -608,9 +627,9 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     state.selectedPeerIds.insert(peerId)
                 }
             } else {
-                for peerId in allPeerIds {
-                    if let peer = peers.first(where: { $0?.id == peerId }), let peerValue = peer {
-                        if canShareLinkToPeer(peer: peerValue) {
+                for peerId in peers.map(\.id) {
+                    if let peer = peers.first(where: { $0.id == peerId }) {
+                        if canShareLinkToPeer(peer: peer) {
                             state.selectedPeerIds.insert(peerId)
                         }
                     }

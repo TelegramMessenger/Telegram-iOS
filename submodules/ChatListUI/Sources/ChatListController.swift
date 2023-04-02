@@ -2705,6 +2705,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self?.push(c)
         }, presentController: { [weak self] c in
             self?.present(c, in: .window(.root))
+        }, completed: {
         }, linkUpdated: { _ in
         })
     }
@@ -2816,33 +2817,38 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             return
                         }
                         
-                        let previewScreen = ChatFolderLinkPreviewScreen(
-                            context: self.context,
-                            subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
-                            contents: ChatFolderLinkContents(
-                                localFilterId: id,
-                                title: title,
-                                peers: peers.compactMap { $0 }.filter { peer in
-                                    if case .channel = peer {
-                                        return true
-                                    } else {
-                                        return false
-                                    }
-                                },
-                                alreadyMemberPeerIds: Set(),
-                                memberCounts: memberCounts
-                            ),
-                            completion: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
-                                    self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
-                                    })
-                                }
+                        let filteredPeers = peers.compactMap { $0 }.filter { peer in
+                            if case .channel = peer {
+                                return true
+                            } else {
+                                return false
                             }
-                        )
-                        self.push(previewScreen)
+                        }
+                        if filteredPeers.isEmpty {
+                            apply()
+                        } else {
+                            let previewScreen = ChatFolderLinkPreviewScreen(
+                                context: self.context,
+                                subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
+                                contents: ChatFolderLinkContents(
+                                    localFilterId: id,
+                                    title: title,
+                                    peers: filteredPeers,
+                                    alreadyMemberPeerIds: Set(),
+                                    memberCounts: memberCounts
+                                ),
+                                completion: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
+                                        self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
+                                        })
+                                    }
+                                }
+                            )
+                            self.push(previewScreen)
+                        }
                     }
                     
                     if hasLinks {

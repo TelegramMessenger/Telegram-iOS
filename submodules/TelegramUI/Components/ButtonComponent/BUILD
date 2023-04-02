@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
+        "//submodules/ActivityIndicator",
     ],
     visibility = [
         "//visibility:public",

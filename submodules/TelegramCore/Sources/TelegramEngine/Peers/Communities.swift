@@ -366,12 +366,10 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                         continue
                     }
                     if let peerValue = transaction.getPeer(peerId) {
-                        if canShareLinkToPeer(peer: EnginePeer(peerValue)) {
-                            resultPeers.append(EnginePeer(peerValue))
-                            
-                            if transaction.getPeerChatListIndex(peerId) != nil {
-                                alreadyMemberPeerIds.insert(peerId)
-                            }
+                        resultPeers.append(EnginePeer(peerValue))
+                        
+                        if transaction.getPeerChatListIndex(peerId) != nil {
+                            alreadyMemberPeerIds.insert(peerId)
                         }
                     }
                 }

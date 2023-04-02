@@ -1084,7 +1084,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     var dismissImpl: (() -> Void)?
     var focusOnNameImpl: (() -> Void)?
     var clearFocusImpl: (() -> Void)?
-    var applyImpl: ((@escaping () -> Void) -> Void)?
+    var applyImpl: ((Bool, @escaping () -> Void) -> Void)?
     
     let sharedLinks = Promise<[ExportedChatFolderLink]?>(nil)
     if let currentPreset {
@@ -1297,11 +1297,16 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         },
         createLink: {
             if currentPreset == nil {
+                //TODO:localize
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let text = "Please finish creating this folder to share it."
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             } else {
-                applyImpl?({
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                presentControllerImpl?(statusController, nil)
+                
+                applyImpl?(true, { [weak statusController] in
                     let state = stateValue.with({ $0 })
                     
                     if let currentPreset, let data = currentPreset.data {
@@ -1315,17 +1320,24 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                             unavailableText = "You can’t share folders which have chat types or excluded chats."
                         }
                         if let unavailableText {
+                            statusController?.dismiss()
+                            
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: unavailableText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             
                             return
                         }
                         
+                        var statusController = statusController
+                        
                         var previousLink: ExportedChatFolderLink?
                         openCreateChatListFolderLink(context: context, folderId: currentPreset.id, checkIfExists: false, title: currentPreset.title, peerIds: state.additionallyIncludePeers, pushController: { c in
                             pushControllerImpl?(c)
                         }, presentController: { c in
                             presentControllerImpl?(c, nil)
+                        }, completed: {
+                            statusController?.dismiss()
+                            statusController = nil
                         }, linkUpdated: { updatedLink in
                             let previousLinkValue = previousLink
                             previousLink = updatedLink
@@ -1347,12 +1359,14 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                                 sharedLinks.set(.single(links))
                             })
                         })
+                    } else {
+                        statusController?.dismiss()
                     }
                 })
             }
         }, openLink: { link in
             if let currentPreset, let _ = currentPreset.data {
-                applyImpl?({
+                applyImpl?(false, {
                     let state = stateValue.with({ $0 })
                     pushControllerImpl?(folderInviteLinkListController(context: context, filterId: currentPreset.id, title: currentPreset.title, allPeerIds: state.additionallyIncludePeers, currentInvitation: link, linkUpdated: { updatedLink in
                         if updatedLink != link {
@@ -1394,14 +1408,13 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     )
         
     var attemptNavigationImpl: (() -> Bool)?
-    applyImpl = { completed in
+    applyImpl = { waitForSync, completed in
         let state = stateValue.with { $0 }
         
         var includePeers = ChatListFilterIncludePeers()
         includePeers.setPeers(state.additionallyIncludePeers)
         
         let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
-            
             var filterId = currentPreset?.id ?? -1
             if currentPreset == nil {
                 filterId = context.engine.peers.generateNewChatListFilterId(filters: filters)
@@ -1440,7 +1453,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         |> deliverOnMainQueue).start(next: { filters in
             updated(filters)
             
-            if let currentPreset {
+            if let currentPreset, waitForSync {
                 let _ = (context.engine.peers.updatedChatListFilters()
                 |> filter { filters -> Bool in
                     for filter in filters {
@@ -1490,7 +1503,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             }
         })
         let rightNavigationButton = ItemListNavigationButton(content: .text(currentPreset == nil ? presentationData.strings.Common_Create : presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
-            applyImpl?({
+            applyImpl?(false, {
                 dismissImpl?()
             })
         })
@@ -1559,7 +1572,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             }),
             //TODO:localize
             TextAlertAction(type: .defaultAction, title: "Save", action: {
-                applyImpl?({
+                applyImpl?(false, {
                     dismissImpl?()
                 })
         })]), nil)
@@ -1594,8 +1607,9 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     return controller
 }
 
-func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, checkIfExists: Bool, title: String, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
+func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, checkIfExists: Bool, title: String, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, completed: @escaping () -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
     if peerIds.isEmpty {
+        completed()
         return
     }
     
@@ -1610,6 +1624,9 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
         |> map { result, peers -> ExportedChatFolderLink? in
             var enabledPeerIds: [EnginePeer.Id] = []
             for peer in peers {
+                if case let .legacyGroup(group) = peer, group.migrationReference != nil {
+                    continue
+                }
                 if let peer, canShareLinkToPeer(peer: peer) {
                     enabledPeerIds.append(peer.id)
                 }
@@ -1634,6 +1651,7 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
     let _ = (existingLink
     |> deliverOnMainQueue).start(next: { existingLink in
         if let existingLink {
+            completed()
             pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: existingLink, linkUpdated: linkUpdated))
             
             return
@@ -1643,9 +1661,18 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
             EngineDataList(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
         )
         |> deliverOnMainQueue).start(next: { peers in
-            let peers = peers.compactMap({ $0 })
+            let peers = peers.compactMap({ peer -> EnginePeer? in
+                guard let peer else {
+                    return nil
+                }
+                if case let .legacyGroup(group) = peer, group.migrationReference != nil {
+                    return nil
+                }
+                return peer
+            })
             if peers.allSatisfy({ !canShareLinkToPeer(peer: $0) }) {
-                pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: nil, linkUpdated: linkUpdated))
+                completed()
+                pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: nil, linkUpdated: linkUpdated))
             } else {
                 var enabledPeerIds: [EnginePeer.Id] = []
                 for peer in peers {
@@ -1656,10 +1683,12 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                 
                 let _ = (context.engine.peers.exportChatFolder(filterId: folderId, title: "", peerIds: enabledPeerIds)
                 |> deliverOnMainQueue).start(next: { link in
+                    completed()
                     linkUpdated(link)
                     
-                    pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peerIds, currentInvitation: link, linkUpdated: linkUpdated))
+                    pushController(folderInviteLinkListController(context: context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: link, linkUpdated: linkUpdated))
                 }, error: { error in
+                    completed()
                     //TODO:localize
                     let text: String
                     switch error {

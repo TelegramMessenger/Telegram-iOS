@@ -716,15 +716,19 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             initialContentHeight += 24.0
             
             let actionButtonTitle: String
+            var actionButtonBadge: Int = 0
             if case .remove = component.subject {
+                actionButtonBadge = self.selectedItems.count
                 if self.selectedItems.isEmpty {
                     actionButtonTitle = "Remove Folder"
                 } else {
                     actionButtonTitle = "Remove Folder and Chats"
                 }
             } else if allChatsAdded {
+                actionButtonBadge = 0
                 actionButtonTitle = "OK"
             } else if let linkContents = component.linkContents {
+                actionButtonBadge = self.selectedItems.count
                 if linkContents.localFilterId != nil {
                     if self.selectedItems.isEmpty {
                         actionButtonTitle = "Do Not Join Any Chats"
@@ -743,19 +747,21 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
                         color: environment.theme.list.itemCheckColors.fillColor,
+                        foreground: environment.theme.list.itemCheckColors.foregroundColor,
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
                     ),
                     content: AnyComponentWithIdentity(
                         id: actionButtonTitle,
                         component: AnyComponent(ButtonTextContentComponent(
                             text: actionButtonTitle,
-                            badge: self.selectedItems.count,
+                            badge: actionButtonBadge,
                             textColor: environment.theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
                             badgeForeground: environment.theme.list.itemCheckColors.fillColor
                         ))
                     ),
                     isEnabled: !self.selectedItems.isEmpty || component.linkContents?.localFilterId != nil,
+                    displaysProgress: self.inProgress,
                     action: { [weak self] in
                         guard let self, let component = self.component, let controller = self.environment?.controller() else {
                             return
