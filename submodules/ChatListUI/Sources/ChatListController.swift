@@ -1547,7 +1547,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
                                             if !data.includePeers.peers.isEmpty && data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty {
-                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
+                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: data.hasSharedLinks ? nil : ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
                                                     c.dismiss(completion: {
@@ -2705,6 +2705,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self?.push(c)
         }, presentController: { [weak self] c in
             self?.present(c, in: .window(.root))
+        }, completed: {
         }, linkUpdated: { _ in
         })
     }
@@ -2816,33 +2817,38 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             return
                         }
                         
-                        let previewScreen = ChatFolderLinkPreviewScreen(
-                            context: self.context,
-                            subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
-                            contents: ChatFolderLinkContents(
-                                localFilterId: id,
-                                title: title,
-                                peers: peers.compactMap { $0 }.filter { peer in
-                                    if case .channel = peer {
-                                        return true
-                                    } else {
-                                        return false
-                                    }
-                                },
-                                alreadyMemberPeerIds: Set(),
-                                memberCounts: memberCounts
-                            ),
-                            completion: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
-                                    self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
-                                    })
-                                }
+                        let filteredPeers = peers.compactMap { $0 }.filter { peer in
+                            if case .channel = peer {
+                                return true
+                            } else {
+                                return false
                             }
-                        )
-                        self.push(previewScreen)
+                        }
+                        if filteredPeers.isEmpty {
+                            apply()
+                        } else {
+                            let previewScreen = ChatFolderLinkPreviewScreen(
+                                context: self.context,
+                                subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
+                                contents: ChatFolderLinkContents(
+                                    localFilterId: id,
+                                    title: title,
+                                    peers: filteredPeers,
+                                    alreadyMemberPeerIds: Set(),
+                                    memberCounts: memberCounts
+                                ),
+                                completion: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id == id {
+                                        self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .all, completion: {
+                                        })
+                                    }
+                                }
+                            )
+                            self.push(previewScreen)
+                        }
                     }
                     
                     if hasLinks {
@@ -3211,7 +3217,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let text = strongSelf.presentationData.strings.ChatList_DeletedThreads(Int32(threadIds.count))
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                         guard let strongSelf = self else {
                             return false
                         }
@@ -3295,7 +3301,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                         guard let strongSelf = self else {
                             return false
                         }
@@ -3640,7 +3646,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return true
                             })
                             
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: strongSelf.presentationData.strings.Undo_ChatCleared, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                                 guard let strongSelf = self else {
                                     return false
                                 }
@@ -3862,7 +3868,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let statusText = self.presentationData.strings.Undo_DeletedTopic
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
             guard let self else {
                 return false
             }
@@ -4150,7 +4156,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return true
         })
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
             guard let strongSelf = self else {
                 return false
             }

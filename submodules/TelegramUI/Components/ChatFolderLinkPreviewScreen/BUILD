@@ -25,6 +25,7 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/PresentationDataUtils",
         "//submodules/Components/SolidRoundedButtonComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/AvatarNode",
         "//submodules/CheckNode",
         "//submodules/Markdown",

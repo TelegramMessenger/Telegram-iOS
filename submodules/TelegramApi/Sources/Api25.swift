@@ -1,12 +1,12 @@
-public extension Api.communities {
+public extension Api.chatlists {
     enum ExportedInvites: TypeConstructorDescription {
-        case exportedInvites(invites: [Api.ExportedCommunityInvite], chats: [Api.Chat], users: [Api.User])
+        case exportedInvites(invites: [Api.ExportedChatlistInvite], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .exportedInvites(let invites, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-2662489)
+                        buffer.appendInt32(279670215)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(invites.count))
@@ -35,9 +35,9 @@ public extension Api.communities {
     }
     
         public static func parse_exportedInvites(_ reader: BufferReader) -> ExportedInvites? {
-            var _1: [Api.ExportedCommunityInvite]?
+            var _1: [Api.ExportedChatlistInvite]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ExportedCommunityInvite.self)
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ExportedChatlistInvite.self)
             }
             var _2: [Api.Chat]?
             if let _ = reader.readInt32() {
@@ -51,7 +51,7 @@ public extension Api.communities {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.communities.ExportedInvites.exportedInvites(invites: _1!, chats: _2!, users: _3!)
+                return Api.chatlists.ExportedInvites.exportedInvites(invites: _1!, chats: _2!, users: _3!)
             }
             else {
                 return nil

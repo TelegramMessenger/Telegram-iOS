@@ -1025,14 +1025,14 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ExportedCommunityInvite: TypeConstructorDescription {
-        case exportedCommunityInvite(flags: Int32, title: String, url: String, peers: [Api.Peer])
+    enum ExportedChatlistInvite: TypeConstructorDescription {
+        case exportedChatlistInvite(flags: Int32, title: String, url: String, peers: [Api.Peer])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .exportedCommunityInvite(let flags, let title, let url, let peers):
+                case .exportedChatlistInvite(let flags, let title, let url, let peers):
                     if boxed {
-                        buffer.appendInt32(-337788502)
+                        buffer.appendInt32(206668204)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -1048,12 +1048,12 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .exportedCommunityInvite(let flags, let title, let url, let peers):
-                return ("exportedCommunityInvite", [("flags", flags as Any), ("title", title as Any), ("url", url as Any), ("peers", peers as Any)])
+                case .exportedChatlistInvite(let flags, let title, let url, let peers):
+                return ("exportedChatlistInvite", [("flags", flags as Any), ("title", title as Any), ("url", url as Any), ("peers", peers as Any)])
     }
     }
     
-        public static func parse_exportedCommunityInvite(_ reader: BufferReader) -> ExportedCommunityInvite? {
+        public static func parse_exportedChatlistInvite(_ reader: BufferReader) -> ExportedChatlistInvite? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -1069,7 +1069,7 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.ExportedCommunityInvite.exportedCommunityInvite(flags: _1!, title: _2!, url: _3!, peers: _4!)
+                return Api.ExportedChatlistInvite.exportedChatlistInvite(flags: _1!, title: _2!, url: _3!, peers: _4!)
             }
             else {
                 return nil

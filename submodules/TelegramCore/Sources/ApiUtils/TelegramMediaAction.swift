@@ -110,6 +110,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .requestedPeer(buttonId: buttonId, peerId: peer.peerId))
     case let .messageActionSetChatWallPaper(wallpaper):
         return TelegramMediaAction(action: .setChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper)))
+    case .messageActionSetSameChatWallPaper:
+        return nil
     }
 }
 

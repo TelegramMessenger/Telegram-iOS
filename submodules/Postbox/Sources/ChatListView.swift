@@ -404,6 +404,7 @@ public struct ChatListViewReadState: Equatable {
 final class MutableChatListView {
     let groupId: PeerGroupId
     let filterPredicate: ChatListFilterPredicate?
+    private let aroundIndex: ChatListIndex
     private let summaryComponents: ChatListEntrySummaryComponents
     fileprivate var groupEntries: [ChatListGroupReferenceEntry]
     private var count: Int
@@ -416,10 +417,15 @@ final class MutableChatListView {
     private var additionalItems: [AdditionalChatListItem] = []
     fileprivate var additionalItemEntries: [MutableChatListAdditionalItemEntry] = []
     
+    private var currentHiddenPeerIds = Set<PeerId>()
+    
     init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
+        self.aroundIndex = aroundIndex
         self.summaryComponents = summaryComponents
+        
+        self.currentHiddenPeerIds = postbox.hiddenChatIds
         
         var spaces: [ChatListViewSpace] = [
             .group(groupId: self.groupId, pinned: .notPinned, predicate: filterPredicate)
@@ -474,7 +480,7 @@ final class MutableChatListView {
                     if let entry = postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
                         switch entry {
                             case let .message(index, messageIndex):
-                                if let messageIndex = messageIndex {
+                                if let messageIndex = messageIndex, !postbox.isChatHidden(peerId: messageIndex.id.peerId) {
                                     foundIndices.append((index, messageIndex))
                                     if index.pinningIndex == nil {
                                         unpinnedCount += 1
@@ -541,7 +547,7 @@ final class MutableChatListView {
     func refreshDueToExternalTransaction(postbox: PostboxImpl, currentTransaction: Transaction) -> Bool {
         var updated = false
         
-        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
+        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, halfLimit: self.count)
         self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
         updated = true
         
@@ -559,8 +565,19 @@ final class MutableChatListView {
     func replay(postbox: PostboxImpl, currentTransaction: Transaction, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         
+        let hiddenChatIds = postbox.hiddenChatIds
+        var hasFilterChanges = false
+        if hiddenChatIds != self.currentHiddenPeerIds {
+            self.currentHiddenPeerIds = hiddenChatIds
+            hasFilterChanges = true
+        }
+        
         if transaction.updatedGlobalNotificationSettings && self.filterPredicate != nil {
-            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
+            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, halfLimit: self.count)
+            self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
+            hasChanges = true
+        } else if hasFilterChanges {
+            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
             hasChanges = true
         } else {
@@ -576,6 +593,9 @@ final class MutableChatListView {
                 if case .group = groupId, !groupOperations.isEmpty {
                     invalidatedGroups = true
                 }
+            }
+            if hasFilterChanges {
+                invalidatedGroups = true
             }
             
             if invalidatedGroups {

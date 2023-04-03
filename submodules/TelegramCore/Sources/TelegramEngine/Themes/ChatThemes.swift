@@ -141,7 +141,7 @@ func _internal_setChatWallpaper(account: Account, peerId: PeerId, wallpaper: Tel
                 inputSettings = inputWallpaperAndInputSettings.1
             }
             
-            return account.network.request(Api.functions.messages.setChatWallPaper(peer: inputPeer, wallpaper: inputWallpaper ?? .inputWallPaperNoFile(id: 0), settings: inputSettings ?? apiWallpaperSettings(WallpaperSettings())))
+            return account.network.request(Api.functions.messages.setChatWallPaper(flags: 0, peer: inputPeer, wallpaper: inputWallpaper ?? .inputWallPaperNoFile(id: 0), settings: inputSettings ?? apiWallpaperSettings(WallpaperSettings()), id: nil))
             |> `catch` { error in
                 return .complete()
             }

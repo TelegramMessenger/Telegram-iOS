@@ -130,7 +130,7 @@ public func uploadWallpaper(account: Account, resource: MediaResource, mimeType:
                     case let .progress(progress):
                         return .single((.progress(progress), result.resource))
                     case let .inputFile(file):
-                        return account.network.request(Api.functions.account.uploadWallPaper(file: file, mimeType: mimeType, settings: apiWallpaperSettings(settings)))
+                    return account.network.request(Api.functions.account.uploadWallPaper(flags: 0, file: file, mimeType: mimeType, settings: apiWallpaperSettings(settings)))
                         |> mapError { _ in return UploadWallpaperError.generic }
                         |> map { wallpaper -> (UploadWallpaperStatus, MediaResource?) in
                             return (.complete(TelegramWallpaper(apiWallpaper: wallpaper)), result.resource)

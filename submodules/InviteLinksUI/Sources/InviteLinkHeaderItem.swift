@@ -131,7 +131,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
             
             let attributedTitle = NSAttributedString(string: item.title ?? "", font: titleFont, textColor: item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
             
-            let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
+            let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: Font.semibold(14.0), textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             }))
             

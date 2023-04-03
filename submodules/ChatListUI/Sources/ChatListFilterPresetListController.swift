@@ -416,24 +416,37 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     }
                     
                     let confirmDeleteFolder: () -> Void = {
-                        let previewScreen = ChatFolderLinkPreviewScreen(
-                            context: context,
-                            subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
-                            contents: ChatFolderLinkContents(
-                                localFilterId: id,
-                                title: title,
-                                peers: peers.compactMap { $0 }.filter { peer in
-                                    if case .channel = peer {
-                                        return true
-                                    } else {
-                                        return false
-                                    }
-                                },
-                                alreadyMemberPeerIds: Set(),
-                                memberCounts: memberCounts
+                        let filteredPeers = peers.compactMap { $0 }.filter { peer in
+                            if case .channel = peer {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        
+                        if filteredPeers.isEmpty {
+                            let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
+                                var filters = filters
+                                if let index = filters.firstIndex(where: { $0.id == id }) {
+                                    filters.remove(at: index)
+                                }
+                                return filters
+                            }
+                            |> deliverOnMainQueue).start()
+                        } else {
+                            let previewScreen = ChatFolderLinkPreviewScreen(
+                                context: context,
+                                subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
+                                contents: ChatFolderLinkContents(
+                                    localFilterId: id,
+                                    title: title,
+                                    peers: filteredPeers,
+                                    alreadyMemberPeerIds: Set(),
+                                    memberCounts: memberCounts
+                                )
                             )
-                        )
-                        pushControllerImpl?(previewScreen)
+                            pushControllerImpl?(previewScreen)
+                        }
                     }
                     
                     if hasLinks {

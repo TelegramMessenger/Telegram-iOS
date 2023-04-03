@@ -321,7 +321,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         case "telegram_botapp":
                             title = item.presentationData.strings.Conversation_BotApp
                             actionTitle = item.presentationData.strings.Conversation_OpenBotApp
-                        case "telegram_community":
+                        case "telegram_chatlist":
                             actionTitle = item.presentationData.strings.Conversation_OpenChatFolder
                         default:
                             break

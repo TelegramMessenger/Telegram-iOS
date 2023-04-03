@@ -9125,4 +9125,4 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
 
-"Conversation.OpenChatFolder" = "Open Shared Folder";
+"Conversation.OpenChatFolder" = "VIEW CHAT LIST";
