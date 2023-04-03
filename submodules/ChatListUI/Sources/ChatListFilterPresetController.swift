@@ -42,6 +42,7 @@ private final class ChatListFilterPresetControllerArguments {
     let openLink: (ExportedChatFolderLink) -> Void
     let removeLink: (ExportedChatFolderLink) -> Void
     let linkContextAction: (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void
+    let peerContextAction: (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     
     init(
         context: AccountContext,
@@ -59,7 +60,8 @@ private final class ChatListFilterPresetControllerArguments {
         createLink: @escaping () -> Void,
         openLink: @escaping (ExportedChatFolderLink) -> Void,
         removeLink: @escaping (ExportedChatFolderLink) -> Void,
-        linkContextAction: @escaping (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void
+        linkContextAction: @escaping (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void,
+        peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     ) {
         self.context = context
         self.updateState = updateState
@@ -77,6 +79,7 @@ private final class ChatListFilterPresetControllerArguments {
         self.openLink = openLink
         self.removeLink = removeLink
         self.linkContextAction = linkContextAction
+        self.peerContextAction = peerContextAction
     }
 }
 
@@ -514,6 +517,12 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.setItemIdWithRevealedOptions(lhs.flatMap { .peer($0) }, rhs.flatMap { .peer($0) })
             }, removePeer: { id in
                 arguments.deleteIncludePeer(id)
+            }, contextAction: { sourceNode, gesture in
+                guard let peer = peer.peer else {
+                    gesture?.cancel()
+                    return
+                }
+                arguments.peerContextAction(peer, sourceNode, gesture, nil)
             })
         case let .excludePeer(_, peer, isRevealed):
             return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.chatMainPeer!, height: .peerList, aliasHandling: .threatSelfAsSaved, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: isRevealed), revealOptions: ItemListPeerItemRevealOptions(options: [ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
@@ -522,6 +531,12 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.setItemIdWithRevealedOptions(lhs.flatMap { .peer($0) }, rhs.flatMap { .peer($0) })
             }, removePeer: { id in
                 arguments.deleteExcludePeer(id)
+            }, contextAction: { sourceNode, gesture in
+                guard let peer = peer.peer else {
+                    gesture?.cancel()
+                    return
+                }
+                arguments.peerContextAction(peer, sourceNode, gesture, nil)
             })
         case let .includeExpand(text):
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: {
@@ -1472,6 +1487,32 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
 
             let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             presentInGlobalOverlayImpl?(contextController)
+        },
+        peerContextAction: { peer, node, gesture, location in
+            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            chatController.canReadHistory.set(false)
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                
+                updateState { state in
+                    var state = state
+                    if let index = state.additionallyExcludePeers.firstIndex(of: peer.id) {
+                        state.additionallyExcludePeers.remove(at: index)
+                    }
+                    if let index = state.additionallyIncludePeers.firstIndex(of: peer.id) {
+                        state.additionallyIncludePeers.remove(at: index)
+                    }
+                    return state
+                }
+            })))
+            
+            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            presentInGlobalOverlayImpl?(contextController)
         }
     )
         
@@ -1796,5 +1837,33 @@ private final class InviteLinkContextReferenceContentSource: ContextReferenceCon
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    let navigationController: NavigationController? = nil
+    
+    let passthroughTouches: Bool = true
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode.view, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
     }
 }

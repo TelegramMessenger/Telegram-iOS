@@ -2769,27 +2769,29 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            let previewScreen = ChatFolderLinkPreviewScreen(
-                context: self.context,
-                subject: .linkList(folderId: filterId, initialLinks: links ?? []),
-                contents: ChatFolderLinkContents(
-                    localFilterId: filterId, title: title,
-                    peers: [],
-                    alreadyMemberPeerIds: Set(),
-                    memberCounts: [:]
-                ),
-                completion: nil
-            )
-            self.push(previewScreen)
+            if links == nil || links?.count == 0 {
+                openCreateChatListFolderLink(context: self.context, folderId: filterId, checkIfExists: false, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
+                    self?.push(c)
+                }, presentController: { [weak self] c in
+                    self?.present(c, in: .window(.root))
+                }, completed: {
+                }, linkUpdated: { _ in
+                })
+            } else {
+                let previewScreen = ChatFolderLinkPreviewScreen(
+                    context: self.context,
+                    subject: .linkList(folderId: filterId, initialLinks: links ?? []),
+                    contents: ChatFolderLinkContents(
+                        localFilterId: filterId, title: title,
+                        peers: [],
+                        alreadyMemberPeerIds: Set(),
+                        memberCounts: [:]
+                    ),
+                    completion: nil
+                )
+                self.push(previewScreen)
+            }
         })
-        
-        /*openCreateChatListFolderLink(context: self.context, folderId: filterId, checkIfExists: true, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
-            self?.push(c)
-        }, presentController: { [weak self] c in
-            self?.present(c, in: .window(.root))
-        }, completed: {
-        }, linkUpdated: { _ in
-        })*/
     }
     
     public func navigateToFolder(folderId: Int32, completion: @escaping () -> Void) {

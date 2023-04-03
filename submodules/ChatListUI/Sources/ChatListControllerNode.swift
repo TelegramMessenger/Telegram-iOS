@@ -14,6 +14,10 @@ import ContextUI
 import AnimationCache
 import MultiAnimationRenderer
 import TelegramUIPreferences
+import ActionPanelComponent
+import ComponentDisplayAdapters
+import ComponentFlow
+import ChatFolderLinkPreviewScreen
 
 public enum ChatListContainerNodeFilter: Equatable {
     case all
@@ -316,6 +320,14 @@ private final class ChatListShimmerNode: ASDisplayNode {
 }
 
 private final class ChatListContainerItemNode: ASDisplayNode {
+    private final class TopPanelItem {
+        let view = ComponentView<Empty>()
+        var size: CGSize?
+        
+        init() {
+        }
+    }
+    
     private let context: AccountContext
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
@@ -331,6 +343,13 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     var emptyShimmerEffectNode: ChatListShimmerNode?
     private var shimmerNodeOffset: CGFloat = 0.0
     let listNode: ChatListNode
+    
+    private var topPanel: TopPanelItem?
+    
+    private var pollFilterUpdatesDisposable: Disposable?
+    private var chatFilterUpdatesDisposable: Disposable?
+    
+    private var chatFolderUpdates: ChatFolderUpdates?
     
     private(set) var validLayout: (size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat)?
     
@@ -456,12 +475,71 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             if let (size, insets, _, _, _, _) = strongSelf.validLayout, let emptyShimmerEffectNode = strongSelf.emptyShimmerEffectNode {
                 strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset + strongSelf.shimmerNodeOffset, transition: transition)
             }
+            strongSelf.layoutAdditionalPanels(transition: transition)
         }
+        
+        if let filter, case let .filter(id, _, _, data) = filter, data.isShared {
+            self.pollFilterUpdatesDisposable = self.context.engine.peers.pollChatFolderUpdates(folderId: id).start()
+            self.chatFilterUpdatesDisposable = (self.context.engine.peers.subscribedChatFolderUpdates(folderId: id)
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                var update = false
+                if let result, result.availableChatsToJoin != 0 {
+                    if self.chatFolderUpdates?.availableChatsToJoin != result.availableChatsToJoin {
+                        update = true
+                    }
+                    self.chatFolderUpdates = result
+                } else {
+                    if self.chatFolderUpdates != nil {
+                        self.chatFolderUpdates = nil
+                        update = true
+                    }
+                }
+                if update {
+                    if let (size, insets, visualNavigationHeight, originalNavigationHeight, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout {
+                        self.updateLayout(size: size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .animated(duration: 0.4, curve: .spring))
+                    }
+                }
+            })
+        }
+    }
+    
+    deinit {
+        self.pollFilterUpdatesDisposable?.dispose()
+        self.chatFilterUpdatesDisposable?.dispose()
     }
     
     private func layoutEmptyShimmerEffectNode(node: ChatListShimmerNode, size: CGSize, insets: UIEdgeInsets, verticalOffset: CGFloat, transition: ContainedViewLayoutTransition) {
         node.update(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, size: size, isInlineMode: self.isInlineMode, presentationData: self.presentationData, transition: .immediate)
         transition.updateFrameAdditive(node: node, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: size))
+    }
+    
+    private func layoutAdditionalPanels(transition: ContainedViewLayoutTransition) {
+        guard let (size, insets, visualNavigationHeight, _, _, _) = self.validLayout, let offset = self.floatingHeaderOffset else {
+            return
+        }
+        
+        let _ = size
+        let _ = insets
+        
+        if let topPanel = self.topPanel, let topPanelSize = topPanel.size {
+            let minY: CGFloat = visualNavigationHeight - 44.0 + topPanelSize.height
+            
+            if let topPanelView = topPanel.view.view {
+                var animateIn = false
+                var topPanelTransition = transition
+                if topPanelView.bounds.isEmpty {
+                    topPanelTransition = .immediate
+                    animateIn = true
+                }
+                topPanelTransition.updateFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: max(minY, offset - topPanelSize.height)), size: topPanelSize))
+                if animateIn {
+                    transition.animatePositionAdditive(layer: topPanelView.layer, offset: CGPoint(x: 0.0, y: -topPanelView.bounds.height))
+                }
+            }
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -479,17 +557,85 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     func updateLayout(size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, insets, visualNavigationHeight, originalNavigationHeight, inlineNavigationLocation, inlineNavigationTransitionFraction)
         
+        var listInsets = insets
+        var additionalTopInset: CGFloat = 0.0
+        
+        if let chatFolderUpdates = self.chatFolderUpdates {
+            let topPanel: TopPanelItem
+            var topPanelTransition = Transition(transition)
+            if let current = self.topPanel {
+                topPanel = current
+            } else {
+                topPanelTransition = .immediate
+                topPanel = TopPanelItem()
+                self.topPanel = topPanel
+            }
+            
+            //TODO:localize
+            let title: String
+            if chatFolderUpdates.availableChatsToJoin == 1 {
+                title = "1 New Chat Available"
+            } else {
+                title = "\(chatFolderUpdates.availableChatsToJoin) New Chats Available"
+            }
+            
+            let topPanelHeight: CGFloat = 44.0
+            
+            let _ = topPanel.view.update(
+                transition: topPanelTransition,
+                component: AnyComponent(ActionPanelComponent(
+                    theme: self.presentationData.theme,
+                    title: title,
+                    action: { [weak self] in
+                        guard let self, let chatFolderUpdates = self.chatFolderUpdates else {
+                            return
+                        }
+                        
+                        self.listNode.push?(ChatFolderLinkPreviewScreen(context: self.context, subject: .updates(chatFolderUpdates), contents: chatFolderUpdates.chatFolderLinkContents))
+                    },
+                    dismissAction: { [weak self] in
+                        guard let self, let chatFolderUpdates = self.chatFolderUpdates else {
+                            return
+                        }
+                        let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: chatFolderUpdates.folderId).start()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: size.width, height: topPanelHeight)
+            )
+            if let topPanelView = topPanel.view.view {
+                if topPanelView.superview == nil {
+                    self.view.addSubview(topPanelView)
+                }
+            }
+            
+            topPanel.size = CGSize(width: size.width, height: topPanelHeight)
+            listInsets.top += topPanelHeight
+            additionalTopInset += topPanelHeight
+        } else {
+            if let topPanel = self.topPanel {
+                self.topPanel = nil
+                if let topPanelView = topPanel.view.view {
+                    transition.updatePosition(layer: topPanelView.layer, position: CGPoint(x: topPanelView.layer.position.x, y: topPanelView.layer.position.y - topPanelView.layer.bounds.height), completion: { [weak topPanelView] _ in
+                        topPanelView?.removeFromSuperview()
+                    })
+                }
+            }
+        }
+        
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: listInsets, duration: duration, curve: curve)
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.listNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: visualNavigationHeight, originalTopInset: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction)
+        self.listNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: visualNavigationHeight + additionalTopInset, originalTopInset: originalNavigationHeight + additionalTopInset, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction)
         
         if let emptyNode = self.emptyNode {
-            let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
+            let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: listInsets.top), size: CGSize(width: size.width, height: size.height - listInsets.top - listInsets.bottom))
             transition.updateFrame(node: emptyNode, frame: emptyNodeFrame)
             emptyNode.updateLayout(size: emptyNodeFrame.size, transition: transition)
         }
+        
+        self.layoutAdditionalPanels(transition: transition)
     }
 }
 

@@ -504,7 +504,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
 }
 
 public final class ChatFolderUpdates: Equatable {
-    fileprivate let folderId: Int32
+    public let folderId: Int32
     fileprivate let title: String
     fileprivate let missingPeers: [EnginePeer]
     fileprivate let memberCounts: [EnginePeer.Id: Int]
