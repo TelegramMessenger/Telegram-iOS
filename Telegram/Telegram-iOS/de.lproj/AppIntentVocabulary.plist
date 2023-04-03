@@ -2,16 +2,48 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>IntentPhrases</key>
-	<array>
-		<dict>
-			<key>IntentName</key>
-			<string>INSendMessageIntent</string>
-			<key>IntentExamples</key>
-			<array>
-				<string>Sende Lisa eine Telegram-Nachricht, dass ich in 15 Minuten da bin.</string>
-			</array>
-		</dict>
-	</array>
+    <key>IntentPhrases</key>
+    <array>
+        <dict>
+            <key>IntentName</key>
+            <string>INSearchCallHistoryIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Suchanrufliste mit Alex in Telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSetMessageAttributeIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Pin die Nachricht in Telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSearchForMessagesIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Suchmeldung mit Alex in Telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INStartAudioCallIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Starten Sie einen Audioanruf mit Alex in Telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSendMessageIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Sende Lisa eine Telegram-Nachricht, dass ich in 15 Minuten da bin.</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
