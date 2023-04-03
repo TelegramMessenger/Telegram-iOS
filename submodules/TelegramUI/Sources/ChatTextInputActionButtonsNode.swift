@@ -76,7 +76,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                 } else {
                     if highlighted {
                         strongSelf.sendContainerNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
-                    } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
+                    } else if let presentationLayer = strongSelf.sendContainerNode.layer.presentation() {
                         strongSelf.sendContainerNode.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
                     }
                 }

@@ -1316,14 +1316,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 
         self.navigationItem.titleView = self.titleView
         
-        if case let .assets(collection, isStandalone) = self.subject {
-            if !isStandalone {
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
-            } else if collection != nil  {
-                self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
-            }
+        if case let .assets(_, isStandalone) = self.subject, isStandalone {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
         } else {
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            if case let .assets(collection, _) = self.subject, collection != nil {
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
+            } else {
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            }
             
             if self.bannedSendPhotos != nil && self.bannedSendVideos != nil {
             } else {
@@ -1596,12 +1596,16 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     @objc private func backPressed() {
-        self.updateNavigationStack { current in
-            var mediaPickerContext: AttachmentMediaPickerContext?
-            if let first = current.first as? MediaPickerScreen {
-                mediaPickerContext = first.webSearchController?.mediaPickerContext ?? first.mediaPickerContext
+        if let _ = self.navigationController {
+            self.dismiss()
+        } else {
+            self.updateNavigationStack { current in
+                var mediaPickerContext: AttachmentMediaPickerContext?
+                if let first = current.first as? MediaPickerScreen {
+                    mediaPickerContext = first.webSearchController?.mediaPickerContext ?? first.mediaPickerContext
+                }
+                return (current.filter { $0 !== self }, mediaPickerContext)
             }
-            return (current.filter { $0 !== self }, mediaPickerContext)
         }
     }
     

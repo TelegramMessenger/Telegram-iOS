@@ -688,7 +688,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             sendButtonFrame.origin.y -= menuHeightWithInset
         }
         sendButtonFrame.origin.y = min(sendButtonFrame.origin.y + contentOffset, layout.size.height - layout.intrinsicInsets.bottom - initialSendButtonFrame.height)
-        transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
+        transition.updateFrameAsPositionAndBounds(node: self.sendButtonNode, frame: sendButtonFrame)
         
         var messageFrame = self.textFieldFrame
         messageFrame.size.width += 32.0
