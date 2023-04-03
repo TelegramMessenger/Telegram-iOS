@@ -15,19 +15,6 @@ import TelegramStringFormatting
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 
-private func cancelContextGestures(view: UIView) {
-    if let gestureRecognizers = view.gestureRecognizers {
-        for gesture in gestureRecognizers {
-            if let gesture = gesture as? ContextGesture {
-                gesture.cancel()
-            }
-        }
-    }
-    for subview in view.subviews {
-        cancelContextGestures(view: subview)
-    }
-}
-
 final class PeerListItemComponent: Component {
     enum SelectionState: Equatable {
         case none

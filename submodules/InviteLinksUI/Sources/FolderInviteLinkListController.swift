@@ -166,7 +166,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
         let arguments = arguments as! FolderInviteLinkListControllerArguments
         switch self {
         case let .header(text):
-            return InviteLinkHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "ChatListNewFolder", sectionId: self.section)
+            return InviteLinkHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "ChatListCloudFolderLink", sectionId: self.section)
         case let .mainLinkHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .mainLink(link, isGenerating):
@@ -517,13 +517,22 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                 }
             } else {
                 var isGroup = true
+                let isPrivate = peer.addressName == nil
                 if case let .channel(channel) = peer, case .broadcast = channel.info {
                     isGroup = false
                 }
                 if isGroup {
-                    text = "You don't have the admin rights to share invite links to this group chat."
+                    if isPrivate {
+                        text = "You don't have the admin rights to share invite links to this private group chat."
+                    } else {
+                        text = "You don't have the admin rights to share invite links to this group chat."
+                    }
                 } else {
-                    text = "You don't have the admin rights to share invite links to this channel."
+                    if isPrivate {
+                        text = "You don't have the admin rights to share invite links to this private channel."
+                    } else {
+                        text = "You don't have the admin rights to share invite links to this channel."
+                    }
                 }
             }
             dismissTooltipsImpl?()

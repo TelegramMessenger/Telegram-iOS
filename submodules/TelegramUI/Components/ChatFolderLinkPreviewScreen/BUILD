@@ -31,6 +31,8 @@ swift_library(
         "//submodules/Markdown",
         "//submodules/UndoUI",
         "//submodules/PremiumUI",
+        "//submodules/QrCodeUI",
+        "//submodules/InviteLinksUI",
     ],
     visibility = [
         "//visibility:public",

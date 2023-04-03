@@ -245,6 +245,15 @@ public extension TelegramEngine {
         public func updatePeerMuteSetting(peerId: PeerId, threadId: Int64?, muteInterval: Int32?) -> Signal<Void, NoError> {
             return _internal_updatePeerMuteSetting(account: self.account, peerId: peerId, threadId: threadId, muteInterval: muteInterval)
         }
+        
+        public func updateMultiplePeerMuteSettings(peerIds: [EnginePeer.Id], muted: Bool) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    _internal_updatePeerMuteSetting(account: self.account, transaction: transaction, peerId: peerId, threadId: nil, muteInterval: muted ? Int32.max : nil)
+                }
+            }
+            |> ignoreValues
+        }
 
         public func updatePeerDisplayPreviewsSetting(peerId: PeerId, threadId: Int64?, displayPreviews: PeerNotificationDisplayPreviews) -> Signal<Void, NoError> {
             return _internal_updatePeerDisplayPreviewsSetting(account: self.account, peerId: peerId, threadId: threadId, displayPreviews: displayPreviews)
@@ -511,6 +520,10 @@ public extension TelegramEngine {
 
         public func updatedChatListFilters() -> Signal<[ChatListFilter], NoError> {
             return _internal_updatedChatListFilters(postbox: self.account.postbox, hiddenIds: self.account.viewTracker.hiddenChatListFilterIds)
+        }
+        
+        public func chatListFiltersAreSynced() -> Signal<Bool, NoError> {
+            return _internal_chatListFiltersAreSynced(postbox: self.account.postbox)
         }
 
         public func updatedChatListFiltersInfo() -> Signal<(filters: [ChatListFilter], synchronized: Bool), NoError> {

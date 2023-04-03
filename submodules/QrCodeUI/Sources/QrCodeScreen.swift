@@ -241,7 +241,7 @@ public final class QrCodeScreen: ViewController {
                 case .chatFolder:
                     //TODO:localize
                     title = "Invite by QR Code"
-                    text = "Everyone on Telegram can scan this code to join your folder."
+                    text = "Everyone on Telegram can scan this code to add this folder and join the chats included in this invite link."
                 default:
                     title = ""
                     text = ""

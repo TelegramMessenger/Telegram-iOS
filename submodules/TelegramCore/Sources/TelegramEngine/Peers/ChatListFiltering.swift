@@ -1319,6 +1319,14 @@ func requestChatListFiltersSync(transaction: Transaction) {
     transaction.operationLogAddEntry(peerId: peerId, tag: tag, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: SynchronizeChatListFiltersOperation(content: .sync))
 }
 
+func _internal_chatListFiltersAreSynced(postbox: Postbox) -> Signal<Bool, NoError> {
+    return postbox.mergedOperationLogView(tag: OperationLogTags.SynchronizeChatListFilters, limit: 1)
+    |> map { view -> Bool in
+        return view.entries.isEmpty
+    }
+    |> distinctUntilChanged
+}
+
 func managedChatListFilters(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return Signal { _ in
         let updateFeaturedDisposable = _internal_updateChatListFeaturedFilters(postbox: postbox, network: network).start()
