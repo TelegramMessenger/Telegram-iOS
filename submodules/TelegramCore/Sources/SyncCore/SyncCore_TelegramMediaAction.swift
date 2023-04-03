@@ -102,6 +102,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case attachMenuBotAllowed
     case requestedPeer(buttonId: Int32, peerId: PeerId)
     case setChatWallpaper(wallpaper: TelegramWallpaper)
+    case setSameChatWallpaper
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -188,6 +189,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 self = .unknown
             }
+        case 34:
+            self = .setSameChatWallpaper
         default:
             self = .unknown
         }
@@ -352,6 +355,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .setChatWallpaper(wallpaper):
             encoder.encodeInt32(33, forKey: "_rawValue")
             encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "wallpaper")
+        case .setSameChatWallpaper:
+            encoder.encodeInt32(34, forKey: "_rawValue")
         }
     }
     
