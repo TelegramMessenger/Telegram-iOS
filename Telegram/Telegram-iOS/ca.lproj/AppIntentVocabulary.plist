@@ -2,16 +2,48 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>IntentPhrases</key>
-	<array>
-		<dict>
-			<key>IntentName</key>
-			<string>INSendMessageIntent</string>
-			<key>IntentExamples</key>
-			<array>
-				<string>Send a Telegram message to Alex saying I&apos;ll be there in 10 minutes</string>
-			</array>
-		</dict>
-	</array>
+    <key>IntentPhrases</key>
+    <array>
+        <dict>
+            <key>IntentName</key>
+            <string>INSearchCallHistoryIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Cerca l'historial de trucades que conté Alex a Telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSetMessageAttributeIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Fixeu el missatge a Telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSearchForMessagesIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Cerca missatges que continguin Alex a Telegram</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INStartAudioCallIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Inicia una trucada d'àudio a Telegram a l'Àlex</string>
+            </array>
+        </dict>
+        <dict>
+            <key>IntentName</key>
+            <string>INSendMessageIntent</string>
+            <key>IntentExamples</key>
+            <array>
+                <string>Envia un missatge de Telegram a l'Alex dient que hi seré d'aquí a 10 minuts</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>
