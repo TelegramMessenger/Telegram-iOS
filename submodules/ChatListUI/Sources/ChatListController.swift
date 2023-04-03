@@ -1392,13 +1392,41 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             guard let strongSelf = self else {
                 return
             }
+            
+            let context = strongSelf.context
+            let filterPeersAreMuted: Signal<Bool, NoError> = strongSelf.context.engine.peers.currentChatListFilters()
+            |> take(1)
+            |> mapToSignal { filters -> Signal<Bool, NoError> in
+                guard let filter = filters.first(where: { $0.id == id }) else {
+                    return .single(false)
+                }
+                guard case let .filter(_, _, _, data) = filter else {
+                    return .single(false)
+                }
+                return context.engine.data.get(
+                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init(id:)))
+                )
+                |> map { list -> Bool in
+                    for item in list {
+                        switch item.muteState {
+                        case .default, .unmuted:
+                            return false
+                        default:
+                            break
+                        }
+                    }
+                    return true
+                }
+            }
+            
             let _ = combineLatest(
                 queue: Queue.mainQueue(),
                 strongSelf.context.engine.peers.currentChatListFilters(),
                 strongSelf.context.engine.data.get(
                     TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
-                )
-            ).start(next: { [weak self] filters, premiumLimits in
+                ),
+                filterPeersAreMuted
+            ).start(next: { [weak self] filters, premiumLimits, filterPeersAreMuted in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1546,6 +1574,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
+                                            if data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty && !data.includePeers.peers.isEmpty {
+                                                items.append(.action(ContextMenuActionItem(text: filterPeersAreMuted ? "Unmute All" : "Mute All", textColor: .primary, badge: nil, icon: { theme in
+                                                    return generateTintedImage(image: UIImage(bundleImageName: filterPeersAreMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+                                                }, action: { c, f in
+                                                    c.dismiss(completion: {
+                                                        guard let strongSelf = self else {
+                                                            return
+                                                        }
+                                                        
+                                                        let _ = strongSelf.context.engine.peers.updateMultiplePeerMuteSettings(peerIds: data.includePeers.peers, muted: !filterPeersAreMuted).start()
+                                                    })
+                                                })))
+                                            }
+                                            
                                             if !data.includePeers.peers.isEmpty && data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty {
                                                 items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: data.hasSharedLinks ? nil : ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
@@ -2701,13 +2743,53 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func shareFolder(filterId: Int32, data: ChatListFilterData, title: String) {
-        openCreateChatListFolderLink(context: self.context, folderId: filterId, checkIfExists: true, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
+        let presentationData = self.presentationData
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+            self?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.8, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        let signal: Signal<[ExportedChatFolderLink]?, NoError> = self.context.engine.peers.getExportedChatFolderLinks(id: filterId)
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        let _ = (signal
+        |> deliverOnMainQueue).start(next: { [weak self] links in
+            guard let self else {
+                return
+            }
+            
+            let previewScreen = ChatFolderLinkPreviewScreen(
+                context: self.context,
+                subject: .linkList(folderId: filterId, initialLinks: links ?? []),
+                contents: ChatFolderLinkContents(
+                    localFilterId: filterId, title: title,
+                    peers: [],
+                    alreadyMemberPeerIds: Set(),
+                    memberCounts: [:]
+                ),
+                completion: nil
+            )
+            self.push(previewScreen)
+        })
+        
+        /*openCreateChatListFolderLink(context: self.context, folderId: filterId, checkIfExists: true, title: title, peerIds: data.includePeers.peers, pushController: { [weak self] c in
             self?.push(c)
         }, presentController: { [weak self] c in
             self?.present(c, in: .window(.root))
         }, completed: {
         }, linkUpdated: { _ in
-        })
+        })*/
     }
     
     public func navigateToFolder(folderId: Int32, completion: @escaping () -> Void) {

@@ -1521,22 +1521,10 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         |> deliverOnMainQueue).start(next: { filters in
             updated(filters)
             
-            if let currentPreset, waitForSync {
-                let _ = (context.engine.peers.updatedChatListFilters()
-                |> filter { filters -> Bool in
-                    for filter in filters {
-                        if filter.id == currentPreset.id {
-                            if let data = filter.data {
-                                if Set(data.includePeers.peers) == Set(includePeers.peers) {
-                                    return true
-                                }
-                            }
-                        }
-                    }
-                    return true
-                }
+            if waitForSync {
+                let _ = (context.engine.peers.chatListFiltersAreSynced()
+                |> filter { $0 }
                 |> take(1)
-                |> delay(1.0, queue: .mainQueue())
                 |> deliverOnMainQueue).start(next: { _ in
                     completed()
                 })

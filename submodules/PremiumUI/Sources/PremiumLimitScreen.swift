@@ -44,6 +44,7 @@ private class PremiumLimitAnimationComponent: Component {
     private let textColor: UIColor
     private let badgeText: String?
     private let badgePosition: CGFloat
+    private let badgeGraphPosition: CGFloat
     private let isPremiumDisabled: Bool
     
     init(
@@ -53,6 +54,7 @@ private class PremiumLimitAnimationComponent: Component {
         textColor: UIColor,
         badgeText: String?,
         badgePosition: CGFloat,
+        badgeGraphPosition: CGFloat,
         isPremiumDisabled: Bool
     ) {
         self.iconName = iconName
@@ -61,6 +63,7 @@ private class PremiumLimitAnimationComponent: Component {
         self.textColor = textColor
         self.badgeText = badgeText
         self.badgePosition = badgePosition
+        self.badgeGraphPosition = badgeGraphPosition
         self.isPremiumDisabled = isPremiumDisabled
     }
     
@@ -81,6 +84,9 @@ private class PremiumLimitAnimationComponent: Component {
             return false
         }
         if lhs.badgePosition != rhs.badgePosition {
+            return false
+        }
+        if lhs.badgeGraphPosition != rhs.badgeGraphPosition {
             return false
         }
         if lhs.isPremiumDisabled != rhs.isPremiumDisabled {
@@ -245,7 +251,7 @@ private class PremiumLimitAnimationComponent: Component {
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - lineHeight), size: CGSize(width: availableSize.width, height: lineHeight))
             self.container.frame = containerFrame
             
-            let activityPosition: CGFloat = floor(containerFrame.width * component.badgePosition)
+            let activityPosition: CGFloat = floor(containerFrame.width * component.badgeGraphPosition)
             let activeWidth: CGFloat = containerFrame.width - activityPosition
             
             if !component.isPremiumDisabled {
@@ -433,6 +439,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
     let badgeIconName: String?
     let badgeText: String?
     let badgePosition: CGFloat
+    let badgeGraphPosition: CGFloat
     let isPremiumDisabled: Bool
     
     public init(
@@ -447,6 +454,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         badgeIconName: String?,
         badgeText: String?,
         badgePosition: CGFloat,
+        badgeGraphPosition: CGFloat,
         isPremiumDisabled: Bool
     ) {
         self.inactiveColor = inactiveColor
@@ -460,6 +468,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         self.badgeIconName = badgeIconName
         self.badgeText = badgeText
         self.badgePosition = badgePosition
+        self.badgeGraphPosition = badgeGraphPosition
         self.isPremiumDisabled = isPremiumDisabled
     }
     
@@ -497,6 +506,9 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         if lhs.badgePosition != rhs.badgePosition {
             return false
         }
+        if lhs.badgeGraphPosition != rhs.badgeGraphPosition {
+            return false
+        }
         if lhs.isPremiumDisabled != rhs.isPremiumDisabled {
             return false
         }
@@ -524,6 +536,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     textColor: component.activeTitleColor,
                     badgeText: component.badgeText,
                     badgePosition: component.badgePosition,
+                    badgeGraphPosition: component.badgeGraphPosition,
                     isPremiumDisabled: component.isPremiumDisabled
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: height),
@@ -591,7 +604,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     transition: context.transition
                 )
                 
-                let activityPosition = floor(context.availableSize.width * component.badgePosition)
+                let activityPosition = floor(context.availableSize.width * component.badgeGraphPosition)
                 
                 var inactiveValueOpacity: CGFloat = 1.0
                 if inactiveValue.size.width + inactiveTitle.size.width >= activityPosition - 8.0 {
@@ -747,6 +760,7 @@ private final class LimitSheetContent: CombinedComponent {
             let defaultValue: String
             let premiumValue: String
             let badgePosition: CGFloat
+            let badgeGraphPosition: CGFloat
             switch subject {
                 case .folders:
                     let limit = state.limits.maxFoldersCount
@@ -757,6 +771,7 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    badgeGraphPosition = badgePosition
                 
                     if !state.isPremium && badgePosition > 0.5 {
                         string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
@@ -775,6 +790,7 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    badgeGraphPosition = badgePosition
                 
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
@@ -794,6 +810,11 @@ private final class LimitSheetContent: CombinedComponent {
                     string = count >= premiumLimit ? strings.Premium_MaxSharedFolderLinksFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderLinksText("\(limit)", "\(premiumLimit)").string
                     defaultValue = count > limit ? "\(limit)" : ""
                     premiumValue = count >= premiumLimit ? "" : "\(premiumLimit)"
+                    if count >= premiumLimit {
+                        badgeGraphPosition = max(0.1, CGFloat(limit) / CGFloat(premiumLimit))
+                    } else {
+                        badgeGraphPosition = max(0.1, CGFloat(count) / CGFloat(premiumLimit))
+                    }
                     badgePosition = max(0.1, CGFloat(count) / CGFloat(premiumLimit))
                 
                     if isPremiumDisabled {
@@ -809,6 +830,7 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    badgeGraphPosition = badgePosition
                 
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
@@ -823,6 +845,7 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    badgeGraphPosition = badgePosition
                 
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
@@ -837,6 +860,7 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = component.count == 4 ? dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
                     premiumValue = component.count != 4 ? dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
                     badgePosition = component.count == 4 ? 1.0 : 0.5
+                    badgeGraphPosition = badgePosition
                     titleText = strings.Premium_FileTooLarge
                 
                     if isPremiumDisabled {
@@ -856,6 +880,7 @@ private final class LimitSheetContent: CombinedComponent {
                     } else {
                         badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
                     }
+                    badgeGraphPosition = badgePosition
                     buttonAnimationName = "premium_addone"
                 
                     if isPremiumDisabled {
@@ -931,6 +956,7 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeIconName: iconName,
                         badgeText: badgeText,
                         badgePosition: badgePosition,
+                        badgeGraphPosition: badgeGraphPosition,
                         isPremiumDisabled: isPremiumDisabled
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
