@@ -60,7 +60,6 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         self.content = content
         
         self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xf2f2f2, alpha: 0.75))
-        self.backgroundNode.cornerRadius = 14.0
         
         let blurEffect: UIBlurEffect
         if #available(iOS 13.0, *) {
@@ -82,11 +81,8 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         switch content {
         case let .text(text):
             title = text
-            self.backgroundNode.cornerRadius = 14.0
-        case let .icon(icon, size):
+        case let .icon(icon, _):
             title = ""
-            self.backgroundNode.cornerRadius = size.height / 2.0
-            
             self.iconNode.image = generateTintedImage(image: icon, color: .white)
             self.darkIconNode.image = generateTintedImage(image: icon, color: UIColor(rgb: 0x000000, alpha: 0.25))
         }
@@ -111,21 +107,9 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
                 if highlighted {
                     strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.backgroundNode.alpha = 0.4
-                    
-                    strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.iconNode.alpha = 0.4
-                    
-                    strongSelf.textNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.textNode.alpha = 0.4
                 } else {
                     strongSelf.backgroundNode.alpha = 1.0
                     strongSelf.backgroundNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    
-                    strongSelf.iconNode.alpha = 1.0
-                    strongSelf.iconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    
-                    strongSelf.textNode.alpha = 1.0
-                    strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -159,7 +143,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
 
         let size = self.bounds.size
         self.backgroundNode.frame = self.bounds
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 14.0, transition: .immediate)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.bounds.size.height / 2.0, transition: .immediate)
         self.vibrancyView.frame = self.bounds
         
         self.iconNode.frame = self.bounds
@@ -284,26 +268,14 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
                     strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.backgroundNode.alpha = 0.4
                     
-                    strongSelf.checkNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.checkNode.alpha = 0.4
-                    
                     strongSelf.colorNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.colorNode.alpha = 0.4
-                    
-                    strongSelf.textNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.textNode.alpha = 0.4
                 } else {
                     strongSelf.backgroundNode.alpha = 1.0
                     strongSelf.backgroundNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     
-                    strongSelf.checkNode.alpha = 1.0
-                    strongSelf.checkNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    
                     strongSelf.colorNode.alpha = 1.0
                     strongSelf.colorNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                    
-                    strongSelf.textNode.alpha = 1.0
-                    strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
