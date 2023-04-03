@@ -152,3 +152,28 @@ func _internal_setChatWallpaper(account: Account, peerId: PeerId, wallpaper: Tel
         } |> switchToLatest
     }
 }
+
+public enum SetExistingChatWallpaperError {
+    case generic
+}
+
+func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId) -> Signal<Void, SetExistingChatWallpaperError> {
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(messageId.peerId)
+    }
+    |> castError(SetExistingChatWallpaperError.self)
+    |> mapToSignal { peer -> Signal<Void, SetExistingChatWallpaperError> in
+        guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
+            return .complete()
+        }
+        let flags: Int32 = 1 << 1
+        return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: nil, settings: nil, id: messageId.id))
+        |> `catch` { _ -> Signal<Api.Updates, SetExistingChatWallpaperError> in
+            return .fail(.generic)
+        }
+        |> mapToSignal { updates -> Signal<Void, SetExistingChatWallpaperError> in
+            account.stateManager.addUpdates(updates)
+            return .complete()
+        }
+    }
+}

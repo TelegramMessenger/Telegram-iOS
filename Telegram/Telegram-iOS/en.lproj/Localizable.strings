@@ -9123,6 +9123,9 @@ Sorry for the inconvenience.";
 "Notification.YouChangedWallpaper" = "You set a new background for this chat";
 "Notification.Wallpaper.View" = "View Background";
 
+"Notification.ChangedToSameWallpaper" = "%1$@ set the same background for this chat";
+"Notification.YouChangedToSameWallpaper" = "You set the same background for this chat";
+
 "Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
 
 "Conversation.OpenChatFolder" = "VIEW CHAT LIST";

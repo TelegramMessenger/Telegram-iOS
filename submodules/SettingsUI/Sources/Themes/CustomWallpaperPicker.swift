@@ -308,7 +308,7 @@ func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGall
                 completion()
             }
             
-            let _ = uploadWallpaper(account: context.account, resource: resource, settings: WallpaperSettings(blur: false, motion: mode.contains(.motion), colors: [], intensity: nil)).start(next: { status in
+            let _ = uploadWallpaper(account: context.account, resource: resource, settings: WallpaperSettings(blur: false, motion: mode.contains(.motion), colors: [], intensity: nil), forChat: true).start(next: { status in
                 if case let .complete(wallpaper) = status {
                     if case let .file(file) = wallpaper {
                         context.account.postbox.mediaBox.copyResourceData(from: resource.id, to: file.file.resource.id, synchronous: true)

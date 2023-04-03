@@ -20,5 +20,9 @@ public extension TelegramEngine {
         public func setChatWallpaper(peerId: PeerId, wallpaper: TelegramWallpaper?) -> Signal<Void, NoError> {
             return _internal_setChatWallpaper(account: self.account, peerId: peerId, wallpaper: wallpaper)
         }
+        
+        public func setExistingChatWallpaper(messageId: MessageId) -> Signal<Void, SetExistingChatWallpaperError> {
+            return _internal_setExistingChatWallpaper(account: self.account, messageId: messageId)
+        }
     }
 }

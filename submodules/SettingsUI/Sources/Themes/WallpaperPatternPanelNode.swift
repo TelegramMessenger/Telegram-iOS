@@ -419,12 +419,16 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     func didAppear(initialWallpaper: TelegramWallpaper? = nil, intensity: Int32? = nil) {
         let wallpaper: TelegramWallpaper?
 
-        switch initialWallpaper {
-        case var .file(file):
-            file.settings = self.wallpapers[0].settings ?? WallpaperSettings()
-            wallpaper = .file(file)
-        default:
-            wallpaper = self.wallpapers.first
+        if self.wallpapers.isEmpty {
+            wallpaper = nil
+        } else {
+            switch initialWallpaper {
+            case var .file(file):
+                file.settings = self.wallpapers[0].settings ?? WallpaperSettings()
+                wallpaper = .file(file)
+            default:
+                wallpaper = self.wallpapers.first
+            }
         }
         
         if let wallpaper = wallpaper {
