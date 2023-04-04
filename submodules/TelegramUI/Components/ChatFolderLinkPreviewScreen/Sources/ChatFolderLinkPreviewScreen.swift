@@ -474,9 +474,9 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                         chatCountString = "\(linkContents.peers.count) chats"
                     }
                     if let title = linkContents.title {
-                        text = "Do you want to add **\(chatCountString)** to your\nfolder **\(title)**?"
+                        text = "Do you want to add **\(chatCountString)** to the\nfolder **\(title)**?"
                     } else {
-                        text = "Do you want to add **\(chatCountString)** chats to your\nfolder?"
+                        text = "Do you want to add **\(chatCountString)** chats to the\nfolder?"
                     }
                 }
             } else {

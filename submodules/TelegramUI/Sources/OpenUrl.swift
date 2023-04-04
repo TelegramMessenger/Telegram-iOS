@@ -837,7 +837,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                     }
                     handleResolvedUrl(.premiumOffer(reference: reference))
-                } else if parsedUrl.host == "list" {
+                } else if parsedUrl.host == "addlist" {
                     if let components = URLComponents(string: "/?" + query) {
                         var slug: String?
                         if let queryItems = components.queryItems {
@@ -850,7 +850,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             }
                         }
                         if let slug = slug {
-                            convertedUrl = "https://t.me/list/\(slug)"
+                            convertedUrl = "https://t.me/addlist/\(slug)"
                         }
                     }
                 }
