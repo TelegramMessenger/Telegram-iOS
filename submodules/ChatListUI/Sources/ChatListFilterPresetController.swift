@@ -1872,6 +1872,18 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                         pushController(limitController)
                         
                         return
+                    case let .tooManyChannels(limit, _):
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                        })
+                        pushController(limitController)
+                        
+                        return
+                    case let .tooManyChannelsInAccount(limit, _):
+                        let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .channels, count: limit, action: {
+                        })
+                        pushController(limitController)
+                        
+                        return
                     }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     presentController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))

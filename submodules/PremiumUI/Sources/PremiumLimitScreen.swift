@@ -800,6 +800,25 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxChatsInFolderNoPremiumText("\(limit)").string
                     }
+                case .channels:
+                    let limit = state.limits.maxChannelsCount
+                    let premiumLimit = state.premiumLimits.maxChannelsCount
+                    iconName = "Premium/Chat"
+                    badgeText = "\(component.count)"
+                    string = component.count >= premiumLimit ? strings.Premium_MaxChannelsFinalText("\(premiumLimit)").string : strings.Premium_MaxChannelsText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = component.count > limit ? "\(limit)" : ""
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                    if component.count >= premiumLimit {
+                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
+                    } else {
+                        badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+                    }
+                    badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+                
+                    if isPremiumDisabled {
+                        badgeText = "\(limit)"
+                        string = strings.Premium_MaxChannelsNoPremiumText("\(limit)").string
+                    }
                 case .linksPerSharedFolder:
                     /*let count: Int32 = 5 + Int32("".count)// component.count
                     let limit: Int32 = 5 + Int32("".count)//state.limits.maxSharedFolderInviteLinks
@@ -991,10 +1010,7 @@ private final class LimitSheetContent: CombinedComponent {
                         gloss: isIncreaseButton,
                         animationName: isIncreaseButton ? buttonAnimationName : nil,
                         iconPosition: .right,
-                        action: { [weak component] in
-                            guard let component = component else {
-                                return
-                            }
+                        action: {
                             component.dismiss()
                             if isIncreaseButton {
                                 component.action()
@@ -1133,6 +1149,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case accounts
         case linksPerSharedFolder
         case membershipInSharedFolders
+        case channels
     }
     
     public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void) {

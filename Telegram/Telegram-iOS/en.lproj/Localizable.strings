@@ -9129,3 +9129,7 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
 
 "Conversation.OpenChatFolder" = "VIEW CHAT LIST";
+
+"Premium.MaxChannelsText" = "You can only join **%1$@** groups and channels. Upgrade to **Telegram Premium** to increase the links limit to **%2$@**.";
+"Premium.MaxChannelsNoPremiumText" = "You can only join **%1$@** groups and channels. We are working to let you increase this limit in the future.";
+"Premium.MaxChannelsFinalText" = "Sorry, you can only join **%1$@** groups and channels";

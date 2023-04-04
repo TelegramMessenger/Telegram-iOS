@@ -392,19 +392,26 @@ public class CheckLayer: CALayer {
         }
 
         if !parameters.theme.filledBorder && !parameters.theme.hasShadow && !parameters.theme.overlayBorder {
-            checkProgress = parameters.animationProgress
-            
-            let fillProgress: CGFloat = parameters.animationProgress
-            
-            context.setFillColor(parameters.theme.backgroundColor.mixedWith(parameters.theme.borderColor, alpha: 1.0 - fillProgress).cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            
-            let innerDiameter: CGFloat = (fillProgress * 0.0) + (1.0 - fillProgress) * (size.width - borderWidth * 2.0)
-            
-            context.setBlendMode(.copy)
-            context.setFillColor(UIColor.clear.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: (size.width - innerDiameter) * 0.5, y: (size.height - innerDiameter) * 0.5), size: CGSize(width: innerDiameter, height: innerDiameter)))
-            context.setBlendMode(.normal)
+            if parameters.theme.isDottedBorder {
+                checkProgress = 0.0
+                let borderInset = borderWidth / 2.0 + inset
+                let borderFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: borderInset, dy: borderInset)
+                context.strokeEllipse(in: borderFrame)
+            } else {
+                checkProgress = parameters.animationProgress
+                
+                let fillProgress: CGFloat = parameters.animationProgress
+                
+                context.setFillColor(parameters.theme.backgroundColor.mixedWith(parameters.theme.borderColor, alpha: 1.0 - fillProgress).cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                
+                let innerDiameter: CGFloat = (fillProgress * 0.0) + (1.0 - fillProgress) * (size.width - borderWidth * 2.0)
+                
+                context.setBlendMode(.copy)
+                context.setFillColor(UIColor.clear.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: (size.width - innerDiameter) * 0.5, y: (size.height - innerDiameter) * 0.5), size: CGSize(width: innerDiameter, height: innerDiameter)))
+                context.setBlendMode(.normal)
+            }
         } else {
             checkProgress = parameters.animatingOut ? 1.0 : parameters.animationProgress
             
