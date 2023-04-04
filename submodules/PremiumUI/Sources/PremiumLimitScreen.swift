@@ -770,8 +770,12 @@ private final class LimitSheetContent: CombinedComponent {
                     string = component.count >= premiumLimit ? strings.Premium_MaxFoldersCountFinalText("\(premiumLimit)").string : strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
-                    badgeGraphPosition = badgePosition
+                    if component.count >= premiumLimit {
+                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
+                    } else {
+                        badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+                    }
+                    badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
                 
                     if !state.isPremium && badgePosition > 0.5 {
                         string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
@@ -811,11 +815,11 @@ private final class LimitSheetContent: CombinedComponent {
                     defaultValue = count > limit ? "\(limit)" : ""
                     premiumValue = count >= premiumLimit ? "" : "\(premiumLimit)"
                     if count >= premiumLimit {
-                        badgeGraphPosition = max(0.1, CGFloat(limit) / CGFloat(premiumLimit))
+                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
                     } else {
-                        badgeGraphPosition = max(0.1, CGFloat(count) / CGFloat(premiumLimit))
+                        badgeGraphPosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
                     }
-                    badgePosition = max(0.1, CGFloat(count) / CGFloat(premiumLimit))
+                    badgePosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
                 
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
@@ -829,8 +833,12 @@ private final class LimitSheetContent: CombinedComponent {
                     string = component.count >= premiumLimit ? strings.Premium_MaxSharedFolderMembershipFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderMembershipText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
-                    badgeGraphPosition = badgePosition
+                    if component.count >= premiumLimit {
+                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
+                    } else {
+                        badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+                    }
+                    badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
                 
                     if isPremiumDisabled {
                         badgeText = "\(limit)"

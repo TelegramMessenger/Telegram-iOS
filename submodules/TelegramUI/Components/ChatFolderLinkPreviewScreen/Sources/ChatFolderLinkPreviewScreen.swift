@@ -20,6 +20,8 @@ import ButtonComponent
 import ContextUI
 import QrCodeUI
 import InviteLinksUI
+import PlainButtonComponent
+import AnimatedCounterComponent
 
 private final class ChatFolderLinkPreviewScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -154,7 +156,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             self.addSubview(self.navigationBarContainer)
             
-            self.scrollView.delaysContentTouches = true
+            self.scrollView.delaysContentTouches = false
             self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -800,15 +802,21 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 listHeaderTitle = " "
             }
             
-            let listHeaderActionTitle: String
+            //TODO:localize
+            let listHeaderActionItems: [AnimatedCounterComponent.Item]
             if self.selectedItems.count == self.items.count {
-                listHeaderActionTitle = "DESELECT ALL"
+                listHeaderActionItems = [
+                    AnimatedCounterComponent.Item(id: AnyHashable(0), text: "DESELECT", numericValue: 0),
+                    AnimatedCounterComponent.Item(id: AnyHashable(1), text: "ALL", numericValue: 1)
+                ]
             } else {
-                listHeaderActionTitle = "SELECT ALL"
+                listHeaderActionItems = [
+                    AnimatedCounterComponent.Item(id: AnyHashable(0), text: "SELECT", numericValue: 1),
+                    AnimatedCounterComponent.Item(id: AnyHashable(1), text: "ALL", numericValue: 1)
+                ]
             }
             
             let listHeaderBody = MarkdownAttributeSet(font: Font.with(size: 13.0, design: .regular, traits: [.monospacedNumbers]), textColor: environment.theme.list.freeTextColor)
-            let listHeaderActionBody = MarkdownAttributeSet(font: Font.with(size: 13.0, design: .regular, traits: [.monospacedNumbers]), textColor: environment.theme.list.itemAccentColor)
             
             let listHeaderTextSize = self.listHeaderText.update(
                 transition: .immediate,
@@ -838,19 +846,15 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             }
             
             let listHeaderActionSize = self.listHeaderAction.update(
-                transition: .immediate,
-                component: AnyComponent(Button(
-                    content: AnyComponent(MultilineTextComponent(
-                        text: .markdown(
-                            text: listHeaderActionTitle,
-                            attributes: MarkdownAttributes(
-                                body: listHeaderActionBody,
-                                bold: listHeaderActionBody,
-                                link: listHeaderActionBody,
-                                linkAttribute: { _ in nil }
-                            )
-                        )
+                transition: transition,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(AnimatedCounterComponent(
+                        font: Font.regular(13.0),
+                        color: environment.theme.list.itemAccentColor,
+                        alignment: .right,
+                        items: listHeaderActionItems
                     )),
+                    effectAlignment: .right,
                     action: { [weak self] in
                         guard let self, let component = self.component, let linkContents = component.linkContents else {
                             return
@@ -877,8 +881,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     self.scrollContentView.addSubview(listHeaderActionView)
                 }
                 let listHeaderActionFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - 15.0 - listHeaderActionSize.width, y: contentHeight), size: listHeaderActionSize)
-                contentTransition.setPosition(view: listHeaderActionView, position: CGPoint(x: listHeaderActionFrame.maxX, y: listHeaderActionFrame.minY))
-                listHeaderActionView.bounds = CGRect(origin: CGPoint(), size: listHeaderActionFrame.size)
+                contentTransition.setFrame(view: listHeaderActionView, frame: listHeaderActionFrame)
                 
                 if let linkContents = component.linkContents, !allChatsAdded, linkContents.peers.count > 1 {
                     listHeaderActionView.isHidden = false
