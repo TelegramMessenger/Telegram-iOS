@@ -205,13 +205,17 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 return
             }
             
-            var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
-            if topOffset > 0.0 {
-                topOffset = max(0.0, topOffset)
-                
-                if topOffset < topOffsetDistance {
-                    targetContentOffset.pointee.y = scrollView.contentOffset.y
-                    scrollView.setContentOffset(CGPoint(x: 0.0, y: itemLayout.topInset), animated: true)
+            if scrollView.contentOffset.y <= -100.0 && velocity.y <= -2.0 {
+                self.environment?.controller()?.dismiss()
+            } else {
+                var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
+                if topOffset > 0.0 {
+                    topOffset = max(0.0, topOffset)
+                    
+                    if topOffset < topOffsetDistance {
+                        targetContentOffset.pointee.y = scrollView.contentOffset.y
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: itemLayout.topInset), animated: true)
+                    }
                 }
             }
         }
@@ -287,7 +291,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
             }
             
-            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
+            var animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
+            if self.scrollView.contentOffset.y < 0.0 {
+                animateOffset += -self.scrollView.contentOffset.y
+            }
             
             self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             self.scrollContentClippingView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
@@ -698,10 +705,18 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     }
                     
                     var subtitle: String?
-                    if linkContents.alreadyMemberPeerIds.contains(peer.id) {
-                        subtitle = "You are already a member"
-                    } else if let memberCount = linkContents.memberCounts[peer.id] {
-                        subtitle = "\(memberCount) participants"
+                    if case let .channel(channel) = peer, case .broadcast = channel.info {
+                        if linkContents.alreadyMemberPeerIds.contains(peer.id) {
+                            subtitle = "You are already a subscriber"
+                        } else if let memberCount = linkContents.memberCounts[peer.id] {
+                            subtitle = "\(memberCount) subscribers"
+                        }
+                    } else {
+                        if linkContents.alreadyMemberPeerIds.contains(peer.id) {
+                            subtitle = "You are already a member"
+                        } else if let memberCount = linkContents.memberCounts[peer.id] {
+                            subtitle = "\(memberCount) participants"
+                        }
                     }
                     
                     let itemSize = item.update(

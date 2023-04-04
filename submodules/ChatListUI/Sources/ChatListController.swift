@@ -2815,6 +2815,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
+            if self.chatListDisplayNode.inlineStackContainerNode != nil {
+                self.setInlineChatList(location: nil)
+            }
             if self.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter?.id != folderId {
                 self.chatListDisplayNode.mainContainerNode.switchToFilter(id: .filter(folderId), completion: {
                     completion()

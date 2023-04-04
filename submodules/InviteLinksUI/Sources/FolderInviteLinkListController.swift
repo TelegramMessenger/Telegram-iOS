@@ -684,7 +684,16 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         } else if state.isSaving {
             doneButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
-            doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Save), style: .bold, enabled: !state.selectedPeerIds.isEmpty, action: {
+            var saveEnabled = false
+            if let currentLink = state.currentLink {
+                if currentLink.title != state.title || Set(currentLink.peerIds) != state.selectedPeerIds {
+                    saveEnabled = true
+                }
+            } else {
+                saveEnabled = true
+            }
+            
+            doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Save), style: .bold, enabled: !state.selectedPeerIds.isEmpty && saveEnabled, action: {
                 applyChangesImpl?()
             })
         }
@@ -739,7 +748,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                         f()
                         dismissImpl?()
                     }),
-                    TextAlertAction(type: .defaultAction, title: "Apply", action: {
+                    TextAlertAction(type: .defaultAction, title: state.selectedPeerIds.isEmpty ? "Continue" : "Apply", action: {
                         applyChangesImpl?()
                     })
                 ]), nil)
