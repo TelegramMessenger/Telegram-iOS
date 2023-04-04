@@ -410,7 +410,18 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
         var newChatCount = 0
         for peerId in peerIds {
             if transaction.getPeerChatListIndex(peerId) == nil {
-                newChatCount += 1
+                var canJoin = true
+                if let peer = transaction.getPeer(peerId) {
+                    if let channel = peer as? TelegramChannel {
+                        if case .kicked = channel.participationStatus {
+                            canJoin = false
+                        }
+                    }
+                }
+                
+                if canJoin {
+                    newChatCount += 1
+                }
             }
         }
         
