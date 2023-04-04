@@ -896,7 +896,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: itemsHeight)))
             
             var initialContentHeight = contentHeight
-            initialContentHeight += min(itemsHeight, floor(singleItemHeight * 2.5))
+            initialContentHeight += min(itemsHeight, floor(singleItemHeight * 3.5))
             
             contentHeight += itemsHeight
             contentHeight += 24.0
@@ -980,6 +980,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             var chatListController: ChatListController?
                             if let navigationController = controller.navigationController as? NavigationController {
                                 for viewController in navigationController.viewControllers.reversed() {
+                                    if viewController is ChatFolderLinkPreviewScreen {
+                                        continue
+                                    }
+                                    
                                     if let rootController = viewController as? TabBarController {
                                         for c in rootController.controllers {
                                             if let c = c as? ChatListController {
@@ -1083,7 +1087,17 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                 
                                                 //TODO:localize
                                                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                                                
+                                                var isUpdates = false
                                                 if case .updates = component.subject {
+                                                    isUpdates = true
+                                                } else {
+                                                    if component.linkContents?.localFilterId != nil {
+                                                        isUpdates = true
+                                                    }
+                                                }
+                                                
+                                                if isUpdates {
                                                     let chatCountString: String
                                                     if result.newChatCount == 1 {
                                                         chatCountString = "1 new chat"
@@ -1091,7 +1105,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                         chatCountString = "\(result.newChatCount) new chats"
                                                     }
                                                     
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Updated", text: "You have joined \(chatCountString)", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: "Folder \(result.title) Updated", text: "You have joined \(chatCountString)", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else if result.newChatCount != 0 {
                                                     let chatCountString: String
                                                     if result.newChatCount == 1 {
@@ -1100,9 +1114,21 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                         chatCountString = "\(result.newChatCount) chats"
                                                     }
                                                     
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Added", text: "You also joined \(chatCountString)", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    let animationBackgroundColor: UIColor
+                                                    if presentationData.theme.overallDarkAppearance {
+                                                        animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                                                    } else {
+                                                        animationBackgroundColor = UIColor(rgb: 0x474747)
+                                                    }
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "Folder \(result.title) Added", text: "You also joined \(chatCountString)", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else {
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Folder \(result.title) Added", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    let animationBackgroundColor: UIColor
+                                                    if presentationData.theme.overallDarkAppearance {
+                                                        animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                                                    } else {
+                                                        animationBackgroundColor = UIColor(rgb: 0x474747)
+                                                    }
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "Folder \(result.title) Added", text: "", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 }
                                             })
                                         }
