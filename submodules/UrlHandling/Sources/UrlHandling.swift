@@ -418,7 +418,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
                     return .theme(pathComponents[1])
-                } else if pathComponents[0] == "addlist" || pathComponents[0] == "folder" {
+                } else if pathComponents[0] == "addlist" || pathComponents[0] == "folder" || pathComponents[0] == "list" {
                     return .chatFolder(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {

@@ -1579,11 +1579,32 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                     return generateTintedImage(image: UIImage(bundleImageName: filterPeersAreMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
                                                     c.dismiss(completion: {
+                                                    })
+                                                    
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    
+                                                    let _ = (strongSelf.context.engine.peers.updateMultiplePeerMuteSettings(peerIds: data.includePeers.peers, muted: !filterPeersAreMuted)
+                                                    |> deliverOnMainQueue).start(completed: {
                                                         guard let strongSelf = self else {
                                                             return
                                                         }
                                                         
-                                                        let _ = strongSelf.context.engine.peers.updateMultiplePeerMuteSettings(peerIds: data.includePeers.peers, muted: !filterPeersAreMuted).start()
+                                                        let overlayController: UndoOverlayController
+                                                        if !filterPeersAreMuted {
+                                                            let iconColor: UIColor = .white
+                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                                                                    "Middle.Group 1.Fill 1": iconColor,
+                                                                    "Top.Group 1.Fill 1": iconColor,
+                                                                    "Bottom.Group 1.Fill 1": iconColor,
+                                                                    "EXAMPLE.Group 1.Fill 1": iconColor,
+                                                                    "Line.Group 1.Stroke 1": iconColor
+                                                            ], title: nil, text: "All chats in **\(title)** are now muted", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
+                                                        } else {
+                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_on", scale: 0.056, colors: [:], title: nil, text: "All chats in **\(title)** are now unmuted", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
+                                                        }
+                                                        strongSelf.present(overlayController, in: .current)
                                                     })
                                                 })))
                                             }

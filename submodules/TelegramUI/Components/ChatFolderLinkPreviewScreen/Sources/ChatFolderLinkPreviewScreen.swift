@@ -76,6 +76,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             return super.hitTest(point, with: event)
         }
+        
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
     }
     
     final class AnimationHint {
