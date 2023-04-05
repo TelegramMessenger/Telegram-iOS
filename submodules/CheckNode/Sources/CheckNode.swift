@@ -396,6 +396,7 @@ public class CheckLayer: CALayer {
                 checkProgress = 0.0
                 let borderInset = borderWidth / 2.0 + inset
                 let borderFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: borderInset, dy: borderInset)
+                context.setLineDash(phase: -6.4, lengths: [4.0, 4.0])
                 context.strokeEllipse(in: borderFrame)
             } else {
                 checkProgress = parameters.animationProgress

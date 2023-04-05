@@ -523,7 +523,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                 }
                 if isGroup {
                     if isPrivate {
-                        text = "You don't have the admin rights to share invite links to this private group chat."
+                        text = "You don't have the admin rights to share invite links to this private group."
                     } else {
                         text = "You don't have the admin rights to share invite links to this group chat."
                     }

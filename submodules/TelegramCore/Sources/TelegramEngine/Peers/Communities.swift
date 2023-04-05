@@ -34,6 +34,7 @@ public enum ExportChatFolderError {
     case limitExceeded(limit: Int32, premiumLimit: Int32)
     case tooManyChannels(limit: Int32, premiumLimit: Int32)
     case tooManyChannelsInAccount(limit: Int32, premiumLimit: Int32)
+    case someUserTooManyChannels
 }
 
 public struct ExportedChatFolderLink: Equatable {
@@ -96,7 +97,9 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                         }
                     }
                 }
-            } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" || error.errorDescription == "CHANNELS_TOO_MUCH" {
+            } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
+                return .fail(.someUserTooManyChannels)
+            } else if error.errorDescription == "CHANNELS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
@@ -106,9 +109,9 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                     let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
                     
                     if isPremium {
-                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
                     } else {
-                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
                     }
                 }
             } else {
@@ -512,9 +515,9 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
                     let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
                     
                     if isPremium {
-                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
                     } else {
-                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
                     }
                 }
             } else {

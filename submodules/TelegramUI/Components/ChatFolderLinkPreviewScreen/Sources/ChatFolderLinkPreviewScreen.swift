@@ -1469,6 +1469,9 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 controller.dismiss()
                                 
                                 return
+                            case .someUserTooManyChannels:
+                                //TODO:localize
+                                text = "One of the groups in this folder can’t be added because one of its admins has too many groups and channels."
                             }
                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                             controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))

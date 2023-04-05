@@ -753,7 +753,7 @@ private final class LimitSheetContent: CombinedComponent {
             )
              
             var titleText = strings.Premium_LimitReached
-            var buttonAnimationName = "premium_x2"
+            var buttonAnimationName: String? = "premium_x2"
             let iconName: String
             var badgeText: String
             var string: String
@@ -844,6 +844,8 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxSharedFolderLinksNoPremiumText("\(limit)").string
                     }
+                
+                    buttonAnimationName = nil
                 case .membershipInSharedFolders:
                     let limit = state.limits.maxSharedFolderJoin
                     let premiumLimit = state.premiumLimits.maxSharedFolderJoin
@@ -863,6 +865,8 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxSharedFolderMembershipNoPremiumText("\(limit)").string
                     }
+                
+                    buttonAnimationName = nil
                 case .pins:
                     let limit = state.limits.maxPinnedChatCount
                     let premiumLimit = state.premiumLimits.maxPinnedChatCount
