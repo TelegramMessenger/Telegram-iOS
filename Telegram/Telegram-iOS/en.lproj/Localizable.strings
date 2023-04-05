@@ -9131,3 +9131,11 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
 
 "Conversation.OpenChatFolder" = "VIEW CHAT LIST";
+
+"Username.BotLinkHint" = "This username cannot be edited.";
+"Username.BotLinkHintExtended" = "This username cannot be edited. You can acquire additional usernames on [Fragment]().";
+
+"PeerInfo.Bot.EditIntro" = "Edit Intro";
+"PeerInfo.Bot.EditCommands" = "Edit Commands";
+"PeerInfo.Bot.ChangeSettings" = "Change Bot Settings";
+"PeerInfo.Bot.BotFatherInfo" = "Use [@BotFather]() to manage this bot.";

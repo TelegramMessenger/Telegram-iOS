@@ -707,7 +707,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var didBeginSelectingChats: (() -> Void)?
     public var displayFilterLimit: (() -> Void)?
     
-    public init(context: AccountContext, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList, previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
+    public init(context: AccountContext, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
         self.location = location
         self.chatListMode = chatListMode

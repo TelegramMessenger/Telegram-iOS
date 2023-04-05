@@ -20,7 +20,7 @@ import Postbox
 import ChatFolderLinkPreviewScreen
 
 public enum ChatListNodeMode {
-    case chatList
+    case chatList(appendContacts: Bool)
     case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory], chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool)
     case peerType(type: [ReplyMarkupButtonRequestPeerType], hasCreate: Bool)
 }
@@ -1668,6 +1668,15 @@ public final class ChatListNode: ListView {
         }
         
         let currentPeerId: EnginePeer.Id = context.account.peerId
+        
+        let contactList: Signal<EngineContactList?, NoError>
+        if case let .chatList(appendContacts) = mode, appendContacts {
+            contactList = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Contacts.List(includePresences: true))
+            |> map(Optional.init)
+        } else {
+            contactList = .single(nil)
+        }
+        let _ = contactList
         
         let chatListNodeViewTransition = combineLatest(
             queue: viewProcessingQueue,
