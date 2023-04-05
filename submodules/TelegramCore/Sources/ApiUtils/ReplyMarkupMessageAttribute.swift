@@ -17,7 +17,7 @@ extension ReplyMarkupButton {
                 self.init(title: text, titleWhenForwarded: nil, action: .requestMap)
             case let .keyboardButtonRequestPhone(text):
                 self.init(title: text, titleWhenForwarded: nil, action: .requestPhone)
-            case let .keyboardButtonSwitchInline(flags, text, query):
+            case let .keyboardButtonSwitchInline(flags, text, query, _):
                 self.init(title: text, titleWhenForwarded: nil, action: .switchInline(samePeer: (flags & (1 << 0)) != 0, query: query))
             case let .keyboardButtonUrl(text, url):
                 self.init(title: text, titleWhenForwarded: nil, action: .url(url))
