@@ -63,10 +63,10 @@ private func preparedThemeColorsGridEntryTransition(context: AccountContext, fro
     return ThemeColorsGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
 
-final class ThemeColorsGridControllerNode: ASDisplayNode {
+final class ThemeColorsGridControllerNode: ASDisplayNode {    
     private let context: AccountContext
+    private weak var controller: ThemeColorsGridController?
     private var presentationData: PresentationData
-    private let peerId: PeerId?
     private var controllerInteraction: ThemeColorsGridControllerInteraction?
     private let push: (ViewController) -> Void
     private let presentColorPicker: () -> Void
@@ -88,9 +88,9 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId?, gradients: [[UInt32]], colors: [UInt32], push: @escaping (ViewController) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, controller: ThemeColorsGridController, gradients: [[UInt32]], colors: [UInt32], push: @escaping (ViewController) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
         self.context = context
-        self.peerId = peerId
+        self.controller = controller
         self.presentationData = presentationData
         self.push = push
         self.presentColorPicker = presentColorPicker
@@ -128,15 +128,34 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         let previousEntries = Atomic<[ThemeColorsGridControllerEntry]?>(value: nil)
         
+        let dismissControllers = { [weak self] in
+            if let self, let navigationController = self.controller?.navigationController as? NavigationController {
+                let controllers = navigationController.viewControllers.filter({ controller in
+                    if controller is ThemeColorsGridController || controller is WallpaperGalleryController {
+                        return false
+                    }
+                    return true
+                })
+                navigationController.setViewControllers(controllers, animated: true)
+            }
+        }
+        
         let interaction = ThemeColorsGridControllerInteraction(openWallpaper: { [weak self] wallpaper in
             if let strongSelf = self {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors), mode: strongSelf.peerId.flatMap { .peer($0) } ?? .default)
+                    let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors), mode: strongSelf.controller?.mode.galleryMode ?? .default)
                     controller.navigationPresentation = .modal
-                    controller.apply = { _, _, _ in
-                        pop()
+                    controller.apply = { [weak self] wallpaper, _, _ in
+                        if let strongSelf = self, let mode = strongSelf.controller?.mode, case let .peer(peer) = mode, case let .wallpaper(wallpaperValue, _) = wallpaper {
+                            let _ = (strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: wallpaperValue)
+                            |> deliverOnMainQueue).start(completed: {
+                                dismissControllers()
+                            })
+                        } else {
+                            pop()
+                        }
                     }
                     strongSelf.push(controller)
                 }

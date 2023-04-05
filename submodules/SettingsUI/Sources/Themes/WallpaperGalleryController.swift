@@ -167,7 +167,7 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
 public class WallpaperGalleryController: ViewController {
     public enum Mode {
         case `default`
-        case peer(EnginePeer.Id)
+        case peer(EnginePeer, Bool)
     }
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
@@ -350,7 +350,7 @@ public class WallpaperGalleryController: ViewController {
         var i: Int = 0
         var updateItems: [GalleryPagerUpdateItem] = []
         for entry in entries {
-            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, index: updateItems.count, entry: entry, arguments: arguments, source: self.source))
+            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, index: updateItems.count, entry: entry, arguments: arguments, source: self.source, mode: self.mode))
             updateItems.append(item)
             i += 1
         }
@@ -361,7 +361,7 @@ public class WallpaperGalleryController: ViewController {
         var updateItems: [GalleryPagerUpdateItem] = []
         for i in 0 ..< self.entries.count {
             if i == index {
-                let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source))
+                let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source, mode: self.mode))
                 updateItems.append(item)
             }
         }
@@ -495,7 +495,7 @@ public class WallpaperGalleryController: ViewController {
                                         }
                                         return current.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers)
                                     }) |> deliverOnMainQueue).start(completed: {
-                                        self?.dismiss(forceAway: true)
+                                        self?.dismiss(animated: true)
                                     })
                                 
                                     switch strongSelf.source {
@@ -954,7 +954,7 @@ public class WallpaperGalleryController: ViewController {
                 colors = true
             }
             
-            self.galleryNode.pager.replaceItems(zip(0 ..< self.entries.count, self.entries).map({ WallpaperGalleryItem(context: self.context, index: $0, entry: $1, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source) }), centralItemIndex: self.centralEntryIndex)
+            self.galleryNode.pager.replaceItems(zip(0 ..< self.entries.count, self.entries).map({ WallpaperGalleryItem(context: self.context, index: $0, entry: $1, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source, mode: self.mode) }), centralItemIndex: self.centralEntryIndex)
             
             if let initialOptions = self.initialOptions, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                 itemNode.options = initialOptions

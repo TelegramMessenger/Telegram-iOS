@@ -9143,3 +9143,11 @@ Sorry for the inconvenience.";
 "PeerInfo.Bot.EditCommands" = "Edit Commands";
 "PeerInfo.Bot.ChangeSettings" = "Change Bot Settings";
 "PeerInfo.Bot.BotFatherInfo" = "Use [@BotFather]() to manage this bot.";
+
+"WallpaperPreview.NotAppliedInfo" = "Background will not be applied for **%@**";
+"WallpaperPreview.ChatTopText" = "Apply the background in this chat.";
+"WallpaperPreview.ChatBottomText" = "Enjoy the view.";
+
+"Conversation.Theme.SetPhotoWallpaper" = "Choose Background from Photos";
+"Conversation.Theme.SetColorWallpaper" = "Choose Color as a Background";
+"Conversation.Theme.OtherOptions" = "Other Options...";

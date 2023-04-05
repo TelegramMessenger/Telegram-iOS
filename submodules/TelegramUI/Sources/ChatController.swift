@@ -839,11 +839,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentThemeSelection()
                             return true
                         case let .setChatWallpaper(wallpaper):
-                            guard message.effectivelyIncoming(strongSelf.context.account.peerId) else {
+                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()
-                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(message.id.peerId))
+                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
                             wallpaperPreviewController.apply = { wallpaper, options, _ in
                                 let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id)
                                 |> deliverOnMainQueue).start(completed: { [weak wallpaperPreviewController] in 
@@ -18480,10 +18480,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let _ = (combineLatest(queue: Queue.mainQueue(), self.chatThemeEmoticonPromise.get(), animatedEmojiStickers)
         |> take(1)).start(next: { [weak self] themeEmoticon, animatedEmojiStickers in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-                
+            
+            
             let selectedEmoticon: String? = themeEmoticon
             
             let controller = ChatThemeScreen(
@@ -18524,7 +18525,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(peerId))
+                        let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
                         controller.navigationPresentation = .modal
                         controller.apply = { [weak self] wallpaper, options, cropRect in
                             if let strongSelf = self {
@@ -18538,14 +18539,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.push(controller)
                 },
                 changeColor: {
-                    guard let strongSelf = self, let peerId else {
+                    guard let strongSelf = self else {
                         return
                     }
                     if let themeController = strongSelf.themeScreen {
                         strongSelf.themeScreen = nil
                         themeController.dimTapped()
                     }
-                    let controller = ThemeColorsGridController(context: context, peerId: peerId)
+                    let controller = ThemeColorsGridController(context: context, mode: .peer(EnginePeer(peer)))
                     controller.navigationPresentation = .modal
                     strongSelf.push(controller)
                 },

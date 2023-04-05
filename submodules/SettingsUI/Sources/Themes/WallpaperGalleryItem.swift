@@ -18,6 +18,7 @@ import LocalMediaResources
 import WallpaperResources
 import AppBundle
 import WallpaperBackgroundNode
+import TextFormat
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool
@@ -42,24 +43,26 @@ class WallpaperGalleryItem: GalleryItem {
     let entry: WallpaperGalleryEntry
     let arguments: WallpaperGalleryItemArguments
     let source: WallpaperListSource
+    let mode: WallpaperGalleryController.Mode
     
-    init(context: AccountContext, index: Int, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource) {
+    init(context: AccountContext, index: Int, entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource, mode: WallpaperGalleryController.Mode) {
         self.context = context
         self.index = index
         self.entry = entry
         self.arguments = arguments
         self.source = source
+        self.mode = mode
     }
     
     func node(synchronous: Bool) -> GalleryItemNode {
         let node = WallpaperGalleryItemNode(context: self.context)
-        node.setEntry(self.entry, arguments: self.arguments, source: self.source)
+        node.setEntry(self.entry, arguments: self.arguments, source: self.source, mode: self.mode)
         return node
     }
     
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? WallpaperGalleryItemNode {
-            node.setEntry(self.entry, arguments: self.arguments, source: self.source)
+            node.setEntry(self.entry, arguments: self.arguments, source: self.source, mode: self.mode)
         }
     }
     
@@ -84,6 +87,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     var entry: WallpaperGalleryEntry?
     var source: WallpaperListSource?
+    var mode: WallpaperGalleryController.Mode?
     private var colorPreview: Bool = false
     private var contentSize: CGSize?
     private var arguments = WallpaperGalleryItemArguments()
@@ -263,10 +267,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.dismiss()
     }
     
-    func setEntry(_ entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource) {
+    func setEntry(_ entry: WallpaperGalleryEntry, arguments: WallpaperGalleryItemArguments, source: WallpaperListSource, mode: WallpaperGalleryController.Mode) {
         let previousArguments = self.arguments
         self.arguments = arguments
         self.source = source
+        self.mode = mode
         
         if self.arguments.colorPreview != previousArguments.colorPreview {
             if self.arguments.colorPreview {
@@ -1063,6 +1068,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         var topMessageText = ""
         var bottomMessageText = ""
+        var serviceMessageText: String?
         var currentWallpaper: TelegramWallpaper = self.presentationData.chatWallpaper
         if let entry = self.entry, case let .wallpaper(wallpaper, _) = entry {
             currentWallpaper = wallpaper
@@ -1125,6 +1131,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
         }
         
+        if let mode = self.mode, case let .peer(peer, existing) = mode {
+            topMessageText = presentationData.strings.WallpaperPreview_ChatTopText
+            bottomMessageText = presentationData.strings.WallpaperPreview_ChatBottomText
+            if !existing {
+                serviceMessageText = presentationData.strings.WallpaperPreview_NotAppliedInfo(peer.compactDisplayTitle).string
+            }
+        }
+        
         let theme = self.presentationData.theme.withUpdated(preview: true)
                    
         let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
@@ -1132,6 +1146,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let message2 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message2], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, isCentered: false))
+        
+        if let serviceMessageText {
+            let attributedText = convertMarkdownToAttributes(NSAttributedString(string: serviceMessageText))
+            let entities = generateChatInputTextEntities(attributedText)
+            
+            let message3 = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66002, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: attributedText.string, entities: entities))], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
+            items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message3], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, isCentered: false))
+        }
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
