@@ -198,11 +198,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.buttonTitleNode.isHidden = fromYou
                             
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: 13.0), size: imageSize)
-                            if let media {
-                                if mediaUpdated {
-//                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerId: nil).start())
-                                }
-                                     
+                            if let media, mediaUpdated {     
                                 let boundingSize = imageSize
                                 var imageSize = boundingSize
                                 let updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
