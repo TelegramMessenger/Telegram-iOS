@@ -27,6 +27,22 @@
 
 #define TGModernGalleryItemPadding 20.0f
 
+static void adjustFrameRate(CAAnimation *animation) {
+    if (@available(iOS 15.0, *)) {
+        float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
+        if (maxFps > 61.0f) {
+            float preferredFps = maxFps;
+            if ([animation isKindOfClass:[CABasicAnimation class]]) {
+                CABasicAnimation *basicAnimation = (CABasicAnimation *)animation;
+                if ([basicAnimation.keyPath isEqualToString:@"opacity"]) {
+                    preferredFps = 60.0f;
+                }
+            }
+            animation.preferredFrameRateRange = CAFrameRateRangeMake(30.0, preferredFps, maxFps);
+        }
+    }
+}
+
 @interface TGModernGalleryController () <UIScrollViewDelegate, TGModernGalleryScrollViewDelegate, TGModernGalleryItemViewDelegate, TGKeyCommandResponder>
 {
     NSMutableDictionary *_reusableItemViewsByIdentifier;
@@ -904,6 +920,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
     positionAnimation.removedOnCompletion = true;
     positionAnimation.fillMode = kCAFillModeForwards;
     positionAnimation.durationFactor = durationFactor;
+    adjustFrameRate(positionAnimation);
     TGAnimationBlockDelegate *delegate = [[TGAnimationBlockDelegate alloc] initWithLayer:view.layer];
     delegate.completion = ^(BOOL finished)
     {
@@ -926,6 +943,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
         scaleAnimation.removedOnCompletion = true;
         scaleAnimation.fillMode = kCAFillModeForwards;
         scaleAnimation.durationFactor = durationFactor;
+        adjustFrameRate(scaleAnimation);
         [view.layer addAnimation:scaleAnimation forKey:@"transform.scale.x"];
     }
     {
@@ -937,6 +955,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
         scaleAnimation.removedOnCompletion = true;
         scaleAnimation.fillMode = kCAFillModeForwards;
         scaleAnimation.durationFactor = durationFactor;
+        adjustFrameRate(scaleAnimation);
         [view.layer addAnimation:scaleAnimation forKey:@"transform.scale.y"];
     }
     
