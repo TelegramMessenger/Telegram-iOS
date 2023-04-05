@@ -326,8 +326,6 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 
                 return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
             case let .chatlistInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
-                let _ = alreadyPeers
-                
                 var allPeers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
                 var memberCounts: [PeerId: Int] = [:]
@@ -355,12 +353,10 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 
                 let currentFilters = _internal_currentChatListFilters(transaction: transaction)
                 var currentFilterTitle: String?
-                var currentFilterPeers: [EnginePeer.Id] = []
                 if let index = currentFilters.firstIndex(where: { $0.id == filterId }) {
                     switch currentFilters[index] {
-                    case let .filter(_, title, _, data):
+                    case let .filter(_, title, _, _):
                         currentFilterTitle = title
-                        currentFilterPeers = data.includePeers.peers
                     default:
                         break
                     }
@@ -371,23 +367,16 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 for peer in missingPeers {
                     if let peerValue = transaction.getPeer(peer.peerId) {
                         resultPeers.append(EnginePeer(peerValue))
-                        
-                        if currentFilterPeers.contains(where: { $0 == peer.peerId }) && transaction.getPeerChatListIndex(peer.peerId) != nil {
-                            alreadyMemberPeerIds.insert(peer.peerId)
-                        }
                     }
                 }
-                for peerId in currentFilterPeers {
-                    if resultPeers.contains(where: { $0.id == peerId }) {
-                        continue
-                    }
-                    if let peerValue = transaction.getPeer(peerId) {
-                        resultPeers.append(EnginePeer(peerValue))
-                        
-                        if transaction.getPeerChatListIndex(peerId) != nil {
-                            alreadyMemberPeerIds.insert(peerId)
+                
+                for peer in alreadyPeers {
+                    if !resultPeers.contains(where: { $0.id == peer.peerId }) {
+                        if let peerValue = transaction.getPeer(peer.peerId) {
+                            resultPeers.append(EnginePeer(peerValue))
                         }
                     }
+                    alreadyMemberPeerIds.insert(peer.peerId)
                 }
                 
                 return ChatFolderLinkContents(localFilterId: filterId, title: currentFilterTitle, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
