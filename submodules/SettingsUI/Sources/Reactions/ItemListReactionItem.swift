@@ -51,8 +51,7 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
                 
                 node.contentSize = layout.contentSize
                 node.insets = layout.insets
-            
-            
+                
                 completion(node, {
                     return (nil, { _ in apply() })
                 })
