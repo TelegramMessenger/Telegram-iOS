@@ -20,6 +20,8 @@ import ButtonComponent
 import ContextUI
 import QrCodeUI
 import InviteLinksUI
+import PlainButtonComponent
+import AnimatedCounterComponent
 
 private final class ChatFolderLinkPreviewScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -73,6 +75,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
     private final class ScrollView: UIScrollView {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             return super.hitTest(point, with: event)
+        }
+        
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
         }
     }
     
@@ -154,7 +160,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             self.addSubview(self.navigationBarContainer)
             
-            self.scrollView.delaysContentTouches = true
+            self.scrollView.delaysContentTouches = false
             self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -203,13 +209,17 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 return
             }
             
-            var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
-            if topOffset > 0.0 {
-                topOffset = max(0.0, topOffset)
-                
-                if topOffset < topOffsetDistance {
-                    targetContentOffset.pointee.y = scrollView.contentOffset.y
-                    scrollView.setContentOffset(CGPoint(x: 0.0, y: itemLayout.topInset), animated: true)
+            if scrollView.contentOffset.y <= -100.0 && velocity.y <= -2.0 {
+                self.environment?.controller()?.dismiss()
+            } else {
+                var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
+                if topOffset > 0.0 {
+                    topOffset = max(0.0, topOffset)
+                    
+                    if topOffset < topOffsetDistance {
+                        targetContentOffset.pointee.y = scrollView.contentOffset.y
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: itemLayout.topInset), animated: true)
+                    }
                 }
             }
         }
@@ -285,7 +295,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
             }
             
-            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
+            var animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
+            if self.scrollView.contentOffset.y < 0.0 {
+                animateOffset += -self.scrollView.contentOffset.y
+            }
             
             self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             self.scrollContentClippingView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
@@ -465,9 +478,9 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                         chatCountString = "\(linkContents.peers.count) chats"
                     }
                     if let title = linkContents.title {
-                        text = "Do you want to add **\(chatCountString)** to your\nfolder **\(title)**?"
+                        text = "Do you want to add **\(chatCountString)** to the\nfolder **\(title)**?"
                     } else {
-                        text = "Do you want to add **\(chatCountString)** chats to your\nfolder?"
+                        text = "Do you want to add **\(chatCountString)** chats to the\nfolder?"
                     }
                 }
             } else {
@@ -696,10 +709,18 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     }
                     
                     var subtitle: String?
-                    if linkContents.alreadyMemberPeerIds.contains(peer.id) {
-                        subtitle = "You are already a member"
-                    } else if let memberCount = linkContents.memberCounts[peer.id] {
-                        subtitle = "\(memberCount) participants"
+                    if case let .channel(channel) = peer, case .broadcast = channel.info {
+                        if linkContents.alreadyMemberPeerIds.contains(peer.id) {
+                            subtitle = "You are already a subscriber"
+                        } else if let memberCount = linkContents.memberCounts[peer.id] {
+                            subtitle = "\(memberCount) subscribers"
+                        }
+                    } else {
+                        if linkContents.alreadyMemberPeerIds.contains(peer.id) {
+                            subtitle = "You are already a member"
+                        } else if let memberCount = linkContents.memberCounts[peer.id] {
+                            subtitle = "\(memberCount) participants"
+                        }
                     }
                     
                     let itemSize = item.update(
@@ -800,15 +821,21 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 listHeaderTitle = " "
             }
             
-            let listHeaderActionTitle: String
+            //TODO:localize
+            let listHeaderActionItems: [AnimatedCounterComponent.Item]
             if self.selectedItems.count == self.items.count {
-                listHeaderActionTitle = "DESELECT ALL"
+                listHeaderActionItems = [
+                    AnimatedCounterComponent.Item(id: AnyHashable(0), text: "DESELECT", numericValue: 0),
+                    AnimatedCounterComponent.Item(id: AnyHashable(1), text: "ALL", numericValue: 1)
+                ]
             } else {
-                listHeaderActionTitle = "SELECT ALL"
+                listHeaderActionItems = [
+                    AnimatedCounterComponent.Item(id: AnyHashable(0), text: "SELECT", numericValue: 1),
+                    AnimatedCounterComponent.Item(id: AnyHashable(1), text: "ALL", numericValue: 1)
+                ]
             }
             
             let listHeaderBody = MarkdownAttributeSet(font: Font.with(size: 13.0, design: .regular, traits: [.monospacedNumbers]), textColor: environment.theme.list.freeTextColor)
-            let listHeaderActionBody = MarkdownAttributeSet(font: Font.with(size: 13.0, design: .regular, traits: [.monospacedNumbers]), textColor: environment.theme.list.itemAccentColor)
             
             let listHeaderTextSize = self.listHeaderText.update(
                 transition: .immediate,
@@ -838,19 +865,15 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             }
             
             let listHeaderActionSize = self.listHeaderAction.update(
-                transition: .immediate,
-                component: AnyComponent(Button(
-                    content: AnyComponent(MultilineTextComponent(
-                        text: .markdown(
-                            text: listHeaderActionTitle,
-                            attributes: MarkdownAttributes(
-                                body: listHeaderActionBody,
-                                bold: listHeaderActionBody,
-                                link: listHeaderActionBody,
-                                linkAttribute: { _ in nil }
-                            )
-                        )
+                transition: transition,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(AnimatedCounterComponent(
+                        font: Font.regular(13.0),
+                        color: environment.theme.list.itemAccentColor,
+                        alignment: .right,
+                        items: listHeaderActionItems
                     )),
+                    effectAlignment: .right,
                     action: { [weak self] in
                         guard let self, let component = self.component, let linkContents = component.linkContents else {
                             return
@@ -877,8 +900,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     self.scrollContentView.addSubview(listHeaderActionView)
                 }
                 let listHeaderActionFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - 15.0 - listHeaderActionSize.width, y: contentHeight), size: listHeaderActionSize)
-                contentTransition.setPosition(view: listHeaderActionView, position: CGPoint(x: listHeaderActionFrame.maxX, y: listHeaderActionFrame.minY))
-                listHeaderActionView.bounds = CGRect(origin: CGPoint(), size: listHeaderActionFrame.size)
+                contentTransition.setFrame(view: listHeaderActionView, frame: listHeaderActionFrame)
                 
                 if let linkContents = component.linkContents, !allChatsAdded, linkContents.peers.count > 1 {
                     listHeaderActionView.isHidden = false
@@ -893,7 +915,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: itemsHeight)))
             
             var initialContentHeight = contentHeight
-            initialContentHeight += min(itemsHeight, floor(singleItemHeight * 2.5))
+            initialContentHeight += min(itemsHeight, floor(singleItemHeight * 3.5))
             
             contentHeight += itemsHeight
             contentHeight += 24.0
@@ -977,6 +999,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             var chatListController: ChatListController?
                             if let navigationController = controller.navigationController as? NavigationController {
                                 for viewController in navigationController.viewControllers.reversed() {
+                                    if viewController is ChatFolderLinkPreviewScreen {
+                                        continue
+                                    }
+                                    
                                     if let rootController = viewController as? TabBarController {
                                         for c in rootController.controllers {
                                             if let c = c as? ChatListController {
@@ -1080,7 +1106,17 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                 
                                                 //TODO:localize
                                                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                                                
+                                                var isUpdates = false
                                                 if case .updates = component.subject {
+                                                    isUpdates = true
+                                                } else {
+                                                    if component.linkContents?.localFilterId != nil {
+                                                        isUpdates = true
+                                                    }
+                                                }
+                                                
+                                                if isUpdates {
                                                     let chatCountString: String
                                                     if result.newChatCount == 1 {
                                                         chatCountString = "1 new chat"
@@ -1088,7 +1124,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                         chatCountString = "\(result.newChatCount) new chats"
                                                     }
                                                     
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Updated", text: "You have joined \(chatCountString)", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: "Folder \(result.title) Updated", text: "You have joined \(chatCountString)", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else if result.newChatCount != 0 {
                                                     let chatCountString: String
                                                     if result.newChatCount == 1 {
@@ -1097,9 +1133,21 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                         chatCountString = "\(result.newChatCount) chats"
                                                     }
                                                     
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: "Folder \(result.title) Added", text: "You also joined \(chatCountString)", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    let animationBackgroundColor: UIColor
+                                                    if presentationData.theme.overallDarkAppearance {
+                                                        animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                                                    } else {
+                                                        animationBackgroundColor = UIColor(rgb: 0x474747)
+                                                    }
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "Folder \(result.title) Added", text: "You also joined \(chatCountString)", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else {
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Folder \(result.title) Added", timeout: nil), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    let animationBackgroundColor: UIColor
+                                                    if presentationData.theme.overallDarkAppearance {
+                                                        animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                                                    } else {
+                                                        animationBackgroundColor = UIColor(rgb: 0x474747)
+                                                    }
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "Folder \(result.title) Added", text: "", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 }
                                             })
                                         }
@@ -1111,19 +1159,46 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                         return
                                     }
                                     
+                                    let context = component.context
+                                    let navigationController = controller.navigationController as? NavigationController
+                                    
                                     switch error {
                                     case .generic:
                                         controller.dismiss()
                                     case let .dialogFilterLimitExceeded(limit, _):
-                                        let limitController = PremiumLimitScreen(context: component.context, subject: .folders, count: limit, action: {})
+                                        let limitController = PremiumLimitScreen(context: component.context, subject: .folders, count: limit, action: { [weak navigationController] in
+                                            guard let navigationController else {
+                                                return
+                                            }
+                                            navigationController.pushViewController(PremiumIntroScreen(context: context, source: .folders))
+                                        })
                                         controller.push(limitController)
                                         controller.dismiss()
                                     case let .sharedFolderLimitExceeded(limit, _):
-                                        let limitController = PremiumLimitScreen(context: component.context, subject: .membershipInSharedFolders, count: limit, action: {})
+                                        let limitController = PremiumLimitScreen(context: component.context, subject: .membershipInSharedFolders, count: limit, action: { [weak navigationController] in
+                                            guard let navigationController else {
+                                                return
+                                            }
+                                            navigationController.pushViewController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
+                                        })
                                         controller.push(limitController)
                                         controller.dismiss()
                                     case let .tooManyChannels(limit, _):
-                                        let limitController = PremiumLimitScreen(context: component.context, subject: .chatsPerFolder, count: limit, action: {})
+                                        let limitController = PremiumLimitScreen(context: component.context, subject: .chatsPerFolder, count: limit, action: { [weak navigationController] in
+                                            guard let navigationController else {
+                                                return
+                                            }
+                                            navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .chatsPerFolder))
+                                        })
+                                        controller.push(limitController)
+                                        controller.dismiss()
+                                    case let .tooManyChannelsInAccount(limit, _):
+                                        let limitController = PremiumLimitScreen(context: component.context, subject: .channels, count: limit, action: { [weak navigationController] in
+                                            guard let navigationController else {
+                                                return
+                                            }
+                                            navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .groupsAndChannels))
+                                        })
                                         controller.push(limitController)
                                         controller.dismiss()
                                     }
@@ -1343,22 +1418,55 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 return
                             }
                             
+                            let context = component.context
+                            let navigationController = controller.navigationController as? NavigationController
+                            
                             //TODO:localize
                             let text: String
                             switch error {
                             case .generic:
                                 text = "An error occurred"
                             case let .sharedFolderLimitExceeded(limit, _):
-                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .membershipInSharedFolders, count: limit, action: {
+                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .membershipInSharedFolders, count: limit, action: {  [weak navigationController] in
+                                    guard let navigationController else {
+                                        return
+                                    }
+                                    navigationController.pushViewController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
                                 })
                                 
                                 controller.push(limitController)
                                 
                                 return
                             case let .limitExceeded(limit, _):
-                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .linksPerSharedFolder, count: limit, action: {
+                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .linksPerSharedFolder, count: limit, action: {  [weak navigationController] in
+                                    guard let navigationController else {
+                                        return
+                                    }
+                                    navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .linksPerSharedFolder))
                                 })
                                 controller.push(limitController)
+                                
+                                return
+                            case let .tooManyChannels(limit, _):
+                                let limitController = PremiumLimitScreen(context: component.context, subject: .chatsPerFolder, count: limit, action: { [weak navigationController] in
+                                    guard let navigationController else {
+                                        return
+                                    }
+                                    navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .chatsPerFolder))
+                                })
+                                controller.push(limitController)
+                                controller.dismiss()
+                                
+                                return
+                            case let .tooManyChannelsInAccount(limit, _):
+                                let limitController = PremiumLimitScreen(context: component.context, subject: .channels, count: limit, action: { [weak navigationController] in
+                                    guard let navigationController else {
+                                        return
+                                    }
+                                    navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .groupsAndChannels))
+                                })
+                                controller.push(limitController)
+                                controller.dismiss()
                                 
                                 return
                             }

@@ -144,6 +144,10 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
     private var nonExtractedRect: CGRect?
     
     private let offsetContainerNode: ASDisplayNode
+    public override var controlsContainer: ASDisplayNode {
+        //return super.controlsContainer
+        return self.containerNode
+    }
     
     private let iconBackgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
@@ -428,7 +432,9 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                             }
                             if strongSelf.maskNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                //strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                strongSelf.maskNode.isUserInteractionEnabled = false
+                                strongSelf.addSubnode(strongSelf.maskNode)
                             }
                             
                             let hasCorners = itemListHasRoundedBlockLayout(params)
@@ -581,7 +587,7 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
     override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        transition.updateSublayerTransformOffset(layer: self.containerNode.layer, offset: CGPoint(x: offset, y: 0.0))
+        transition.updateSublayerTransformOffset(layer: self.offsetContainerNode.layer, offset: CGPoint(x: offset + (self.contextSourceNode.isExtractedToContextPreview ? 12.0 : 0.0), y: 0.0))
     }
     
     override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {

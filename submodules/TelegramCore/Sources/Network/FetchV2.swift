@@ -641,10 +641,13 @@ private final class FetchImpl {
                             isComplete = true
                             let resultingSize = fetchRange.lowerBound + actualLength
                             if let currentKnownSize = self.knownSize {
+                                Logger.shared.log("FetchV2", "\(self.loggingIdentifier): setting known size to min(\(currentKnownSize), \(resultingSize)) = \(min(currentKnownSize, resultingSize))")
                                 self.knownSize = min(currentKnownSize, resultingSize)
                             } else {
+                                Logger.shared.log("FetchV2", "\(self.loggingIdentifier): setting known size to \(resultingSize)")
                                 self.knownSize = resultingSize
                             }
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): reporting resource size \(fetchRange.lowerBound + actualLength)")
                             self.onNext(.resourceSizeUpdated(fetchRange.lowerBound + actualLength))
                         }
                         
@@ -662,15 +665,21 @@ private final class FetchImpl {
                             } else {
                                 actualData = Data()
                             }
+                            
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): extracting aligned part \(partRange) (\(fetchRange)): \(actualData.count)")
                         }
                         
                         if !actualData.isEmpty {
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): emitting data part \(partRange) (aligned as \(fetchRange)): \(actualData.count), isComplete: \(isComplete)")
+                            
                             self.onNext(.dataPart(
                                 resourceOffset: partRange.lowerBound,
                                 data: actualData,
                                 range: 0 ..< Int64(actualData.count),
                                 complete: isComplete
                             ))
+                        } else {
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): not emitting data part \(partRange) (aligned as \(fetchRange))")
                         }
                     case let .cdnRedirect(cdnData):
                         self.state = .fetching(FetchImpl.FetchingState(

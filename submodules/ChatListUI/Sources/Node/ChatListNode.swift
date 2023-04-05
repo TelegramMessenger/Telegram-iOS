@@ -1668,15 +1668,39 @@ public final class ChatListNode: ListView {
         }
         
         let currentPeerId: EnginePeer.Id = context.account.peerId
-        
-        let contactList: Signal<EngineContactList?, NoError>
+
+        /*let contactList: Signal<EngineContactList?, NoError>
         if case let .chatList(appendContacts) = mode, appendContacts {
             contactList = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Contacts.List(includePresences: true))
             |> map(Optional.init)
         } else {
             contactList = .single(nil)
         }
-        let _ = contactList
+        let _ = contactList*/
+
+        
+        /*let emptyInitialView = ChatListNodeView(
+            originalList: EngineChatList(
+                items: [],
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: false
+            ),
+            filteredEntries: [ChatListNodeEntry.HeaderEntry],
+            isLoading: false,
+            filter: nil
+        )
+        let _ = previousView.swap(emptyInitialView)
+        
+        let _ = (preparedChatListNodeViewTransition(from: nil, to: emptyInitialView, reason: .initial, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: nil, searchMode: false)
+        |> map { mappedChatListNodeViewListTransition(context: context, nodeInteraction: nodeInteraction, location: location, filterData: nil, mode: mode, isPeerEnabled: nil, transition: $0) }).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            let _ = self.enqueueTransition(value).start()
+        })*/
         
         let chatListNodeViewTransition = combineLatest(
             queue: viewProcessingQueue,
@@ -1958,7 +1982,7 @@ public final class ChatListNode: ListView {
                 }
             }
             if isEmpty {
-                entries = []
+                entries = [.HeaderEntry]
             }
             
             let processedView = ChatListNodeView(originalList: update.list, filteredEntries: entries, isLoading: isLoading, filter: filter)
@@ -1972,6 +1996,8 @@ public final class ChatListNode: ListView {
             if let previous = previousView {
                 if previous.filteredEntries.count == 1 {
                     if case .HoleEntry = previous.filteredEntries[0] {
+                        previousWasEmptyOrSingleHole = true
+                    } else if case .HeaderEntry = previous.filteredEntries[0] {
                         previousWasEmptyOrSingleHole = true
                     }
                 } else if previous.filteredEntries.isEmpty && previous.isLoading {
@@ -2664,7 +2690,9 @@ public final class ChatListNode: ListView {
     }
     
     private func pollFilterUpdates() {
-        guard let chatListFilter, case let .filter(id, _, _, data) = chatListFilter, data.isShared else {
+        self.chatFolderUpdates.set(.single(nil))
+        
+        /*guard let chatListFilter, case let .filter(id, _, _, data) = chatListFilter, data.isShared else {
             self.chatFolderUpdates.set(.single(nil))
             return
         }
@@ -2675,7 +2703,7 @@ public final class ChatListNode: ListView {
                 return
             }
             self.chatFolderUpdates.set(.single(result))
-        })
+        })*/
     }
     
     private func resetFilter() {
@@ -2969,13 +2997,16 @@ public final class ChatListNode: ListView {
                 scrollToItem = ListViewScrollToItem(index: 0, position: .top(offset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
             }
             
-            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatListOpaqueTransactionState(chatListView: transition.chatListView), completion: completion)
+            let updatedOpaqueState: Any? = ChatListOpaqueTransactionState(chatListView: transition.chatListView)
+            self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: updatedOpaqueState, completion: completion)
         }
     }
     
     var isNavigationHidden: Bool {
         switch self.visibleContentOffset() {
         case let .known(value) where abs(value) < navigationBarSearchContentHeight - 1.0:
+            return false
+        case .none:
             return false
         default:
             return true
@@ -3079,6 +3110,7 @@ public final class ChatListNode: ListView {
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true
+            
             self.dequeueTransition()
         }
     }

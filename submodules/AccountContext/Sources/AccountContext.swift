@@ -898,6 +898,7 @@ public enum PremiumLimitSubject {
     case accounts
     case linksPerSharedFolder
     case membershipInSharedFolders
+    case channels
 }
 
 public protocol ComposeController: ViewController {

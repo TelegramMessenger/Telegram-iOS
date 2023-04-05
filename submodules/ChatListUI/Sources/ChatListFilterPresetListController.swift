@@ -324,7 +324,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                 var filters = filters
                 let id = context.engine.peers.generateNewChatListFilterId(filters: filters)
-                filters.insert(.filter(id: id, title: title, emoticon: nil, data: data), at: 0)
+                filters.append(.filter(id: id, title: title, emoticon: nil, data: data))
                 return filters
             }
             |> deliverOnMainQueue).start(next: { _ in

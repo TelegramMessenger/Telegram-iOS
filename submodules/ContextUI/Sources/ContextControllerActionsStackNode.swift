@@ -311,24 +311,49 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             if let currentBadge = self.currentBadge, currentBadge.badge == badge {
                 badgeImage = currentBadge.image
             } else {
-                let badgeTextColor: UIColor = presentationData.theme.list.itemCheckColors.foregroundColor
-                let badgeString = NSAttributedString(string: badge.value, font: Font.semibold(11.0), textColor: badgeTextColor)
-                let badgeTextBounds = badgeString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
-                let badgeSideInset: CGFloat = 3.0
-                let badgeVerticalInset: CGFloat = 1.0
-                let badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + ceil(badgeTextBounds.width), height: badgeVerticalInset * 2.0 + ceil(badgeTextBounds.height))
-                badgeImage = generateImage(badgeBackgroundSize, rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                    context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 5.0).cgPath)
-                    context.fillPath()
+                switch badge.style {
+                case .badge:
+                    let badgeTextColor: UIColor = presentationData.theme.list.itemCheckColors.foregroundColor
+                    let badgeString = NSAttributedString(string: badge.value, font: Font.regular(13.0), textColor: badgeTextColor)
+                    let badgeTextBounds = badgeString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
                     
-                    UIGraphicsPushContext(context)
+                    let badgeSideInset: CGFloat = 5.0
+                    let badgeVerticalInset: CGFloat = 1.0
+                    var badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + ceil(badgeTextBounds.width), height: badgeVerticalInset * 2.0 + ceil(badgeTextBounds.height))
+                    badgeBackgroundSize.width = max(badgeBackgroundSize.width, badgeBackgroundSize.height)
+                    badgeImage = generateImage(badgeBackgroundSize, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: size.height * 0.5).cgPath)
+                        context.fillPath()
+                        
+                        UIGraphicsPushContext(context)
+                        
+                        badgeString.draw(at: CGPoint(x: badgeTextBounds.minX + floor((badgeBackgroundSize.width - badgeTextBounds.width) * 0.5), y: badgeTextBounds.minY + badgeVerticalInset))
+                        
+                        UIGraphicsPopContext()
+                    })
+                case .label:
+                    let badgeTextColor: UIColor = presentationData.theme.list.itemCheckColors.foregroundColor
+                    let badgeString = NSAttributedString(string: badge.value, font: Font.semibold(11.0), textColor: badgeTextColor)
+                    let badgeTextBounds = badgeString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
                     
-                    badgeString.draw(at: CGPoint(x: badgeTextBounds.minX + badgeSideInset + UIScreenPixel, y: badgeTextBounds.minY + badgeVerticalInset + UIScreenPixel))
-                    
-                    UIGraphicsPopContext()
-                })
+                    let badgeSideInset: CGFloat = 3.0
+                    let badgeVerticalInset: CGFloat = 1.0
+                    let badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + ceil(badgeTextBounds.width), height: badgeVerticalInset * 2.0 + ceil(badgeTextBounds.height))
+                    badgeImage = generateImage(badgeBackgroundSize, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 5.0).cgPath)
+                        context.fillPath()
+                        
+                        UIGraphicsPushContext(context)
+                        
+                        badgeString.draw(at: CGPoint(x: badgeTextBounds.minX + badgeSideInset + UIScreenPixel, y: badgeTextBounds.minY + badgeVerticalInset + UIScreenPixel))
+                        
+                        UIGraphicsPopContext()
+                    })
+                }
             }
             
             let badgeIconNode: ASImageNode

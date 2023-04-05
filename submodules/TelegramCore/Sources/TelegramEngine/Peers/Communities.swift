@@ -32,6 +32,8 @@ public enum ExportChatFolderError {
     case generic
     case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
     case limitExceeded(limit: Int32, premiumLimit: Int32)
+    case tooManyChannels(limit: Int32, premiumLimit: Int32)
+    case tooManyChannelsInAccount(limit: Int32, premiumLimit: Int32)
 }
 
 public struct ExportedChatFolderLink: Equatable {
@@ -92,6 +94,21 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                         } else {
                             return .fail(.limitExceeded(limit: userDefaultLimits.maxSharedFolderInviteLinks, premiumLimit: userPremiumLimits.maxSharedFolderInviteLinks))
                         }
+                    }
+                }
+            } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" || error.errorDescription == "CHANNELS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(ExportChatFolderError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.chatlists.ExportedChatlistInvite, ExportChatFolderError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                    } else {
+                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
                     }
                 }
             } else {
@@ -391,6 +408,7 @@ public enum JoinChatFolderLinkError {
     case dialogFilterLimitExceeded(limit: Int32, premiumLimit: Int32)
     case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
     case tooManyChannels(limit: Int32, premiumLimit: Int32)
+    case tooManyChannelsInAccount(limit: Int32, premiumLimit: Int32)
 }
 
 public final class JoinChatFolderResult {
@@ -406,11 +424,41 @@ public final class JoinChatFolderResult {
 }
 
 func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> {
+    /*#if DEBUG
+    if "".isEmpty {
+        return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+            return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+        }
+        |> castError(JoinChatFolderLinkError.self)
+        |> mapToSignal { appConfiguration, isPremium -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> in
+            let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+            let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+            
+            if isPremium {
+                return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+            } else {
+                return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+            }
+        }
+    }
+    #endif*/
+    
     return account.postbox.transaction { transaction -> ([Api.InputPeer], Int) in
         var newChatCount = 0
         for peerId in peerIds {
             if transaction.getPeerChatListIndex(peerId) == nil {
-                newChatCount += 1
+                var canJoin = true
+                if let peer = transaction.getPeer(peerId) {
+                    if let channel = peer as? TelegramChannel {
+                        if case .kicked = channel.participationStatus {
+                            canJoin = false
+                        }
+                    }
+                }
+                
+                if canJoin {
+                    newChatCount += 1
+                }
             }
         }
         
@@ -465,6 +513,21 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
                         return .fail(.sharedFolderLimitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                     }
                 }
+            } else if error.errorDescription == "CHANNELS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                    } else {
+                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                    }
+                }
             } else {
                 return .fail(.generic)
             }
@@ -504,7 +567,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
 }
 
 public final class ChatFolderUpdates: Equatable {
-    fileprivate let folderId: Int32
+    public let folderId: Int32
     fileprivate let title: String
     fileprivate let missingPeers: [EnginePeer]
     fileprivate let memberCounts: [EnginePeer.Id: Int]
