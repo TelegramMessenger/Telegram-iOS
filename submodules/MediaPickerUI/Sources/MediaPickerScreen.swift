@@ -1317,7 +1317,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.navigationItem.titleView = self.titleView
         
         if case let .assets(_, isStandalone) = self.subject, isStandalone {
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         } else {
             if case let .assets(collection, _) = self.subject, collection != nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))

@@ -255,6 +255,8 @@
 
 "PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@|suggested you new profile photo";
 
+"PUSH_MESSAGE_WALLPAPER" = "%1$@ set a new background for the chat with you";
+"PUSH_MESSAGE_SAME_WALLPAPER" = "%1$@ set the same background for the chat with you";
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
@@ -9133,3 +9135,19 @@ Sorry for the inconvenience.";
 "Premium.MaxChannelsText" = "You can only join **%1$@** groups and channels. Upgrade to **Telegram Premium** to increase the links limit to **%2$@**.";
 "Premium.MaxChannelsNoPremiumText" = "You can only join **%1$@** groups and channels. We are working to let you increase this limit in the future.";
 "Premium.MaxChannelsFinalText" = "Sorry, you can only join **%1$@** groups and channels";
+
+"Username.BotLinkHint" = "This username cannot be edited.";
+"Username.BotLinkHintExtended" = "This username cannot be edited. You can acquire additional usernames on [Fragment]().";
+
+"PeerInfo.Bot.EditIntro" = "Edit Intro";
+"PeerInfo.Bot.EditCommands" = "Edit Commands";
+"PeerInfo.Bot.ChangeSettings" = "Change Bot Settings";
+"PeerInfo.Bot.BotFatherInfo" = "Use [@BotFather]() to manage this bot.";
+
+"WallpaperPreview.NotAppliedInfo" = "Background will not be applied for **%@**";
+"WallpaperPreview.ChatTopText" = "Apply the background in this chat.";
+"WallpaperPreview.ChatBottomText" = "Enjoy the view.";
+
+"Conversation.Theme.SetPhotoWallpaper" = "Choose Background from Photos";
+"Conversation.Theme.SetColorWallpaper" = "Choose Color as a Background";
+"Conversation.Theme.OtherOptions" = "Other Options...";

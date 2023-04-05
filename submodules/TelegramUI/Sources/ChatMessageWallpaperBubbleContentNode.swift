@@ -187,7 +187,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_Wallpaper_View, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-                let backgroundSize = CGSize(width: width, height: subtitleLayout.size.height + 145.0 + (fromYou ? 0.0 : 37.0))
+                let backgroundSize = CGSize(width: width, height: subtitleLayout.size.height + 140.0 + (fromYou ? 0.0 : 42.0))
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in

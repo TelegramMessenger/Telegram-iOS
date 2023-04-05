@@ -160,7 +160,6 @@ private final class BadgeNode: ASDisplayNode {
 
 public final class SolidRoundedButtonNode: ASDisplayNode {
     private var theme: SolidRoundedButtonTheme
-    private var font: SolidRoundedButtonFont
     private var fontSize: CGFloat
     private let gloss: Bool
     
@@ -198,6 +197,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     public var title: String? {
         didSet {
             self.updateAccessibilityLabels()
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
+    
+    public var font: SolidRoundedButtonFont {
+        didSet {
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, transition: .immediate)
             }

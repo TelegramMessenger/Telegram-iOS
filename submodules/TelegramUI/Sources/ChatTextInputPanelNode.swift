@@ -1394,8 +1394,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if case .scheduledMessages = interfaceState.subject {
             
         } else {
-            if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
-                if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+            if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
+                    displayBotStartButton = true
+                } else if interfaceState.peerIsBlocked {
                     displayBotStartButton = true
                 }
             }

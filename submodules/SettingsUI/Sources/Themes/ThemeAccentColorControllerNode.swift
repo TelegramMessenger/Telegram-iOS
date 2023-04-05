@@ -224,7 +224,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
     }
     
-    init(context: AccountContext, mode: ThemeAccentColorControllerMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void, ready: Promise<Bool>) {
+    init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ThemeAccentColorController.ResultMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void, ready: Promise<Bool>) {
         self.context = context
         self.mode = mode
         self.state = ThemeColorState()
@@ -305,10 +305,13 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let doneButtonType: WallpaperGalleryToolbarDoneButtonType
         if case .edit(_, _, _, _, _, true, _) = self.mode {
             doneButtonType = .proceed
+        } else if case .peer = resultMode {
+            doneButtonType = .setPeer
         } else {
             doneButtonType = .set
         }
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
+        self.toolbarNode.setDoneIsSolid(true, transition: .immediate)
         
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false

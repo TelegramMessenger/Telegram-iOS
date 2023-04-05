@@ -1405,16 +1405,18 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     interaction.editingOpenPublicLinkSetup()
                 }))
                 
-                items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: "Edit Intro", icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
+                items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: presentationData.strings.PeerInfo_Bot_EditIntro, icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
                     interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: "\(user.addressName ?? "")-intro", behavior: .interactive)))
                 }))
-                items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemCommands, text: "Edit Commands", icon: UIImage(bundleImageName: "Peer Info/BotCommands"), action: {
+                items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemCommands, text: presentationData.strings.PeerInfo_Bot_EditCommands, icon: UIImage(bundleImageName: "Peer Info/BotCommands"), action: {
                     interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: "\(user.addressName ?? "")-commands", behavior: .interactive)))
                 }))
-                items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemBotSettings, text: "Change Bot Settings", icon: UIImage(bundleImageName: "Peer Info/BotSettings"), action: {
+                items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemBotSettings, text: presentationData.strings.PeerInfo_Bot_ChangeSettings, icon: UIImage(bundleImageName: "Peer Info/BotSettings"), action: {
                     interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: user.addressName ?? "", behavior: .interactive)))
                 }))
-                items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemBotInfo, text: "Use [@BotFather]() to manage this bot."))
+                items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemBotInfo, text: presentationData.strings.PeerInfo_Bot_BotFatherInfo, linkAction: { _ in
+                    interaction.openPeerMention("botfather", .default)
+                }))
             } else if !user.flags.contains(.isSupport) {
                 let compactName = EnginePeer(user).compactDisplayTitle
                 items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemSuggest, text: presentationData.strings.UserInfo_SuggestPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Peer Info/SuggestAvatar"), action: {

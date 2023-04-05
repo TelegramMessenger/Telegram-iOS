@@ -225,7 +225,7 @@ open class ViewControllerComponentContainer: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 var theme = presentationData.theme
-                if case .modal = presentationMode, theme.list.blocksBackgroundColor.rgb == theme.list.plainBackgroundColor.rgb {
+                if case .modal = presentationMode {
                     theme = theme.withModalBlocksBackground()
                 }
 

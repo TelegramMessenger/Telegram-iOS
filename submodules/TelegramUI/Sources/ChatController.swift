@@ -839,10 +839,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentThemeSelection()
                             return true
                         case let .setChatWallpaper(wallpaper):
+                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                                return true
+                            }
                             strongSelf.chatDisplayNode.dismissInput()
-                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil))
+                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
+                            wallpaperPreviewController.apply = { wallpaper, options, _ in
+                                let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id)
+                                |> deliverOnMainQueue).start(completed: { [weak wallpaperPreviewController] in 
+                                    wallpaperPreviewController?.dismiss()
+                                })
+                            }
                             strongSelf.push(wallpaperPreviewController)
                             return true
+                        case .setSameChatWallpaper:
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ReplyMessageAttribute {
+                                    strongSelf.controllerInteraction?.navigateToMessage(message.id, attribute.messageId)
+                                    return true
+                                }
+                            }
                         case let .giftPremium(_, _, duration, _, _):
                             strongSelf.chatDisplayNode.dismissInput()
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
@@ -16928,7 +16944,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             Queue.mainQueue().async {
                 unblockingPeer.set(false)
                 if let strongSelf = self, restartBot {
-                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: [.message(text: "/start", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+                    strongSelf.startBot(strongSelf.presentationInterfaceState.botStartPayload)
                 }
             }
         })).start())
@@ -18464,10 +18480,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let _ = (combineLatest(queue: Queue.mainQueue(), self.chatThemeEmoticonPromise.get(), animatedEmojiStickers)
         |> take(1)).start(next: { [weak self] themeEmoticon, animatedEmojiStickers in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-                
+            
+            
             let selectedEmoticon: String? = themeEmoticon
             
             let controller = ChatThemeScreen(
@@ -18489,8 +18506,47 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let themeController = strongSelf.themeScreen {
                         strongSelf.themeScreen = nil
                         themeController.dimTapped()
+                    }                    
+                    let dismissControllers = { [weak self] in
+                        if let self, let navigationController = self.navigationController as? NavigationController {
+                            let controllers = navigationController.viewControllers.filter({ controller in
+                                if controller is WallpaperGalleryController || controller is MediaPickerScreen {
+                                    return false
+                                }
+                                return true
+                            })
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
                     }
-                    let controller = ThemeGridController(context: strongSelf.context, mode: .peer(peerId, strongSelf.presentationData.chatWallpaper))
+                    
+                    let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, true))
+                    controller.navigationPresentation = .modal
+                    controller.customSelection = { [weak self] asset in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
+                        controller.navigationPresentation = .modal
+                        controller.apply = { [weak self] wallpaper, options, cropRect in
+                            if let strongSelf = self {
+                                uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, peerId: peerId, completion: {
+                                    dismissControllers()
+                                })
+                            }
+                        }
+                        strongSelf.push(controller)
+                    }
+                    strongSelf.push(controller)
+                },
+                changeColor: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let themeController = strongSelf.themeScreen {
+                        strongSelf.themeScreen = nil
+                        themeController.dimTapped()
+                    }
+                    let controller = ThemeColorsGridController(context: context, mode: .peer(EnginePeer(peer)))
                     controller.navigationPresentation = .modal
                     strongSelf.push(controller)
                 },

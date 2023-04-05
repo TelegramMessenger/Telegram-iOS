@@ -1029,24 +1029,51 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         |> distinctUntilChanged
                         
-                        let resultSignal = signal
-                        |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                        let resultSignal = combineLatest(
+                            signal,
+                            hasPremium
+                        )
+                        |> mapToSignal { keywords, hasPremium -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                             var allEmoticons: [String: String] = [:]
                             for keyword in keywords {
                                 for emoticon in keyword.emoticons {
                                     allEmoticons[emoticon] = keyword.keyword
                                 }
                             }
-                                                        
-                            return combineLatest(
-                                hasPremium,
-                                context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
-                            )
-                            |> mapToSignal { hasPremium, foundEmoji -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                            let remoteSignal: Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError>
+                            if hasPremium {
+                                remoteSignal = context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
+                            } else {
+                                remoteSignal = .single(([], true))
+                            }
+                            return remoteSignal
+                            |> mapToSignal { foundEmoji -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                                 if foundEmoji.items.isEmpty && !foundEmoji.isFinalResult {
                                     return .complete()
                                 }
                                 var items: [EmojiPagerContentComponent.Item] = []
+                                
+                                let appendUnicodeEmoji = {
+                                    for (_, list) in EmojiPagerContentComponent.staticEmojiMapping {
+                                        for emojiString in list {
+                                            if allEmoticons[emojiString] != nil {
+                                                let item = EmojiPagerContentComponent.Item(
+                                                    animationData: nil,
+                                                    content: .staticEmoji(emojiString),
+                                                    itemFile: nil,
+                                                    subgroupId: nil,
+                                                    icon: .none,
+                                                    tintMode: .none
+                                                )
+                                                items.append(item)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if !hasPremium {
+                                    appendUnicodeEmoji()
+                                }
                                 
                                 var existingIds = Set<MediaId>()
                                 for itemFile in foundEmoji.items {
@@ -1061,11 +1088,16 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     let item = EmojiPagerContentComponent.Item(
                                         animationData: animationData,
                                         content: .animation(animationData),
-                                        itemFile: itemFile, subgroupId: nil,
+                                        itemFile: itemFile,
+                                        subgroupId: nil,
                                         icon: .none,
                                         tintMode: animationData.isTemplate ? .primary : .none
                                     )
                                     items.append(item)
+                                }
+                                
+                                if hasPremium {
+                                    appendUnicodeEmoji()
                                 }
                             
                                 return .single([EmojiPagerContentComponent.ItemGroup(
