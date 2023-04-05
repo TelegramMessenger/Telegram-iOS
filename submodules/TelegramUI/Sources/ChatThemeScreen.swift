@@ -728,7 +728,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     private let animationContainerNode: ASDisplayNode
     private var animationNode: AnimationNode
     private let doneButton: SolidRoundedButtonNode
-    private let colorButton: HighlightableButtonNode
+    private let otherButton: HighlightableButtonNode
     
     private let listNode: ListView
     private var entries: [ThemeSettingsThemeEntry]?
@@ -825,7 +825,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
         
-        self.colorButton = HighlightableButtonNode()
+        self.otherButton = HighlightableButtonNode()
         
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
@@ -852,7 +852,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.textNode)
         self.buttonsContentContainerNode.addSubnode(self.doneButton)
-        self.buttonsContentContainerNode.addSubnode(self.colorButton)
+        self.buttonsContentContainerNode.addSubnode(self.otherButton)
         
         self.topContentContainerNode.addSubnode(self.animationContainerNode)
         self.animationContainerNode.addSubnode(self.animationNode)
@@ -865,10 +865,14 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.doneButton.isUserInteractionEnabled = false
-                strongSelf.completion?(strongSelf.selectedEmoticon)
+                if strongSelf.doneButton.font == .bold {
+                    strongSelf.completion?(strongSelf.selectedEmoticon)
+                } else {
+                    strongSelf.controller?.changeWallpaper()
+                }
             }
         }
-        self.colorButton.addTarget(self, action: #selector(self.colorButtonPressed), forControlEvents: .touchUpInside)
+        self.otherButton.addTarget(self, action: #selector(self.otherButtonPressed), forControlEvents: .touchUpInside)
         
         self.disposable.set(combineLatest(queue: Queue.mainQueue(), self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).start(next: { [weak self] themes, selectedEmoticon, isDarkAppearance in
             guard let strongSelf = self else {
@@ -1020,7 +1024,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.doneButton.updateTheme(buttonTheme)
         
         
-        self.colorButton.setTitle(otherButtonTitle, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.otherButton.setTitle(otherButtonTitle, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -1074,8 +1078,12 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.cancel?()
     }
     
-    @objc func colorButtonPressed() {
-        self.controller?.changeColor()
+    @objc func otherButtonPressed() {
+        if self.selectedEmoticon != self.initiallySelectedEmoticon {
+            self.setEmoticon(self.initiallySelectedEmoticon)
+        } else {
+            self.controller?.changeColor()
+        }
     }
     
     func dimTapped() {
@@ -1295,8 +1303,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - 50.0 - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
         
-        let colorButtonSize = self.colorButton.measure(CGSize(width: contentFrame.width - buttonInset * 2.0, height: .greatestFiniteMagnitude))
-        transition.updateFrame(node: self.colorButton, frame: CGRect(origin: CGPoint(x: floor((contentFrame.width - colorButtonSize.width) / 2.0), y: contentHeight - colorButtonSize.height - insets.bottom - 6.0 - 9.0), size: colorButtonSize))
+        let colorButtonSize = self.otherButton.measure(CGSize(width: contentFrame.width - buttonInset * 2.0, height: .greatestFiniteMagnitude))
+        transition.updateFrame(node: self.otherButton, frame: CGRect(origin: CGPoint(x: floor((contentFrame.width - colorButtonSize.width) / 2.0), y: contentHeight - colorButtonSize.height - insets.bottom - 6.0 - 9.0), size: colorButtonSize))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.topContentContainerNode, frame: contentContainerFrame)
