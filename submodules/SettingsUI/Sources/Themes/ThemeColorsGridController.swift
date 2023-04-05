@@ -102,17 +102,18 @@ private func availableColors(theme: PresentationTheme) -> [UInt32] {
     }
 }
 
-final class ThemeColorsGridController: ViewController {
+public final class ThemeColorsGridController: ViewController {
     private var controllerNode: ThemeColorsGridControllerNode {
         return self.displayNode as! ThemeColorsGridControllerNode
     }
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    public override var ready: Promise<Bool> {
         return self._ready
     }
     
     private let context: AccountContext
+    private let peerId: PeerId?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -121,8 +122,9 @@ final class ThemeColorsGridController: ViewController {
     
     private var previousContentOffset: GridNodeVisibleContentOffset?
     
-    init(context: AccountContext) {
+    public init(context: AccountContext, peerId: PeerId? = nil) {
         self.context = context
+        self.peerId = peerId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
@@ -169,9 +171,9 @@ final class ThemeColorsGridController: ViewController {
         }
     }
     
-    override func loadDisplayNode() {
-        self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, gradients: availableGradients(theme: self.presentationData.theme), colors: availableColors(theme: self.presentationData.theme), present: { [weak self] controller, arguments in
-            self?.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
+    public override func loadDisplayNode() {
+        self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, peerId: self.peerId, gradients: availableGradients(theme: self.presentationData.theme), colors: availableColors(theme: self.presentationData.theme), push: { [weak self] controller in
+            self?.push(controller)
         }, pop: { [weak self] in
             if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                 let _ = navigationController.popViewController(animated: true)
@@ -194,7 +196,7 @@ final class ThemeColorsGridController: ViewController {
                         themeReference = settings.theme
                     }
                     
-                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference))
+                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference), forChat: strongSelf.peerId != nil)
                     controller.completion = { [weak self] in
                         if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                             var controllers = navigationController.viewControllers
@@ -249,7 +251,7 @@ final class ThemeColorsGridController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)

@@ -114,7 +114,7 @@ final class ContactsControllerNode: ASDisplayNode {
                 
                 strongSelf.presentationData = presentationData
                 
-                if previousStrings !== presentationData.strings {
+                if previousStrings.baseLanguageCode != presentationData.strings.baseLanguageCode {
                     strongSelf.stringsPromise.set(.single(presentationData.strings))
                 }
                 

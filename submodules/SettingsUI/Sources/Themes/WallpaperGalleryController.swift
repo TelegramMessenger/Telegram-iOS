@@ -457,7 +457,6 @@ public class WallpaperGalleryController: ViewController {
                             return
                         }
                         
-                        
                         switch entry {
                             case let .wallpaper(wallpaper, _):
                                 var resource: MediaResource?

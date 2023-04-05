@@ -263,8 +263,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.gridNode.addSubnode(self.colorItemNode)
         self.gridNode.addSubnode(self.galleryItemNode)
         self.gridNode.addSubnode(self.descriptionItemNode)
-        self.gridNode.addSubnode(self.resetItemNode)
-        self.gridNode.addSubnode(self.resetDescriptionItemNode)
+        if case .default = self.mode {
+            self.gridNode.addSubnode(self.resetItemNode)
+            self.gridNode.addSubnode(self.resetDescriptionItemNode)
+        }
         self.addSubnode(self.gridNode)
         
         let previousEntries = Atomic<[ThemeGridControllerEntry]?>(value: nil)
@@ -348,10 +350,11 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let transition = combineLatest(self.wallpapersPromise.get(), deletedWallpaperIdsPromise.get(), context.sharedContext.presentationData)
         |> map { wallpapers, deletedWallpaperIds, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
-            var index = 1
+            var index: Int = 0
 
             if selectFirst {
                 entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: false, isSelected: true), at: 0)
+                index += 1
             }
             
             var defaultWallpaper: TelegramWallpaper?
@@ -422,10 +425,6 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 }
             }
 
-            /*if !entries.isEmpty {
-                entries = [entries[0]]
-            }*/
-            
             let previous = previousEntries.swap(entries)
             return (preparedThemeGridEntryTransition(context: context, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
         }
@@ -757,7 +756,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         let makeResetDescriptionLayout = self.resetDescriptionItemNode.asyncLayout()
         let (resetDescriptionLayout, _) = makeResetDescriptionLayout(self.resetDescriptionItem, params, ItemListNeighbors(top: .none, bottom: .none))
-        insets.bottom += buttonHeight + 35.0 + resetDescriptionLayout.contentSize.height + 32.0
+        if case .default = self.mode {
+            insets.bottom += buttonHeight + 35.0 + resetDescriptionLayout.contentSize.height + 32.0
+        }
         
         self.gridNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, fillWidth: nil, lineSpacing: spacing, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })

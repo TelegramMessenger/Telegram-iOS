@@ -66,8 +66,9 @@ private func preparedThemeColorsGridEntryTransition(context: AccountContext, fro
 final class ThemeColorsGridControllerNode: ASDisplayNode {
     private let context: AccountContext
     private var presentationData: PresentationData
+    private let peerId: PeerId?
     private var controllerInteraction: ThemeColorsGridControllerInteraction?
-    private let present: (ViewController, Any?) -> Void
+    private let push: (ViewController) -> Void
     private let presentColorPicker: () -> Void
     
     let ready = ValuePromise<Bool>()
@@ -87,10 +88,11 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, presentationData: PresentationData, gradients: [[UInt32]], colors: [UInt32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId?, gradients: [[UInt32]], colors: [UInt32], push: @escaping (ViewController) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
         self.context = context
+        self.peerId = peerId
         self.presentationData = presentationData
-        self.present = present
+        self.push = push
         self.presentColorPicker = presentColorPicker
         
         self.gridNode = GridNode()
@@ -131,11 +133,12 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
-                    controller.apply = {  _, _, _ in
+                    let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors), mode: strongSelf.peerId.flatMap { .peer($0) } ?? .default)
+                    controller.navigationPresentation = .modal
+                    controller.apply = { _, _, _ in
                         pop()
                     }
-                    strongSelf.present(controller, nil)
+                    strongSelf.push(controller)
                 }
             }
         })

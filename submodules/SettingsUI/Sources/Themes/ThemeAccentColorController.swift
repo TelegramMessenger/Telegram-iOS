@@ -37,6 +37,7 @@ enum ThemeAccentColorControllerMode {
 final class ThemeAccentColorController: ViewController {
     private let context: AccountContext
     private let mode: ThemeAccentColorControllerMode
+    private let forChat: Bool
     private let section: ThemeColorSection
     private let initialBackgroundColor: UIColor?
     private var presentationData: PresentationData
@@ -57,9 +58,10 @@ final class ThemeAccentColorController: ViewController {
     
     var completion: (() -> Void)?
     
-    init(context: AccountContext, mode: ThemeAccentColorControllerMode) {
+    init(context: AccountContext, mode: ThemeAccentColorControllerMode, forChat: Bool = false) {
         self.context = context
         self.mode = mode
+        self.forChat = forChat
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let section: ThemeColorSection = .background
@@ -143,7 +145,7 @@ final class ThemeAccentColorController: ViewController {
             initialWallpaper = self.presentationData.chatWallpaper
         }
         
-        self.displayNode = ThemeAccentColorControllerNode(context: self.context, mode: self.mode, theme: theme, wallpaper: initialWallpaper, dismiss: { [weak self] in
+        self.displayNode = ThemeAccentColorControllerNode(context: self.context, mode: self.mode, forChat: self.forChat, theme: theme, wallpaper: initialWallpaper, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }

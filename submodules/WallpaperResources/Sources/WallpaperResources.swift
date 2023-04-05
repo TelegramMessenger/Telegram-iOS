@@ -300,6 +300,7 @@ public func wallpaperImage(account: Account, accountManager: AccountManager<Tele
                         c.setBlendMode(.normal)
                     }
                 }
+                addCorners(context, arguments: arguments)
                 return context
             }
             

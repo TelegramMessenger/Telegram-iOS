@@ -141,7 +141,8 @@ func _internal_setChatWallpaper(account: Account, peerId: PeerId, wallpaper: Tel
                 inputSettings = inputWallpaperAndInputSettings.1
             }
             
-            return account.network.request(Api.functions.messages.setChatWallPaper(flags: 0, peer: inputPeer, wallpaper: inputWallpaper ?? .inputWallPaperNoFile(id: 0), settings: inputSettings ?? apiWallpaperSettings(WallpaperSettings()), id: nil))
+            let flags: Int32 = 1 << 0
+            return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: inputWallpaper ?? .inputWallPaperNoFile(id: 0), settings: inputSettings ?? apiWallpaperSettings(WallpaperSettings()), id: nil))
             |> `catch` { error in
                 return .complete()
             }
@@ -159,7 +160,20 @@ public enum SetExistingChatWallpaperError {
 
 func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId) -> Signal<Void, SetExistingChatWallpaperError> {
     return account.postbox.transaction { transaction -> Peer? in
-        return transaction.getPeer(messageId.peerId)
+        if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId) {
+            if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .setChatWallpaper(wallpaper) = action.action {
+                transaction.updatePeerCachedData(peerIds: Set([peer.id]), update: { _, current in
+                    if let current = current as? CachedUserData {
+                        return current.withUpdatedWallpaper(wallpaper)
+                    } else {
+                        return current
+                    }
+                })
+            }
+            return peer
+        } else {
+            return nil
+        }
     }
     |> castError(SetExistingChatWallpaperError.self)
     |> mapToSignal { peer -> Signal<Void, SetExistingChatWallpaperError> in

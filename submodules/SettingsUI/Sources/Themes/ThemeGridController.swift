@@ -115,7 +115,7 @@ public final class ThemeGridController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         if let isEmpty = self.isEmpty, isEmpty {
-        } else {
+        } else if case .default = mode {
             if self.editingMode {
                 self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
             } else {
@@ -215,7 +215,7 @@ public final class ThemeGridController: ViewController {
                     
                     if empty {
                         strongSelf.navigationItem.setRightBarButton(nil, animated: true)
-                    } else {
+                    } else if case .default = strongSelf.mode {
                         if strongSelf.editingMode {
                             strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
                         } else {
