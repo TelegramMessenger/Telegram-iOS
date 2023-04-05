@@ -263,7 +263,7 @@ public extension Api {
         case keyboardButtonRequestPhone(text: String)
         case keyboardButtonRequestPoll(flags: Int32, quiz: Api.Bool?, text: String)
         case keyboardButtonSimpleWebView(text: String, url: String)
-        case keyboardButtonSwitchInline(flags: Int32, text: String, query: String)
+        case keyboardButtonSwitchInline(flags: Int32, text: String, query: String, peerTypes: [Api.InlineQueryPeerType]?)
         case keyboardButtonUrl(text: String, url: String)
         case keyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, buttonId: Int32)
         case keyboardButtonUserProfile(text: String, userId: Int64)
@@ -349,13 +349,18 @@ public extension Api {
                     serializeString(text, buffer: buffer, boxed: false)
                     serializeString(url, buffer: buffer, boxed: false)
                     break
-                case .keyboardButtonSwitchInline(let flags, let text, let query):
+                case .keyboardButtonSwitchInline(let flags, let text, let query, let peerTypes):
                     if boxed {
-                        buffer.appendInt32(90744648)
+                        buffer.appendInt32(-1816527947)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
                     serializeString(query, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peerTypes!.count))
+                    for item in peerTypes! {
+                        item.serialize(buffer, true)
+                    }}
                     break
                 case .keyboardButtonUrl(let text, let url):
                     if boxed {
@@ -415,8 +420,8 @@ public extension Api {
                 return ("keyboardButtonRequestPoll", [("flags", flags as Any), ("quiz", quiz as Any), ("text", text as Any)])
                 case .keyboardButtonSimpleWebView(let text, let url):
                 return ("keyboardButtonSimpleWebView", [("text", text as Any), ("url", url as Any)])
-                case .keyboardButtonSwitchInline(let flags, let text, let query):
-                return ("keyboardButtonSwitchInline", [("flags", flags as Any), ("text", text as Any), ("query", query as Any)])
+                case .keyboardButtonSwitchInline(let flags, let text, let query, let peerTypes):
+                return ("keyboardButtonSwitchInline", [("flags", flags as Any), ("text", text as Any), ("query", query as Any), ("peerTypes", peerTypes as Any)])
                 case .keyboardButtonUrl(let text, let url):
                 return ("keyboardButtonUrl", [("text", text as Any), ("url", url as Any)])
                 case .keyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let buttonId):
@@ -600,11 +605,16 @@ public extension Api {
             _2 = parseString(reader)
             var _3: String?
             _3 = parseString(reader)
+            var _4: [Api.InlineQueryPeerType]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InlineQueryPeerType.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.KeyboardButton.keyboardButtonSwitchInline(flags: _1!, text: _2!, query: _3!)
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.KeyboardButton.keyboardButtonSwitchInline(flags: _1!, text: _2!, query: _3!, peerTypes: _4)
             }
             else {
                 return nil

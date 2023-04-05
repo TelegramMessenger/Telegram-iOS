@@ -725,11 +725,11 @@ private enum AdditionalExcludeCategoryId: Int {
     case archived
 }
 
-func chatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter], limit: Int32, premiumLimit: Int32, isPremium: Bool) -> ViewController {
-    return internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: allFilters, applyAutomatically: true, limit: limit, premiumLimit: premiumLimit, isPremium: isPremium, updated: { _ in })
+func chatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter], limit: Int32, premiumLimit: Int32, isPremium: Bool, presentUndo: @escaping (UndoOverlayContent) -> Void) -> ViewController {
+    return internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: allFilters, applyAutomatically: true, limit: limit, premiumLimit: premiumLimit, isPremium: isPremium, updated: { _ in }, presentUndo: presentUndo)
 }
     
-private func internalChatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter], applyAutomatically: Bool, limit: Int32, premiumLimit: Int32, isPremium: Bool, updated: @escaping (ChatListFilter) -> Void) -> ViewController {
+private func internalChatListFilterAddChatsController(context: AccountContext, filter: ChatListFilter, allFilters: [ChatListFilter], applyAutomatically: Bool, limit: Int32, premiumLimit: Int32, isPremium: Bool, updated: @escaping (ChatListFilter) -> Void, presentUndo: @escaping (UndoOverlayContent) -> Void) -> ViewController {
     guard case let .filter(_, _, _, filterData) = filter else {
         return ViewController(navigationBarPresentationData: nil)
     }
@@ -839,6 +839,39 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
             }
         }
         includePeers.sort()
+        
+        let newPeers = includePeers.filter({ !(filter.data?.includePeers.peers.contains($0) ?? false) })
+        var removedPeers: [PeerId] = []
+        if let data = filter.data {
+            removedPeers = data.includePeers.peers.filter({ !includePeers.contains($0) })
+        }
+        if newPeers.count != 0 {
+            let title: String
+            let text: String
+            
+            if newPeers.count == 1 {
+                title = "Сhat added to folder"
+                text = "It will not affect chatlist of the links of this folder"
+            } else {
+                title = "\(newPeers.count) chats added to folder"
+                text = "It will not affect chatlist of the links of this folder"
+            }
+            
+            presentUndo(.info(title: title, text: text, timeout: nil))
+        } else if removedPeers.count != 0 {
+            let title: String
+            let text: String
+            
+            if newPeers.count == 1 {
+                title = "Сhat removed from folder"
+                text = "It will not affect chatlist of the links of this folder"
+            } else {
+                title = "\(newPeers.count) chats removed from folder"
+                text = "It will not affect chatlist of the links of this folder"
+            }
+            
+            presentUndo(.info(title: title, text: text, timeout: nil))
+        }
         
         var categories: ChatListFilterPeerCategories = []
         for id in additionalCategoryIds {
@@ -1243,6 +1276,9 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                             state.includeCategories = filter.data?.categories ?? []
                             return state
                         }
+                    }, presentUndo: { content in
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     })
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
@@ -1527,7 +1563,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Delete, textColor: .destructive, icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_RemoveFromFolder, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
             }, action: { _, f in
                 f(.dismissWithoutContent)
@@ -1884,6 +1920,9 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                         pushController(limitController)
                         
                         return
+                    case .someUserTooManyChannels:
+                        //TODO:localize
+                        text = "One of the groups in this folder can’t be added because one of its admins has too many groups and channels."
                     }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     presentController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))

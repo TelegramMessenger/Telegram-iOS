@@ -958,6 +958,7 @@ public extension Api {
 }
 public extension Api {
     enum InlineQueryPeerType: TypeConstructorDescription {
+        case inlineQueryPeerTypeBotPM
         case inlineQueryPeerTypeBroadcast
         case inlineQueryPeerTypeChat
         case inlineQueryPeerTypeMegagroup
@@ -966,6 +967,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inlineQueryPeerTypeBotPM:
+                    if boxed {
+                        buffer.appendInt32(238759180)
+                    }
+                    
+                    break
                 case .inlineQueryPeerTypeBroadcast:
                     if boxed {
                         buffer.appendInt32(1664413338)
@@ -1001,6 +1008,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inlineQueryPeerTypeBotPM:
+                return ("inlineQueryPeerTypeBotPM", [])
                 case .inlineQueryPeerTypeBroadcast:
                 return ("inlineQueryPeerTypeBroadcast", [])
                 case .inlineQueryPeerTypeChat:
@@ -1014,6 +1023,9 @@ public extension Api {
     }
     }
     
+        public static func parse_inlineQueryPeerTypeBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeBotPM
+        }
         public static func parse_inlineQueryPeerTypeBroadcast(_ reader: BufferReader) -> InlineQueryPeerType? {
             return Api.InlineQueryPeerType.inlineQueryPeerTypeBroadcast
         }

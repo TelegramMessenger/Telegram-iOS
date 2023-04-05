@@ -1404,13 +1404,34 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return .single(false)
                 }
                 return context.engine.data.get(
-                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init(id:)))
+                    EngineDataMap(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))),
+                    EngineDataMap(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init(id:))),
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global()
                 )
-                |> map { list -> Bool in
-                    for item in list {
-                        switch item.muteState {
-                        case .default, .unmuted:
+                |> map { peers, list, globalSettings -> Bool in
+                    for peerId in data.includePeers.peers {
+                        switch list[peerId]?.muteState {
+                        case .unmuted:
                             return false
+                        case .default:
+                            if let peer = peers[peerId], let peerValue = peer {
+                                let globalValue: EngineGlobalNotificationSettings.CategorySettings
+                                switch peerValue {
+                                case .user, .secretChat:
+                                    globalValue = globalSettings.privateChats
+                                case .legacyGroup:
+                                    globalValue = globalSettings.groupChats
+                                case let .channel(channel):
+                                    if case .broadcast = channel.info {
+                                        globalValue = globalSettings.channels
+                                    } else {
+                                        globalValue = globalSettings.groupChats
+                                    }
+                                }
+                                if globalValue.enabled {
+                                    return false
+                                }
+                            }
                         default:
                             break
                         }
@@ -1539,7 +1560,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                     guard let strongSelf = self else {
                                                         return
                                                     }
-                                                    strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters, limit: limits.maxFolderChatsCount, premiumLimit: premiumLimits.maxFolderChatsCount, isPremium: isPremium))
+                                                    strongSelf.push(chatListFilterAddChatsController(context: strongSelf.context, filter: filter, allFilters: filters, limit: limits.maxFolderChatsCount, premiumLimit: premiumLimits.maxFolderChatsCount, isPremium: isPremium, presentUndo: { content in
+                                                        guard let strongSelf = self else {
+                                                            return
+                                                        }
+                                                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                                    }))
                                                     f(.dismissWithoutContent)
                                                 })
                                                 found = true
@@ -1591,18 +1617,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                             return
                                                         }
                                                         
+                                                        let iconColor: UIColor = .white
                                                         let overlayController: UndoOverlayController
                                                         if !filterPeersAreMuted {
-                                                            let iconColor: UIColor = .white
-                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
-                                                                    "Middle.Group 1.Fill 1": iconColor,
-                                                                    "Top.Group 1.Fill 1": iconColor,
-                                                                    "Bottom.Group 1.Fill 1": iconColor,
-                                                                    "EXAMPLE.Group 1.Fill 1": iconColor,
-                                                                    "Line.Group 1.Stroke 1": iconColor
+                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                                                "Middle.Group 1.Fill 1": iconColor,
+                                                                "Top.Group 1.Fill 1": iconColor,
+                                                                "Bottom.Group 1.Fill 1": iconColor,
+                                                                "EXAMPLE.Group 1.Fill 1": iconColor,
+                                                                "Line.Group 1.Stroke 1": iconColor
                                                             ], title: nil, text: "All chats in **\(title)** are now muted", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
                                                         } else {
-                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_on", scale: 0.056, colors: [:], title: nil, text: "All chats in **\(title)** are now unmuted", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
+                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                                                                "Middle.Group 1.Fill 1": iconColor,
+                                                                "Top.Group 1.Fill 1": iconColor,
+                                                                "Bottom.Group 1.Fill 1": iconColor,
+                                                                "EXAMPLE.Group 1.Fill 1": iconColor,
+                                                                "Line.Group 1.Stroke 1": iconColor
+                                                        ], title: nil, text: "All chats in **\(title)** are now unmuted", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
                                                         }
                                                         strongSelf.present(overlayController, in: .current)
                                                     })
