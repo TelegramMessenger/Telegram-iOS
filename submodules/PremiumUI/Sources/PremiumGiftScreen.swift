@@ -645,7 +645,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 price = nil
             }
             let buttonText = presentationData.strings.Premium_Gift_GiftSubscription(price ?? "—").string
-            self.buttonStatePromise.set(.single(AttachmentMainButtonState(text: buttonText, background: .premium, textColor: .white, isVisible: true, progress: self.inProgress ? .center : .none, isEnabled: true)))
+            self.buttonStatePromise.set(.single(AttachmentMainButtonState(text: buttonText, font: .bold, background: .premium, textColor: .white, isVisible: true, progress: self.inProgress ? .center : .none, isEnabled: true)))
         }
         
         func buy() {

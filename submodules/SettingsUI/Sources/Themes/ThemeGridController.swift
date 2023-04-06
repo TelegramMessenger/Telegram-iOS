@@ -142,7 +142,7 @@ public final class ThemeGridController: ViewController {
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
-                let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, true))
+                let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
                 controller.customSelection = { [weak self] asset in
                     guard let strongSelf = self else {
                         return

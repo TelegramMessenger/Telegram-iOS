@@ -9151,3 +9151,10 @@ Sorry for the inconvenience.";
 "Conversation.Theme.SetPhotoWallpaper" = "Choose Background from Photos";
 "Conversation.Theme.SetColorWallpaper" = "Choose Color as a Background";
 "Conversation.Theme.OtherOptions" = "Other Options...";
+
+"Conversation.Theme.ChooseWallpaperTitle" = "Choose Background";
+"Conversation.Theme.ResetWallpaper" = "Reset to Default Background";
+"Conversation.Theme.ChooseColorTitle" = "Set a Color";
+"Conversation.Theme.SetCustomColor" = "Set Custom";
+
+"Appearance.ShowNextMediaOnTap" = "Show Next Media on Tap";

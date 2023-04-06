@@ -112,6 +112,7 @@ swift_library(
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
         "//submodules/MediaPickerUI:MediaPickerUI",
         "//submodules/ImageBlur:ImageBlur",
+        "//submodules/AttachmentUI:AttachmentUI",
     ],
     visibility = [
         "//visibility:public",
