@@ -150,7 +150,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     
     var pushController: (ViewController) -> Void = { _ in }
     
-    public init(context: AccountContext, mode: Mode = .default) {
+    public init(context: AccountContext, mode: Mode = .default, canDelete: Bool = false) {
         self.context = context
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -189,6 +189,10 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
         
         self.pushController = { [weak self] controller in
             self?.push(controller)
+        }
+        
+        if canDelete {
+            self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: self.presentationData.strings.Conversation_Theme_ResetWallpaper, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.destructiveActionTextColor, isVisible: true, progress: .none, isEnabled: true)))
         }
     }
     
@@ -317,7 +321,12 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     }
     
     @objc fileprivate func mainButtonPressed() {
+        guard case let .peer(peer) = self.mode else {
+            return
+        }
         
+        let _ = self.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: nil).start()
+        self.dismiss(animated: true)
     }
     
     public var requestAttachmentMenuExpansion: () -> Void = {}
@@ -370,12 +379,12 @@ private final class ThemeColorsGridContext: AttachmentMediaPickerContext {
 }
 
 
-public func standaloneColorPickerController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, push: @escaping (ViewController) -> Void) -> ViewController {
+public func standaloneColorPickerController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, canDelete: Bool, push: @escaping (ViewController) -> Void) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
     controller.requestController = { _, present in
-        let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer))
+        let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer), canDelete: canDelete)
         colorPickerController.pushController = { controller in
             push(controller)
         }

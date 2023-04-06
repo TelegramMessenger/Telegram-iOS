@@ -18520,21 +18520,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let controller = standaloneMediaPickerController(context: strongSelf.context, subject: .assets(nil, .wallpaper), completion: { asset in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
-                        controller.navigationPresentation = .modal
-                        controller.apply = { [weak self] wallpaper, options, cropRect in
-                            if let strongSelf = self {
-                                uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, peerId: peerId, completion: {
-                                    dismissControllers()
-                                })
+                    var canDelete = false
+                    if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData {
+                        canDelete = cachedUserData.wallpaper != nil
+                    }
+                    let controller = wallpaperMediaPickerController(
+                        context: strongSelf.context,
+                        updatedPresentationData: strongSelf.updatedPresentationData,
+                        peer: EnginePeer(peer),
+                        canDelete: canDelete,
+                        completion: { asset in
+                            guard let strongSelf = self else {
+                                return
                             }
+                            let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
+                            controller.navigationPresentation = .modal
+                            controller.apply = { [weak self] wallpaper, options, cropRect in
+                                if let strongSelf = self {
+                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, peerId: peerId, completion: {
+                                        dismissControllers()
+                                    })
+                                }
+                            }
+                            strongSelf.push(controller)
                         }
-                        strongSelf.push(controller)
-                    })
+                    )
                     controller.navigationPresentation = .flatModal
                     strongSelf.push(controller)
                 },
@@ -18546,7 +18556,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.themeScreen = nil
                         themeController.dimTapped()
                     }
-                    let controller = standaloneColorPickerController(context: strongSelf.context, peer: EnginePeer(peer), push: { [weak self] controller in
+                    
+                    var canDelete = false
+                    if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData {
+                        canDelete = cachedUserData.wallpaper != nil
+                    }
+                    let controller = standaloneColorPickerController(context: strongSelf.context, peer: EnginePeer(peer), canDelete: canDelete, push: { [weak self] controller in
                         if let strongSelf = self {
                             strongSelf.push(controller)
                         }

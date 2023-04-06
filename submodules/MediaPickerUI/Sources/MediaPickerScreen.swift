@@ -1238,7 +1238,24 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     private var isDismissing = false
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, threadTitle: String?, chatLocation: ChatLocation?, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, subject: Subject, editingContext: TGMediaEditingContext? = nil, selectionContext: TGMediaSelectionContext? = nil, saveEditedPhotos: Bool = false) {
+    fileprivate let mainButtonState: AttachmentMainButtonState?
+    private let mainButtonAction: (() -> Void)?
+    
+    public init(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+        peer: EnginePeer?,
+        threadTitle: String?,
+        chatLocation: ChatLocation?,
+        bannedSendPhotos: (Int32, Bool)?,
+        bannedSendVideos: (Int32, Bool)?,
+        subject: Subject,
+        editingContext: TGMediaEditingContext? = nil,
+        selectionContext: TGMediaSelectionContext? = nil,
+        saveEditedPhotos: Bool = false,
+        mainButtonState: AttachmentMainButtonState? = nil,
+        mainButtonAction: (() -> Void)? = nil
+    ) {
         self.context = context
                 
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -1251,6 +1268,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.bannedSendVideos = bannedSendVideos
         self.subject = subject
         self.saveEditedPhotos = saveEditedPhotos
+        self.mainButtonState = mainButtonState
+        self.mainButtonAction = mainButtonAction
         
         let selectionContext = selectionContext ?? TGMediaSelectionContext()
         
@@ -1627,6 +1646,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
     }
     
+    func mainButtonPressed() {
+        self.mainButtonAction?()
+    }
+    
     func dismissAllTooltips() {
         self.undoOverlayController?.dismissWithCommitAction()
     }
@@ -1811,21 +1834,17 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
-        if let interaction = self.interaction {
-            return MediaPickerContext(interaction: interaction)
-        } else {
-            return nil
-        }
+        return MediaPickerContext(controller: self)
     }
 }
 
 final class MediaPickerContext: AttachmentMediaPickerContext {
-    private weak var interaction: MediaPickerInteraction?
+    private weak var controller: MediaPickerScreen?
     
     var selectionCount: Signal<Int, NoError> {
         return Signal { [weak self] subscriber in
-            let disposable = self?.interaction?.selectionState?.selectionChangedSignal().start(next: { [weak self] value in
-                subscriber.putNext(Int(self?.interaction?.selectionState?.count() ?? 0))
+            let disposable = self?.controller?.interaction?.selectionState?.selectionChangedSignal().start(next: { [weak self] value in
+                subscriber.putNext(Int(self?.controller?.interaction?.selectionState?.count() ?? 0))
             }, error: { _ in }, completed: { })
             return ActionDisposable {
                 disposable?.dispose()
@@ -1835,7 +1854,7 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     
     var caption: Signal<NSAttributedString?, NoError> {
         return Signal { [weak self] subscriber in
-            let disposable = self?.interaction?.editingState.forcedCaption().start(next: { caption in
+            let disposable = self?.controller?.interaction?.editingState.forcedCaption().start(next: { caption in
                 if let caption = caption as? NSAttributedString {
                     subscriber.putNext(caption)
                 } else {
@@ -1853,27 +1872,27 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     }
     
     public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return .single(nil)
+        return .single(self.controller?.mainButtonState)
     }
     
-    init(interaction: MediaPickerInteraction) {
-        self.interaction = interaction
+    init(controller: MediaPickerScreen) {
+        self.controller = controller
     }
     
     func setCaption(_ caption: NSAttributedString) {
-        self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
+        self.controller?.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
     func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
-        self.interaction?.sendSelected(nil, mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, true, {})
+        self.controller?.interaction?.sendSelected(nil, mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, true, {})
     }
     
     func schedule() {
-        self.interaction?.schedule()
+        self.controller?.interaction?.schedule()
     }
     
     func mainButtonAction() {
-        
+        self.controller?.mainButtonPressed()
     }
 }
 
@@ -1987,12 +2006,22 @@ public class MediaPickerGridSelectionGesture<T> : UIPanGestureRecognizer {
     }
 }
 
-public func standaloneMediaPickerController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: MediaPickerScreen.Subject, completion: @escaping (PHAsset) -> Void = { _ in }) -> ViewController {
+public func wallpaperMediaPickerController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    peer: EnginePeer,
+    canDelete: Bool,
+    completion: @escaping (PHAsset) -> Void = { _ in }
+) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
-    controller.requestController = { _, present in
-        let mediaPickerController = MediaPickerScreen(context: context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: subject)
+    controller.requestController = { [weak controller] _, present in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let mediaPickerController = MediaPickerScreen(context: context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper), mainButtonState: canDelete ? AttachmentMainButtonState(text: presentationData.strings.Conversation_Theme_ResetWallpaper, font: .regular, background: .color(.clear), textColor: presentationData.theme.actionSheet.destructiveActionTextColor, isVisible: true, progress: .none, isEnabled: true) : nil, mainButtonAction: canDelete ? {
+            let _ = context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: nil).start()
+            controller?.dismiss(animated: true)
+        } : nil)
         mediaPickerController.customSelection = completion
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
     }
