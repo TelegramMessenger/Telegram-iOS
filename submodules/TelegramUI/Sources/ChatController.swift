@@ -840,6 +840,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return true
                         case let .setChatWallpaper(wallpaper):
                             guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                                strongSelf.presentThemeSelection()
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()

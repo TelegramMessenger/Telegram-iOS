@@ -276,7 +276,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
         croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 1440.0, height: 2960.0), image.size, true)
         
         if mode.contains(.blur) {
-            croppedImage = blurredImage(croppedImage, radius: 30.0)!
+            croppedImage = blurredImage(croppedImage, radius: 20.0)!
         }
         
         let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
@@ -284,12 +284,12 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
         
         if let data = croppedImage.jpegData(compressionQuality: 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
             let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-            context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
-            context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
+            context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
             
             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
-            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             
             let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: nil)
             let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)

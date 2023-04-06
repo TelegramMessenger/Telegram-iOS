@@ -289,14 +289,14 @@ public func wallpaperImage(account: Account, accountManager: AccountManager<Tele
             }
             
             if let blurredThumbnailImage = blurredThumbnailImage, fullSizeImage == nil {
-                guard let context = DrawingContext(size: blurredThumbnailImage.size, scale: blurredThumbnailImage.scale, clear: true) else {
+                guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
                     return nil
                 }
                 context.withFlippedContext { c in
                     c.setBlendMode(.copy)
                     if let cgImage = blurredThumbnailImage.cgImage {
-                        c.interpolationQuality = .none
-                        drawImage(context: c, image: cgImage, orientation: imageOrientation, in: CGRect(origin: CGPoint(), size: blurredThumbnailImage.size))
+                        c.interpolationQuality = .medium
+                        drawImage(context: c, image: cgImage, orientation: imageOrientation, in: fittedRect)
                         c.setBlendMode(.normal)
                     }
                 }

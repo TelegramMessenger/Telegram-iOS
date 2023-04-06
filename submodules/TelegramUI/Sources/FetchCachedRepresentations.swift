@@ -398,7 +398,7 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
                 let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
-                if let colorImage = blurredImage(image, radius: 30.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                if let colorImage = blurredImage(image, radius: 20.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
                     CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
                     
                     let colorQuality: Float = 0.5
@@ -447,7 +447,7 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
                 let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 
-                if let colorImage = blurredImage(image, radius: 30.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
+                if let colorImage = blurredImage(image, radius: 20.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
                     CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
                     
                     let colorQuality: Float = 0.5
