@@ -771,7 +771,7 @@ watchos_application(
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchApp.mobileprovision",
     }),
-    ipa_post_processor = ":StripWatchosStubBinary",
+    #ipa_post_processor = ":StripWatchosStubBinary",
     resources = [
         ":TelegramWatchAppResources",
         ":TelegramWatchAppAssets",
@@ -1970,7 +1970,7 @@ ios_application(
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
-        "//conditions:default": #":TelegramWatchApp",
+        "//conditions:default": ":TelegramWatchApp",
     }) if telegram_enable_watch else None,
     deps = [
         ":Main",
