@@ -389,6 +389,15 @@ public final class Transaction {
         return self.postbox?.chatListTable.getPeerChatListIndex(peerId: peerId)
     }
     
+    public func getChatListPeers(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?) -> [Peer] {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.chatListTable.getChatListPeers(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate, additionalFilter: additionalFilter)
+        } else {
+            return []
+        }
+    }
+    
     public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool) -> [PeerId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
