@@ -1970,7 +1970,7 @@ ios_application(
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
-        "//conditions:default": ":TelegramWatchApp",
+        "//conditions:default": #":TelegramWatchApp",
     }) if telegram_enable_watch else None,
     deps = [
         ":Main",
