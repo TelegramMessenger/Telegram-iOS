@@ -131,6 +131,12 @@ public final class AnimationNode: ASDisplayNode {
         }
     }
     
+    public func setColors(colors: [String: UIColor]) {
+        for (key, value) in colors {
+            self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+        }
+    }
+    
     public func setAnimation(data: Data) {
         if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
             let animation = try? Animation(dictionary: json)
