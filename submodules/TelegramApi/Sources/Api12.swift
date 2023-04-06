@@ -263,7 +263,7 @@ public extension Api {
         case messageActionSetChatTheme(emoticon: String)
         case messageActionSetChatWallPaper(wallpaper: Api.WallPaper)
         case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
-        case messageActionSetSameChatWallPaper
+        case messageActionSetSameChatWallPaper(wallpaper: Api.WallPaper)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
         case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
@@ -522,11 +522,11 @@ public extension Api {
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(autoSettingFrom!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionSetSameChatWallPaper:
+                case .messageActionSetSameChatWallPaper(let wallpaper):
                     if boxed {
-                        buffer.appendInt32(-632006598)
+                        buffer.appendInt32(-1065845395)
                     }
-                    
+                    wallpaper.serialize(buffer, true)
                     break
                 case .messageActionSuggestProfilePhoto(let photo):
                     if boxed {
@@ -637,8 +637,8 @@ public extension Api {
                 return ("messageActionSetChatWallPaper", [("wallpaper", wallpaper as Any)])
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                 return ("messageActionSetMessagesTTL", [("flags", flags as Any), ("period", period as Any), ("autoSettingFrom", autoSettingFrom as Any)])
-                case .messageActionSetSameChatWallPaper:
-                return ("messageActionSetSameChatWallPaper", [])
+                case .messageActionSetSameChatWallPaper(let wallpaper):
+                return ("messageActionSetSameChatWallPaper", [("wallpaper", wallpaper as Any)])
                 case .messageActionSuggestProfilePhoto(let photo):
                 return ("messageActionSuggestProfilePhoto", [("photo", photo as Any)])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
@@ -1092,7 +1092,17 @@ public extension Api {
             }
         }
         public static func parse_messageActionSetSameChatWallPaper(_ reader: BufferReader) -> MessageAction? {
-            return Api.MessageAction.messageActionSetSameChatWallPaper
+            var _1: Api.WallPaper?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.WallPaper
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSetSameChatWallPaper(wallpaper: _1!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_messageActionSuggestProfilePhoto(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.Photo?

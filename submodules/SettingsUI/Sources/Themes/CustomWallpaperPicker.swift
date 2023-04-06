@@ -196,7 +196,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
     }).start()
 }
 
-public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, peerId: PeerId, completion: @escaping () -> Void) {
+public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, brightnessMultiplier: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
     let imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):

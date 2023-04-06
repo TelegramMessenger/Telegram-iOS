@@ -846,7 +846,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.chatDisplayNode.dismissInput()
                             let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
                             wallpaperPreviewController.apply = { wallpaper, options, _ in
-                                let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id)
+                                let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, wallpaper: nil)
                                 |> deliverOnMainQueue).start(completed: { [weak wallpaperPreviewController] in 
                                     wallpaperPreviewController?.dismiss()
                                 })
@@ -18537,7 +18537,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             controller.navigationPresentation = .modal
                             controller.apply = { [weak self] wallpaper, options, cropRect in
                                 if let strongSelf = self {
-                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, peerId: peerId, completion: {
+                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightnessMultiplier: nil, peerId: peerId, completion: {
                                         dismissControllers()
                                     })
                                 }

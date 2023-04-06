@@ -6884,11 +6884,11 @@ public extension Api.functions.messages {
 public extension Api.functions.messages {
                 static func setChatWallPaper(flags: Int32, peer: Api.InputPeer, wallpaper: Api.InputWallPaper?, settings: Api.WallPaperSettings?, id: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-609568219)
+                    buffer.appendInt32(-1879389471)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {wallpaper!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 0) != 0 {settings!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {settings!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(id!, buffer: buffer, boxed: false)}
                     return (FunctionDescription(name: "messages.setChatWallPaper", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("wallpaper", String(describing: wallpaper)), ("settings", String(describing: settings)), ("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)

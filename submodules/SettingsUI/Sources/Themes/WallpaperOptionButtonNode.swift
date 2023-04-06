@@ -42,40 +42,24 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
     
     private let content: Content
     
-    private let backgroundNode: NavigationBackgroundNode
-    private let vibrancyView: UIVisualEffectView
-    
+    private let backgroundNode: WallpaperLightButtonBackgroundNode
+ 
     private let iconNode: ASImageNode
-    private let darkIconNode: ASImageNode
     
     private let textNode: ImmediateTextNode
-    private let darkTextNode: ImmediateTextNode
     
     func setIcon(_ image: UIImage?) {
         self.iconNode.image = generateTintedImage(image: image, color: .white)
-        self.darkIconNode.image = generateTintedImage(image: image, color: UIColor(rgb: 0x000000, alpha: 0.25))
     }
     
     init(content: Content) {
         self.content = content
         
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xf2f2f2, alpha: 0.75))
-        
-        let blurEffect: UIBlurEffect
-        if #available(iOS 13.0, *) {
-            blurEffect = UIBlurEffect(style: .extraLight)
-        } else {
-            blurEffect = UIBlurEffect(style: .light)
-        }
-        self.vibrancyView = UIVisualEffectView(effect: UIVibrancyEffect(blurEffect: blurEffect))
+        self.backgroundNode = WallpaperLightButtonBackgroundNode()
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.contentMode = .center
-        
-        self.darkIconNode = ASImageNode()
-        self.darkIconNode.displaysAsynchronously = false
-        self.darkIconNode.contentMode = .center
         
         var title: String
         switch content {
@@ -84,23 +68,16 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         case let .icon(icon, _):
             title = ""
             self.iconNode.image = generateTintedImage(image: icon, color: .white)
-            self.darkIconNode.image = generateTintedImage(image: icon, color: UIColor(rgb: 0x000000, alpha: 0.25))
         }
         
         self.textNode = ImmediateTextNode()
         self.textNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: .white)
         
-        self.darkTextNode = ImmediateTextNode()
-        self.darkTextNode.attributedText = NSAttributedString(string: title, font: Font.semibold(15.0), textColor: UIColor(rgb: 0x000000, alpha: 0.25))
-        
         super.init()
         
         self.addSubnode(self.backgroundNode)
-        self.vibrancyView.contentView.addSubnode(self.iconNode)
-        self.vibrancyView.contentView.addSubnode(self.textNode)
-        self.backgroundNode.view.addSubview(self.vibrancyView)
-        self.backgroundNode.addSubnode(self.darkIconNode)
-        self.backgroundNode.addSubnode(self.darkTextNode)
+        self.addSubnode(self.iconNode)
+        self.addSubnode(self.textNode)
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -117,11 +94,11 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
     
     var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
         didSet {
-            if self.buttonColor == UIColor(rgb: 0x000000, alpha: 0.3) {
-                self.backgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.75), transition: .immediate)
-            } else {
-                self.backgroundNode.updateColor(color: self.buttonColor, transition: .immediate)
-            }
+//            if self.buttonColor == UIColor(rgb: 0x000000, alpha: 0.3) {
+//                self.backgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.75), transition: .immediate)
+//            } else {
+//                self.backgroundNode.updateColor(color: self.buttonColor, transition: .immediate)
+//            }
         }
     }
     
@@ -130,7 +107,6 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         switch self.content {
         case .text:
             let size = self.textNode.updateLayout(constrainedSize)
-            let _ = self.darkTextNode.updateLayout(constrainedSize)
             self.textSize = size
             return CGSize(width: ceil(size.width) + 16.0, height: 28.0)
         case let .icon(_, size):
@@ -143,15 +119,13 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
 
         let size = self.bounds.size
         self.backgroundNode.frame = self.bounds
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.bounds.size.height / 2.0, transition: .immediate)
-        self.vibrancyView.frame = self.bounds
+        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size)
+        self.backgroundNode.cornerRadius = size.height / 2.0
         
         self.iconNode.frame = self.bounds
-        self.darkIconNode.frame = self.bounds
         
         if let textSize = self.textSize {
             self.textNode.frame = CGRect(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0), width: textSize.width, height: textSize.height)
-            self.darkTextNode.frame = self.textNode.frame
         }
     }
 }
@@ -159,15 +133,11 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
 
 final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     private let backgroundNode: NavigationBackgroundNode
-    private let vibrancyView: UIVisualEffectView
     
     private let checkNode: CheckNode
-    private let darkCheckNode: CheckNode
-    
     private let colorNode: ASImageNode
     
     private let textNode: ImmediateTextNode
-    private let darkTextNode: ImmediateTextNode
     
     private var textSize: CGSize?
     
@@ -189,14 +159,12 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
                 self._value = .colors(newValue, colors)
             }
             self.checkNode.setSelected(newValue, animated: false)
-            self.darkCheckNode.setSelected(newValue, animated: false)
         }
     }
     
     var title: String {
         didSet {
             self.textNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: .white)
-            self.darkTextNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: UIColor(rgb: 0x000000, alpha: 0.25))
         }
     }
     
@@ -204,62 +172,38 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         self._value = value
         self.title = title
         
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xffffff, alpha: 0.4))
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.01))
         self.backgroundNode.cornerRadius = 14.0
-        
-        let blurEffect: UIBlurEffect
-        if #available(iOS 13.0, *) {
-            blurEffect = UIBlurEffect(style: .extraLight)
-        } else {
-            blurEffect = UIBlurEffect(style: .light)
-        }
-        self.vibrancyView = UIVisualEffectView(effect: UIVibrancyEffect(blurEffect: blurEffect))
-        
-        let darkColor = UIColor(rgb: 0x000000, alpha: 0.25)
-        
+
         self.checkNode = CheckNode(theme: CheckNodeTheme(backgroundColor: .white, strokeColor: .clear, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false, borderWidth: 1.5))
         self.checkNode.isUserInteractionEnabled = false
-        
-        self.darkCheckNode = CheckNode(theme: CheckNodeTheme(backgroundColor: darkColor, strokeColor: .clear, borderColor: darkColor, overlayBorder: false, hasInset: false, hasShadow: false, borderWidth: 1.5))
-        self.darkCheckNode.isUserInteractionEnabled = false
         
         self.colorNode = ASImageNode()
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: .white)
-        
-        self.darkTextNode = ImmediateTextNode()
-        self.darkTextNode.displaysAsynchronously = false
-        self.darkTextNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: UIColor(rgb: 0x000000, alpha: 0.25))
-        
+
         super.init()
         
         switch value {
         case let .check(selected):
             self.checkNode.isHidden = false
-            self.darkCheckNode.isHidden = false
             self.colorNode.isHidden = true
             self.checkNode.selected = selected
-            self.darkCheckNode.selected = selected
         case let .color(_, color):
             self.checkNode.isHidden = true
-            self.darkCheckNode.isHidden = true
             self.colorNode.isHidden = false
             self.colorNode.image = generateFilledCircleImage(diameter: 18.0, color: color)
         case let .colors(_, colors):
             self.checkNode.isHidden = true
-            self.darkCheckNode.isHidden = true
             self.colorNode.isHidden = false
             self.colorNode.image = generateColorsImage(diameter: 18.0, colors: colors)
         }
         
         self.addSubnode(self.backgroundNode)
-        self.vibrancyView.contentView.addSubnode(self.checkNode)
-        self.vibrancyView.contentView.addSubnode(self.textNode)
-        self.backgroundNode.view.addSubview(self.vibrancyView)
-        self.addSubnode(self.darkCheckNode)
-        self.addSubnode(self.darkTextNode)
+        self.addSubnode(self.checkNode)
+        self.addSubnode(self.textNode)
         self.addSubnode(self.colorNode)
         
         self.highligthedChanged = { [weak self] highlighted in
@@ -283,11 +227,11 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     
     var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
         didSet {
-            if self.buttonColor == UIColor(rgb: 0x000000, alpha: 0.3) {
-                self.backgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.75), transition: .immediate)
-            } else {
-                self.backgroundNode.updateColor(color: self.buttonColor, transition: .immediate)
-            }
+//            if self.buttonColor == UIColor(rgb: 0x000000, alpha: 0.3) {
+//                self.backgroundNode.updateColor(color: UIColor(rgb: 0xf2f2f2, alpha: 0.75), transition: .immediate)
+//            } else {
+//                self.backgroundNode.updateColor(color: self.buttonColor, transition: .immediate)
+//            }
         }
     }
     
@@ -357,7 +301,6 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
             self._value = .colors(selected, colors)
         }
         self.checkNode.setSelected(selected, animated: animated)
-        self.darkCheckNode.setSelected(selected, animated: animated)
     }
     
     func setEnabled(_ enabled: Bool) {
@@ -371,7 +314,6 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     
     override func measure(_ constrainedSize: CGSize) -> CGSize {
         let size = self.textNode.updateLayout(constrainedSize)
-        let _ = self.darkTextNode.updateLayout(constrainedSize)
         self.textSize = size
         return CGSize(width: ceil(size.width) + 48.0, height: 30.0)
     }
@@ -381,7 +323,6 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
 
         self.backgroundNode.frame = self.bounds
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 15.0, transition: .immediate)
-        self.vibrancyView.frame = self.bounds
         
         guard let _ = self.textSize else {
             return
@@ -392,12 +333,10 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         let checkSize = CGSize(width: 18.0, height: 18.0)
         let checkFrame = CGRect(origin: CGPoint(x: padding, y: padding), size: checkSize)
         self.checkNode.frame = checkFrame
-        self.darkCheckNode.frame = checkFrame
         self.colorNode.frame = checkFrame
         
         if let textSize = self.textSize {
             self.textNode.frame = CGRect(x: max(padding + checkSize.width + spacing, padding + checkSize.width + floor((self.bounds.width - padding - checkSize.width - textSize.width) / 2.0) - 2.0), y: floorToScreenPixels((self.bounds.height - textSize.height) / 2.0), width: textSize.width, height: textSize.height)
-            self.darkTextNode.frame = self.textNode.frame
         }
     }
 }
