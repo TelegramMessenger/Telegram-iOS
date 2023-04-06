@@ -123,7 +123,7 @@ genrule(
 )
 
 minimum_os_version = "11.0"
-minimum_watchos_version="9.0"
+minimum_watchos_version="5.0"
 
 empty_languages = [
     "ar",
@@ -740,7 +740,7 @@ genrule(
     name = "StripWatchosStubBinary",
     cmd_bash =
 """
-    echo 'lipo -remove arm64e -remove armv7k $$1/TelegramWatch.app/_WatchKitStub/WK -output $$1/TelegramWatch.app/_WatchKitStub/WK && lipo -remove arm64e -remove armv7k $$1/TelegramWatch.app/TelegramWatch -output $$1/TelegramWatch.app/TelegramWatch' > $(location StripWatchosStubBinary.sh)
+    echo 'lipo -remove arm64e $$1/TelegramWatch.app/_WatchKitStub/WK -output $$1/TelegramWatch.app/_WatchKitStub/WK && lipo -remove arm64e $$1/TelegramWatch.app/TelegramWatch -output $$1/TelegramWatch.app/TelegramWatch' > $(location StripWatchosStubBinary.sh)
     echo '' >> $(location StripWatchosStubBinary.sh)
 """,
     outs = [
