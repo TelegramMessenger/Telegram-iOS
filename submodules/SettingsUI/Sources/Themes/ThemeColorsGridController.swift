@@ -9,6 +9,7 @@ import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import AttachmentUI
 
 private func availableGradients(theme: PresentationTheme) -> [[UInt32]] {
     if theme.overallDarkAppearance {
@@ -102,7 +103,7 @@ private func availableColors(theme: PresentationTheme) -> [UInt32] {
     }
 }
 
-public final class ThemeColorsGridController: ViewController {
+public final class ThemeColorsGridController: ViewController, AttachmentContainable {
     public enum Mode {
         case `default`
         case peer(EnginePeer)
@@ -145,6 +146,10 @@ public final class ThemeColorsGridController: ViewController {
     
     private var previousContentOffset: GridNodeVisibleContentOffset?
     
+    fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
+    
+    var pushController: (ViewController) -> Void = { _ in }
+    
     public init(context: AccountContext, mode: Mode = .default) {
         self.context = context
         self.mode = mode
@@ -152,7 +157,6 @@ public final class ThemeColorsGridController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.title = self.presentationData.strings.WallpaperColors_Title
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
@@ -174,6 +178,18 @@ public final class ThemeColorsGridController: ViewController {
                 }
             }
         })
+        
+        if case .peer = mode {
+            self.title = self.presentationData.strings.Conversation_Theme_ChooseColorTitle
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Conversation_Theme_SetCustomColor, style: .plain, target: self, action: #selector(self.customPressed))
+        } else {
+            self.title = self.presentationData.strings.WallpaperColors_Title
+        }
+        
+        self.pushController = { [weak self] controller in
+            self?.push(controller)
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -182,6 +198,14 @@ public final class ThemeColorsGridController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss()
+    }
+    
+    @objc private func customPressed() {
+        self.presentColorPicker()
     }
     
     private func updateThemeAndStrings() {
@@ -194,55 +218,67 @@ public final class ThemeColorsGridController: ViewController {
         }
     }
     
+    private func presentColorPicker() {
+        let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            guard let strongSelf = self else {
+                return
+            }
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
+            
+            let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
+            let themeReference: PresentationThemeReference
+            if autoNightModeTriggered {
+                themeReference = settings.automaticThemeSwitchSetting.theme
+            } else {
+                themeReference = settings.theme
+            }
+                                
+            let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference), resultMode: strongSelf.mode.colorPickerMode)
+            controller.completion = { [weak self] in
+                if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                    var controllers = navigationController.viewControllers
+                    controllers = controllers.filter { controller in
+                        if controller is ThemeColorsGridController {
+                            return false
+                        }
+                        return true
+                    }
+                    navigationController.setViewControllers(controllers, animated: false)
+                    controllers = controllers.filter { controller in
+                        if controller is ThemeAccentColorController {
+                            return false
+                        }
+                        return true
+                    }
+                    navigationController.setViewControllers(controllers, animated: true)
+                }
+            }
+            strongSelf.pushController(controller)
+        })
+    }
+    
     public override func loadDisplayNode() {
         self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, controller: self, gradients: availableGradients(theme: self.presentationData.theme), colors: availableColors(theme: self.presentationData.theme), push: { [weak self] controller in
-            self?.push(controller)
+            self?.pushController(controller)
         }, pop: { [weak self] in
             if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                 let _ = navigationController.popViewController(animated: true)
             }
         }, presentColorPicker: { [weak self] in
             if let strongSelf = self {
-                let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] sharedData in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
-                    
-                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
-                    let themeReference: PresentationThemeReference
-                    if autoNightModeTriggered {
-                        themeReference = settings.automaticThemeSwitchSetting.theme
-                    } else {
-                        themeReference = settings.theme
-                    }
-                                        
-                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference), resultMode: strongSelf.mode.colorPickerMode)
-                    controller.completion = { [weak self] in
-                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { controller in
-                                if controller is ThemeColorsGridController {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(controllers, animated: false)
-                            controllers = controllers.filter { controller in
-                                if controller is ThemeAccentColorController {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(controllers, animated: true)
-                        }
-                    }
-                    strongSelf.push(controller)
-                })
+                strongSelf.presentColorPicker()
             }
         })
+        
+        let transitionOffset: CGFloat
+        switch self.mode {
+        case .default:
+            transitionOffset = 30.0
+        case .peer:
+            transitionOffset = 2.0
+        }
         
         self.controllerNode.gridNode.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self {
@@ -253,12 +289,12 @@ public final class ThemeColorsGridController: ViewController {
                 switch offset {
                     case let .known(value):
                         let transition: ContainedViewLayoutTransition
-                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
+                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > transitionOffset {
                             transition = .animated(duration: 0.2, curve: .easeInOut)
                         } else {
                             transition = .immediate
                         }
-                        strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                        strongSelf.navigationBar?.updateBackgroundAlpha(min(transitionOffset, value) / transitionOffset, transition: transition)
                     case .unknown, .none:
                         strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
                 }
@@ -279,4 +315,71 @@ public final class ThemeColorsGridController: ViewController {
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
+    
+    @objc fileprivate func mainButtonPressed() {
+        
+    }
+    
+    public var requestAttachmentMenuExpansion: () -> Void = {}
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
+    
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
+        return ThemeColorsGridContext(controller: self)
+    }
+}
+
+private final class ThemeColorsGridContext: AttachmentMediaPickerContext {
+    private weak var controller: ThemeColorsGridController?
+    
+    var selectionCount: Signal<Int, NoError> {
+        return .single(0)
+    }
+    
+    var caption: Signal<NSAttributedString?, NoError> {
+        return .single(nil)
+    }
+    
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
+    }
+    
+    init(controller: ThemeColorsGridController) {
+        self.controller = controller
+    }
+            
+    func setCaption(_ caption: NSAttributedString) {
+    }
+    
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+    }
+    
+    func schedule() {
+    }
+    
+    func mainButtonAction() {
+        self.controller?.mainButtonPressed()
+    }
+}
+
+
+public func standaloneColorPickerController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, push: @escaping (ViewController) -> Void) -> ViewController {
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
+        return nil
+    })
+    controller.requestController = { _, present in
+        let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer))
+        colorPickerController.pushController = { controller in
+            push(controller)
+        }
+        present(colorPickerController, colorPickerController.mediaPickerContext)
+    }
+    return controller
 }

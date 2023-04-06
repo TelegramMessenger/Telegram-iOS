@@ -13826,7 +13826,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil, false), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
+    private func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -18511,7 +18511,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let dismissControllers = { [weak self] in
                         if let self, let navigationController = self.navigationController as? NavigationController {
                             let controllers = navigationController.viewControllers.filter({ controller in
-                                if controller is WallpaperGalleryController || controller is MediaPickerScreen {
+                                if controller is WallpaperGalleryController || controller is AttachmentController {
                                     return false
                                 }
                                 return true
@@ -18520,9 +18520,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, true))
-                    controller.navigationPresentation = .modal
-                    controller.customSelection = { [weak self] asset in
+                    let controller = standaloneMediaPickerController(context: strongSelf.context, subject: .assets(nil, .wallpaper), completion: { asset in
                         guard let strongSelf = self else {
                             return
                         }
@@ -18536,7 +18534,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         strongSelf.push(controller)
-                    }
+                    })
+                    controller.navigationPresentation = .flatModal
                     strongSelf.push(controller)
                 },
                 changeColor: {
@@ -18547,8 +18546,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.themeScreen = nil
                         themeController.dimTapped()
                     }
-                    let controller = ThemeColorsGridController(context: context, mode: .peer(EnginePeer(peer)))
-                    controller.navigationPresentation = .modal
+                    let controller = standaloneColorPickerController(context: strongSelf.context, peer: EnginePeer(peer), push: { [weak self] controller in
+                        if let strongSelf = self {
+                            strongSelf.push(controller)
+                        }
+                    })
+                    controller.navigationPresentation = .flatModal
                     strongSelf.push(controller)
                 },
                 completion: { [weak self] emoticon in
