@@ -840,37 +840,40 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
         includePeers.sort()
         
-        let newPeers = includePeers.filter({ !(filter.data?.includePeers.peers.contains($0) ?? false) })
-        var removedPeers: [PeerId] = []
-        if let data = filter.data {
-            removedPeers = data.includePeers.peers.filter({ !includePeers.contains($0) })
-        }
-        if newPeers.count != 0 {
-            let title: String
-            let text: String
-            
-            if newPeers.count == 1 {
-                title = "Сhat added to folder"
-                text = "It will not affect chatlist of the links of this folder"
-            } else {
-                title = "\(newPeers.count) chats added to folder"
-                text = "It will not affect chatlist of the links of this folder"
+        if filter.id > 1, case let .filter(_, _, _, data) = filter, data.hasSharedLinks {
+            let newPeers = includePeers.filter({ !(filter.data?.includePeers.peers.contains($0) ?? false) })
+            var removedPeers: [PeerId] = []
+            if let data = filter.data {
+                removedPeers = data.includePeers.peers.filter({ !includePeers.contains($0) })
             }
-            
-            presentUndo(.info(title: title, text: text, timeout: nil))
-        } else if removedPeers.count != 0 {
-            let title: String
-            let text: String
-            
-            if newPeers.count == 1 {
-                title = "Сhat removed from folder"
-                text = "It will not affect chatlist of the links of this folder"
-            } else {
-                title = "\(newPeers.count) chats removed from folder"
-                text = "It will not affect chatlist of the links of this folder"
+            if newPeers.count != 0 {
+                let title: String
+                let text: String
+                
+                //TODO:localize
+                if newPeers.count == 1 {
+                    title = "Сhat added to folder"
+                    text = "It will not affect chatlist of the links of this folder"
+                } else {
+                    title = "\(newPeers.count) chats added to folder"
+                    text = "It will not affect chatlist of the links of this folder"
+                }
+                
+                presentUndo(.universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil))
+            } else if removedPeers.count != 0 {
+                let title: String
+                let text: String
+                
+                if newPeers.count == 1 {
+                    title = "Сhat removed from folder"
+                    text = "It will not affect chatlist of the links of this folder"
+                } else {
+                    title = "\(newPeers.count) chats removed from folder"
+                    text = "It will not affect chatlist of the links of this folder"
+                }
+                
+                presentUndo(.universal(animation: "anim_remove_from_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil))
             }
-            
-            presentUndo(.info(title: title, text: text, timeout: nil))
         }
         
         var categories: ChatListFilterPeerCategories = []
@@ -1321,6 +1324,21 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                 }
                 return state
             }
+            
+            let _ = (updatedCurrentPreset |> take(1) |> deliverOnMainQueue).start(next: { currentPreset in
+                if let currentPreset, let data = currentPreset.data, data.hasSharedLinks {
+                    //TODO:localize
+                    let title: String
+                    let text: String
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    
+                    title = "Сhat removed from folder"
+                    text = "It will not affect chatlist of the links of this folder"
+                    
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_remove_from_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                }
+            })
         },
         deleteExcludePeer: { peerId in
             updateState { state in
@@ -1581,6 +1599,21 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                     }
                     return state
                 }
+            
+                let _ = (updatedCurrentPreset |> take(1) |> deliverOnMainQueue).start(next: { currentPreset in
+                    if let currentPreset, let data = currentPreset.data, data.hasSharedLinks {
+                        //TODO:localize
+                        let title: String
+                        let text: String
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        
+                        title = "Сhat removed from folder"
+                        text = "It will not affect chatlist of the links of this folder"
+                        
+                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_remove_from_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
+                })
             })))
             
             let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
