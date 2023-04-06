@@ -1394,29 +1394,32 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             let context = strongSelf.context
-            let filterPeersAreMuted: Signal<Bool, NoError> = strongSelf.context.engine.peers.currentChatListFilters()
+            let filterPeersAreMuted: Signal<(areMuted: Bool, peerIds: [EnginePeer.Id])?, NoError> = strongSelf.context.engine.peers.currentChatListFilters()
             |> take(1)
-            |> mapToSignal { filters -> Signal<Bool, NoError> in
+            |> mapToSignal { filters -> Signal<(areMuted: Bool, peerIds: [EnginePeer.Id])?, NoError> in
                 guard let filter = filters.first(where: { $0.id == id }) else {
-                    return .single(false)
+                    return .single(nil)
                 }
                 guard case let .filter(_, _, _, data) = filter else {
-                    return .single(false)
+                    return .single(nil)
                 }
-                return context.engine.data.get(
-                    EngineDataMap(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))),
-                    EngineDataMap(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init(id:))),
-                    TelegramEngine.EngineData.Item.NotificationSettings.Global()
-                )
-                |> map { peers, list, globalSettings -> Bool in
-                    for peerId in data.includePeers.peers {
-                        switch list[peerId]?.muteState {
-                        case .unmuted:
-                            return false
-                        case .default:
-                            if let peer = peers[peerId], let peerValue = peer {
+                
+                let filterPredicate: ChatListFilterPredicate = chatListFilterPredicate(filter: data)
+                return context.engine.peers.getChatListPeers(filterPredicate: filterPredicate)
+                |> mapToSignal { peers -> Signal<(areMuted: Bool, peerIds: [EnginePeer.Id])?, NoError> in
+                    let peerIds = peers.map(\.id)
+                    return context.engine.data.get(
+                        EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init(id:))),
+                        TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                    )
+                    |> map { list, globalSettings -> (areMuted: Bool, peerIds: [EnginePeer.Id])? in
+                        for peer in peers {
+                            switch list[peer.id]?.muteState {
+                            case .unmuted:
+                                return (false, peerIds)
+                            case .default:
                                 let globalValue: EngineGlobalNotificationSettings.CategorySettings
-                                switch peerValue {
+                                switch peer {
                                 case .user, .secretChat:
                                     globalValue = globalSettings.privateChats
                                 case .legacyGroup:
@@ -1429,14 +1432,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     }
                                 }
                                 if globalValue.enabled {
-                                    return false
+                                    return (false, peerIds)
                                 }
+                            default:
+                                break
                             }
-                        default:
-                            break
                         }
+                        return (true, peerIds)
                     }
-                    return true
                 }
             }
             
@@ -1600,9 +1603,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
-                                            if data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty && !data.includePeers.peers.isEmpty {
-                                                items.append(.action(ContextMenuActionItem(text: filterPeersAreMuted ? "Unmute All" : "Mute All", textColor: .primary, badge: nil, icon: { theme in
-                                                    return generateTintedImage(image: UIImage(bundleImageName: filterPeersAreMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+                                            if let filterPeersAreMuted {
+                                                items.append(.action(ContextMenuActionItem(text: filterPeersAreMuted.areMuted ? "Unmute All" : "Mute All", textColor: .primary, badge: nil, icon: { theme in
+                                                    return generateTintedImage(image: UIImage(bundleImageName: filterPeersAreMuted.areMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
                                                     c.dismiss(completion: {
                                                     })
@@ -1611,7 +1614,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                         return
                                                     }
                                                     
-                                                    let _ = (strongSelf.context.engine.peers.updateMultiplePeerMuteSettings(peerIds: data.includePeers.peers, muted: !filterPeersAreMuted)
+                                                    let _ = (strongSelf.context.engine.peers.updateMultiplePeerMuteSettings(peerIds: filterPeersAreMuted.peerIds, muted: !filterPeersAreMuted.areMuted)
                                                     |> deliverOnMainQueue).start(completed: {
                                                         guard let strongSelf = self else {
                                                             return
@@ -1619,7 +1622,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                         
                                                         let iconColor: UIColor = .white
                                                         let overlayController: UndoOverlayController
-                                                        if !filterPeersAreMuted {
+                                                        if !filterPeersAreMuted.areMuted {
                                                             overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
                                                                 "Middle.Group 1.Fill 1": iconColor,
                                                                 "Top.Group 1.Fill 1": iconColor,
@@ -2827,6 +2830,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     self?.push(c)
                 }, presentController: { [weak self] c in
                     self?.present(c, in: .window(.root))
+                }, pushPremiumController: { [weak self] c in
+                    self?.push(c)
                 }, completed: {
                 }, linkUpdated: { _ in
                 })

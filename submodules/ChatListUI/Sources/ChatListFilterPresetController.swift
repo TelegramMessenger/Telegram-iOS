@@ -1155,6 +1155,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
     var applyImpl: ((Bool, @escaping () -> Void) -> Void)?
     var getControllerImpl: (() -> ViewController?)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
+    var pushPremiumController: ((ViewController) -> Void)?
     
     let sharedLinks = Promise<[ExportedChatFolderLink]?>(nil)
     if let initialPreset {
@@ -1385,7 +1386,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                 let state = stateValue.with({ $0 })
                 if state.additionallyIncludePeers.isEmpty {
                     //TODO:localize
-                    let text = "Please add chats to this folder to share it."
+                    let text = "You can’t share folders which have chat types or excluded chats."
                     presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     
                     return
@@ -1424,6 +1425,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                                 pushControllerImpl?(c)
                             }, presentController: { c in
                                 presentControllerImpl?(c, nil)
+                            }, pushPremiumController: { c in
+                                pushPremiumController?(c)
                             }, completed: {
                                 statusController?.dismiss()
                                 statusController = nil
@@ -1769,6 +1772,11 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             controller.presentInGlobalOverlay(c)
         }
     }
+    pushPremiumController = { [weak controller] c in
+        if let controller = controller {
+            controller.replace(with: c)
+        }
+    }
     attemptNavigationImpl = { f in
         let _ = (updatedCurrentPreset |> take(1) |> deliverOnMainQueue).start(next: { currentPreset in
             let state = stateValue.with { $0 }
@@ -1803,7 +1811,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
     return controller
 }
 
-func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, checkIfExists: Bool, title: String, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, completed: @escaping () -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
+func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, checkIfExists: Bool, title: String, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, pushPremiumController: @escaping (ViewController) -> Void, completed: @escaping () -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
     if peerIds.isEmpty {
         completed()
         return
@@ -1898,24 +1906,28 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                         text = "An error occurred"
                     case let .sharedFolderLimitExceeded(limit, _):
                         let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .membershipInSharedFolders, count: limit, action: {
+                            pushPremiumController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
                         })
                         pushController(limitController)
                         
                         return
                     case let .limitExceeded(limit, _):
                         let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                            pushPremiumController(PremiumIntroScreen(context: context, source: .linksPerSharedFolder))
                         })
                         pushController(limitController)
                         
                         return
                     case let .tooManyChannels(limit, _):
                         let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .linksPerSharedFolder, count: limit, action: {
+                            pushPremiumController(PremiumIntroScreen(context: context, source: .groupsAndChannels))
                         })
                         pushController(limitController)
                         
                         return
                     case let .tooManyChannelsInAccount(limit, _):
                         let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .channels, count: limit, action: {
+                            pushPremiumController(PremiumIntroScreen(context: context, source: .groupsAndChannels))
                         })
                         pushController(limitController)
                         

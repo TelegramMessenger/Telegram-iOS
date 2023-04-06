@@ -649,6 +649,12 @@ public extension TelegramEngine {
         public func updateBotAbout(peerId: PeerId, about: String) -> Signal<Void, UpdateBotInfoError> {
             return _internal_updateBotAbout(account: self.account, peerId: peerId, about: about)
         }
+        
+        public func getChatListPeers(filterPredicate: ChatListFilterPredicate) -> Signal<[EnginePeer], NoError> {
+            return self.account.postbox.transaction { transaction -> [EnginePeer] in
+                return transaction.getChatListPeers(groupId: .root, filterPredicate: filterPredicate, additionalFilter: nil).map(EnginePeer.init)
+            }
+        }
 
         public func getNextUnreadChannel(peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<(peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)?, NoError> {
             return self.account.postbox.transaction { transaction -> (peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)? in
