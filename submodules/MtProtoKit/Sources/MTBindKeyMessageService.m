@@ -136,7 +136,7 @@
     }
 }
 
-- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector {
+- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector networkType:(int32_t)networkType {
     if ([message.body isKindOfClass:[MTRpcResultMessage class]]) {
         MTRpcResultMessage *rpcResultMessage = message.body;
         if (rpcResultMessage.requestMessageId == _currentMessageId) {
