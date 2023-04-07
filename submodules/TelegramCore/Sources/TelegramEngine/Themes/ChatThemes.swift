@@ -140,11 +140,11 @@ func _internal_setChatWallpaper(account: Account, peerId: PeerId, wallpaper: Tel
             var inputSettings: Api.WallPaperSettings?
             if let inputWallpaperAndInputSettings = wallpaper?.apiInputWallpaperAndSettings {
                 flags |= 1 << 0
-                
+                flags |= 1 << 2
                 inputWallpaper = inputWallpaperAndInputSettings.0
                 inputSettings = inputWallpaperAndInputSettings.1
             }
-            return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: inputWallpaper, settings: inputSettings, id: nil))
+            return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: inputWallpaper, settings: inputSettings, id: nil), automaticFloodWait: false)
             |> `catch` { error in
                 return .complete()
             }
@@ -160,7 +160,7 @@ public enum SetExistingChatWallpaperError {
     case generic
 }
 
-func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId, wallpaper: TelegramWallpaper?) -> Signal<Void, SetExistingChatWallpaperError> {
+func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId, settings: WallpaperSettings?) -> Signal<Void, SetExistingChatWallpaperError> {
     return account.postbox.transaction { transaction -> Peer? in
         if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId) {
             if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .setChatWallpaper(wallpaper) = action.action {
@@ -185,11 +185,11 @@ func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId, 
         var flags: Int32 = 1 << 1
         
         var inputSettings: Api.WallPaperSettings?
-        if let inputWallpaperAndInputSettings = wallpaper?.apiInputWallpaperAndSettings {
+        if let settings = settings {
             flags |= 1 << 2
-            inputSettings = inputWallpaperAndInputSettings.1
+            inputSettings = apiWallpaperSettings(settings)
         }
-        return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: nil, settings: inputSettings, id: messageId.id))
+        return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: nil, settings: inputSettings, id: messageId.id), automaticFloodWait: false)
         |> `catch` { _ -> Signal<Api.Updates, SetExistingChatWallpaperError> in
             return .fail(.generic)
         }

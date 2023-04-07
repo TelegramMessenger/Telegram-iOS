@@ -3405,8 +3405,8 @@ func replayFinalState(
                                             for (space, _) in holesAtHistoryStart {
                                                 transaction.removeHole(peerId: chatPeerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: space, range: 1 ... id.id)
                                             }
-                                    case let .setChatWallpaper(wallpaper):
-                                        if chatPeerId == accountPeerId {
+                                    case let .setChatWallpaper(wallpaper), let .setSameChatWallpaper(wallpaper):
+                                        if message.authorId == accountPeerId {
                                             transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
                                                 var current = current
                                                 if current == nil {

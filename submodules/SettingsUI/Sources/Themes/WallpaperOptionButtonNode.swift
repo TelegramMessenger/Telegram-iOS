@@ -70,8 +70,8 @@ final class WallpaperLightButtonBackgroundNode: ASDisplayNode {
 final class WallpaperOptionBackgroundNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
     
-    override init() {
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.3), enableBlur: true, enableSaturation: false)
+    init(enableSaturation: Bool = false) {
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.3), enableBlur: true, enableSaturation: enableSaturation)
 
         super.init()
         
@@ -95,12 +95,25 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         case text(String)
     }
     
+    var enableSaturation: Bool = false
+    
     private let content: Content
+    var dark: Bool {
+        didSet {
+            if self.dark != oldValue {
+                self.backgroundNode.removeFromSupernode()
+                if self.dark {
+                    self.backgroundNode = WallpaperOptionBackgroundNode(enableSaturation: self.enableSaturation)
+                } else {
+                    self.backgroundNode = WallpaperLightButtonBackgroundNode()
+                }
+                self.insertSubnode(self.backgroundNode, at: 0)
+            }
+        }
+    }
     
-    private let backgroundNode: ASDisplayNode
- 
+    private var backgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
-    
     private let textNode: ImmediateTextNode
     
     func setIcon(_ image: UIImage?) {
@@ -109,6 +122,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
     
     init(content: Content, dark: Bool) {
         self.content = content
+        self.dark = dark
         
         if dark {
             self.backgroundNode = WallpaperOptionBackgroundNode()

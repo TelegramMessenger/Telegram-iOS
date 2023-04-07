@@ -229,14 +229,16 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func updateColor(color: UIColor, enableBlur: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
+    public func updateColor(color: UIColor, enableBlur: Bool? = nil, enableSaturation: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
         let effectiveEnableBlur = enableBlur ?? self.enableBlur
-
-        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur {
+        let effectiveEnableSaturation = enableSaturation ?? self.enableSaturation
+        
+        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur && self.enableSaturation == effectiveEnableSaturation {
             return
         }
         self._color = color
         self.enableBlur = effectiveEnableBlur
+        self.enableSaturation = effectiveEnableSaturation
 
         if sharedIsReduceTransparencyEnabled {
             transition.updateBackgroundColor(node: self.backgroundNode, color: self._color.withAlphaComponent(1.0))

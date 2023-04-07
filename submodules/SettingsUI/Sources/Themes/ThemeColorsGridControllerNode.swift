@@ -132,25 +132,31 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.addSubnode(self.gridNode)
         
         let previousEntries = Atomic<[ThemeColorsGridControllerEntry]?>(value: nil)
-        
-        let dismissControllers = { [weak self] in
-            if let self, let navigationController = self.controller?.navigationController as? NavigationController {
-                let controllers = navigationController.viewControllers.filter({ controller in
-                    if controller is ThemeColorsGridController || controller is WallpaperGalleryController {
-                        return false
-                    }
-                    return true
-                })
-                navigationController.setViewControllers(controllers, animated: true)
-            }
-        }
-        
+                
         let interaction = ThemeColorsGridControllerInteraction(openWallpaper: { [weak self] wallpaper in
             if let strongSelf = self {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
                     let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors), mode: strongSelf.controller?.mode.galleryMode ?? .default)
+
+                    let dismissControllers = { [weak self, weak controller] in
+                        if let self {
+                            if let dismissControllers = self.controller?.dismissControllers {
+                                dismissControllers()
+                                controller?.dismiss(animated: true)
+                            } else if let navigationController = self.controller?.navigationController as? NavigationController {
+                                let controllers = navigationController.viewControllers.filter({ controller in
+                                    if controller is ThemeColorsGridController || controller is WallpaperGalleryController {
+                                        return false
+                                    }
+                                    return true
+                                })
+                                navigationController.setViewControllers(controllers, animated: true)
+                            }
+                        }
+                    }
+                    
                     controller.navigationPresentation = .modal
                     controller.apply = { [weak self] wallpaper, _, _, _ in
                         if let strongSelf = self, let mode = strongSelf.controller?.mode, case let .peer(peer) = mode, case let .wallpaper(wallpaperValue, _) = wallpaper {

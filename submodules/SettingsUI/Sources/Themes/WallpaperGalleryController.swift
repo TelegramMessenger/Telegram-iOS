@@ -437,6 +437,12 @@ public class WallpaperGalleryController: ViewController {
         }
                 
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
+        switch self.source {
+        case .asset, .contextResult:
+            toolbarNode.dark = false
+        default:
+            toolbarNode.dark = true
+        }
         self.toolbarNode = toolbarNode
         overlayNode.addSubnode(toolbarNode)
         

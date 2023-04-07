@@ -149,6 +149,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
     
     var pushController: (ViewController) -> Void = { _ in }
+    var dismissControllers: (() -> Void)?
     
     public init(context: AccountContext, mode: Mode = .default, canDelete: Bool = false) {
         self.context = context
@@ -240,23 +241,28 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
             }
                                 
             let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference), resultMode: strongSelf.mode.colorPickerMode)
-            controller.completion = { [weak self] in
-                if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                    var controllers = navigationController.viewControllers
-                    controllers = controllers.filter { controller in
-                        if controller is ThemeColorsGridController {
-                            return false
+            controller.completion = { [weak self, weak controller] in
+                if let strongSelf = self {
+                    if let dismissControllers = strongSelf.dismissControllers {
+                        dismissControllers()
+                        controller?.dismiss(animated: true)
+                    } else if let navigationController = strongSelf.navigationController as? NavigationController {
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { controller in
+                            if controller is ThemeColorsGridController {
+                                return false
+                            }
+                            return true
                         }
-                        return true
-                    }
-                    navigationController.setViewControllers(controllers, animated: false)
-                    controllers = controllers.filter { controller in
-                        if controller is ThemeAccentColorController {
-                            return false
+                        navigationController.setViewControllers(controllers, animated: false)
+                        controllers = controllers.filter { controller in
+                            if controller is ThemeAccentColorController {
+                                return false
+                            }
+                            return true
                         }
-                        return true
+                        navigationController.setViewControllers(controllers, animated: true)
                     }
-                    navigationController.setViewControllers(controllers, animated: true)
                 }
             }
             strongSelf.pushController(controller)
@@ -387,6 +393,9 @@ public func standaloneColorPickerController(context: AccountContext, updatedPres
         let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer), canDelete: canDelete)
         colorPickerController.pushController = { controller in
             push(controller)
+        }
+        colorPickerController.dismissControllers = { [weak controller] in
+            controller?.dismiss(animated: true)
         }
         present(colorPickerController, colorPickerController.mediaPickerContext)
     }

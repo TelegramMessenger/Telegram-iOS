@@ -166,7 +166,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.patternButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
         self.patternButtonNode.setEnabled(false)
         
-        self.serviceBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.35))
+        self.serviceBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.33))
         
         var sliderValueChangedImpl: ((CGFloat) -> Void)?
         self.sliderNode = WallpaperSliderNode(minValue: 0.0, maxValue: 1.0, value: 0.5, valueChanged: { value, _ in
@@ -176,8 +176,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.colorsButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_WallpaperColors, value: .colors(false, [.clear]))
 
         self.cancelButtonNode = WallpaperNavigationButtonNode(content: .text(self.presentationData.strings.Common_Cancel), dark: false)
+        self.cancelButtonNode.enableSaturation = true
         self.shareButtonNode = WallpaperNavigationButtonNode(content: .icon(image: UIImage(bundleImageName: "Chat/Links/Share"), size: CGSize(width: 28.0, height: 28.0)), dark: false)
-    
+        self.shareButtonNode.enableSaturation = true
+        
         self.playButtonPlayImage = generateImage(CGSize(width: 48.0, height: 48.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(UIColor.white.cgColor)
@@ -400,6 +402,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.playButtonNode.setIcon(self.playButtonRotateImage)
             }
             
+            var isEditable = false
             var canShare = false
             switch entry {
                 case let .wallpaper(wallpaper, message):
@@ -563,6 +566,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     }
                     self.cropNode.removeFromSupernode()
                 case let .asset(asset):
+                    isEditable = true
                     let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                     contentSize = dimensions
                     displaySize = dimensions.dividedByScreenScale().integralFloor
@@ -573,6 +577,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                     self.wrapperNode.addSubnode(self.cropNode)
                 case let .contextResult(result):
+                    isEditable = true
                     var imageDimensions: CGSize?
                     var imageResource: TelegramMediaResource?
                     var thumbnailDimensions: CGSize?
@@ -629,6 +634,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             self.contentSize = contentSize
             
+            self.cancelButtonNode.dark = !isEditable
+            self.shareButtonNode.dark = !isEditable
             self.shareButtonNode.isHidden = !canShare
             
             if self.cropNode.supernode == nil {
@@ -1238,15 +1245,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             self.messageNodes = messageNodes
         }
-        
-        if let _ = serviceMessageText, let messageNodes = self.messageNodes, let node = messageNodes.last {
-            if let backgroundNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.first {
-                let serviceBackgroundFrame = backgroundNode.view.convert(backgroundNode.bounds, to: self.view).offsetBy(dx: 0.0, dy: -1.0).insetBy(dx: 0.0, dy: -1.0)
-                transition.updateFrame(node: self.serviceBackgroundNode, frame: serviceBackgroundFrame)
-                self.serviceBackgroundNode.update(size: serviceBackgroundFrame.size, cornerRadius: serviceBackgroundFrame.height / 2.0, transition: transition)
-            }
-        }
-        
+                
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
         if let messageNodes = self.messageNodes {
@@ -1256,6 +1255,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 bottomOffset += itemNode.frame.height
                 itemNode.updateFrame(itemNode.frame, within: layout.size)
                 transition.updateAlpha(node: itemNode, alpha: alpha)
+            }
+        }
+        
+        if let _ = serviceMessageText, let messageNodes = self.messageNodes, let node = messageNodes.last {
+            if let backgroundNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.first {
+                let serviceBackgroundFrame = backgroundNode.view.convert(backgroundNode.bounds, to: self.view).offsetBy(dx: 0.0, dy: -1.0).insetBy(dx: 0.0, dy: -1.0)
+                transition.updateFrame(node: self.serviceBackgroundNode, frame: serviceBackgroundFrame)
+                self.serviceBackgroundNode.update(size: serviceBackgroundFrame.size, cornerRadius: serviceBackgroundFrame.height / 2.0, transition: transition)
             }
         }
     }

@@ -386,6 +386,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             let titleString: String
             var allChatsAdded = false
+            var canAddChatCount = 0
             if case .linkList = component.subject {
                 //TODO:localize
                 titleString = "Share Folder"
@@ -397,13 +398,14 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     if linkContents.alreadyMemberPeerIds == Set(linkContents.peers.map(\.id)) {
                         allChatsAdded = true
                     }
+                    canAddChatCount = linkContents.peers.map(\.id).count - linkContents.alreadyMemberPeerIds.count
                     
                     if allChatsAdded {
                         titleString = "Add Folder"
-                    } else if linkContents.peers.count == 1 {
-                        titleString = "Add \(linkContents.peers.count) chat"
+                    } else if canAddChatCount == 1 {
+                        titleString = "Add \(canAddChatCount) chat"
                     } else {
-                        titleString = "Add \(linkContents.peers.count) chats"
+                        titleString = "Add \(canAddChatCount) chats"
                     }
                 } else {
                     titleString = "Add Folder"
@@ -433,8 +435,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             var topBadge: String?
             if case .linkList = component.subject {
             } else if case .remove = component.subject {
-            } else if !allChatsAdded, let linkContents = component.linkContents, linkContents.localFilterId != nil {
-                topBadge = "+\(linkContents.peers.count)"
+            } else if !allChatsAdded, let linkContents = component.linkContents, linkContents.localFilterId != nil, canAddChatCount != 0 {
+                topBadge = "+\(canAddChatCount)"
             }
             
             let topIconSize = self.topIcon.update(
@@ -472,10 +474,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     text = "Do you want to add a new chat folder\nand join its groups and channels?"
                 } else {
                     let chatCountString: String
-                    if linkContents.peers.count == 1 {
+                    if canAddChatCount == 1 {
                         chatCountString = "1 chat"
                     } else {
-                        chatCountString = "\(linkContents.peers.count) chats"
+                        chatCountString = "\(canAddChatCount) chats"
                     }
                     if let title = linkContents.title {
                         text = "Do you want to add **\(chatCountString)** to the\nfolder **\(title)**?"
@@ -934,7 +936,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 actionButtonBadge = 0
                 actionButtonTitle = "OK"
             } else if let linkContents = component.linkContents {
-                actionButtonBadge = self.selectedItems.count
+                actionButtonBadge = max(0, self.selectedItems.count - (linkContents.peers.count - canAddChatCount))
                 if linkContents.localFilterId != nil {
                     if self.selectedItems.isEmpty {
                         actionButtonTitle = "Do Not Join Any Chats"
