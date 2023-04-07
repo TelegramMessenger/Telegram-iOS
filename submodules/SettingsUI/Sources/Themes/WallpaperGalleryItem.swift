@@ -95,22 +95,26 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let wrapperNode: ASDisplayNode
     let imageNode: TransformImageNode
     let nativeNode: WallpaperBackgroundNode
+    let brightnessNode: ASDisplayNode
     private let statusNode: RadialStatusNode
     private let blurredNode: BlurredImageNode
     let cropNode: WallpaperCropNode
     
-    private var cancelButtonNode: WallpaperNavigationButtonNode
-    private var shareButtonNode: WallpaperNavigationButtonNode
+    private let cancelButtonNode: WallpaperNavigationButtonNode
+    private let shareButtonNode: WallpaperNavigationButtonNode
 
-    private var blurButtonNode: WallpaperOptionButtonNode
-    private var motionButtonNode: WallpaperOptionButtonNode
-    private var patternButtonNode: WallpaperOptionButtonNode
-    private var colorsButtonNode: WallpaperOptionButtonNode
-    private var playButtonNode: WallpaperNavigationButtonNode
+    private let blurButtonNode: WallpaperOptionButtonNode
+    private let motionButtonNode: WallpaperOptionButtonNode
+    private let patternButtonNode: WallpaperOptionButtonNode
+    private let colorsButtonNode: WallpaperOptionButtonNode
+    private let playButtonNode: WallpaperNavigationButtonNode
+    private let sliderNode: WallpaperSliderNode
     
     private let messagesContainerNode: ASDisplayNode
     private var messageNodes: [ListViewItemNode]?
     private var validMessages: [String]?
+    
+    private let serviceBackgroundNode: NavigationBackgroundNode
     
     fileprivate let _ready = Promise<Void>()
     private let fetchDisposable = MetaDisposable()
@@ -149,6 +153,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.statusNode.isUserInteractionEnabled = false
         
         self.blurredNode = BlurredImageNode()
+        self.brightnessNode = ASDisplayNode()
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
@@ -160,11 +165,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.motionButtonNode.setEnabled(false)
         self.patternButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
         self.patternButtonNode.setEnabled(false)
+        
+        self.serviceBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.35))
+        
+        var sliderValueChangedImpl: ((CGFloat) -> Void)?
+        self.sliderNode = WallpaperSliderNode(minValue: 0.0, maxValue: 1.0, value: 0.5, valueChanged: { value, _ in
+            sliderValueChangedImpl?(value)
+        })
 
         self.colorsButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_WallpaperColors, value: .colors(false, [.clear]))
 
-        self.cancelButtonNode = WallpaperNavigationButtonNode(content: .text(self.presentationData.strings.Common_Cancel))
-        self.shareButtonNode = WallpaperNavigationButtonNode(content: .icon(image: UIImage(bundleImageName: "Chat/Links/Share"), size: CGSize(width: 28.0, height: 28.0)))
+        self.cancelButtonNode = WallpaperNavigationButtonNode(content: .text(self.presentationData.strings.Common_Cancel), dark: false)
+        self.shareButtonNode = WallpaperNavigationButtonNode(content: .icon(image: UIImage(bundleImageName: "Chat/Links/Share"), size: CGSize(width: 28.0, height: 28.0)), dark: false)
     
         self.playButtonPlayImage = generateImage(CGSize(width: 48.0, height: 48.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -193,7 +205,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
         self.playButtonRotateImage = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRotateIcon"), color: .white)
 
-        self.playButtonNode = WallpaperNavigationButtonNode(content: .icon(image: self.playButtonPlayImage, size: CGSize(width: 48.0, height: 48.0)))
+        self.playButtonNode = WallpaperNavigationButtonNode(content: .icon(image: self.playButtonPlayImage, size: CGSize(width: 48.0, height: 48.0)), dark: true)
         
         super.init()
         
@@ -217,6 +229,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.addSubnode(self.wrapperNode)
         //self.addSubnode(self.statusNode)
+        self.addSubnode(self.serviceBackgroundNode)
         self.addSubnode(self.messagesContainerNode)
         
         self.addSubnode(self.blurButtonNode)
@@ -224,8 +237,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.addSubnode(self.patternButtonNode)
         self.addSubnode(self.colorsButtonNode)
         self.addSubnode(self.playButtonNode)
+        self.addSubnode(self.sliderNode)
         self.addSubnode(self.cancelButtonNode)
         self.addSubnode(self.shareButtonNode)
+        
+        self.imageNode.addSubnode(self.brightnessNode)
         
         self.blurButtonNode.addTarget(self, action: #selector(self.toggleBlur), forControlEvents: .touchUpInside)
         self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
@@ -234,6 +250,24 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.playButtonNode.addTarget(self, action: #selector(self.togglePlay), forControlEvents: .touchUpInside)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         self.shareButtonNode.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)
+        
+        sliderValueChangedImpl = { [weak self] value in
+            if let self {
+                let value = (value - 0.5) * 2.0
+                if value < 0.0 {
+                    self.brightnessNode.backgroundColor = UIColor(rgb: 0x000000)
+                    self.brightnessNode.layer.compositingFilter = nil
+                    self.brightnessNode.alpha = value * -1.0
+                } else if value > 0.0 {
+                    self.brightnessNode.backgroundColor = UIColor(rgb: 0xffffff)
+                    self.brightnessNode.layer.compositingFilter = "overlayBlendMode"
+                    self.brightnessNode.alpha = value
+                } else {
+                    self.brightnessNode.layer.compositingFilter = nil
+                    self.brightnessNode.alpha = 0.0
+                }
+            }
+        }
     }
     
     deinit {
@@ -252,6 +286,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 return self.cropNode.cropRect
             default:
                 return nil
+        }
+    }
+    
+    var brightness: CGFloat? {
+        guard let entry = self.entry else {
+            return nil
+        }
+        switch entry {
+        case .asset, .contextResult:
+            return (self.sliderNode.value - 0.5) * 2.0
+        default:
+            return nil
         }
     }
     
@@ -721,7 +767,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     func setBlurEnabled(_ enabled: Bool, animated: Bool) {
-        let blurRadius: CGFloat = 45.0
+        let blurRadius: CGFloat = 30.0
         
         var animated = animated
         if animated, let (layout, _) = self.validLayout {
@@ -732,13 +778,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if enabled {
             if self.blurredNode.supernode == nil {
-                if self.cropNode.supernode != nil {
-                    self.blurredNode.frame = self.imageNode.bounds
-                    self.imageNode.addSubnode(self.blurredNode)
-                } else {
-                    self.blurredNode.frame = self.imageNode.bounds
-                    self.imageNode.addSubnode(self.blurredNode)
-                }
+                self.blurredNode.frame = self.imageNode.bounds
+                self.imageNode.insertSubnode(self.blurredNode, at: 0)
             }
             
             if animated {
@@ -914,12 +955,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         let buttonSize = CGSize(width: maxButtonWidth, height: 30.0)
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
-        let additionalYOffset: CGFloat = 0.0
-        /*if self.patternButtonNode.isSelected {
-            additionalYOffset = -235.0
-        } else if self.colorsButtonNode.isSelected {
-            additionalYOffset = -235.0
-        }*/
+        var additionalYOffset: CGFloat = 0.0
+        if let source = self.source {
+            switch source {
+            case .asset, .contextResult:
+                additionalYOffset -= 44.0
+            default:
+                break
+            }
+        }
 
         let buttonSpacing: CGFloat = 18.0
         
@@ -937,12 +981,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         var motionFrame = centerButtonFrame
         var motionAlpha: CGFloat = 0.0
-
+        
         var colorsFrame = CGRect(origin: CGPoint(x: rightButtonFrame.maxX - colorsButtonSize.width, y: rightButtonFrame.minY), size: colorsButtonSize)
         var colorsAlpha: CGFloat = 0.0
 
         let playFrame = CGRect(origin: CGPoint(x: centerButtonFrame.midX - playButtonSize.width / 2.0, y: centerButtonFrame.midY - playButtonSize.height / 2.0), size: playButtonSize)
         var playAlpha: CGFloat = 0.0
+        
+        let sliderSize = CGSize(width: 268.0, height: 30.0)
+        let sliderFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - sliderSize.width) / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 52.0 + offset.y), size: sliderSize)
+        var sliderIsHidden = true
         
         let cancelSize = self.cancelButtonNode.measure(layout.size)
         let cancelFrame = CGRect(origin: CGPoint(x: 16.0 + offset.x, y: 16.0), size: cancelSize)
@@ -958,11 +1006,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     blurFrame = leftButtonFrame
                     motionAlpha = 1.0
                     motionFrame = rightButtonFrame
+                    sliderIsHidden = false
                 case .contextResult:
                     blurAlpha = 1.0
                     blurFrame = leftButtonFrame
                     motionAlpha = 1.0
                     motionFrame = rightButtonFrame
+                    sliderIsHidden = false
                 case let .wallpaper(wallpaper, _):
                     switch wallpaper {
                         case .builtin:
@@ -1047,17 +1097,17 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         transition.updateAlpha(node: self.playButtonNode, alpha: playAlpha * alpha)
         transition.updateSublayerTransformScale(node: self.playButtonNode, scale: max(0.1, playAlpha))
         
+        transition.updateFrame(node: self.sliderNode, frame: sliderFrame)
+        self.sliderNode.updateLayout(size: sliderFrame.size)
+        self.sliderNode.isHidden = sliderIsHidden
+        
         transition.updateFrame(node: self.cancelButtonNode, frame: cancelFrame)
         transition.updateFrame(node: self.shareButtonNode, frame: shareFrame)
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
-        let bottomInset: CGFloat = 132.0
+        var bottomInset: CGFloat = 132.0
 
-        if self.patternButtonNode.isSelected || self.colorsButtonNode.isSelected {
-            //bottomInset = 350.0
-        }
-        
         var items: [ListViewItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
         let otherPeerId = self.context.account.peerId
@@ -1125,6 +1175,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 case .asset, .contextResult:
                     topMessageText = presentationData.strings.WallpaperPreview_CropTopText
                     bottomMessageText = presentationData.strings.WallpaperPreview_CropBottomText
+                    bottomInset += 44.0
                 case .customColor:
                     topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
                     bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
@@ -1188,6 +1239,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             self.messageNodes = messageNodes
         }
         
+        if let _ = serviceMessageText, let messageNodes = self.messageNodes, let node = messageNodes.last {
+            if let backgroundNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.first {
+                let serviceBackgroundFrame = backgroundNode.view.convert(backgroundNode.bounds, to: self.view).offsetBy(dx: 0.0, dy: -1.0).insetBy(dx: 0.0, dy: -1.0)
+                transition.updateFrame(node: self.serviceBackgroundNode, frame: serviceBackgroundFrame)
+                self.serviceBackgroundNode.update(size: serviceBackgroundFrame.size, cornerRadius: serviceBackgroundFrame.height / 2.0, transition: transition)
+            }
+        }
+        
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
         if let messageNodes = self.messageNodes {
@@ -1237,6 +1296,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             self.blurredNode.frame = self.imageNode.bounds
         }
+        self.brightnessNode.frame = self.imageNode.bounds
         
         let additionalYOffset: CGFloat = 0.0
         

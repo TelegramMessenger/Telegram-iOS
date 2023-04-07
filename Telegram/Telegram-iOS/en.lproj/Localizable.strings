@@ -9158,3 +9158,6 @@ Sorry for the inconvenience.";
 "Conversation.Theme.SetCustomColor" = "Set Custom";
 
 "Appearance.ShowNextMediaOnTap" = "Show Next Media on Tap";
+
+"WebApp.LaunchMoreInfo" = "More about this bot";
+"WebApp.LaunchConfirmation" = "To launch this web app, you will connect to its website.";

@@ -845,7 +845,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             strongSelf.chatDisplayNode.dismissInput()
                             let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
-                            wallpaperPreviewController.apply = { wallpaper, options, _ in
+                            wallpaperPreviewController.apply = { wallpaper, options, _, _ in
                                 let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, wallpaper: nil)
                                 |> deliverOnMainQueue).start(completed: { [weak wallpaperPreviewController] in 
                                     wallpaperPreviewController?.dismiss()
@@ -4264,12 +4264,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if value {
                     openWebView()
                 } else {
-                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertTitle, text: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertText(botName).string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                        if let strongSelf = self {
-                            let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
-                            openWebView()
-                        }
-                    })], parseMarkdown: true), in: .window(.root), with: nil)
+                    let controller = webAppLaunchConfirmationController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(peer), commit: {
+                        let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                        openWebView()
+                    }, showMore: nil)
+                    strongSelf.present(controller, in: .window(.root))
                 }
             })
         }, activateAdAction: { [weak self] messageId in
@@ -17173,7 +17172,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?, forceExternal: Bool = false) {
+    private func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?, forceExternal: Bool = false, concealed: Bool = false) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -17230,7 +17229,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
                     }
                 case let .withBotApp(botAppStart):
-                    strongSelf.presentBotApp(botApp: botAppStart.botApp, payload: botAppStart.payload)
+                    let _ =  (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId.id))
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        if let strongSelf = self, let peer {
+                            let openBotApp = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.presentBotApp(botApp: botAppStart.botApp, payload: botAppStart.payload)
+                                }
+                            }
+                            if concealed {
+                                let controller = webAppLaunchConfirmationController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, commit: {
+                                    openBotApp()
+                                }, showMore: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.openResolved(result: .peer(peer._asPeer(), .info), sourceMessageId: nil)
+                                    }
+                                })
+                                strongSelf.present(controller, in: .window(.root))
+                            } else {
+                                openBotApp()
+                            }
+                        }
+                    })
                 default:
                     break
                 }
@@ -17256,7 +17276,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
-                self?.openResolved(result: resolved, sourceMessageId: message?.id, forceExternal: forceExternal)
+                self?.openResolved(result: resolved, sourceMessageId: message?.id, forceExternal: forceExternal, concealed: concealed)
             })
         }, performAction: true)
     }
@@ -18535,9 +18555,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
                             controller.navigationPresentation = .modal
-                            controller.apply = { [weak self] wallpaper, options, cropRect in
+                            controller.apply = { [weak self] wallpaper, options, cropRect, brightness in
                                 if let strongSelf = self {
-                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightnessMultiplier: nil, peerId: peerId, completion: {
+                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightness: brightness, peerId: peerId, completion: {
                                         dismissControllers()
                                     })
                                 }

@@ -25,9 +25,9 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
         controller.selectionBlock = { [weak legacyController] asset, _ in
             if let asset = asset {
                 let controller = WallpaperGalleryController(context: context, source: .asset(asset.backingAsset))
-                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, cropRect in
+                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, cropRect, brightness in
                     if let legacyController = legacyController, let controller = controller {
-                        uploadCustomWallpaper(context: context, wallpaper: wallpaper, mode: mode, cropRect: cropRect, completion: { [weak legacyController, weak controller] in
+                        uploadCustomWallpaper(context: context, wallpaper: wallpaper, mode: mode, cropRect: cropRect, brightness: brightness, completion: { [weak legacyController, weak controller] in
                             if let legacyController = legacyController, let controller = controller {
                                 legacyController.dismiss()
                                 controller.dismiss(forceAway: true)
@@ -47,7 +47,7 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
     })
 }
 
-func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, completion: @escaping () -> Void) {
+func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, brightness: CGFloat?, completion: @escaping () -> Void) {
     let imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
@@ -196,7 +196,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
     }).start()
 }
 
-public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, brightnessMultiplier: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
+public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?,  brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
     let imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
@@ -276,7 +276,25 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
         croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 1440.0, height: 2960.0), image.size, true)
         
         if mode.contains(.blur) {
-            croppedImage = blurredImage(croppedImage, radius: 20.0)!
+            croppedImage = blurredImage(croppedImage, radius: 30.0)!
+        }
+        
+        if let brightness, abs(brightness) > 0.01 {
+            if let updatedImage = generateImage(croppedImage.size, contextGenerator: { size, context in
+                let bounds = CGRect(origin: .zero, size: size)
+                if let cgImage = croppedImage.cgImage {
+                    context.draw(cgImage, in: bounds)
+                }
+                if brightness > 0.0 {
+                    context.setFillColor(UIColor(rgb: 0xffffff, alpha: brightness).cgColor)
+                    context.setBlendMode(.overlay)
+                } else {
+                    context.setFillColor(UIColor(rgb: 0x000000, alpha: brightness * -1.0).cgColor)
+                }
+                context.fill(bounds)
+            }) {
+                croppedImage = updatedImage
+            }
         }
         
         let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))

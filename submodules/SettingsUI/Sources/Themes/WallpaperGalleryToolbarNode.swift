@@ -17,39 +17,6 @@ enum WallpaperGalleryToolbarDoneButtonType {
     case none
 }
 
-final class WallpaperLightButtonBackgroundNode: ASDisplayNode {
-    private let backgroundNode: NavigationBackgroundNode
-    private let overlayNode: ASDisplayNode
-    private let lightNode: ASDisplayNode
-    
-    override init() {
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.01), enableBlur: true)
-        self.overlayNode = ASDisplayNode()
-        self.overlayNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.55)
-        self.overlayNode.layer.compositingFilter = "overlayBlendMode"
-        
-        self.lightNode = ASDisplayNode()
-        self.lightNode.backgroundColor = UIColor(rgb: 0xf2f2f2, alpha: 0.3)
-        
-        super.init()
-        
-        self.clipsToBounds = true
-        
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.overlayNode)
-        //self.addSubnode(self.lightNode)
-    }
-    
-    func updateLayout(size: CGSize) {
-        let frame = CGRect(origin: .zero, size: size)
-        self.backgroundNode.frame = frame
-        self.overlayNode.frame = frame
-        self.lightNode.frame = frame
-        
-        self.backgroundNode.update(size: size, transition: .immediate)
-    }
-}
-
 final class WallpaperGalleryToolbarNode: ASDisplayNode {
     private var theme: PresentationTheme
     private let strings: PresentationStrings
