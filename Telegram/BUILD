@@ -740,7 +740,7 @@ genrule(
     name = "StripWatchosStubBinary",
     cmd_bash =
 """
-    echo 'lipo -remove arm64e -remove arm64 $$1/TelegramWatch.app/_WatchKitStub/WK -output $$1/TelegramWatch.app/_WatchKitStub/WK && lipo -remove arm64e -remove arm64 $$1/TelegramWatch.app/TelegramWatch -output $$1/TelegramWatch.app/TelegramWatch' > $(location StripWatchosStubBinary.sh)
+    echo 'lipo -remove arm64e $$1/TelegramWatch.app/_WatchKitStub/WK -output $$1/TelegramWatch.app/_WatchKitStub/WK && lipo -remove arm64e $$1/TelegramWatch.app/TelegramWatch -output $$1/TelegramWatch.app/TelegramWatch' > $(location StripWatchosStubBinary.sh)
     echo '' >> $(location StripWatchosStubBinary.sh)
 """,
     outs = [
@@ -1970,7 +1970,7 @@ ios_application(
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
-        "//conditions:default": None,#":TelegramWatchApp",
+        "//conditions:default": ":TelegramWatchApp",
     }) if telegram_enable_watch else None,
     deps = [
         ":Main",
