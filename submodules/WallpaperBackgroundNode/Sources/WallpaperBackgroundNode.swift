@@ -743,6 +743,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     private var gradientBackgroundNode: GradientBackgroundNode?
     private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
     private let patternImageLayer: EffectImageLayer
+    private let dimLayer: SimpleLayer
     private var isGeneratingPatternImage: Bool = false
 
     private let bakedBackgroundView: UIImageView
@@ -862,6 +863,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.bakedBackgroundView = UIImageView()
         self.bakedBackgroundView.isHidden = true
         
+        self.dimLayer = SimpleLayer()
+        self.dimLayer.backgroundColor = UIColor.black.cgColor
+        
         super.init()
         
         if #available(iOS 12.0, *) {
@@ -885,12 +889,27 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
         self.layer.addSublayer(self.patternImageLayer)
+        
+        self.layer.addSublayer(self.dimLayer)
     }
 
     deinit {
         self.patternImageDisposable.dispose()
         self.wallpaperDisposable.dispose()
         self.imageDisposable.dispose()
+    }
+    
+    private func updateDimming() {
+        guard let wallpaper = self.wallpaper, let theme = self.bubbleTheme else {
+            return
+        }
+        var dimAlpha: Float = 0.0
+        if case let .file(file) = wallpaper, !file.isPattern {
+            if let intensity = file.settings.intensity, intensity < 100, theme.overallDarkAppearance == true {
+                dimAlpha = 1.0 - max(0.0, min(1.0, Float(intensity) / 100.0))
+            }
+        }
+        self.dimLayer.opacity = dimAlpha
     }
 
     func update(wallpaper: TelegramWallpaper) {
@@ -915,7 +934,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             gradientColors = file.settings.colors
             gradientAngle = file.settings.rotation ?? 0
         }
-
+        
         var scheduleLoopingEvent = false
         if gradientColors.count >= 3 {
             let mappedColors = gradientColors.map { color -> UIColor in
@@ -1032,6 +1051,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.animateEvent(transition: .animated(duration: 0.7, curve: .linear), extendAnimation: false)
             }
         }
+        
+        self.updateDimming()
     }
 
     func _internalUpdateIsSettingUpWallpaper() {
@@ -1304,6 +1325,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             transition.updateFrame(node: outgoingBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
             outgoingBackgroundNode.update(rect: CGRect(origin: CGPoint(), size: size), within: size, transition: transition)
         }
+        
+        transition.updateFrame(layer: self.dimLayer, frame: CGRect(origin: CGPoint(), size: size))
 
         self.loadPatternForSizeIfNeeded(size: size, displayMode: displayMode, transition: transition)
                 
@@ -1378,6 +1401,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             }
 
             self.updateBubbles()
+            self.updateDimming()
         }
     }
 

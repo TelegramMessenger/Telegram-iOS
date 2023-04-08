@@ -554,9 +554,9 @@ final class ChatThemeScreen: ViewController {
     private let animatedEmojiStickers: [String: [StickerPackItem]]
     private let initiallySelectedEmoticon: String?
     private let peerName: String
+    let canResetWallpaper: Bool
     private let previewTheme: (String?, Bool?) -> Void
     fileprivate let changeWallpaper: () -> Void
-    fileprivate let changeColor: () -> Void
     private let completion: (String?) -> Void
     
     private var presentationData: PresentationData
@@ -578,9 +578,9 @@ final class ChatThemeScreen: ViewController {
         animatedEmojiStickers: [String: [StickerPackItem]],
         initiallySelectedEmoticon: String?,
         peerName: String,
+        canResetWallpaper: Bool,
         previewTheme: @escaping (String?, Bool?) -> Void,
         changeWallpaper: @escaping () -> Void,
-        changeColor: @escaping () -> Void,
         completion: @escaping (String?) -> Void
     ) {
         self.context = context
@@ -588,9 +588,9 @@ final class ChatThemeScreen: ViewController {
         self.animatedEmojiStickers = animatedEmojiStickers
         self.initiallySelectedEmoticon = initiallySelectedEmoticon
         self.peerName = peerName
+        self.canResetWallpaper = canResetWallpaper
         self.previewTheme = previewTheme
         self.changeWallpaper = changeWallpaper
-        self.changeColor = changeColor
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
@@ -1013,18 +1013,22 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     private func updateButtons() {
+        let canResetWallpaper = self.controller?.canResetWallpaper ?? false
+        
         let doneButtonTitle: String
         let otherButtonTitle: String
         var accentButtonTheme = true
+        var destructiveOtherButton = false
         if self.selectedEmoticon == self.initiallySelectedEmoticon {
             doneButtonTitle = self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper
-            otherButtonTitle = self.presentationData.strings.Conversation_Theme_SetColorWallpaper
+            otherButtonTitle = canResetWallpaper ? self.presentationData.strings.Conversation_Theme_ResetWallpaper : self.presentationData.strings.Common_Cancel
             accentButtonTheme = false
+            destructiveOtherButton = canResetWallpaper
         } else if self.selectedEmoticon == nil && self.initiallySelectedEmoticon != nil {
             doneButtonTitle = self.presentationData.strings.Conversation_Theme_Reset
             otherButtonTitle = self.presentationData.strings.Conversation_Theme_OtherOptions
         } else {
-            doneButtonTitle = self.presentationData.strings.Conversation_Theme_Apply
+            doneButtonTitle = self.presentationData.strings.Conversation_Theme_ApplyBackground
             otherButtonTitle = self.presentationData.strings.Conversation_Theme_OtherOptions
         }
     
@@ -1040,7 +1044,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
         self.doneButton.updateTheme(buttonTheme)
         
-        self.otherButton.setTitle(otherButtonTitle, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.otherButton.setTitle(otherButtonTitle, with: Font.regular(17.0), with: destructiveOtherButton ? self.presentationData.theme.actionSheet.destructiveActionTextColor : self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
     }
     
     private var switchThemeIconAnimator: DisplayLinkAnimator?
@@ -1102,7 +1106,11 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         if self.selectedEmoticon != self.initiallySelectedEmoticon {
             self.setEmoticon(self.initiallySelectedEmoticon)
         } else {
-            self.controller?.changeColor()
+            if self.controller?.canResetWallpaper == true {
+                
+            } else {
+                self.cancelButtonPressed()
+            }
         }
     }
     
@@ -1229,7 +1237,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             if let strongSelf = self, count < 2 && currentTimestamp > timestamp + 24 * 60 * 60 {
                 strongSelf.displayedPreviewTooltip = true
                 
-                strongSelf.present?(TooltipScreen(account: strongSelf.context.account, text: isDark ? strongSelf.presentationData.strings.Conversation_Theme_PreviewLight(strongSelf.peerName).string : strongSelf.presentationData.strings.Conversation_Theme_PreviewDark(strongSelf.peerName).string, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                strongSelf.present?(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: isDark ? strongSelf.presentationData.strings.Conversation_Theme_PreviewLight(strongSelf.peerName).string : strongSelf.presentationData.strings.Conversation_Theme_PreviewDark(strongSelf.peerName).string, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
                     return .dismiss(consume: false)
                 }))
                 

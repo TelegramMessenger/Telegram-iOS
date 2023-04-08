@@ -9149,7 +9149,7 @@ Sorry for the inconvenience.";
 "WallpaperPreview.ChatBottomText" = "Enjoy the view.";
 
 "Conversation.Theme.SetPhotoWallpaper" = "Choose Background from Photos";
-"Conversation.Theme.SetColorWallpaper" = "Choose Color as a Background";
+"Conversation.Theme.SetColorWallpaper" = "Set a Color as a Background";
 "Conversation.Theme.OtherOptions" = "Other Options...";
 
 "Conversation.Theme.ChooseWallpaperTitle" = "Choose Background";
@@ -9161,3 +9161,8 @@ Sorry for the inconvenience.";
 
 "WebApp.LaunchMoreInfo" = "More about this bot";
 "WebApp.LaunchConfirmation" = "To launch this web app, you will connect to its website.";
+
+"WallpaperPreview.PreviewInNightMode" = "Preview this background in night mode.";
+"WallpaperPreview.PreviewInDayMode" = "Preview this background in day mode.";
+
+"Conversation.Theme.ApplyBackground" = "Set as Background";

@@ -11,8 +11,8 @@ import TelegramUIPreferences
 import AccountContext
 import AttachmentUI
 
-private func availableGradients(theme: PresentationTheme) -> [[UInt32]] {
-    if theme.overallDarkAppearance {
+private func availableGradients(dark: Bool) -> [[UInt32]] {
+    if dark {
         return [
             [0x1e3557, 0x151a36, 0x1c4352, 0x2a4541] as [UInt32],
             [0x1d223f, 0x1d1832, 0x1b2943, 0x141631] as [UInt32],
@@ -39,8 +39,8 @@ private func availableGradients(theme: PresentationTheme) -> [[UInt32]] {
     }
 }
 
-private func availableColors(theme: PresentationTheme) -> [UInt32] {
-    if theme.overallDarkAppearance {
+private func availableColors(dark: Bool) -> [UInt32] {
+    if dark {
         return [
             0x1D2D3C,
             0x111B26,
@@ -150,6 +150,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     
     var pushController: (ViewController) -> Void = { _ in }
     var dismissControllers: (() -> Void)?
+    var openGallery: (() -> Void)?
     
     public init(context: AccountContext, mode: Mode = .default, canDelete: Bool = false) {
         self.context = context
@@ -192,9 +193,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
             self?.push(controller)
         }
         
-        if canDelete {
-            self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: self.presentationData.strings.Conversation_Theme_ResetWallpaper, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.destructiveActionTextColor, isVisible: true, progress: .none, isEnabled: true)))
-        }
+        self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true)))
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -270,7 +269,11 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     }
     
     public override func loadDisplayNode() {
-        self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, controller: self, gradients: availableGradients(theme: self.presentationData.theme), colors: availableColors(theme: self.presentationData.theme), push: { [weak self] controller in
+        var dark = false
+        if case .default = self.mode {
+            dark = self.presentationData.theme.overallDarkAppearance
+        }
+        self.displayNode = ThemeColorsGridControllerNode(context: self.context, presentationData: self.presentationData, controller: self, gradients: availableGradients(dark: dark), colors: availableColors(dark: dark), push: { [weak self] controller in
             self?.pushController(controller)
         }, pop: { [weak self] in
             if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
@@ -327,12 +330,8 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     }
     
     @objc fileprivate func mainButtonPressed() {
-        guard case let .peer(peer) = self.mode else {
-            return
-        }
-        
-        let _ = self.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: nil).start()
         self.dismiss(animated: true)
+        self.openGallery?()
     }
     
     public var requestAttachmentMenuExpansion: () -> Void = {}
@@ -385,18 +384,25 @@ private final class ThemeColorsGridContext: AttachmentMediaPickerContext {
 }
 
 
-public func standaloneColorPickerController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, canDelete: Bool, push: @escaping (ViewController) -> Void) -> ViewController {
+public func standaloneColorPickerController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    peer: EnginePeer,
+    push: @escaping (ViewController) -> Void,
+    openGallery: @escaping () -> Void
+) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
     controller.requestController = { _, present in
-        let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer), canDelete: canDelete)
+        let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer))
         colorPickerController.pushController = { controller in
             push(controller)
         }
         colorPickerController.dismissControllers = { [weak controller] in
             controller?.dismiss(animated: true)
         }
+        colorPickerController.openGallery = openGallery
         present(colorPickerController, colorPickerController.mediaPickerContext)
     }
     return controller

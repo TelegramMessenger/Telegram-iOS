@@ -196,7 +196,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
     }).start()
 }
 
-public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?,  brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
+public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
     let imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
@@ -279,24 +279,6 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             croppedImage = blurredImage(croppedImage, radius: 30.0)!
         }
         
-        if let brightness, abs(brightness) > 0.01 {
-            if let updatedImage = generateImage(croppedImage.size, contextGenerator: { size, context in
-                let bounds = CGRect(origin: .zero, size: size)
-                if let cgImage = croppedImage.cgImage {
-                    context.draw(cgImage, in: bounds)
-                }
-                if brightness > 0.0 {
-                    context.setFillColor(UIColor(rgb: 0xffffff, alpha: brightness).cgColor)
-                    context.setBlendMode(.overlay)
-                } else {
-                    context.setFillColor(UIColor(rgb: 0x000000, alpha: brightness * -1.0).cgColor)
-                }
-                context.fill(bounds)
-            }) {
-                croppedImage = updatedImage
-            }
-        }
-        
         let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
         let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
         
@@ -309,7 +291,12 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             
-            let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: nil)
+            var intensity: Int32?
+            if let brightness {
+                intensity = Int32(brightness * 100.0)
+            }
+            
+            let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
             let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
             
             let _ = context.account.postbox.transaction({ transaction in
@@ -326,7 +313,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
                 completion()
             }
             
-            let _ = uploadWallpaper(account: context.account, resource: resource, settings: WallpaperSettings(blur: false, motion: mode.contains(.motion), colors: [], intensity: nil), forChat: true).start(next: { status in
+            let _ = uploadWallpaper(account: context.account, resource: resource, settings: WallpaperSettings(blur: false, motion: mode.contains(.motion), colors: [], intensity: intensity), forChat: true).start(next: { status in
                 if case let .complete(wallpaper) = status {
                     if case let .file(file) = wallpaper {
                         context.account.postbox.mediaBox.copyResourceData(from: resource.id, to: file.file.resource.id, synchronous: true)

@@ -676,14 +676,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
-            if strongSelf.presentVoiceMessageDiscardAlert(action: { [weak self] in
-                if let strongSelf = self {
-                    Queue.mainQueue().after(0.1, {
-                        let _ = strongSelf.controllerInteraction?.openMessage(message, mode)
-                    })
+            let displayVoiceMessageDiscardAlert: () -> Bool = {
+                if strongSelf.presentVoiceMessageDiscardAlert(action: { [weak self] in
+                    if let strongSelf = self {
+                        Queue.mainQueue().after(0.1, {
+                            let _ = strongSelf.controllerInteraction?.openMessage(message, mode)
+                        })
+                    }
+                }, performAction: false) {
+                    return false
                 }
-            }, performAction: false) {
-                return false
+                return true
             }
             
             strongSelf.commitPurposefulAction()
@@ -696,6 +699,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
             for media in message.media {
                 if media is TelegramMediaMap {
+                    if !displayVoiceMessageDiscardAlert() {
+                        return false
+                    }
                     isLocation = true
                 }
                 if let file = media as? TelegramMediaFile, file.isInstantVideo {
@@ -707,12 +713,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
                     switch extendedMedia {
                         case .preview:
-                            strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id)
-                            return true
+                            if displayVoiceMessageDiscardAlert() {
+                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id)
+                                return true
+                            } else {
+                                return false
+                            }
                         case .full:
                             break
                     }
                 } else if let action = media as? TelegramMediaAction {
+                    if !displayVoiceMessageDiscardAlert() {
+                        return false
+                    }
                     switch action.action {
                         case .pinnedMessageUpdated:
                             for attribute in message.attributes {
@@ -5839,6 +5852,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 let (themeEmoticonPreview, darkAppearancePreview) = themeEmoticonAndDarkAppearance
                 
+                var chatWallpaper = chatWallpaper
+                
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
                 let previousChatWallpaper = strongSelf.presentationData.chatWallpaper
@@ -5846,7 +5861,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var themeEmoticon = themeEmoticon
                 if let themeEmoticonPreview = themeEmoticonPreview {
                     if !themeEmoticonPreview.isEmpty {
-                        themeEmoticon = themeEmoticonPreview
+                        if themeEmoticon != themeEmoticonPreview {
+                            chatWallpaper = nil
+                            themeEmoticon = themeEmoticonPreview
+                        }
                     } else {
                         themeEmoticon = nil
                     }
@@ -5857,7 +5875,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
-                
+
                 if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == themeEmoticon.strippedEmoji }) {
                     if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
@@ -5896,7 +5914,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             lightWallpaper = theme.chat.defaultWallpaper
                         }
                         
-                        lightTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+                        var preferredBaseTheme: TelegramBaseTheme?
+                        if let baseTheme = themeSettings.themePreferredBaseTheme[themeSettings.theme.index], [.classic, .day].contains(baseTheme) {
+                            preferredBaseTheme = baseTheme
+                        }
+                        
+                        lightTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, baseTheme: preferredBaseTheme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
                     } else {
                         lightTheme = presentationData.theme
                         lightWallpaper = presentationData.chatWallpaper
@@ -5905,7 +5928,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
                         let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
                         
-                        darkTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: automaticTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+                        var preferredBaseTheme: TelegramBaseTheme?
+                        if let baseTheme = themeSettings.themePreferredBaseTheme[automaticTheme.index], [.night, .tinted].contains(baseTheme) {
+                            preferredBaseTheme = baseTheme
+                        } else {
+                            preferredBaseTheme = .night
+                        }
+                        
+                        darkTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: automaticTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
                         
                         if let themeSpecificWallpaper = themeSpecificWallpaper {
                             darkWallpaper = themeSpecificWallpaper
@@ -5943,7 +5973,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let chatWallpaper {
                     presentationData = presentationData.withUpdated(chatWallpaper: chatWallpaper)
                 }
-                
                 
                 let isFirstTime = !strongSelf.didSetPresentationData
                 strongSelf.presentationData = presentationData
@@ -14314,7 +14343,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(account: self.context.account, text: solution.text, textEntities: solution.entities, icon: .info, location: .top, shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: solution.text, textEntities: solution.entities, icon: .info, location: .top, shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {
@@ -14407,7 +14436,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(account: self.context.account, text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {
@@ -14521,7 +14550,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let tooltipScreen = TooltipScreen(account: self.context.account, text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
+        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: psaText, textEntities: psaEntities, icon: .info, location: .top, displayDuration: .custom(10.0), shouldDismissOnTouch: { point in
             return .ignore
         }, openActiveTextItem: { [weak self] item, action in
             guard let strongSelf = self else {
@@ -18508,12 +18537,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let selectedEmoticon: String? = themeEmoticon
             
+            var canResetWallpaper = false
+            if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData {
+                canResetWallpaper = cachedUserData.wallpaper != nil
+            }
+            
             let controller = ChatThemeScreen(
                 context: context,
                 updatedPresentationData: strongSelf.updatedPresentationData,
                 animatedEmojiStickers: animatedEmojiStickers,
                 initiallySelectedEmoticon: selectedEmoticon,
                 peerName: strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "",
+                canResetWallpaper: canResetWallpaper,
                 previewTheme: { [weak self] emoticon, dark in
                     if let strongSelf = self {
                         strongSelf.presentCrossfadeSnapshot()
@@ -18540,54 +18575,47 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    var canDelete = false
-                    if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData {
-                        canDelete = cachedUserData.wallpaper != nil
-                    }
-                    let controller = wallpaperMediaPickerController(
-                        context: strongSelf.context,
-                        updatedPresentationData: strongSelf.updatedPresentationData,
-                        peer: EnginePeer(peer),
-                        canDelete: canDelete,
-                        completion: { asset in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
-                            controller.navigationPresentation = .modal
-                            controller.apply = { [weak self] wallpaper, options, cropRect, brightness in
-                                if let strongSelf = self {
-                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightness: brightness, peerId: peerId, completion: {
-                                        dismissControllers()
-                                    })
+                    var openWallpaperPickerImpl: (() -> Void)?
+                    let openWallpaperPicker = {
+                        let controller = wallpaperMediaPickerController(
+                            context: strongSelf.context,
+                            updatedPresentationData: strongSelf.updatedPresentationData,
+                            peer: EnginePeer(peer),
+                            completion: { asset in
+                                guard let strongSelf = self else {
+                                    return
                                 }
+                                let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
+                                controller.navigationPresentation = .modal
+                                controller.apply = { [weak self] wallpaper, options, cropRect, brightness in
+                                    if let strongSelf = self {
+                                        uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightness: brightness, peerId: peerId, completion: {
+                                            dismissControllers()
+                                        })
+                                    }
+                                }
+                                strongSelf.push(controller)
+                            },
+                            openColors: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let controller = standaloneColorPickerController(context: strongSelf.context, peer: EnginePeer(peer), push: { [weak self] controller in
+                                    if let strongSelf = self {
+                                        strongSelf.push(controller)
+                                    }
+                                }, openGallery: {
+                                    openWallpaperPickerImpl?()
+                                })
+                                controller.navigationPresentation = .flatModal
+                                strongSelf.push(controller)
                             }
-                            strongSelf.push(controller)
-                        }
-                    )
-                    controller.navigationPresentation = .flatModal
-                    strongSelf.push(controller)
-                },
-                changeColor: {
-                    guard let strongSelf = self else {
-                        return
+                        )
+                        controller.navigationPresentation = .flatModal
+                        strongSelf.push(controller)
                     }
-                    if let themeController = strongSelf.themeScreen {
-                        strongSelf.themeScreen = nil
-                        themeController.dimTapped()
-                    }
-                    
-                    var canDelete = false
-                    if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData {
-                        canDelete = cachedUserData.wallpaper != nil
-                    }
-                    let controller = standaloneColorPickerController(context: strongSelf.context, peer: EnginePeer(peer), canDelete: canDelete, push: { [weak self] controller in
-                        if let strongSelf = self {
-                            strongSelf.push(controller)
-                        }
-                    })
-                    controller.navigationPresentation = .flatModal
-                    strongSelf.push(controller)
+                    openWallpaperPickerImpl = openWallpaperPicker
+                    openWallpaperPicker()
                 },
                 completion: { [weak self] emoticon in
                     guard let strongSelf = self, let peerId else {

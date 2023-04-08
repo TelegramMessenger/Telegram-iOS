@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import CheckNode
+import AnimationUI
 
 enum WallpaperOptionButtonValue {
     case check(Bool)
@@ -93,6 +94,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
     enum Content {
         case icon(image: UIImage?, size: CGSize)
         case text(String)
+        case dayNight(isNight: Bool)
     }
     
     var enableSaturation: Bool = false
@@ -115,6 +117,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
     private var backgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
+    private var animationNode: AnimationNode?
     
     func setIcon(_ image: UIImage?) {
         self.iconNode.image = generateTintedImage(image: image, color: .white)
@@ -141,6 +144,12 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         case let .icon(icon, _):
             title = ""
             self.iconNode.image = generateTintedImage(image: icon, color: .white)
+        case let .dayNight(isNight):
+            title = ""
+            let animationNode = AnimationNode(animation: isNight ? "anim_sun_reverse" : "anim_sun", colors: [:], scale: 1.0)
+            animationNode.speed = 1.5
+            animationNode.isUserInteractionEnabled = false
+            self.animationNode = animationNode
         }
         
         self.textNode = ImmediateTextNode()
@@ -152,16 +161,50 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         self.addSubnode(self.iconNode)
         self.addSubnode(self.textNode)
         
+        if let animationNode = self.animationNode {
+            self.addSubnode(animationNode)
+        }
+        
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
                     strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.backgroundNode.alpha = 0.4
+                    
+                    strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.iconNode.alpha = 0.4
+                    
+                    strongSelf.textNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.textNode.alpha = 0.4
+                    
+//                    if let animationNode = strongSelf.animationNode {
+//                        animationNode.layer.removeAnimation(forKey: "opacity")
+//                        animationNode.alpha = 0.4
+//                    }
                 } else {
                     strongSelf.backgroundNode.alpha = 1.0
                     strongSelf.backgroundNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    strongSelf.iconNode.alpha = 1.0
+                    strongSelf.iconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    strongSelf.textNode.alpha = 1.0
+                    strongSelf.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+//                    if let animationNode = strongSelf.animationNode {
+//                        animationNode.alpha = 1.0
+//                        animationNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+//                    }
                 }
             }
+        }
+    }
+    
+    func setIsNight(_ isNight: Bool) {
+        self.animationNode?.setAnimation(name: !isNight ? "anim_sun_reverse" : "anim_sun", colors: [:])
+        self.animationNode?.speed = 1.5
+        Queue.mainQueue().after(0.01) {
+            self.animationNode?.playOnce()
         }
     }
     
@@ -179,6 +222,8 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
             return CGSize(width: ceil(size.width) + 16.0, height: 28.0)
         case let .icon(_, size):
             return size
+        case .dayNight:
+            return CGSize(width: 28.0, height: 28.0)
         }
     }
     
@@ -198,6 +243,11 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         
         if let textSize = self.textSize {
             self.textNode.frame = CGRect(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0), width: textSize.width, height: textSize.height)
+        }
+        
+        if let animationNode = self.animationNode {
+            animationNode.bounds = CGRect(origin: .zero, size: CGSize(width: 24.0, height: 24.0))
+            animationNode.position = CGPoint(x: 14.0, y: 14.0)
         }
     }
 }
@@ -491,7 +541,16 @@ final class WallpaperSliderNode: ASDisplayNode {
         self.view.addGestureRecognizer(tapGestureRecognizer)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+    var ignoreUpdates = false
+    func animateValue(from: CGFloat, to: CGFloat, transition: ContainedViewLayoutTransition = .immediate) {
+        guard let size = self.validLayout else {
+            return
+        }
+        self.internalUpdateLayout(size: size, value: from)
+        self.internalUpdateLayout(size: size, value: to, transition: transition)
+    }
+    
+    func internalUpdateLayout(size: CGSize, value: CGFloat, transition: ContainedViewLayoutTransition = .immediate) {
         self.validLayout = size
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: size))
@@ -506,10 +565,17 @@ final class WallpaperSliderNode: ASDisplayNode {
         }
         
         let range = self.maxValue - self.minValue
-        let value = (self.value - self.minValue) / range
+        let value = (value - self.minValue) / range
         let foregroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: value * size.width, height: size.height))
-        transition.updateFrameAdditive(node: self.foregroundNode, frame: foregroundFrame)
-        transition.updateFrameAdditive(node: self.foregroundLightNode, frame: foregroundFrame)
+        transition.updateFrame(node: self.foregroundNode, frame: foregroundFrame)
+        transition.updateFrame(node: self.foregroundLightNode, frame: foregroundFrame)
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+        guard !self.ignoreUpdates else {
+            return
+        }
+        self.internalUpdateLayout(size: size, value: self.value, transition: transition)
     }
     
     @objc private func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
@@ -525,13 +591,9 @@ final class WallpaperSliderNode: ASDisplayNode {
                 self.value = max(self.minValue, min(self.maxValue, self.value + delta))
                 gestureRecognizer.setTranslation(CGPoint(), in: gestureRecognizer.view)
                 
-                if self.value == 2.0 && previousValue != 2.0 {
+                if self.value == 0.0 && previousValue != 0.0 {
                     self.hapticFeedback.impact(.soft)
                 } else if self.value == 1.0 && previousValue != 1.0 {
-                    self.hapticFeedback.impact(.soft)
-                } else if self.value == 2.5 && previousValue != 2.5 {
-                    self.hapticFeedback.impact(.soft)
-                } else if self.value == 0.05 && previousValue != 0.05 {
                     self.hapticFeedback.impact(.soft)
                 }
                 if abs(previousValue - self.value) >= 0.001 {

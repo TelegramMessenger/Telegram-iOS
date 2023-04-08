@@ -760,8 +760,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }) else {
             return
         }
-                
-        self.present?(TooltipScreen(account: self.account, text: self.presentationData.strings.Call_CameraOrScreenTooltip, style: .light, icon: nil, location: .point(location.offsetBy(dx: 0.0, dy: -14.0), .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _ in
+        
+        self.present?(TooltipScreen(account: self.account, sharedContext: self.sharedContext, text: self.presentationData.strings.Call_CameraOrScreenTooltip, style: .light, icon: nil, location: .point(location.offsetBy(dx: 0.0, dy: -14.0), .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _ in
             return .dismiss(consume: false)
         }))
     }

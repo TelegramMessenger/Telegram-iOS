@@ -2010,18 +2010,18 @@ public func wallpaperMediaPickerController(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     peer: EnginePeer,
-    canDelete: Bool,
-    completion: @escaping (PHAsset) -> Void = { _ in }
+    completion: @escaping (PHAsset) -> Void = { _ in },
+    openColors: @escaping () -> Void
 ) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
     controller.requestController = { [weak controller] _, present in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let mediaPickerController = MediaPickerScreen(context: context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper), mainButtonState: canDelete ? AttachmentMainButtonState(text: presentationData.strings.Conversation_Theme_ResetWallpaper, font: .regular, background: .color(.clear), textColor: presentationData.theme.actionSheet.destructiveActionTextColor, isVisible: true, progress: .none, isEnabled: true) : nil, mainButtonAction: canDelete ? {
-            let _ = context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: nil).start()
+        let mediaPickerController = MediaPickerScreen(context: context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper), mainButtonState: AttachmentMainButtonState(text: presentationData.strings.Conversation_Theme_SetColorWallpaper, font: .regular, background: .color(.clear), textColor: presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true), mainButtonAction: {
             controller?.dismiss(animated: true)
-        } : nil)
+            openColors()
+        })
         mediaPickerController.customSelection = completion
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
     }

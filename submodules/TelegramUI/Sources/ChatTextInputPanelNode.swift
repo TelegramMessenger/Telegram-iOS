@@ -1483,7 +1483,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         tooltipController.location = .point(location, .bottom)
                     }
                 } else {
-                    let controller = TooltipScreen(account: context.account, text: interfaceState.strings.Bot_TapToUse, icon: .downArrows, location: .point(location, .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _ in
+                    let controller = TooltipScreen(account: context.account, sharedContext: context.sharedContext, text: interfaceState.strings.Bot_TapToUse, icon: .downArrows, location: .point(location, .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _ in
                         return .ignore
                     })
                     controller.alwaysVisible = true
