@@ -21,7 +21,7 @@
 @protocol MTTcpConnectionInterfaceDelegate <NSObject>
 
 - (void)connectionInterfaceDidReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)tag;
-- (void)connectionInterfaceDidReadData:(NSData * _Nonnull)rawData withTag:(long)tag;
+- (void)connectionInterfaceDidReadData:(NSData * _Nonnull)rawData withTag:(long)tag networkType:(int32_t)networkType;
 - (void)connectionInterfaceDidConnect;
 - (void)connectionInterfaceDidDisconnectWithError:(NSError * _Nullable)error;
 

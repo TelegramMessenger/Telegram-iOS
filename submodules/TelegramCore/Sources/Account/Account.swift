@@ -970,6 +970,8 @@ public class Account {
     private var lastSmallLogPostTimestamp: Double?
     private let smallLogPostDisposable = MetaDisposable()
     
+    let networkStatsContext: NetworkStatsContext
+    
     public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
         self.accountManager = accountManager
         self.id = id
@@ -982,6 +984,8 @@ public class Account {
         
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
+        
+        self.networkStatsContext = NetworkStatsContext(postbox: postbox)
         
         self.peerInputActivityManager = PeerInputActivityManager()
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in

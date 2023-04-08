@@ -5119,14 +5119,15 @@ enum GCDAsyncSocketConfig
 		result = [NSData dataWithBytesNoCopy:buffer length:currentRead->bytesDone freeWhenDone:NO];
 	}
 	
-	if (delegateQueue && [delegate respondsToSelector:@selector(socket:didReadData:withTag:)])
+    if (delegateQueue && [delegate respondsToSelector:@selector(socket:didReadData:withTag:networkType:)])
 	{
 		__strong id theDelegate = delegate;
 		GCDAsyncReadPacket *theRead = currentRead; // Ensure currentRead retained since result may not own buffer
+        int32_t networkType = _interface == MTNetworkUsageManagerInterfaceOther ? 0 : 1;
 		
 		dispatch_async(delegateQueue, ^{ @autoreleasepool {
 			
-			[theDelegate socket:self didReadData:result withTag:theRead->tag];
+			[theDelegate socket:self didReadData:result withTag:theRead->tag networkType:networkType];
 		}});
 	}
 	

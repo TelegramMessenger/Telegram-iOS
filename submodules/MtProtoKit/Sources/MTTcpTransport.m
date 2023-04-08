@@ -452,7 +452,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)tcpConnectionReceivedData:(MTTcpConnection *)connection data:(NSData *)data
+- (void)tcpConnectionReceivedData:(MTTcpConnection *)connection networkType:(int32_t)networkType data:(NSData *)data
 {
     MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
@@ -464,7 +464,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [self startActualizationPingResendTimer];
         
         __weak MTTcpTransport *weakSelf = self;
-        [self _processIncomingData:data scheme:connection.scheme transactionId:connection.internalId requestTransactionAfterProcessing:false decodeResult:^(id transactionId, bool success)
+        [self _processIncomingData:data scheme:connection.scheme networkType:networkType transactionId:connection.internalId requestTransactionAfterProcessing:false decodeResult:^(id transactionId, bool success)
         {
             if (success)
             {
@@ -760,7 +760,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
+- (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector networkType:(int32_t)networkType
 {
     if ([incomingMessage.body isKindOfClass:[MTPongMessage class]])
     {
