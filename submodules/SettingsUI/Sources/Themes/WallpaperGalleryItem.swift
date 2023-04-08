@@ -177,6 +177,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.patternButtonNode.setEnabled(false)
         
         self.serviceBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.33))
+        self.serviceBackgroundNode.isHidden = true
         
         var sliderValueChangedImpl: ((CGFloat) -> Void)?
         self.sliderNode = WallpaperSliderNode(minValue: 0.0, maxValue: 1.0, value: 0.7, valueChanged: { value, _ in
@@ -627,6 +628,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                     self.wrapperNode.addSubnode(self.cropNode)
                     showPreviewTooltip = true
+                    self.serviceBackgroundNode.isHidden = false
                 case let .contextResult(result):
                     var imageDimensions: CGSize?
                     var imageResource: TelegramMediaResource?
@@ -682,11 +684,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     subtitleSignal = .single(nil)
                     self.wrapperNode.addSubnode(self.cropNode)
                     showPreviewTooltip = true
+                    self.serviceBackgroundNode.isHidden = false
             }
             self.contentSize = contentSize
             
-            //self.cancelButtonNode.dark = !isEditable
-            //self.shareButtonNode.dark = !isEditable
             self.shareButtonNode.isHidden = !canShare
             
             if self.cropNode.supernode == nil {

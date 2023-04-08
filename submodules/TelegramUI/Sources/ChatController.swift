@@ -18559,7 +18559,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, dark)))
                     }
                 },
-                changeWallpaper: {
+                changeWallpaper: { [weak self] in
                     guard let strongSelf = self, let peerId else {
                         return
                     }
@@ -18630,6 +18630,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 completion: { [weak self] emoticon in
                     guard let strongSelf = self, let peerId else {
                         return
+                    }
+                    if canResetWallpaper {
+                        let _ = context.engine.themes.setChatWallpaper(peerId: peerId, wallpaper: nil).start()
                     }
                     strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon ?? "", nil)))
                     let _ = context.engine.themes.setChatTheme(peerId: peerId, emoticon: emoticon).start(completed: { [weak self] in
