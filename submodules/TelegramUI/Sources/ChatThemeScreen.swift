@@ -639,20 +639,20 @@ final class ChatThemeScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.dismiss()
+            strongSelf.dismiss(animated: true)
             if strongSelf.initiallySelectedEmoticon == nil && emoticon == nil {
             } else {
                 strongSelf.completion(emoticon)
             }
         }
         self.controllerNode.dismiss = { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            self?.dismiss(animated: false)
         }
         self.controllerNode.cancel = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.dismiss()
+            strongSelf.dismiss(animated: true)
             strongSelf.previewTheme(nil, nil)
         }
     }
@@ -672,15 +672,22 @@ final class ChatThemeScreen: ViewController {
         }
     }
     
-    override public func dismiss(completion: (() -> Void)? = nil) {
+    override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
                 controller.dismiss()
             }
             return true
         })
-    
-        self.controllerNode.animateOut(completion: completion)
+        
+        if flag {
+            self.controllerNode.animateOut(completion: {
+                super.dismiss(animated: flag, completion: completion)
+                completion?()
+            })
+        } else {
+            super.dismiss(animated: flag, completion: completion)
+        }
         
         self.dismissed?()
     }
