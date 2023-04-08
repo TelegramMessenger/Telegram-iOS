@@ -293,7 +293,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             
             var intensity: Int32?
             if let brightness {
-                intensity = Int32(brightness * 100.0)
+                intensity = max(1, Int32(brightness * 100.0))
             }
             
             let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)

@@ -10970,6 +10970,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }
                     
+                    if strongSelf.effectiveNavigationController?.topViewController !== strongSelf {
+                        return false
+                    }
+                    
                     if strongSelf.presentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
                         return false
                     }
@@ -18617,6 +18621,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     openWallpaperPickerImpl = openWallpaperPicker
                     openWallpaperPicker()
                 },
+                resetWallpaper: { [weak self] in
+                    guard let strongSelf = self, let peerId else {
+                        return
+                    }
+                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peerId, wallpaper: nil).start()
+                },
                 completion: { [weak self] emoticon in
                     guard let strongSelf = self, let peerId else {
                         return
@@ -18629,6 +18639,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }
             )
+            controller.navigationPresentation = .flatModal
             controller.passthroughHitTestImpl = { [weak self] _ in
                 if let strongSelf = self {
                     return strongSelf.chatDisplayNode.historyNode.view
@@ -18644,7 +18655,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.historyNode.tapped = { [weak controller] in
                 controller?.dimTapped()
             }
-            strongSelf.present(controller, in: .window(.root))
+            strongSelf.push(controller)
+            //strongSelf.present(controller, in: .window(.root))
             strongSelf.themeScreen = controller
         })
     }

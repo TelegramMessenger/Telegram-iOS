@@ -385,32 +385,40 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         override func didLoad() {
             super.didLoad()
             
+            guard let controller = self.controller else {
+                return
+            }
+            
             self.gridNode.scrollView.alwaysBounceVertical = true
             self.gridNode.scrollView.showsVerticalScrollIndicator = false
             
-            let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
-            selectionGesture.delegate = self
-            selectionGesture.began = { [weak self] in
-                self?.controller?.cancelPanGesture()
-            }
-            selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
-                self?.gridNode.scrollView.isScrollEnabled = isEnabled
-            }
-            selectionGesture.itemAt = { [weak self] point in
-                if let strongSelf = self, let itemNode = strongSelf.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
-                    return (selectableItem, strongSelf.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
-                } else {
-                    return nil
+            if case let .assets(_, mode) = controller.subject, case .wallpaper = mode {
+                
+            } else {
+                let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
+                selectionGesture.delegate = self
+                selectionGesture.began = { [weak self] in
+                    self?.controller?.cancelPanGesture()
                 }
-            }
-            selectionGesture.updateSelection = { [weak self] asset, selected in
-                if let strongSelf = self {
-                    strongSelf.controller?.interaction?.selectionState?.setItem(asset, selected: selected, animated: true, sender: nil)
+                selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
+                    self?.gridNode.scrollView.isScrollEnabled = isEnabled
                 }
+                selectionGesture.itemAt = { [weak self] point in
+                    if let strongSelf = self, let itemNode = strongSelf.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let selectableItem = itemNode.selectableItem {
+                        return (selectableItem, strongSelf.controller?.interaction?.selectionState?.isIdentifierSelected(selectableItem.uniqueIdentifier) ?? false)
+                    } else {
+                        return nil
+                    }
+                }
+                selectionGesture.updateSelection = { [weak self] asset, selected in
+                    if let strongSelf = self {
+                        strongSelf.controller?.interaction?.selectionState?.setItem(asset, selected: selected, animated: true, sender: nil)
+                    }
+                }
+                selectionGesture.sideInset = 44.0
+                self.gridNode.view.addGestureRecognizer(selectionGesture)
+                self.selectionGesture = selectionGesture
             }
-            selectionGesture.sideInset = 44.0
-            self.gridNode.view.addGestureRecognizer(selectionGesture)
-            self.selectionGesture = selectionGesture
             
             if let controller = self.controller, case let .assets(collection, _) = controller.subject, collection != nil {
                 self.gridNode.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
@@ -741,7 +749,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
     
             if let customSelection = controller.customSelection {
+                self.openingMedia = true
                 customSelection(fetchResult[index])
+                Queue.mainQueue().after(0.3) {
+                    self.openingMedia = false
+                }
                 return
             }
             
@@ -2016,6 +2028,7 @@ public func wallpaperMediaPickerController(
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
+    //controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     controller.requestController = { [weak controller] _, present in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let mediaPickerController = MediaPickerScreen(context: context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper), mainButtonState: AttachmentMainButtonState(text: presentationData.strings.Conversation_Theme_SetColorWallpaper, font: .regular, background: .color(.clear), textColor: presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true), mainButtonAction: {

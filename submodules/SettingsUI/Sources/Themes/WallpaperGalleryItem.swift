@@ -1433,7 +1433,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let _ = (signal
         |> deliverOnMainQueue).start(next: { [weak self] count, timestamp in
-            if let strongSelf = self, (count < 2 && currentTimestamp > timestamp + 24 * 60 * 60) || "".isEmpty {
+            if let strongSelf = self, (count < 2 && currentTimestamp > timestamp + 24 * 60 * 60) {
                 strongSelf.displayedPreviewTooltip = true
                 
                 let controller = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: isDark ? strongSelf.presentationData.strings.WallpaperPreview_PreviewInDayMode : strongSelf.presentationData.strings.WallpaperPreview_PreviewInNightMode, style: .customBlur(UIColor(rgb: 0x333333, alpha: 0.33)), icon: nil, location: .point(frame.offsetBy(dx: 1.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in

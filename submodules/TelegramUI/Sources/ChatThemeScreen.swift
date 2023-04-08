@@ -557,6 +557,7 @@ final class ChatThemeScreen: ViewController {
     let canResetWallpaper: Bool
     private let previewTheme: (String?, Bool?) -> Void
     fileprivate let changeWallpaper: () -> Void
+    fileprivate let resetWallpaper: () -> Void
     private let completion: (String?) -> Void
     
     private var presentationData: PresentationData
@@ -581,6 +582,7 @@ final class ChatThemeScreen: ViewController {
         canResetWallpaper: Bool,
         previewTheme: @escaping (String?, Bool?) -> Void,
         changeWallpaper: @escaping () -> Void,
+        resetWallpaper: @escaping () -> Void,
         completion: @escaping (String?) -> Void
     ) {
         self.context = context
@@ -591,11 +593,14 @@ final class ChatThemeScreen: ViewController {
         self.canResetWallpaper = canResetWallpaper
         self.previewTheme = previewTheme
         self.changeWallpaper = changeWallpaper
+        self.resetWallpaper = resetWallpaper
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.blocksBackgroundWhenInOverlay = true
         
@@ -1107,7 +1112,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             self.setEmoticon(self.initiallySelectedEmoticon)
         } else {
             if self.controller?.canResetWallpaper == true {
-                
+                self.controller?.resetWallpaper()
+                self.cancelButtonPressed()
             } else {
                 self.cancelButtonPressed()
             }
