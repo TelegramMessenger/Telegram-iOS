@@ -147,7 +147,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         case let .dayNight(isNight):
             title = ""
             let animationNode = AnimationNode(animation: isNight ? "anim_sun_reverse" : "anim_sun", colors: [:], scale: 1.0)
-            animationNode.speed = 1.5
+            animationNode.speed = 1.66
             animationNode.isUserInteractionEnabled = false
             self.animationNode = animationNode
         }
@@ -202,10 +202,8 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
     
     func setIsNight(_ isNight: Bool) {
         self.animationNode?.setAnimation(name: !isNight ? "anim_sun_reverse" : "anim_sun", colors: [:])
-        self.animationNode?.speed = 1.5
-        Queue.mainQueue().after(0.01) {
-            self.animationNode?.playOnce()
-        }
+        self.animationNode?.speed = 1.66
+        self.animationNode?.playOnce()
     }
     
     var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {

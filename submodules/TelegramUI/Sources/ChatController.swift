@@ -18556,9 +18556,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            
-            let selectedEmoticon: String? = themeEmoticon
-            
             var canResetWallpaper = false
             if let cachedUserData = strongSelf.peerView?.cachedData as? CachedUserData {
                 canResetWallpaper = cachedUserData.wallpaper != nil
@@ -18568,7 +18565,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 context: context,
                 updatedPresentationData: strongSelf.updatedPresentationData,
                 animatedEmojiStickers: animatedEmojiStickers,
-                initiallySelectedEmoticon: selectedEmoticon,
+                initiallySelectedEmoticon: themeEmoticon,
                 peerName: strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "",
                 canResetWallpaper: canResetWallpaper,
                 previewTheme: { [weak self] emoticon, dark in
@@ -18596,7 +18593,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             navigationController.setViewControllers(controllers, animated: true)
                         }
                     }
-                    
                     var openWallpaperPickerImpl: (() -> Void)?
                     let openWallpaperPicker = {
                         let controller = wallpaperMediaPickerController(
@@ -18677,7 +18673,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 controller?.dimTapped()
             }
             strongSelf.push(controller)
-            //strongSelf.present(controller, in: .window(.root))
             strongSelf.themeScreen = controller
         })
     }
@@ -18711,7 +18706,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }) {
                     let isEmoji = actions[0].0.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
-                    
                     strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_MultipleRemovedText(Int32(actions.count)) : presentationData.strings.StickerPackActionInfo_MultipleRemovedText(Int32(actions.count)), undo: true, info: actions[0].0, topItem: actions[0].1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
                         if case .undo = action {
                             var itemsAndIndices: [(StickerPackCollectionInfo, [StickerPackItem], Int)] = actions.compactMap { action -> (StickerPackCollectionInfo, [StickerPackItem], Int)? in
@@ -18731,7 +18725,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             } else if let (info, items, action) = actions.first {
                 let isEmoji = info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks
-                
                 switch action {
                 case .add:
                     strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedTitle : presentationData.strings.StickerPackActionInfo_AddedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_AddedText(info.title).string : presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in

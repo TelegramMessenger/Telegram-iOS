@@ -901,6 +901,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 return
             }
             
+            let selectedEmoticon = selectedEmoticon?.strippedEmoji
+            
             let isFirstTime = strongSelf.entries == nil
             let presentationData = strongSelf.presentationData
                 
@@ -910,7 +912,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 guard let emoticon = theme.emoticon else {
                     continue
                 }
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon?.strippedEmoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
@@ -993,7 +995,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized {
             if let index = transition.entries.firstIndex(where: { entry in
-                return entry.emoticon == self.initiallySelectedEmoticon
+                return entry.emoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji
             }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-57.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
@@ -1031,7 +1033,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         let otherButtonTitle: String
         var accentButtonTheme = true
         var destructiveOtherButton = false
-        if self.selectedEmoticon == self.initiallySelectedEmoticon {
+        if self.selectedEmoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji {
             doneButtonTitle = self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper
             otherButtonTitle = canResetWallpaper ? self.presentationData.strings.Conversation_Theme_ResetWallpaper : self.presentationData.strings.Common_Cancel
             accentButtonTheme = false
@@ -1115,7 +1117,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     @objc func otherButtonPressed() {
-        if self.selectedEmoticon != self.initiallySelectedEmoticon {
+        if self.selectedEmoticon?.strippedEmoji != self.initiallySelectedEmoticon?.strippedEmoji {
             self.setEmoticon(self.initiallySelectedEmoticon)
         } else {
             if self.controller?.canResetWallpaper == true {
@@ -1128,7 +1130,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     func dimTapped() {
-        if self.selectedEmoticon == self.initiallySelectedEmoticon {
+        if self.selectedEmoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji {
             self.cancelButtonPressed()
         } else {
             let alertController = textAlertController(context: self.context, updatedPresentationData: (self.presentationData, .single(self.presentationData)), title: nil, text: self.presentationData.strings.Conversation_Theme_DismissAlert, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_Theme_DismissAlertApply, action: { [weak self] in

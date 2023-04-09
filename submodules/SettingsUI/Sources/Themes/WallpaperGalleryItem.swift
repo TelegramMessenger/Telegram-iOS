@@ -314,6 +314,123 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.action?()
     }
     
+    private func switchTheme() {
+        if let messageNodes = self.messageNodes {
+            for messageNode in messageNodes.prefix(2) {
+                if let snapshotView = messageNode.view.snapshotContentTree() {
+                    messageNode.view.addSubview(snapshotView)
+                    snapshotView.frame = messageNode.bounds
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
+        }
+        let themeSettings = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+        |> map { sharedData -> PresentationThemeSettings in
+            let themeSettings: PresentationThemeSettings
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
+                themeSettings = current
+            } else {
+                themeSettings = PresentationThemeSettings.defaultSettings
+            }
+            return themeSettings
+        }
+        
+        let _ = (themeSettings
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] themeSettings in
+            guard let strongSelf = self else {
+                return
+            }
+            var presentationData = strongSelf.presentationData
+            
+            let lightTheme: PresentationTheme
+            let lightWallpaper: TelegramWallpaper
+            
+            let darkTheme: PresentationTheme
+            let darkWallpaper: TelegramWallpaper
+            
+            if !strongSelf.isDarkAppearance {
+                darkTheme = presentationData.theme
+                darkWallpaper = presentationData.chatWallpaper
+                
+                var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+                if let colors = currentColors, colors.baseColor == .theme {
+                    currentColors = nil
+                }
+                
+                let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+                
+                if let themeSpecificWallpaper = themeSpecificWallpaper {
+                    lightWallpaper = themeSpecificWallpaper
+                } else {
+                    let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, preview: true) ?? defaultPresentationTheme
+                    lightWallpaper = theme.chat.defaultWallpaper
+                }
+                
+                var preferredBaseTheme: TelegramBaseTheme?
+                if let baseTheme = themeSettings.themePreferredBaseTheme[themeSettings.theme.index], [.classic, .day].contains(baseTheme) {
+                    preferredBaseTheme = baseTheme
+                }
+                
+                lightTheme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeSettings.theme, baseTheme: preferredBaseTheme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+            } else {
+                lightTheme = presentationData.theme
+                lightWallpaper = presentationData.chatWallpaper
+                
+                let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
+                let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
+                
+                var preferredBaseTheme: TelegramBaseTheme?
+                if let baseTheme = themeSettings.themePreferredBaseTheme[automaticTheme.index], [.night, .tinted].contains(baseTheme) {
+                    preferredBaseTheme = baseTheme
+                } else {
+                    preferredBaseTheme = .night
+                }
+                
+                darkTheme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: automaticTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+                
+                if let themeSpecificWallpaper = themeSpecificWallpaper {
+                    darkWallpaper = themeSpecificWallpaper
+                } else {
+                    switch lightWallpaper {
+                        case .builtin, .color, .gradient:
+                            darkWallpaper = darkTheme.chat.defaultWallpaper
+                        case .file:
+                            if lightWallpaper.isPattern {
+                                darkWallpaper = darkTheme.chat.defaultWallpaper
+                            } else {
+                                darkWallpaper = lightWallpaper
+                            }
+                        default:
+                            darkWallpaper = lightWallpaper
+                    }
+                }
+            }
+            
+            if strongSelf.isDarkAppearance {
+                darkTheme.forceSync = true
+                Queue.mainQueue().after(1.0, {
+                    darkTheme.forceSync = false
+                })
+                presentationData = presentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkWallpaper)
+            } else {
+                lightTheme.forceSync = true
+                Queue.mainQueue().after(1.0, {
+                    lightTheme.forceSync = false
+                })
+                presentationData = presentationData.withUpdated(theme: lightTheme).withUpdated(chatWallpaper: lightWallpaper)
+            }
+            
+            strongSelf.presentationData = presentationData
+            
+            if let (layout, _) = strongSelf.validLayout {
+                strongSelf.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
+        })
+    }
     
     @objc private func dayNightPressed() {
         self.isDarkAppearance = !self.isDarkAppearance
@@ -332,6 +449,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.updateIntensity(transition: .animated(duration: 0.3, curve: .easeInOut))
             }
         }
+        
+        self.switchTheme()
     }
     
     private func animateIntensityChange(delay: Double) {
@@ -1278,7 +1397,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
         }
         
-        let theme = self.presentationData.theme.withUpdated(preview: false)
+        let theme = self.presentationData.theme
                    
         let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message1], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, isCentered: false))
@@ -1296,18 +1415,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
-            if self.validMessages != [topMessageText, bottomMessageText] {
-                self.validMessages = [topMessageText, bottomMessageText]
-                for i in 0 ..< items.count {
-                    items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
-                        let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+            for i in 0 ..< items.count {
+                items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
+                    let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
 
-                        messageNodes[i].contentSize = layout.contentSize
-                        messageNodes[i].insets = layout.insets
-                        messageNodes[i].frame = nodeFrame
+                    messageNodes[i].contentSize = layout.contentSize
+                    messageNodes[i].insets = layout.insets
+                    messageNodes[i].frame = nodeFrame
 
-                        apply(ListViewItemApply(isOnScreen: true))
-                    }
+                    apply(ListViewItemApply(isOnScreen: true))
                 }
             }
         } else {

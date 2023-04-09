@@ -144,7 +144,11 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager<Tele
                                         return (thumbnailData, betterFullSizeData ?? fullSizeData, complete)
                                     })
                             } else {
-                                return .single((thumbnailData, fullSizeData, complete))
+                                if thumbnailData == nil, let decodedThumbnailData = decodedThumbnailData {
+                                    return .single((decodedThumbnailData, fullSizeData, complete))
+                                } else {
+                                    return .single((thumbnailData, fullSizeData, complete))
+                                }
                             }
                         }
                     }
