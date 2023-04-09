@@ -205,8 +205,8 @@ private func fetchCachedStickerAJpegRepresentation(account: Account, resource: M
                 }, scale: 1.0)
                 
                 if let alphaImage = alphaImage, let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
-                    CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
-                    CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
+                    CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
+                    CGImageDestinationSetProperties(alphaDestination, NSDictionary() as CFDictionary)
                     
                     let colorQuality: Float
                     let alphaQuality: Float
@@ -270,7 +270,7 @@ private func fetchCachedScaledImageRepresentation(resource: MediaResource, resou
                 }, scale: 1.0)!
                 
                 if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                    CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                    CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
                     
                     let colorQuality: Float = 0.5
                     
@@ -330,7 +330,7 @@ private func fetchCachedVideoFirstFrameRepresentation(account: Account, resource
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                    CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                    CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
                     
                     let colorQuality: Float = 0.6
                     
@@ -371,7 +371,7 @@ private func fetchCachedScaledVideoFirstFrameRepresentation(account: Account, re
                         }, scale: 1.0)!
                         
                         if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                            CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                            CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
                             
                             let colorQuality: Float = 0.5
                             
@@ -399,7 +399,7 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorImage = blurredImage(image, radius: 20.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                    CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                    CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
                     
                     let colorQuality: Float = 0.5
                     
@@ -448,7 +448,7 @@ private func fetchCachedBlurredWallpaperRepresentation(account: Account, resourc
                 let url = URL(fileURLWithPath: path)
                 
                 if let colorImage = blurredImage(image, radius: 20.0), let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                    CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                    CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
                     
                     let colorQuality: Float = 0.5
                     
@@ -491,7 +491,7 @@ private func fetchCachedAlbumArtworkRepresentation(account: Account, resource: M
                     })!
                     
                     if let colorDestination = CGImageDestinationCreateWithURL(url as CFURL, kUTTypeJPEG, 1, nil) {
-                        CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
+                        CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
                         
                         let colorQuality: Float = 0.5
                         
