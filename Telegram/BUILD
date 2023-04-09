@@ -28,6 +28,7 @@ load("@build_bazel_rules_swift//swift:swift.bzl",
 load(
     "@rules_xcodeproj//xcodeproj:defs.bzl",
     "top_level_target",
+    "top_level_targets",
     "xcodeproj",
 )
 
@@ -1985,9 +1986,12 @@ xcodeproj(
     bazel_path = telegram_bazel_path,
     project_name = "Telegram",
     tags = ["manual"],
-    top_level_targets = [
-        ":Telegram",
-    ],
+    top_level_targets = top_level_targets(
+        labels = [
+            ":Telegram",
+        ],
+        target_environments = ["device", "simulator"],
+    ),
 )
 
 # Temporary targets used to simplify webrtc build tests
