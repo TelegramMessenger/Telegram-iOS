@@ -18594,12 +18594,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     var openWallpaperPickerImpl: (() -> Void)?
-                    let openWallpaperPicker = {
+                    let openWallpaperPicker = { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
                         let controller = wallpaperMediaPickerController(
                             context: strongSelf.context,
                             updatedPresentationData: strongSelf.updatedPresentationData,
                             peer: EnginePeer(peer),
-                            completion: { asset in
+                            completion: { [weak self] asset in
                                 guard let strongSelf = self else {
                                     return
                                 }

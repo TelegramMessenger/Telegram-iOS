@@ -425,6 +425,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             
             strongSelf.presentationData = presentationData
+            strongSelf.nativeNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
             
             if let (layout, _) = strongSelf.validLayout {
                 strongSelf.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -527,6 +528,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let progressAction = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: presentationData.theme.rootController.navigationBar.accentTextColor))
             
             var isBlurrable = true
+            
+            self.nativeNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
 
             switch entry {
             case let .wallpaper(wallpaper, _):
@@ -562,8 +565,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 }
             case .asset:
                 self.nativeNode._internalUpdateIsSettingUpWallpaper()
-                //self.nativeNode.update(wallpaper: self.presentationData.chatWallpaper)
-                self.nativeNode.isHidden = true
+                
+                //self.nativeNode.update(wallpaper: .color(0xff000000))
+                self.nativeNode.isHidden = false
                 self.patternButtonNode.isSelected = false
                 self.playButtonNode.setIcon(self.playButtonRotateImage)
             default:
@@ -571,9 +575,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.patternButtonNode.isSelected = false
                 self.playButtonNode.setIcon(self.playButtonRotateImage)
             }
-            
-            self.nativeNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
-            
+                        
             var canShare = false
             switch entry {
                 case let .wallpaper(wallpaper, message):
@@ -814,6 +816,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.wrapperNode.addSubnode(self.imageNode)
                 self.wrapperNode.addSubnode(self.nativeNode)
             } else {
+                self.wrapperNode.insertSubnode(self.nativeNode, at: 0)
                 self.imageNode.contentMode = .scaleToFill
             }
             
@@ -833,6 +836,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     }
                     strongSelf.blurredNode.image = image
                     imagePromise.set(.single(image))
+                    
+                    if case .asset = entry, let image, let data = image.jpegData(compressionQuality: 0.5) {
+                        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                        strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                        
+                        let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], WallpaperSettings())
+                        strongSelf.nativeNode.update(wallpaper: wallpaper)
+                    }
                 }
             }
             self.fetchDisposable.set(fetchSignal.start())
@@ -1456,7 +1467,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         if let _ = serviceMessageText, let messageNodes = self.messageNodes, let node = messageNodes.last {
-            if let backgroundNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.first {
+            if let backgroundNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.first, let backdropNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.last?.subnodes?.last?.subnodes?.first {
+                backdropNode.isHidden = true            
                 let serviceBackgroundFrame = backgroundNode.view.convert(backgroundNode.bounds, to: self.view).offsetBy(dx: 0.0, dy: -1.0).insetBy(dx: 0.0, dy: -1.0)
                 transition.updateFrame(node: self.serviceBackgroundNode, frame: serviceBackgroundFrame)
                 self.serviceBackgroundNode.update(size: serviceBackgroundFrame.size, cornerRadius: serviceBackgroundFrame.height / 2.0, transition: transition)
