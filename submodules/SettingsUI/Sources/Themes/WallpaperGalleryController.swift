@@ -176,7 +176,7 @@ public class WallpaperGalleryController: ViewController {
     private let context: AccountContext
     private let source: WallpaperListSource
     private let mode: Mode
-    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
+    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?, CGFloat?) -> Void)?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -437,6 +437,12 @@ public class WallpaperGalleryController: ViewController {
         }
                 
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
+        switch self.source {
+        case .asset, .contextResult:
+            toolbarNode.dark = false
+        default:
+            toolbarNode.dark = true
+        }
         self.toolbarNode = toolbarNode
         overlayNode.addSubnode(toolbarNode)
         
@@ -453,7 +459,7 @@ public class WallpaperGalleryController: ViewController {
                         let entry = strongSelf.entries[centralItemNode.index]
                         
                         if case .peer = strongSelf.mode {
-                            strongSelf.apply?(entry, options, centralItemNode.cropRect)
+                            strongSelf.apply?(entry, options, centralItemNode.cropRect, centralItemNode.brightness)
                             return
                         }
                         
@@ -611,7 +617,7 @@ public class WallpaperGalleryController: ViewController {
                                 break
                         }
 
-                        strongSelf.apply?(entry, options, centralItemNode.cropRect)
+                        strongSelf.apply?(entry, options, centralItemNode.cropRect, centralItemNode.brightness)
                     }
                 }
             }

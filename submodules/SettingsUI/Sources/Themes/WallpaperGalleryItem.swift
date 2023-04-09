@@ -19,6 +19,8 @@ import WallpaperResources
 import AppBundle
 import WallpaperBackgroundNode
 import TextFormat
+import TooltipUI
+import TelegramNotices
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool
@@ -83,7 +85,7 @@ private func reference(for resource: MediaResource, media: Media, message: Messa
 
 final class WallpaperGalleryItemNode: GalleryItemNode {
     private let context: AccountContext
-    private let presentationData: PresentationData
+    private var presentationData: PresentationData
     
     var entry: WallpaperGalleryEntry?
     var source: WallpaperListSource?
@@ -95,22 +97,27 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     let wrapperNode: ASDisplayNode
     let imageNode: TransformImageNode
     let nativeNode: WallpaperBackgroundNode
+    let brightnessNode: ASDisplayNode
     private let statusNode: RadialStatusNode
     private let blurredNode: BlurredImageNode
     let cropNode: WallpaperCropNode
     
-    private var cancelButtonNode: WallpaperNavigationButtonNode
-    private var shareButtonNode: WallpaperNavigationButtonNode
+    private let cancelButtonNode: WallpaperNavigationButtonNode
+    private let shareButtonNode: WallpaperNavigationButtonNode
+    private let dayNightButtonNode: WallpaperNavigationButtonNode
 
-    private var blurButtonNode: WallpaperOptionButtonNode
-    private var motionButtonNode: WallpaperOptionButtonNode
-    private var patternButtonNode: WallpaperOptionButtonNode
-    private var colorsButtonNode: WallpaperOptionButtonNode
-    private var playButtonNode: WallpaperNavigationButtonNode
+    private let blurButtonNode: WallpaperOptionButtonNode
+    private let motionButtonNode: WallpaperOptionButtonNode
+    private let patternButtonNode: WallpaperOptionButtonNode
+    private let colorsButtonNode: WallpaperOptionButtonNode
+    private let playButtonNode: WallpaperNavigationButtonNode
+    private let sliderNode: WallpaperSliderNode
     
     private let messagesContainerNode: ASDisplayNode
     private var messageNodes: [ListViewItemNode]?
     private var validMessages: [String]?
+    
+    private let serviceBackgroundNode: NavigationBackgroundNode
     
     fileprivate let _ready = Promise<Void>()
     private let fetchDisposable = MetaDisposable()
@@ -135,9 +142,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
     private var isReadyDisposable: Disposable?
     
+    private var isDarkAppearance: Bool = false
+    private var didChangeAppearance: Bool = false
+    private var darkAppearanceIntensity: CGFloat = 0.8
+    
     init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.isDarkAppearance = self.presentationData.theme.overallDarkAppearance
         
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
@@ -149,6 +162,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.statusNode.isUserInteractionEnabled = false
         
         self.blurredNode = BlurredImageNode()
+        self.brightnessNode = ASDisplayNode()
+        self.brightnessNode.alpha = 0.0
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
@@ -160,12 +175,24 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.motionButtonNode.setEnabled(false)
         self.patternButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
         self.patternButtonNode.setEnabled(false)
+        
+        self.serviceBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.33))
+        self.serviceBackgroundNode.isHidden = true
+        
+        var sliderValueChangedImpl: ((CGFloat) -> Void)?
+        self.sliderNode = WallpaperSliderNode(minValue: 0.0, maxValue: 1.0, value: 0.7, valueChanged: { value, _ in
+            sliderValueChangedImpl?(value)
+        })
 
         self.colorsButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_WallpaperColors, value: .colors(false, [.clear]))
 
-        self.cancelButtonNode = WallpaperNavigationButtonNode(content: .text(self.presentationData.strings.Common_Cancel))
-        self.shareButtonNode = WallpaperNavigationButtonNode(content: .icon(image: UIImage(bundleImageName: "Chat/Links/Share"), size: CGSize(width: 28.0, height: 28.0)))
-    
+        self.cancelButtonNode = WallpaperNavigationButtonNode(content: .text(self.presentationData.strings.Common_Cancel), dark: true)
+        self.cancelButtonNode.enableSaturation = true
+        self.shareButtonNode = WallpaperNavigationButtonNode(content: .icon(image: UIImage(bundleImageName: "Chat/Links/Share"), size: CGSize(width: 28.0, height: 28.0)), dark: true)
+        self.shareButtonNode.enableSaturation = true
+        self.dayNightButtonNode = WallpaperNavigationButtonNode(content: .dayNight(isNight: self.isDarkAppearance), dark: true)
+        self.dayNightButtonNode.enableSaturation = true
+        
         self.playButtonPlayImage = generateImage(CGSize(width: 48.0, height: 48.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(UIColor.white.cgColor)
@@ -193,7 +220,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
         self.playButtonRotateImage = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeColorRotateIcon"), color: .white)
 
-        self.playButtonNode = WallpaperNavigationButtonNode(content: .icon(image: self.playButtonPlayImage, size: CGSize(width: 48.0, height: 48.0)))
+        self.playButtonNode = WallpaperNavigationButtonNode(content: .icon(image: self.playButtonPlayImage, size: CGSize(width: 48.0, height: 48.0)), dark: true)
         
         super.init()
         
@@ -217,6 +244,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         self.addSubnode(self.wrapperNode)
         //self.addSubnode(self.statusNode)
+        self.addSubnode(self.serviceBackgroundNode)
         self.addSubnode(self.messagesContainerNode)
         
         self.addSubnode(self.blurButtonNode)
@@ -224,8 +252,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.addSubnode(self.patternButtonNode)
         self.addSubnode(self.colorsButtonNode)
         self.addSubnode(self.playButtonNode)
+        self.addSubnode(self.sliderNode)
         self.addSubnode(self.cancelButtonNode)
         self.addSubnode(self.shareButtonNode)
+        self.addSubnode(self.dayNightButtonNode)
+        
+        self.imageNode.addSubnode(self.brightnessNode)
         
         self.blurButtonNode.addTarget(self, action: #selector(self.toggleBlur), forControlEvents: .touchUpInside)
         self.motionButtonNode.addTarget(self, action: #selector(self.toggleMotion), forControlEvents: .touchUpInside)
@@ -234,6 +266,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.playButtonNode.addTarget(self, action: #selector(self.togglePlay), forControlEvents: .touchUpInside)
         self.cancelButtonNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         self.shareButtonNode.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)
+        self.dayNightButtonNode.addTarget(self, action: #selector(self.dayNightPressed), forControlEvents: .touchUpInside)
+        
+        sliderValueChangedImpl = { [weak self] value in
+            if let self {
+                self.updateIntensity(transition: .immediate)
+            }
+        }
     }
     
     deinit {
@@ -255,12 +294,191 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
     }
     
+    var brightness: CGFloat? {
+        guard let entry = self.entry else {
+            return nil
+        }
+        switch entry {
+        case .asset, .contextResult:
+            return self.sliderNode.value
+        default:
+            return nil
+        }
+    }
+    
     override func ready() -> Signal<Void, NoError> {
         return self._ready.get()
     }
     
     @objc private func actionPressed() {
         self.action?()
+    }
+    
+    private func switchTheme() {
+        if let messageNodes = self.messageNodes {
+            for messageNode in messageNodes.prefix(2) {
+                if let snapshotView = messageNode.view.snapshotContentTree() {
+                    messageNode.view.addSubview(snapshotView)
+                    snapshotView.frame = messageNode.bounds
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
+        }
+        let themeSettings = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+        |> map { sharedData -> PresentationThemeSettings in
+            let themeSettings: PresentationThemeSettings
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
+                themeSettings = current
+            } else {
+                themeSettings = PresentationThemeSettings.defaultSettings
+            }
+            return themeSettings
+        }
+        
+        let _ = (themeSettings
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] themeSettings in
+            guard let strongSelf = self else {
+                return
+            }
+            var presentationData = strongSelf.presentationData
+            
+            let lightTheme: PresentationTheme
+            let lightWallpaper: TelegramWallpaper
+            
+            let darkTheme: PresentationTheme
+            let darkWallpaper: TelegramWallpaper
+            
+            if !strongSelf.isDarkAppearance {
+                darkTheme = presentationData.theme
+                darkWallpaper = presentationData.chatWallpaper
+                
+                var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+                if let colors = currentColors, colors.baseColor == .theme {
+                    currentColors = nil
+                }
+                
+                let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+                
+                if let themeSpecificWallpaper = themeSpecificWallpaper {
+                    lightWallpaper = themeSpecificWallpaper
+                } else {
+                    let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, preview: true) ?? defaultPresentationTheme
+                    lightWallpaper = theme.chat.defaultWallpaper
+                }
+                
+                var preferredBaseTheme: TelegramBaseTheme?
+                if let baseTheme = themeSettings.themePreferredBaseTheme[themeSettings.theme.index], [.classic, .day].contains(baseTheme) {
+                    preferredBaseTheme = baseTheme
+                }
+                
+                lightTheme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeSettings.theme, baseTheme: preferredBaseTheme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+            } else {
+                lightTheme = presentationData.theme
+                lightWallpaper = presentationData.chatWallpaper
+                
+                let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
+                let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
+                
+                var preferredBaseTheme: TelegramBaseTheme?
+                if let baseTheme = themeSettings.themePreferredBaseTheme[automaticTheme.index], [.night, .tinted].contains(baseTheme) {
+                    preferredBaseTheme = baseTheme
+                } else {
+                    preferredBaseTheme = .night
+                }
+                
+                darkTheme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: automaticTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+                
+                if let themeSpecificWallpaper = themeSpecificWallpaper {
+                    darkWallpaper = themeSpecificWallpaper
+                } else {
+                    switch lightWallpaper {
+                        case .builtin, .color, .gradient:
+                            darkWallpaper = darkTheme.chat.defaultWallpaper
+                        case .file:
+                            if lightWallpaper.isPattern {
+                                darkWallpaper = darkTheme.chat.defaultWallpaper
+                            } else {
+                                darkWallpaper = lightWallpaper
+                            }
+                        default:
+                            darkWallpaper = lightWallpaper
+                    }
+                }
+            }
+            
+            if strongSelf.isDarkAppearance {
+                darkTheme.forceSync = true
+                Queue.mainQueue().after(1.0, {
+                    darkTheme.forceSync = false
+                })
+                presentationData = presentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkWallpaper)
+            } else {
+                lightTheme.forceSync = true
+                Queue.mainQueue().after(1.0, {
+                    lightTheme.forceSync = false
+                })
+                presentationData = presentationData.withUpdated(theme: lightTheme).withUpdated(chatWallpaper: lightWallpaper)
+            }
+            
+            strongSelf.presentationData = presentationData
+            strongSelf.nativeNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
+            
+            if let (layout, _) = strongSelf.validLayout {
+                strongSelf.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
+        })
+    }
+    
+    @objc private func dayNightPressed() {
+        self.isDarkAppearance = !self.isDarkAppearance
+        self.dayNightButtonNode.setIsNight(self.isDarkAppearance)
+                
+        if let layout = self.validLayout?.0 {
+            let offset = CGPoint(x: self.validOffset ?? 0.0, y: 0.0)
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+            self.updateButtonsLayout(layout: layout, offset: offset, transition: transition)
+            self.updateMessagesLayout(layout: layout, offset: offset, transition: transition)
+            
+            if !self.didChangeAppearance {
+                self.didChangeAppearance = true
+                self.animateIntensityChange(delay: 0.15)
+            } else {
+                self.updateIntensity(transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
+        }
+        
+        self.switchTheme()
+    }
+    
+    private func animateIntensityChange(delay: Double) {
+        let targetValue: CGFloat = self.sliderNode.value
+        self.sliderNode.internalUpdateLayout(size: self.sliderNode.frame.size, value: 1.0)
+        self.sliderNode.ignoreUpdates = true
+        Queue.mainQueue().after(delay, {
+            self.brightnessNode.backgroundColor = UIColor(rgb: 0x000000)
+            self.brightnessNode.layer.compositingFilter = nil
+            
+            self.sliderNode.ignoreUpdates = false
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .easeInOut)
+            self.sliderNode.animateValue(from: 1.0, to: targetValue, transition: transition)
+            self.updateIntensity(transition: transition)
+        })
+    }
+    
+    private func updateIntensity(transition: ContainedViewLayoutTransition) {
+        let value = self.isDarkAppearance ? self.sliderNode.value : 1.0
+        if value < 1.0 {
+            self.brightnessNode.backgroundColor = UIColor(rgb: 0x000000)
+            self.brightnessNode.layer.compositingFilter = nil
+            transition.updateAlpha(node: self.brightnessNode, alpha: 1.0 - value)
+        } else {
+            self.brightnessNode.layer.compositingFilter = nil
+            transition.updateAlpha(node: self.brightnessNode, alpha: 0.0)
+        }
     }
     
     @objc private func cancelPressed() {
@@ -280,6 +498,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.imageNode.contentAnimations = .subsequentUpdates
             }
         }
+        
+        var showPreviewTooltip = false
         
         if self.entry != entry || self.arguments.colorPreview != previousArguments.colorPreview {
             let previousEntry = self.entry
@@ -308,7 +528,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             let progressAction = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: presentationData.theme.rootController.navigationBar.accentTextColor))
             
             var isBlurrable = true
-
+            
             self.nativeNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
 
             switch entry {
@@ -345,7 +565,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 }
             case .asset:
                 self.nativeNode._internalUpdateIsSettingUpWallpaper()
-                self.nativeNode.isHidden = true
+                
+                //self.nativeNode.update(wallpaper: .color(0xff000000))
+                self.nativeNode.isHidden = false
                 self.patternButtonNode.isSelected = false
                 self.playButtonNode.setIcon(self.playButtonRotateImage)
             default:
@@ -353,7 +575,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.patternButtonNode.isSelected = false
                 self.playButtonNode.setIcon(self.playButtonRotateImage)
             }
-            
+                        
             var canShare = false
             switch entry {
                 case let .wallpaper(wallpaper, message):
@@ -526,6 +748,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     subtitleSignal = .single(nil)
                     colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                     self.wrapperNode.addSubnode(self.cropNode)
+                    showPreviewTooltip = true
+                    self.serviceBackgroundNode.isHidden = false
                 case let .contextResult(result):
                     var imageDimensions: CGSize?
                     var imageResource: TelegramMediaResource?
@@ -580,6 +804,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     colorSignal = .single(UIColor(rgb: 0x000000, alpha: 0.3))
                     subtitleSignal = .single(nil)
                     self.wrapperNode.addSubnode(self.cropNode)
+                    showPreviewTooltip = true
+                    self.serviceBackgroundNode.isHidden = false
             }
             self.contentSize = contentSize
             
@@ -590,6 +816,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.wrapperNode.addSubnode(self.imageNode)
                 self.wrapperNode.addSubnode(self.nativeNode)
             } else {
+                self.wrapperNode.insertSubnode(self.nativeNode, at: 0)
                 self.imageNode.contentMode = .scaleToFill
             }
             
@@ -609,6 +836,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     }
                     strongSelf.blurredNode.image = image
                     imagePromise.set(.single(image))
+                    
+                    if case .asset = entry, let image, let data = image.jpegData(compressionQuality: 0.5) {
+                        let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                        strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                        
+                        let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], WallpaperSettings())
+                        strongSelf.nativeNode.update(wallpaper: wallpaper)
+                    }
                 }
             }
             self.fetchDisposable.set(fetchSignal.start())
@@ -659,6 +894,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         if let (layout, _) = self.validLayout {
             self.updateButtonsLayout(layout: layout, offset: CGPoint(), transition: .immediate)
             self.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .immediate)
+        }
+        
+        if showPreviewTooltip {
+            Queue.mainQueue().after(0.35) {
+                self.maybePresentPreviewTooltip()
+            }
+            if self.isDarkAppearance && !self.didChangeAppearance {
+                Queue.mainQueue().justDispatch {
+                    self.didChangeAppearance = true
+                    self.animateIntensityChange(delay: 0.35)
+                }
+            }
         }
     }
     
@@ -721,7 +968,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     func setBlurEnabled(_ enabled: Bool, animated: Bool) {
-        let blurRadius: CGFloat = 45.0
+        let blurRadius: CGFloat = 30.0
         
         var animated = animated
         if animated, let (layout, _) = self.validLayout {
@@ -732,13 +979,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if enabled {
             if self.blurredNode.supernode == nil {
-                if self.cropNode.supernode != nil {
-                    self.blurredNode.frame = self.imageNode.bounds
-                    self.imageNode.addSubnode(self.blurredNode)
-                } else {
-                    self.blurredNode.frame = self.imageNode.bounds
-                    self.imageNode.addSubnode(self.blurredNode)
-                }
+                self.blurredNode.frame = self.imageNode.bounds
+                self.imageNode.insertSubnode(self.blurredNode, at: 0)
             }
             
             if animated {
@@ -914,12 +1156,17 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         let buttonSize = CGSize(width: maxButtonWidth, height: 30.0)
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
-        let additionalYOffset: CGFloat = 0.0
-        /*if self.patternButtonNode.isSelected {
-            additionalYOffset = -235.0
-        } else if self.colorsButtonNode.isSelected {
-            additionalYOffset = -235.0
-        }*/
+        var additionalYOffset: CGFloat = 0.0
+        if let source = self.source {
+            switch source {
+            case .asset, .contextResult:
+                if self.isDarkAppearance {
+                    additionalYOffset -= 44.0
+                }
+            default:
+                break
+            }
+        }
 
         let buttonSpacing: CGFloat = 18.0
         
@@ -937,12 +1184,25 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         var motionFrame = centerButtonFrame
         var motionAlpha: CGFloat = 0.0
-
+        
         var colorsFrame = CGRect(origin: CGPoint(x: rightButtonFrame.maxX - colorsButtonSize.width, y: rightButtonFrame.minY), size: colorsButtonSize)
         var colorsAlpha: CGFloat = 0.0
 
         let playFrame = CGRect(origin: CGPoint(x: centerButtonFrame.midX - playButtonSize.width / 2.0, y: centerButtonFrame.midY - playButtonSize.height / 2.0), size: playButtonSize)
         var playAlpha: CGFloat = 0.0
+        
+        let sliderSize = CGSize(width: 268.0, height: 30.0)
+        var sliderFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - sliderSize.width) / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 52.0 + offset.y), size: sliderSize)
+        var sliderAlpha: CGFloat = 0.0
+        var sliderScale: CGFloat = 0.2
+        if !additionalYOffset.isZero {
+            sliderAlpha = 1.0
+            sliderScale = 1.0
+        } else {
+            sliderFrame = sliderFrame.offsetBy(dx: 0.0, dy: 22.0)
+        }
+        
+        var dayNightHidden = true
         
         let cancelSize = self.cancelButtonNode.measure(layout.size)
         let cancelFrame = CGRect(origin: CGPoint(x: 16.0 + offset.x, y: 16.0), size: cancelSize)
@@ -958,11 +1218,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     blurFrame = leftButtonFrame
                     motionAlpha = 1.0
                     motionFrame = rightButtonFrame
+                    dayNightHidden = false
                 case .contextResult:
                     blurAlpha = 1.0
                     blurFrame = leftButtonFrame
                     motionAlpha = 1.0
                     motionFrame = rightButtonFrame
+                    dayNightHidden = false
                 case let .wallpaper(wallpaper, _):
                     switch wallpaper {
                         case .builtin:
@@ -1047,17 +1309,21 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         transition.updateAlpha(node: self.playButtonNode, alpha: playAlpha * alpha)
         transition.updateSublayerTransformScale(node: self.playButtonNode, scale: max(0.1, playAlpha))
         
+        transition.updateFrameAsPositionAndBounds(node: self.sliderNode, frame: sliderFrame)
+        transition.updateAlpha(node: self.sliderNode, alpha: sliderAlpha * alpha)
+        transition.updateTransformScale(node: self.sliderNode, scale: sliderScale)
+        self.sliderNode.updateLayout(size: sliderFrame.size)
+        
         transition.updateFrame(node: self.cancelButtonNode, frame: cancelFrame)
         transition.updateFrame(node: self.shareButtonNode, frame: shareFrame)
+        transition.updateFrame(node: self.dayNightButtonNode, frame: shareFrame)
+        
+        self.dayNightButtonNode.isHidden = dayNightHidden
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
-        let bottomInset: CGFloat = 132.0
+        var bottomInset: CGFloat = 132.0
 
-        if self.patternButtonNode.isSelected || self.colorsButtonNode.isSelected {
-            //bottomInset = 350.0
-        }
-        
         var items: [ListViewItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
         let otherPeerId = self.context.account.peerId
@@ -1125,6 +1391,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 case .asset, .contextResult:
                     topMessageText = presentationData.strings.WallpaperPreview_CropTopText
                     bottomMessageText = presentationData.strings.WallpaperPreview_CropBottomText
+                    if self.isDarkAppearance {
+                        bottomInset += 44.0
+                    }
                 case .customColor:
                     topMessageText = presentationData.strings.WallpaperPreview_CustomColorTopText
                     bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
@@ -1139,7 +1408,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
         }
         
-        let theme = self.presentationData.theme.withUpdated(preview: true)
+        let theme = self.presentationData.theme
                    
         let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message1], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, isCentered: false))
@@ -1157,18 +1426,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
         if let messageNodes = self.messageNodes {
-            if self.validMessages != [topMessageText, bottomMessageText] {
-                self.validMessages = [topMessageText, bottomMessageText]
-                for i in 0 ..< items.count {
-                    items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
-                        let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+            for i in 0 ..< items.count {
+                items[i].updateNode(async: { f in f() }, node: { return messageNodes[i] }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None) { layout, apply in
+                    let nodeFrame = CGRect(origin: messageNodes[i].frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
 
-                        messageNodes[i].contentSize = layout.contentSize
-                        messageNodes[i].insets = layout.insets
-                        messageNodes[i].frame = nodeFrame
+                    messageNodes[i].contentSize = layout.contentSize
+                    messageNodes[i].insets = layout.insets
+                    messageNodes[i].frame = nodeFrame
 
-                        apply(ListViewItemApply(isOnScreen: true))
-                    }
+                    apply(ListViewItemApply(isOnScreen: true))
                 }
             }
         } else {
@@ -1187,7 +1453,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             self.messageNodes = messageNodes
         }
-        
+                
         let alpha = 1.0 - min(1.0, max(0.0, abs(offset.y) / 50.0))
         
         if let messageNodes = self.messageNodes {
@@ -1197,6 +1463,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 bottomOffset += itemNode.frame.height
                 itemNode.updateFrame(itemNode.frame, within: layout.size)
                 transition.updateAlpha(node: itemNode, alpha: alpha)
+            }
+        }
+        
+        if let _ = serviceMessageText, let messageNodes = self.messageNodes, let node = messageNodes.last {
+            if let backgroundNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.first, let backdropNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.last?.subnodes?.last?.subnodes?.first {
+                backdropNode.isHidden = true            
+                let serviceBackgroundFrame = backgroundNode.view.convert(backgroundNode.bounds, to: self.view).offsetBy(dx: 0.0, dy: -1.0).insetBy(dx: 0.0, dy: -1.0)
+                transition.updateFrame(node: self.serviceBackgroundNode, frame: serviceBackgroundFrame)
+                self.serviceBackgroundNode.update(size: serviceBackgroundFrame.size, cornerRadius: serviceBackgroundFrame.height / 2.0, transition: transition)
             }
         }
     }
@@ -1236,7 +1511,18 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 self.cropNode.zoom(to: CGRect(x: (contentSize.width - fittedSize.width) / 2.0, y: (contentSize.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height))
             }
             self.blurredNode.frame = self.imageNode.bounds
+            
+            let displayMode: WallpaperDisplayMode
+            if case .regular = layout.metrics.widthClass {
+                displayMode = .aspectFit
+            } else {
+                displayMode = .aspectFill
+            }
+            
+            self.nativeNode.frame = self.wrapperNode.bounds
+            self.nativeNode.updateLayout(size: self.nativeNode.bounds.size, displayMode: displayMode, transition: .immediate)
         }
+        self.brightnessNode.frame = self.imageNode.bounds
         
         let additionalYOffset: CGFloat = 0.0
         
@@ -1254,5 +1540,42 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
     func animateWallpaperAppeared() {
         self.nativeNode.animateEvent(transition: .animated(duration: 2.0, curve: .spring), extendAnimation: true)
+    }
+    
+    private var displayedPreviewTooltip = false
+    private func maybePresentPreviewTooltip() {
+        guard !self.displayedPreviewTooltip else {
+            return
+        }
+        
+        let frame = self.dayNightButtonNode.view.convert(self.dayNightButtonNode.bounds, to: self.view)
+        let currentTimestamp = Int32(Date().timeIntervalSince1970)
+        
+        let isDark = self.isDarkAppearance
+        
+        let signal: Signal<(Int32, Int32), NoError>
+        if isDark {
+            signal = ApplicationSpecificNotice.getChatWallpaperLightPreviewTip(accountManager: self.context.sharedContext.accountManager)
+        } else {
+            signal = ApplicationSpecificNotice.getChatWallpaperDarkPreviewTip(accountManager: self.context.sharedContext.accountManager)
+        }
+        
+        let _ = (signal
+        |> deliverOnMainQueue).start(next: { [weak self] count, timestamp in
+            if let strongSelf = self, (count < 2 && currentTimestamp > timestamp + 24 * 60 * 60) {
+                strongSelf.displayedPreviewTooltip = true
+                
+                let controller = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: isDark ? strongSelf.presentationData.strings.WallpaperPreview_PreviewInDayMode : strongSelf.presentationData.strings.WallpaperPreview_PreviewInNightMode, style: .customBlur(UIColor(rgb: 0x333333, alpha: 0.33)), icon: nil, location: .point(frame.offsetBy(dx: 1.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                    return .dismiss(consume: false)
+                })
+                strongSelf.galleryController()?.present(controller, in: .current)
+
+                if isDark {
+                    let _ = ApplicationSpecificNotice.incrementChatWallpaperLightPreviewTip(accountManager: strongSelf.context.sharedContext.accountManager, timestamp: currentTimestamp).start()
+                } else {
+                    let _ = ApplicationSpecificNotice.incrementChatWallpaperDarkPreviewTip(accountManager: strongSelf.context.sharedContext.accountManager, timestamp: currentTimestamp).start()
+                }
+            }
+        })
     }
 }

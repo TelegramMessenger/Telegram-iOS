@@ -119,7 +119,11 @@ final class ThemeAccentColorController: ViewController {
         } else {
             self.navigationItem.titleView = self.segmentedTitleView
         }
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+        if case .peer = resultMode {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        } else {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -128,6 +132,10 @@ final class ThemeAccentColorController: ViewController {
     
     deinit {
         self.applyDisposable.dispose()
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -167,6 +175,12 @@ final class ThemeAccentColorController: ViewController {
                     } else {
                         coloredWallpaper = .color(state.backgroundColors[0].rgb)
                     }
+                }
+                
+                if case let .peer(peer) = strongSelf.resultMode {
+                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: coloredWallpaper).start()
+                    strongSelf.completion?()
+                    return
                 }
                 
                 let prepareWallpaper: Signal<CreateThemeResult, CreateThemeError>

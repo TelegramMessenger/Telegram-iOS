@@ -669,12 +669,8 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     
     entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
     entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
-    switch kind {
-        case .presence, .voiceCalls, .forwards, .phoneNumber, .voiceMessages, .profilePhoto:
-            entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-        case .groupInvitations:
-            break
-    }
+    entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
+
     let phoneLink = "https://t.me/+\(phoneNumber)"
     if let settingInfoText = settingInfoText {
         entries.append(.settingInfo(presentationData.theme, settingInfoText, phoneLink))
