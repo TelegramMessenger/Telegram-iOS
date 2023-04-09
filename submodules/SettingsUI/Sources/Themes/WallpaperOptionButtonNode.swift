@@ -423,7 +423,6 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     
     func setEnabled(_ enabled: Bool) {
         let alpha: CGFloat = enabled ? 1.0 : 0.4
-        self.backgroundNode.alpha = alpha
         self.checkNode.alpha = alpha
         self.colorNode.alpha = alpha
         self.textNode.alpha = alpha

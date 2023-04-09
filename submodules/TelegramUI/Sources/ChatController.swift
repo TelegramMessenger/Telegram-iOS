@@ -858,11 +858,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             strongSelf.chatDisplayNode.dismissInput()
                             let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
-                            wallpaperPreviewController.apply = { wallpaper, options, _, _ in
-                                let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, settings: nil)
-                                |> deliverOnMainQueue).start(completed: { [weak wallpaperPreviewController] in 
-                                    wallpaperPreviewController?.dismiss()
-                                })
+                            wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _ in
+                                if case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper, !file.isPattern && options.contains(.blur) {
+                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: entry, mode: options, cropRect: nil, brightness: nil, peerId: message.id.peerId, completion: {
+                                        wallpaperPreviewController?.dismiss()
+                                    })
+                                } else {
+                                    let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, settings: nil)
+                                    |> deliverOnMainQueue).start()
+                                    Queue.mainQueue().after(0.1) {
+                                        wallpaperPreviewController?.dismiss()
+                                    }
+                                }
                             }
                             strongSelf.push(wallpaperPreviewController)
                             return true
@@ -5861,7 +5868,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var themeEmoticon = themeEmoticon
                 if let themeEmoticonPreview = themeEmoticonPreview {
                     if !themeEmoticonPreview.isEmpty {
-                        if themeEmoticon != themeEmoticonPreview {
+                        if themeEmoticon?.strippedEmoji != themeEmoticonPreview.strippedEmoji {
                             chatWallpaper = nil
                             themeEmoticon = themeEmoticonPreview
                         }

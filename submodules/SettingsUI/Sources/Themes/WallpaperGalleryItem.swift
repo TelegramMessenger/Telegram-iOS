@@ -425,7 +425,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             
             strongSelf.presentationData = presentationData
-            strongSelf.nativeNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
             
             if let (layout, _) = strongSelf.validLayout {
                 strongSelf.updateMessagesLayout(layout: layout, offset: CGPoint(), transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -533,7 +532,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
             switch entry {
             case let .wallpaper(wallpaper, _):
-                self.nativeNode.update(wallpaper: wallpaper)
+                Queue.mainQueue().justDispatch {
+                    self.nativeNode.update(wallpaper: wallpaper)
+                }
 
                 if case let .file(file) = wallpaper, file.isPattern {
                     self.nativeNode.isHidden = false
@@ -559,15 +560,14 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.nativeNode.update(wallpaper: wallpaper)
                     self.patternButtonNode.isSelected = false
                 } else {
+                    self.nativeNode._internalUpdateIsSettingUpWallpaper()
                     self.nativeNode.isHidden = true
                     self.patternButtonNode.isSelected = false
                     self.playButtonNode.setIcon(self.playButtonRotateImage)
                 }
             case .asset:
                 self.nativeNode._internalUpdateIsSettingUpWallpaper()
-                
-                //self.nativeNode.update(wallpaper: .color(0xff000000))
-                self.nativeNode.isHidden = false
+                self.nativeNode.isHidden = true
                 self.patternButtonNode.isSelected = false
                 self.playButtonNode.setIcon(self.playButtonRotateImage)
             default:
@@ -1322,6 +1322,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     private func updateMessagesLayout(layout: ContainerViewLayout, offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        self.nativeNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
+        
         var bottomInset: CGFloat = 132.0
 
         var items: [ListViewItem] = []
@@ -1468,7 +1470,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if let _ = serviceMessageText, let messageNodes = self.messageNodes, let node = messageNodes.last {
             if let backgroundNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.first, let backdropNode = node.subnodes?.first?.subnodes?.first?.subnodes?.first?.subnodes?.last?.subnodes?.last?.subnodes?.first {
-                backdropNode.isHidden = true            
+                backdropNode.isHidden = true
                 let serviceBackgroundFrame = backgroundNode.view.convert(backgroundNode.bounds, to: self.view).offsetBy(dx: 0.0, dy: -1.0).insetBy(dx: 0.0, dy: -1.0)
                 transition.updateFrame(node: self.serviceBackgroundNode, frame: serviceBackgroundFrame)
                 self.serviceBackgroundNode.update(size: serviceBackgroundFrame.size, cornerRadius: serviceBackgroundFrame.height / 2.0, transition: transition)

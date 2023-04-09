@@ -904,8 +904,19 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             return
         }
         var dimAlpha: Float = 0.0
-        if case let .file(file) = wallpaper, !file.isPattern {
-            if let intensity = file.settings.intensity, intensity < 100, theme.overallDarkAppearance == true {
+        if theme.overallDarkAppearance == true {
+            var intensity: Int32?
+            switch wallpaper {
+            case let .image(_, settings):
+                intensity = settings.intensity
+            case let .file(file):
+                if !file.isPattern {
+                    intensity = file.settings.intensity
+                }
+            default:
+                break
+            }
+            if let intensity, intensity < 100 {
                 dimAlpha = 1.0 - max(0.0, min(1.0, Float(intensity) / 100.0))
             }
         }
