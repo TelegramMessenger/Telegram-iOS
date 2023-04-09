@@ -12797,7 +12797,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.presentAttachmentMenu(subject: .bot(id: botId, payload: payload, justInstalled: justInstalled))
     }
     
-    public func presentBotApp(botApp: BotApp, payload: String?) {
+    public func presentBotApp(botApp: BotApp, botPeer: EnginePeer, payload: String?) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -12845,6 +12845,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        let botAddress = botPeer.addressName ?? ""
+        
         self.messageActionCallbackDisposable.set(((self.context.engine.messages.requestAppWebView(peerId: peerId, appReference: .id(id: botApp.id, accessHash: botApp.accessHash), payload: payload, themeParams: generateWebAppThemeParams(self.presentationData.theme), allowWrite: false)
         |> afterDisposed {
             updateProgress()
@@ -12856,6 +12858,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false)
             let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url in
                 self?.openUrl(url, concealed: true, forceExternal: true)
+            }, requestSwitchInline: { [weak self] query, chatTypes, completion in
+                if let strongSelf = self {
+                    if let chatTypes {
+                        let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: chatTypes, hasContactSelector: false, hasCreation: false))
+                        controller.peerSelected = { [weak self, weak controller] peer, _ in
+                            if let strongSelf = self {
+                                completion()
+                                controller?.dismiss()
+                                strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)")
+                            }
+                        }
+                        strongSelf.push(controller)
+                    } else {
+                        strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)")
+                    }
+                }
             }, completion: { [weak self] in
                 self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
             }, getNavigationController: { [weak self] in
@@ -17267,7 +17285,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self, let peer {
                             let openBotApp = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.presentBotApp(botApp: botAppStart.botApp, payload: botAppStart.payload)
+                                    strongSelf.presentBotApp(botApp: botAppStart.botApp, botPeer: peerId, payload: botAppStart.payload)
                                 }
                             }
                             if concealed {

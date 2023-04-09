@@ -629,7 +629,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_ready":
                     self.animateTransitionIn()
                 case "web_app_switch_inline_query":
-                    if controller.isInline, let json, let query = json["query"] as? String {
+                    if let json, let query = json["query"] as? String {
                         if let chatTypes = json["chat_types"] as? [String], !chatTypes.isEmpty {
                             var requestPeerTypes: [ReplyMarkupButtonRequestPeerType] = []
                             for type in chatTypes {
