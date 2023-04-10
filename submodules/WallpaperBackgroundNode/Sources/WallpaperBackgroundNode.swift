@@ -864,6 +864,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.bakedBackgroundView.isHidden = true
         
         self.dimLayer = SimpleLayer()
+        self.dimLayer.opacity = 0.0
         self.dimLayer.backgroundColor = UIColor.black.cgColor
         
         super.init()
