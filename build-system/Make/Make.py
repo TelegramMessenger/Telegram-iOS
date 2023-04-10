@@ -12,14 +12,15 @@ import glob
 from BuildEnvironment import resolve_executable, call_executable, run_executable_with_output, BuildEnvironment
 from ProjectGeneration import generate
 from BazelLocation import locate_bazel
-from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, BuildConfiguration, build_configuration_from_json
+from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, XcodeManagedCodesigningSource, BuildConfiguration, build_configuration_from_json
 import RemoteBuild
 import GenerateProfiles
 
 
 class ResolvedCodesigningData:
-    def __init__(self, aps_environment):
+    def __init__(self, aps_environment, use_xcode_managed_codesigning):
         self.aps_environment = aps_environment
+        self.use_xcode_managed_codesigning = use_xcode_managed_codesigning
 
 
 class BazelCommandLine:
@@ -451,8 +452,8 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
             team_id=build_configuration.team_id,
             bundle_id=build_configuration.bundle_id
         )
-    elif arguments.noCodesigning is not None:
-        return ResolvedCodesigningData(aps_environment='production')
+    elif arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
+        profile_source = XcodeManagedCodesigningSource()
     else:
         raise Exception('Neither gitCodesigningRepository nor codesigningInformationPath are set')
 
@@ -467,7 +468,10 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
         profile_source.copy_profiles_to_destination(destination_path=additional_codesigning_output_path + '/profiles')
         profile_source.copy_certificates_to_destination(destination_path=additional_codesigning_output_path + '/certs')
 
-    return ResolvedCodesigningData(aps_environment=profile_source.resolve_aps_environment())
+    return ResolvedCodesigningData(
+        aps_environment=profile_source.resolve_aps_environment(),
+        use_xcode_managed_codesigning=profile_source.use_xcode_managed_codesigning()
+    )
 
 
 def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, arguments, additional_codesigning_output_path):
@@ -499,7 +503,7 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
         sys.exit(1)
 
     if bazel_command_line is not None:
-        build_configuration.write_to_variables_file(bazel_path=bazel_command_line.bazel, aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
+        build_configuration.write_to_variables_file(bazel_path=bazel_command_line.bazel, use_xcode_managed_codesigning=codesigning_data.use_xcode_managed_codesigning, aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
 
     provisioning_profile_files = []
     for file_name in os.listdir(provisioning_path):
@@ -549,6 +553,8 @@ def generate_project(bazel, arguments):
         disable_extensions = arguments.disableExtensions
     if arguments.disableProvisioningProfiles is not None:
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
+    if arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
+        disable_extensions = True
     if arguments.generateDsym is not None:
         generate_dsym = arguments.generateDsym
     if arguments.target is not None:
@@ -593,9 +599,6 @@ def build(bazel, arguments):
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
     bazel_command_line.set_show_actions(arguments.showActions)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
-
-    if arguments.noCodesigning is not None:
-        bazel_command_line.set_disable_provisioning_profiles()
 
     bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
@@ -688,12 +691,11 @@ def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
         metavar='command'
     )
     codesigning_group.add_argument(
-        '--noCodesigning',
-        type=bool,
+        '--xcodeManagedCodesigning',
+        action='store_true',
         help='''
-            Use signing certificates and provisioning profiles from a local directory.
+            Let Xcode manage your certificates and provisioning profiles.
             ''',
-        metavar='command'
     )
 
     current_parser.add_argument(
