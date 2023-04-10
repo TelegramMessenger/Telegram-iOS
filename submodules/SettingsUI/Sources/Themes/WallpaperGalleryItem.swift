@@ -176,7 +176,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.patternButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Pattern, value: .check(false))
         self.patternButtonNode.setEnabled(false)
         
-        self.serviceBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.33))
+        self.serviceBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.45))
         self.serviceBackgroundNode.isHidden = true
         
         var sliderValueChangedImpl: ((CGFloat) -> Void)?
@@ -1567,7 +1567,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             if let strongSelf = self, (count < 2 && currentTimestamp > timestamp + 24 * 60 * 60) {
                 strongSelf.displayedPreviewTooltip = true
                 
-                let controller = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: isDark ? strongSelf.presentationData.strings.WallpaperPreview_PreviewInDayMode : strongSelf.presentationData.strings.WallpaperPreview_PreviewInNightMode, style: .customBlur(UIColor(rgb: 0x333333, alpha: 0.33)), icon: nil, location: .point(frame.offsetBy(dx: 1.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                let controller = TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: isDark ? strongSelf.presentationData.strings.WallpaperPreview_PreviewInDayMode : strongSelf.presentationData.strings.WallpaperPreview_PreviewInNightMode, style: .customBlur(UIColor(rgb: 0x333333, alpha: 0.45)), icon: nil, location: .point(frame.offsetBy(dx: 1.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
                     return .dismiss(consume: false)
                 })
                 strongSelf.galleryController()?.present(controller, in: .current)

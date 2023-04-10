@@ -5,6 +5,7 @@ import TelegramCore
 
 enum WallpaperPreviewMediaContent: Equatable {
     case file(file: TelegramMediaFile, colors: [UInt32], rotation: Int32?, intensity: Int32?, Bool, Bool)
+    case image(representations: [TelegramMediaImageRepresentation])
     case color(UIColor)
     case gradient([UInt32], Int32?)
     case themeSettings(TelegramThemeSettings)
@@ -55,6 +56,8 @@ extension WallpaperPreviewMedia {
             self.init(content: .gradient(gradient.colors, gradient.settings.rotation))
         case let .file(file):
             self.init(content: .file(file: file.file, colors: file.settings.colors, rotation: file.settings.rotation, intensity: file.settings.intensity, false, false))
+        case let .image(representations, _):
+            self.init(content: .image(representations: representations))
         default:
             return nil
         }

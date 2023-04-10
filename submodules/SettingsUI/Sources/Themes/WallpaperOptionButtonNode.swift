@@ -41,7 +41,7 @@ final class WallpaperLightButtonBackgroundNode: ASDisplayNode {
     private let lightNode: ASDisplayNode
     
     override init() {
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.3), enableBlur: true, enableSaturation: false)
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.45), enableBlur: true, enableSaturation: false)
         self.overlayNode = ASDisplayNode()
         self.overlayNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.75)
         self.overlayNode.layer.compositingFilter = "overlayBlendMode"
@@ -72,7 +72,7 @@ final class WallpaperOptionBackgroundNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
     
     init(enableSaturation: Bool = false) {
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.3), enableBlur: true, enableSaturation: enableSaturation)
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.45), enableBlur: true, enableSaturation: enableSaturation)
 
         super.init()
         
@@ -488,7 +488,7 @@ final class WallpaperSliderNode: ASDisplayNode {
         self.value = value
         self.valueChanged = valueChanged
         
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.3), enableBlur: true, enableSaturation: false)
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.45), enableBlur: true, enableSaturation: false)
        
         self.foregroundNode = ASDisplayNode()
         self.foregroundNode.clipsToBounds = true

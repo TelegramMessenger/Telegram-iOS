@@ -15,12 +15,16 @@ import WallpaperBackgroundNode
 import PhotoResources
 import WallpaperResources
 import Markdown
+import RadialStatusNode
 
 class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
     private let mediaBackgroundNode: NavigationBackgroundNode
     private let subtitleNode: TextNode
     private let imageNode: TransformImageNode
+    
+    private var statusOverlayNode: ASDisplayNode
+    private var statusNode: RadialStatusNode
 
     private let buttonNode: HighlightTrackingButtonNode
     private let buttonTitleNode: TextNode
@@ -28,6 +32,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     private var absoluteRect: (CGRect, CGSize)?
     
     private let fetchDisposable = MetaDisposable()
+    private let statusDisposable = MetaDisposable()
             
     required init() {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
@@ -48,6 +53,15 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
         
+        self.statusOverlayNode = ASDisplayNode()
+        self.statusOverlayNode.alpha = 0.0
+        self.statusOverlayNode.clipsToBounds = true
+        self.statusOverlayNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
+        self.statusOverlayNode.cornerRadius = 50.0
+        
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.6))
+        self.statusNode.isUserInteractionEnabled = false
+        
         super.init()
 
         self.addSubnode(self.mediaBackgroundNode)
@@ -56,6 +70,9 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.buttonTitleNode)
+        
+        self.addSubnode(self.statusOverlayNode)
+        self.statusOverlayNode.addSubnode(self.statusNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -82,6 +99,25 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     
     deinit {
         self.fetchDisposable.dispose()
+        self.statusDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.statusOverlayNode.layer.cornerCurve = .circular
+        }
+        
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.progressPressed))
+        self.statusOverlayNode.view.addGestureRecognizer(tapGestureRecognizer)
+    }
+    
+    @objc private func progressPressed() {
+        guard let item = self.item else {
+            return
+        }
+        item.context.account.pendingPeerMediaUploadManager.cancel(peerId: item.message.id.peerId)
     }
     
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
@@ -133,6 +169,18 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
             return
         }
         let _ = item.controllerInteraction.openMessage(item.message, .default)
+    }
+    
+    private func updateProgress(_ progress: Float?) {
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+        if let progress {
+            let progressValue = CGFloat(max(0.027, progress))
+            self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: progressValue, cancelEnabled: true, animateRotation: true))
+            transition.updateAlpha(node: self.statusOverlayNode, alpha: 1.0)
+        } else {
+            self.statusNode.transitionToState(.none)
+            transition.updateAlpha(node: self.statusOverlayNode, alpha: 0.0)
+        }
     }
                 
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -223,6 +271,11 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                                         }
                                         updateImageSignal = wallpaperImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), representations: representations, alwaysShowThumbnailFirst: true, thumbnail: true, autoFetchFullSize: true)
                                     }
+                                case let .image(representations):
+                                    if let dimensions = representations.last?.dimensions.cgSize {
+                                        imageSize = dimensions.aspectFilled(boundingSize)
+                                    }
+                                    updateImageSignal = wallpaperImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, fileReference: nil, representations: representations.map({ ImageRepresentationWithReference(representation: $0, reference: .standalone(resource: $0.resource)) }), alwaysShowThumbnailFirst: true, thumbnail: true, autoFetchFullSize: true)
                                 case let .color(color):
                                     updateImageSignal = solidColorImage(color)
                                 case let .gradient(colors, rotation):
@@ -238,6 +291,24 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                                 apply()
                                 
                                 strongSelf.imageNode.frame = imageFrame
+                            }
+                            
+                            let radialStatusSize: CGFloat = 50.0
+                            strongSelf.statusOverlayNode.frame = imageFrame
+                            strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.width - radialStatusSize) / 2.0), y: floor((imageFrame.height - radialStatusSize) / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
+                            
+                            if mediaUpdated {
+                                if item.message.id.namespace == Namespaces.Message.Local {
+                                    strongSelf.statusDisposable.set((item.context.account.pendingPeerMediaUploadManager.uploadProgress(messageId: item.message.id)
+                                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                                        if let strongSelf = self {
+                                            strongSelf.updateProgress(progress)
+                                        }
+                                    }))
+                                } else {
+                                    strongSelf.statusDisposable.set(nil)
+                                    strongSelf.updateProgress(nil)
+                                }
                             }
                             
                             let mediaBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - width) / 2.0), y: 0.0), size: backgroundSize)
@@ -299,7 +370,9 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        if self.mediaBackgroundNode.frame.contains(point) {
+        if self.statusOverlayNode.alpha > 0.0 {
+            return .none
+        } else if self.mediaBackgroundNode.frame.contains(point) {
             return .openMessage
         } else {
             return .none

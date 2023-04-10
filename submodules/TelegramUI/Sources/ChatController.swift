@@ -18655,7 +18655,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let peerId else {
                         return
                     }
-                    if canResetWallpaper {
+                    if canResetWallpaper && emoticon != nil {
                         let _ = context.engine.themes.setChatWallpaper(peerId: peerId, wallpaper: nil).start()
                     }
                     strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon ?? "", nil)))

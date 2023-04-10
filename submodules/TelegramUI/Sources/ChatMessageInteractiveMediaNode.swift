@@ -733,7 +733,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else {
                             unboundSize = CGSize(width: 54.0, height: 54.0)
                         }
-                    case .themeSettings:
+                    case .themeSettings, .image:
                         unboundSize = CGSize(width: 160.0, height: 240.0).fitted(CGSize(width: 240.0, height: 240.0))
                     case .color, .gradient:
                         unboundSize = CGSize(width: 128.0, height: 128.0)
@@ -1116,6 +1116,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                                 return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                             }
                                         }
+                                    case let .image(representations):
+                                        return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: nil, representations: representations.map({ ImageRepresentationWithReference(representation: $0, reference: .standalone(resource: $0.resource)) }), alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                     case let .themeSettings(settings):
                                         return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .settings(settings))
                                     case let .color(color):
@@ -1182,7 +1184,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                         return (resourceStatus, nil)
                                     }
-                                case .themeSettings, .color, .gradient:
+                                case .themeSettings, .color, .gradient, .image:
                                     updatedStatusSignal = .single((.Local, nil))
                             }
                         }

@@ -244,6 +244,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             guard let strongSelf = self else {
                 return
             }
+            var useDarkButton = true
             if case let .file(file) = wallpaper {
                 let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                 let displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
@@ -258,6 +259,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if wallpaper.isPattern {
                     signal = .complete()
                 } else {
+                    useDarkButton = false
                     signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
@@ -296,6 +298,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
 
                 strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))()
+                strongSelf.toolbarNode.dark = useDarkButton
             }
         })
     }

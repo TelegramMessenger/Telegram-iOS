@@ -197,15 +197,18 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
 }
 
 public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
-    let imageSignal: Signal<UIImage, NoError>
+    var imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
+            imageSignal = .complete()
             switch wallpaper {
                 case let .file(file):
-                    if let path = context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                    if let path = context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let image = UIImage(data: data) {
                         context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data, synchronous: true)
                         let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedScaledImageRepresentation(size: CGSize(width: 720.0, height: 720.0), mode: .aspectFit), complete: true, fetch: true).start()
                         let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+                     
+                        imageSignal = .single(image)
                     }
                 case let .image(representations, _):
                     for representation in representations {
@@ -218,7 +221,6 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
                 default:
                     break
             }
-            imageSignal = .complete()
             completion()
         case let .asset(asset):
             imageSignal = fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier, thumbnail: false)
@@ -299,31 +301,11 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
             let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
             
-            let _ = context.account.postbox.transaction({ transaction in
-                transaction.updatePeerCachedData(peerIds: Set([peerId])) { _, cachedData in
-                    if let cachedData = cachedData as? CachedUserData {
-                        return cachedData.withUpdatedWallpaper(temporaryWallpaper)
-                    } else {
-                        return cachedData
-                    }
-                }
-            }).start()
-            
             Queue.mainQueue().async {
                 completion()
             }
             
-            let _ = uploadWallpaper(account: context.account, resource: resource, settings: WallpaperSettings(blur: false, motion: mode.contains(.motion), colors: [], intensity: intensity), forChat: true).start(next: { status in
-                if case let .complete(wallpaper) = status {
-                    if case let .file(file) = wallpaper {
-                        context.account.postbox.mediaBox.copyResourceData(from: resource.id, to: file.file.resource.id, synchronous: true)
-                        for representation in file.file.previewRepresentations {
-                            context.account.postbox.mediaBox.copyResourceData(from: resource.id, to: representation.resource.id, synchronous: true)
-                        }
-                    }
-                    let _ = context.engine.themes.setChatWallpaper(peerId: peerId, wallpaper: wallpaper).start()
-                }
-            })
+            context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
         }
         return croppedImage
     }).start()
