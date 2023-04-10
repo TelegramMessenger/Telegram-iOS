@@ -2512,7 +2512,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }))
             }
-        }, activateSwitchInline: { [weak self] peerId, inputString in
+        }, activateSwitchInline: { [weak self] peerId, inputString, peerTypes in
             guard let strongSelf = self else {
                 return
             }
@@ -2536,7 +2536,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                 } else {
-                    strongSelf.openPeer(peer: nil, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), subject: nil, peekData: nil), fromMessage: nil)
+                    strongSelf.openPeer(peer: nil, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), subject: nil, peekData: nil), fromMessage: nil, peerTypes: peerTypes)
                 }
             }
         }, openUrl: { [weak self] url, concealed, _, message in
@@ -4226,12 +4226,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         if let strongSelf = self {
                                             completion()
                                             controller?.dismiss()
-                                            strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)")
+                                            strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)", nil)
                                         }
                                     }
                                     strongSelf.push(controller)
                                 } else {
-                                    strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)")
+                                    strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)", nil)
                                 }
                             }
                         }, getNavigationController: { [weak self] in
@@ -12873,12 +12873,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let strongSelf = self {
                                 completion()
                                 controller?.dismiss()
-                                strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)")
+                                strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)", nil)
                             }
                         }
                         strongSelf.push(controller)
                     } else {
-                        strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)")
+                        strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)", nil)
                     }
                 }
             }, completion: { [weak self] in
@@ -16716,7 +16716,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func openPeer(peer: EnginePeer?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: MessageReference?, fromReactionMessageId: MessageId? = nil, expandAvatar: Bool = false) {
+    private func openPeer(peer: EnginePeer?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: MessageReference?, fromReactionMessageId: MessageId? = nil, expandAvatar: Bool = false, peerTypes: ReplyMarkupButtonAction.PeerTypes? = nil) {
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             if case let .peer(currentPeerId) = self.chatLocation, peer?.id == currentPeerId {
                 switch navigation {
@@ -16815,7 +16815,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             break
                         case let .chat(textInputState, _, _):
                             if let textInputState = textInputState {
-                                let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, selectForumThreads: true))
+                                let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, requestPeerType: peerTypes.flatMap { $0.requestPeerTypes }, selectForumThreads: true))
                                 controller.peerSelected = { [weak self, weak controller] peer, threadId in
                                     let peerId = peer.id
                                     
