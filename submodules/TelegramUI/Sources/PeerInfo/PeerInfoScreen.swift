@@ -2678,7 +2678,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             return false
         }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _ in
-        }, activateSwitchInline: { _, _ in
+        }, activateSwitchInline: { _, _, _ in
         }, openUrl: { [weak self] url, concealed, external, _ in
             guard let strongSelf = self else {
                 return
