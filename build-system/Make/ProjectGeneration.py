@@ -10,21 +10,27 @@ def remove_directory(path):
         shutil.rmtree(path)
 
 def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
+    if '/' in target_name:
+        app_target_spec = target_name.split('/')[0] + '/' + target_name.split('/')[1] + ':' + target_name.split('/')[1]
+        app_target = target_name
+        app_target_clean = app_target.replace('/', '_')
+    else:
+        app_target_spec = '{target}:{target}'.format(target=target_name)
+        app_target = target_name
+        app_target_clean = app_target.replace('/', '_')
+
     bazel_generate_arguments = [build_environment.bazel_path]
     bazel_generate_arguments += ['run', '//Telegram:Telegram_xcodeproj']
     bazel_generate_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
-    #if disable_extensions:
-    #    bazel_generate_arguments += ['--//{}:disableExtensions'.format(app_target)]
-    #if disable_provisioning_profiles:
-    #    bazel_generate_arguments += ['--//{}:disableProvisioningProfiles'.format(app_target)]
-    #if generate_dsym:
-    #    bazel_generate_arguments += ['--apple_generate_dsym']
-    #bazel_generate_arguments += ['--//{}:disableStripping'.format('Telegram')]
+    if disable_extensions:
+        bazel_generate_arguments += ['--//{}:disableExtensions'.format(app_target)]
 
     project_bazel_arguments = []
     for argument in bazel_app_arguments:
         project_bazel_arguments.append(argument)
     project_bazel_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
+    if disable_extensions:
+        project_bazel_arguments += ['--//{}:disableExtensions'.format(app_target)]
 
     xcodeproj_bazelrc = os.path.join(build_environment.base_path, 'xcodeproj.bazelrc')
     if os.path.isfile(xcodeproj_bazelrc):
