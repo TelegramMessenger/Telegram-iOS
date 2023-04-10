@@ -164,6 +164,10 @@ func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId, 
     return account.postbox.transaction { transaction -> Peer? in
         if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId) {
             if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .setChatWallpaper(wallpaper) = action.action {
+                var wallpaper = wallpaper
+                if let settings = settings {
+                    wallpaper = wallpaper.withUpdatedSettings(settings)
+                }
                 transaction.updatePeerCachedData(peerIds: Set([peer.id]), update: { _, current in
                     if let current = current as? CachedUserData {
                         return current.withUpdatedWallpaper(wallpaper)

@@ -208,6 +208,7 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)reset
 {
+    NSAssert([[PGCameraCaptureSession cameraQueue] isCurrentQueue], @"[[PGCameraCaptureSession cameraQueue] isCurrentQueue]");
     [self beginConfiguration];
     
     [self _removeAudioInputEndAudioSession:true];
@@ -259,6 +260,8 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)setCurrentMode:(PGCameraMode)mode
 {
+    NSAssert([[PGCameraCaptureSession cameraQueue] isCurrentQueue], @"[[PGCameraCaptureSession cameraQueue] isCurrentQueue]");
+    
     _currentMode = mode;
     
     [self beginConfiguration];
@@ -804,6 +807,7 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)setCurrentCameraPosition:(PGCameraPosition)position
 {
+    NSAssert([[PGCameraCaptureSession cameraQueue] isCurrentQueue], @"[[PGCameraCaptureSession cameraQueue] isCurrentQueue]");
     AVCaptureDevice *deviceForTargetPosition = [PGCameraCaptureSession _deviceWithCameraPosition:position];
     if ([_videoDevice isEqual:deviceForTargetPosition])
         return;
@@ -1121,6 +1125,20 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
             });
         }
     }
+}
+
+#pragma mark -
+
++ (SQueue *)cameraQueue
+{
+    static dispatch_once_t onceToken;
+    static SQueue *queue = nil;
+    dispatch_once(&onceToken, ^
+    {
+        queue = [[SQueue alloc] init];
+    });
+    
+    return queue;
 }
 
 @end
