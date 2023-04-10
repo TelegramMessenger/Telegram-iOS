@@ -454,8 +454,6 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
         )
     elif arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
         profile_source = XcodeManagedCodesigningSource()
-    elif arguments.noCodesigning is not None:
-        return ResolvedCodesigningData(aps_environment='production')
     else:
         raise Exception('Neither gitCodesigningRepository nor codesigningInformationPath are set')
 
@@ -601,9 +599,6 @@ def build(bazel, arguments):
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
     bazel_command_line.set_show_actions(arguments.showActions)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
-
-    if arguments.noCodesigning is not None:
-        bazel_command_line.set_disable_provisioning_profiles()
 
     bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
