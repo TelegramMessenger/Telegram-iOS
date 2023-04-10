@@ -30,7 +30,7 @@ Install Xcode (directly from https://developer.apple.com/download/applications o
 openssl rand -hex 8
 ```
 2. Create a new Xcode project. Use `Telegram` as the Product Name. Use `org.{identifier from step 1}` as the Organization Identifier.
-3. In Signing & Capabilities click on the `i` next to `Xcode Managed Profile` and copy the team ID (`ABCDEFG123`).
+3. Open `Keychain Access` and navigate to `Certificates`. Locate `Apple Development: your@email.address (XXXXXXXXXX)` and double tap the certificate. Under `Details`, locate `Organizational Unit`. This is the Team ID.
 4. Edit `build-system/template_minimal_development_configuration.json`. Use data from the previous steps.
 
 ## Generate an Xcode project
