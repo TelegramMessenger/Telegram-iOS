@@ -218,20 +218,19 @@ final class PeerListItemComponent: Component {
                 }
             }
             
-            //TODO:localize
             let labelData: (String, Bool)
             if let subtitle = component.subtitle {
                 labelData = (subtitle, false)
             } else if case .legacyGroup = component.peer {
-                labelData = ("group", false)
+                labelData = (component.strings.Group_Status, false)
             } else if case let .channel(channel) = component.peer {
                 if case .group = channel.info {
-                    labelData = ("group", false)
+                    labelData = (component.strings.Group_Status, false)
                 } else {
-                    labelData = ("channel", false)
+                    labelData = (component.strings.Channel_Status, false)
                 }
             } else {
-                labelData = ("group", false)
+                labelData = (component.strings.Group_Status, false)
             }
             
             let labelSize = self.label.update(

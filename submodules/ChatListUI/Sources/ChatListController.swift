@@ -1599,12 +1599,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         })))
                                     }
                                     
-                                    //TODO:localize
-                                    
                                     for filter in filters {
                                         if filter.id == filterId, case let .filter(_, title, _, data) = filter {
                                             if let filterPeersAreMuted {
-                                                items.append(.action(ContextMenuActionItem(text: filterPeersAreMuted.areMuted ? "Unmute All" : "Mute All", textColor: .primary, badge: nil, icon: { theme in
+                                                items.append(.action(ContextMenuActionItem(text: filterPeersAreMuted.areMuted ? strongSelf.presentationData.strings.ChatList_ContextUnmuteAll : strongSelf.presentationData.strings.ChatList_ContextMuteAll, textColor: .primary, badge: nil, icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: filterPeersAreMuted.areMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
                                                     c.dismiss(completion: {
@@ -1623,21 +1621,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                         let iconColor: UIColor = .white
                                                         let overlayController: UndoOverlayController
                                                         if !filterPeersAreMuted.areMuted {
+                                                            let text =  strongSelf.presentationData.strings.ChatList_ToastFolderMuted(title).string
                                                             overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
                                                                 "Middle.Group 1.Fill 1": iconColor,
                                                                 "Top.Group 1.Fill 1": iconColor,
                                                                 "Bottom.Group 1.Fill 1": iconColor,
                                                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                                                 "Line.Group 1.Stroke 1": iconColor
-                                                            ], title: nil, text: "All chats in **\(title)** are now muted", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
+                                                            ], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
                                                         } else {
+                                                            let text = strongSelf.presentationData.strings.ChatList_ToastFolderUnmuted(title).string
                                                             overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
                                                                 "Middle.Group 1.Fill 1": iconColor,
                                                                 "Top.Group 1.Fill 1": iconColor,
                                                                 "Bottom.Group 1.Fill 1": iconColor,
                                                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                                                 "Line.Group 1.Stroke 1": iconColor
-                                                        ], title: nil, text: "All chats in **\(title)** are now unmuted", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
+                                                            ], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
                                                         }
                                                         strongSelf.present(overlayController, in: .current)
                                                     })
@@ -1645,7 +1645,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                             }
                                             
                                             if !data.includePeers.peers.isEmpty && data.categories.isEmpty && !data.excludeRead && !data.excludeMuted && !data.excludeArchived && data.excludePeers.isEmpty {
-                                                items.append(.action(ContextMenuActionItem(text: "Share", textColor: .primary, badge: data.hasSharedLinks ? nil : ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
+                                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ContextMenuShare, textColor: .primary, badge: data.hasSharedLinks ? nil : ContextMenuActionBadge(value: strongSelf.presentationData.strings.ChatList_ContextMenuBadgeNew, color: .accent, style: .label), icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
                                                     c.dismiss(completion: {
@@ -2997,8 +2997,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     
                     if hasLinks {
-                        //TODO:localize
-                        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
+                        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatList_AlertDeleteFolderTitle, text: presentationData.strings.ChatList_AlertDeleteFolderText, actions: [
                             TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
                                 confirmDeleteFolder()
                             }),

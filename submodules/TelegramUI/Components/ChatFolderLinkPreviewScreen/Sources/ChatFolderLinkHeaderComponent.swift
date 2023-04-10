@@ -151,9 +151,8 @@ final class ChatFolderLinkHeaderComponent: Component {
             let badgeSpacing: CGFloat = 6.0
             
             if themeUpdated {
-                //TODO:localize
-                let leftString = NSAttributedString(string: "All Chats", font: Font.semibold(14.0), textColor: component.theme.list.freeTextColor)
-                let rightString = NSAttributedString(string: "Personal", font: Font.semibold(14.0), textColor: component.theme.list.freeTextColor)
+                let leftString = NSAttributedString(string: component.strings.FolderLinkPreview_IconTabLeft, font: Font.semibold(14.0), textColor: component.theme.list.freeTextColor)
+                let rightString = NSAttributedString(string: component.strings.FolderLinkPreview_IconTabRight, font: Font.semibold(14.0), textColor: component.theme.list.freeTextColor)
                 
                 let leftStringBounds = leftString.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
                 let rightStringBounds = rightString.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)

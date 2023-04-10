@@ -547,11 +547,9 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.expandSection(.exclude)
             })
         case let .inviteLinkHeader(hasLinks):
-            //TODO:localize
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "SHARE FOLDER", badge: hasLinks ? nil : "NEW", sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ChatListFilter_SectionShare, badge: hasLinks ? nil : presentationData.strings.ChatList_ContextMenuBadgeNew, sectionId: self.section)
         case let .inviteLinkCreate(hasLinks):
-            //TODO:localize
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: hasLinks ? "Create a new Link" : "Create an Invite Link", sectionId: self.section, editing: false, action: {
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(presentationData.theme), title: hasLinks ? presentationData.strings.ChatListFilter_CreateLink : presentationData.strings.ChatListFilter_CreateLinkNew, sectionId: self.section, editing: false, action: {
                 arguments.createLink()
             })
         case let .inviteLink(_, link):
@@ -648,8 +646,7 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     if let currentPreset, let data = currentPreset.data, data.isShared {
     } else {
         entries.append(.excludePeersHeader(presentationData.strings.ChatListFolder_ExcludedSectionHeader))
-        //TODO:localize
-        entries.append(.addExcludePeer(title: "Add Chats to Exclude"))
+        entries.append(.addExcludePeer(title: presentationData.strings.ChatListFilter_ExcludeChatsAction))
         
         var excludeCategoryIndex = 0
         for category in ChatListFilterExcludeCategory.allCases {
@@ -705,8 +702,7 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
         }
     }
     
-    //TODO:localize
-    entries.append(.inviteLinkInfo(text: hasLinks ? "Create more links to set up different access levels for different people." : "Share access to some of this folder's groups and channels with others."))
+    entries.append(.inviteLinkInfo(text: hasLinks ? presentationData.strings.ChatListFilter_LinkListInfo : presentationData.strings.ChatListFilter_LinkListInfoNew))
     
     return entries
 }
@@ -847,30 +843,13 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
                 removedPeers = data.includePeers.peers.filter({ !includePeers.contains($0) })
             }
             if newPeers.count != 0 {
-                let title: String
-                let text: String
-                
-                //TODO:localize
-                if newPeers.count == 1 {
-                    title = "Сhat added to folder"
-                    text = "It will not affect chatlist of the links of this folder"
-                } else {
-                    title = "\(newPeers.count) chats added to folder"
-                    text = "It will not affect chatlist of the links of this folder"
-                }
+                let title: String = presentationData.strings.ChatListFilter_ToastChatsAddedTitle(Int32(newPeers.count))
+                let text: String = presentationData.strings.ChatListFilter_ToastChatsAddedText
                 
                 presentUndo(.universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil))
             } else if removedPeers.count != 0 {
-                let title: String
-                let text: String
-                
-                if newPeers.count == 1 {
-                    title = "Сhat removed from folder"
-                    text = "It will not affect chatlist of the links of this folder"
-                } else {
-                    title = "\(newPeers.count) chats removed from folder"
-                    text = "It will not affect chatlist of the links of this folder"
-                }
+                let title: String = presentationData.strings.ChatListFilter_ToastChatsRemovedTitle(Int32(newPeers.count))
+                let text: String = presentationData.strings.ChatListFilter_ToastChatsRemovedText
                 
                 presentUndo(.universal(animation: "anim_remove_from_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil))
             }
@@ -1327,14 +1306,13 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             
             let _ = (updatedCurrentPreset |> take(1) |> deliverOnMainQueue).start(next: { currentPreset in
                 if let currentPreset, let data = currentPreset.data, data.hasSharedLinks {
-                    //TODO:localize
                     let title: String
                     let text: String
                     
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
-                    title = "Сhat removed from folder"
-                    text = "It will not affect chatlist of the links of this folder"
+                    title = presentationData.strings.ChatListFilter_ToastChatsRemovedTitle(1)
+                    text = presentationData.strings.ChatListFilter_ToastChatsRemovedText
                     
                     presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_remove_from_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }
@@ -1394,17 +1372,15 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
         },
         createLink: {
             if initialPreset == nil {
-                //TODO:localize
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text = "Please finish creating this folder to share it."
+                let text = presentationData.strings.ChatListFilter_AlertCreateFolderBeforeSharingText
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             } else {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
                 let state = stateValue.with({ $0 })
                 if state.additionallyIncludePeers.isEmpty {
-                    //TODO:localize
-                    let text = "You can’t share folders which have chat types or excluded chats."
+                    let text = presentationData.strings.ChatListFilter_ErrorShareInvalidFolder
                     presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     
                     return
@@ -1418,14 +1394,13 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                     
                     let _ = (updatedCurrentPreset |> take(1) |> deliverOnMainQueue).start(next: { currentPreset in
                         if let currentPreset, let data = currentPreset.data {
-                            //TODO:localize
                             var unavailableText: String?
                             if !data.categories.isEmpty {
-                                unavailableText = "You can’t share folders which have chat types or excluded chats."
+                                unavailableText = presentationData.strings.ChatListFilter_ErrorShareInvalidFolder
                             } else if data.excludeArchived || data.excludeRead || data.excludeMuted {
-                                unavailableText = "You can’t share folders which have chat types or excluded chats."
+                                unavailableText = presentationData.strings.ChatListFilter_ErrorShareInvalidFolder
                             } else if !data.excludePeers.isEmpty {
-                                unavailableText = "You can’t share folders which have chat types or excluded chats."
+                                unavailableText = presentationData.strings.ChatListFilter_ErrorShareInvalidFolder
                             }
                             if let unavailableText {
                                 statusController?.dismiss()
@@ -1602,14 +1577,13 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             
                 let _ = (updatedCurrentPreset |> take(1) |> deliverOnMainQueue).start(next: { currentPreset in
                     if let currentPreset, let data = currentPreset.data, data.hasSharedLinks {
-                        //TODO:localize
                         let title: String
                         let text: String
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
-                        title = "Сhat removed from folder"
-                        text = "It will not affect chatlist of the links of this folder"
+                        title = presentationData.strings.ChatListFilter_ToastChatsRemovedTitle(1)
+                        text = presentationData.strings.ChatListFilter_ToastChatsRemovedText
                         
                         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_remove_from_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: title, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     }
@@ -1790,8 +1764,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             TextAlertAction(type: .genericAction, title: presentationData.strings.ChatListFolder_DiscardDiscard, action: {
                 dismissImpl?()
             }),
-            //TODO:localize
-            TextAlertAction(type: .defaultAction, title: "Save", action: {
+            TextAlertAction(type: .defaultAction, title: presentationData.strings.ChatListFilter_SaveAlertActionSave, action: {
                 applyImpl?(false, {
                     dismissImpl?()
                 })
@@ -1932,11 +1905,13 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                     }))
                 }, error: { error in
                     completed()
-                    //TODO:localize
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    
                     let text: String
                     switch error {
                     case .generic:
-                        text = "An error occurred"
+                        text = presentationData.strings.ChatListFilter_CreateLinkUnknownError
                     case let .sharedFolderLimitExceeded(limit, _):
                         let limitController = context.sharedContext.makePremiumLimitController(context: context, subject: .membershipInSharedFolders, count: limit, action: {
                             pushPremiumController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
@@ -1966,10 +1941,8 @@ func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, chec
                         
                         return
                     case .someUserTooManyChannels:
-                        //TODO:localize
-                        text = "One of the groups in this folder can’t be added because one of its admins has too many groups and channels."
+                        text = presentationData.strings.ChatListFilter_CreateLinkErrorSomeoneHasChannelLimit
                     }
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     presentController(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                 })
             }

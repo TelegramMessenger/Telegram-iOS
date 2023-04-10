@@ -223,8 +223,7 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
     
     entries.append(.listHeader(presentationData.strings.ChatListFolderSettings_FoldersSection))
     
-    //TODO:localize
-    entries.append(.addItem(text: "Create a Folder", isEditing: state.isEditing))
+    entries.append(.addItem(text: presentationData.strings.ChatListFilterList_CreateFolder, isEditing: state.isEditing))
     
     if !filters.isEmpty || suggestedFilters.isEmpty {
         var folderCount = 0
@@ -450,8 +449,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                     }
                     
                     if hasLinks {
-                        //TODO:localize
-                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatList_AlertDeleteFolderTitle, text: presentationData.strings.ChatList_AlertDeleteFolderText, actions: [
                             TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
                                 confirmDeleteFolder()
                             }),
