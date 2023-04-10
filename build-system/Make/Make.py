@@ -447,7 +447,11 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
             always_fetch=not arguments.gitCodesigningUseCurrent
         )
     elif arguments.codesigningInformationPath is not None:
-        profile_source = DirectoryCodesigningSource()
+        profile_source = DirectoryCodesigningSource(
+            directory_path=arguments.codesigningInformationPath,
+            team_id=build_configuration.team_id,
+            bundle_id=build_configuration.bundle_id
+        )
     elif arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
         profile_source = XcodeManagedCodesigningSource()
     elif arguments.noCodesigning is not None:
