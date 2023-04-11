@@ -258,7 +258,7 @@ public func wallpaperImage(account: Account, accountManager: AccountManager<Tele
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                 
-                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 240.0, height: 240.0))
+                let initialThumbnailContextFittingSize = fittedSize.fitted(thumbnail ? CGSize(width: 240.0, height: 240.0) : CGSize(width: 320.0, height: 320.0))
                 
                 let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
                 guard let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) else {

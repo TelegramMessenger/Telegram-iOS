@@ -16,12 +16,16 @@ import PhotoResources
 import WallpaperResources
 import Markdown
 import RadialStatusNode
+import ComponentFlow
+import AudioTranscriptionPendingIndicatorComponent
 
 class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
     private let mediaBackgroundNode: NavigationBackgroundNode
     private let subtitleNode: TextNode
+    private let progressNode: ImmediateTextNode
     private let imageNode: TransformImageNode
+    private var transcriptionPendingIndicator: ComponentHostView<Empty>?
     
     private var statusOverlayNode: ASDisplayNode
     private var statusNode: RadialStatusNode
@@ -43,7 +47,12 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
         self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.displaysAsynchronously = false
         
+        self.progressNode = ImmediateTextNode()
+        self.progressNode.isUserInteractionEnabled = false
+        self.progressNode.displaysAsynchronously = false
+        
         self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
@@ -66,6 +75,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
 
         self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.progressNode)
         self.addSubnode(self.imageNode)
     
         self.addSubnode(self.buttonNode)
@@ -172,14 +182,25 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     private func updateProgress(_ progress: Float?) {
+        guard let item = self.item else {
+            return
+        }
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
         if let progress {
             let progressValue = CGFloat(max(0.027, progress))
             self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: progressValue, cancelEnabled: true, animateRotation: true))
             transition.updateAlpha(node: self.statusOverlayNode, alpha: 1.0)
+            
+            let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+            self.progressNode.attributedText = NSAttributedString(string: "\(Int(progress * 100.0))%", font: Font.semibold(13.0), textColor: primaryTextColor, paragraphAlignment: .center)
+            let progressSize = self.progressNode.updateLayout(CGSize(width: 100.0, height: 100.0))
+            let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(self.subtitleNode.frame.midX - progressSize.width / 2.0), y: self.subtitleNode.frame.maxY + 1.0), size: progressSize)
+            self.progressNode.isHidden = false
+            self.progressNode.frame = progressFrame
         } else {
             self.statusNode.transitionToState(.none)
             transition.updateAlpha(node: self.statusOverlayNode, alpha: 0.0)
+            self.progressNode.isHidden = true
         }
     }
                 
@@ -218,8 +239,14 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let peerName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
                 let text: String
+                var displayTrailingAnimatedDots = false
                 if fromYou {
-                    text = item.presentationData.strings.Notification_YouChangedWallpaper
+                    if item.message.id.namespace == Namespaces.Message.Local {
+                        text = item.presentationData.strings.Notification_YouChangingWallpaper
+                        displayTrailingAnimatedDots = true
+                    } else {
+                        text = item.presentationData.strings.Notification_YouChangedWallpaper
+                    }
                 } else {
                     text = item.presentationData.strings.Notification_ChangedWallpaper(peerName).string
                 }
@@ -227,15 +254,24 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                 let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor)
                 let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: primaryTextColor)
                 
-                let subtitle = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in
+                var subtitle = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in
                     return nil
                 }), textAlignment: .center)
+                if displayTrailingAnimatedDots {
+                    let modifiedString = NSMutableAttributedString(attributedString: subtitle)
+                    modifiedString.append(NSAttributedString(string: "...", font: Font.regular(13.0), textColor: .clear))
+                    subtitle = modifiedString
+                }
                 
                 let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_Wallpaper_View, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-                let backgroundSize = CGSize(width: width, height: subtitleLayout.size.height + 140.0 + (fromYou ? 0.0 : 42.0))
+                var textHeight = subtitleLayout.size.height
+                if displayTrailingAnimatedDots {
+                    textHeight += subtitleLayout.size.height
+                }
+                let backgroundSize = CGSize(width: width, height: textHeight + 140.0 + (fromYou ? 0.0 : 42.0))
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
@@ -323,6 +359,34 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                                                         
                             let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 127.0), size: subtitleLayout.size)
                             strongSelf.subtitleNode.frame = subtitleFrame
+                            
+                            if displayTrailingAnimatedDots {
+                                let transcriptionPendingIndicator: ComponentHostView<Empty>
+                                if let current = strongSelf.transcriptionPendingIndicator {
+                                    transcriptionPendingIndicator = current
+                                } else {
+                                    transcriptionPendingIndicator = ComponentHostView<Empty>()
+                                    strongSelf.transcriptionPendingIndicator = transcriptionPendingIndicator
+                                    strongSelf.view.addSubview(transcriptionPendingIndicator)
+                                }
+                                
+                                let indicatorComponent: AnyComponent<Empty>
+                                indicatorComponent = AnyComponent(AudioTranscriptionPendingLottieIndicatorComponent(color: primaryTextColor, font: Font.regular(13.0)))
+                                
+                                let indicatorSize = transcriptionPendingIndicator.update(
+                                    transition: .immediate,
+                                    component: indicatorComponent,
+                                    environment: {},
+                                    containerSize: CGSize(width: 100.0, height: 100.0)
+                                )
+                                
+                                transcriptionPendingIndicator.frame = CGRect(origin: CGPoint(x: strongSelf.subtitleNode.frame.midX + subtitleLayout.trailingLineWidth / 2.0 - indicatorSize.width + 2.0 - UIScreenPixel, y: strongSelf.subtitleNode.frame.maxY - indicatorSize.height - 3.0 - UIScreenPixel), size: indicatorSize)
+                            } else {
+                                if let transcriptionPendingIndicator = strongSelf.transcriptionPendingIndicator {
+                                    strongSelf.transcriptionPendingIndicator = nil
+                                    transcriptionPendingIndicator.removeFromSuperview()
+                                }
+                            }
                             
                             let buttonTitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonTitleLayout.size.width) / 2.0), y: subtitleFrame.maxY + 18.0), size: buttonTitleLayout.size)
                             strongSelf.buttonTitleNode.frame = buttonTitleFrame

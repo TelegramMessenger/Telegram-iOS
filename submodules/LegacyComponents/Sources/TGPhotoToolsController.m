@@ -150,6 +150,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         }
         if (!tool.isHidden)
         {
+            if (tool.isRegional && self.intent == TGPhotoEditorControllerWallpaperIntent) {
+                continue;
+            }
             [tools addObject:tool];
             if (tool.isSimple)
                 [simpleTools addObject:tool];
@@ -1019,6 +1022,8 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 - (TGPhotoEditorTab)availableTabs
 {
     if (self.photoEditor.forVideo) {
+        return TGPhotoEditorToolsTab | TGPhotoEditorTintTab | TGPhotoEditorCurvesTab;
+    } else if (self.intent == TGPhotoEditorControllerWallpaperIntent) {
         return TGPhotoEditorToolsTab | TGPhotoEditorTintTab | TGPhotoEditorCurvesTab;
     } else {
         return TGPhotoEditorToolsTab | TGPhotoEditorTintTab | TGPhotoEditorBlurTab | TGPhotoEditorCurvesTab;

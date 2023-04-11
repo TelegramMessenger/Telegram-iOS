@@ -16,6 +16,8 @@ import GalleryUI
 import HexColor
 import CounterContollerTitleView
 import UndoUI
+import LegacyComponents
+import LegacyMediaPickerUI
 
 public enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)
@@ -164,6 +166,14 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
     return .file(TelegramWallpaper.File(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(colors: colorValues, intensity: intensityValue, rotation: rotation)))
 }
 
+class WallpaperGalleryInteraction {
+    let editMedia: (UIImage, CGRect, UIView, [UIView], @escaping (UIImage, TGMediaEditAdjustments?) -> Void) -> Void
+    
+    init(editMedia: @escaping (UIImage, CGRect, UIView, [UIView], @escaping (UIImage, TGMediaEditAdjustments?) -> Void) -> Void) {
+        self.editMedia = editMedia
+    }
+}
+
 public class WallpaperGalleryController: ViewController {
     public enum Mode {
         case `default`
@@ -176,7 +186,9 @@ public class WallpaperGalleryController: ViewController {
     private let context: AccountContext
     private let source: WallpaperListSource
     private let mode: Mode
-    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?, CGFloat?) -> Void)?
+    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, UIImage?, CGRect?, CGFloat?) -> Void)?
+    
+    private var interaction: WallpaperGalleryInteraction?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -230,9 +242,29 @@ public class WallpaperGalleryController: ViewController {
         //self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
+        self.interaction = WallpaperGalleryInteraction(editMedia: { [weak self] image, fromRect, mainSnapshot, snapshots, apply in
+            guard let self else {
+                return
+            }
+            var snapshots = snapshots
+            if let toolbarNode = self.toolbarNode, let snapshotView = toolbarNode.view.snapshotContentTree() {
+                snapshotView.frame = toolbarNode.view.convert(toolbarNode.view.bounds, to: nil)
+                snapshots.append(snapshotView)
+            }
+            
+            legacyWallpaperEditor(context: context, image: image, fromRect: fromRect, mainSnapshot: mainSnapshot, snapshots: snapshots, transitionCompletion: {
+                
+            }, completion: { image, adjustments in
+                apply(image, adjustments)
+            }, present: { [weak self] c, a in
+                if let self {
+                    self.present(c, in: .window(.root))
+                }
+            })
+        })
+        
         var entries: [WallpaperGalleryEntry] = []
         var centralEntryIndex: Int?
-        
         switch source {
             case let .list(wallpapers, central, type):
                 entries = wallpapers.map { .wallpaper($0, nil) }
@@ -350,7 +382,7 @@ public class WallpaperGalleryController: ViewController {
         var i: Int = 0
         var updateItems: [GalleryPagerUpdateItem] = []
         for entry in entries {
-            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, index: updateItems.count, entry: entry, arguments: arguments, source: self.source, mode: self.mode))
+            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, index: updateItems.count, entry: entry, arguments: arguments, source: self.source, mode: self.mode, interaction: self.interaction!))
             updateItems.append(item)
             i += 1
         }
@@ -361,7 +393,7 @@ public class WallpaperGalleryController: ViewController {
         var updateItems: [GalleryPagerUpdateItem] = []
         for i in 0 ..< self.entries.count {
             if i == index {
-                let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source, mode: self.mode))
+                let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source, mode: self.mode, interaction: self.interaction!))
                 updateItems.append(item)
             }
         }
@@ -459,7 +491,7 @@ public class WallpaperGalleryController: ViewController {
                         let entry = strongSelf.entries[centralItemNode.index]
                         
                         if case .peer = strongSelf.mode {
-                            strongSelf.apply?(entry, options, centralItemNode.cropRect, centralItemNode.brightness)
+                            strongSelf.apply?(entry, options, centralItemNode.editedImage, centralItemNode.cropRect, centralItemNode.brightness)
                             return
                         }
                         
@@ -617,7 +649,7 @@ public class WallpaperGalleryController: ViewController {
                                 break
                         }
 
-                        strongSelf.apply?(entry, options, centralItemNode.cropRect, centralItemNode.brightness)
+                        strongSelf.apply?(entry, options, nil, centralItemNode.cropRect, centralItemNode.brightness)
                     }
                 }
             }
@@ -695,7 +727,7 @@ public class WallpaperGalleryController: ViewController {
                             break
                         }
                     }
-                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
 
@@ -723,7 +755,7 @@ public class WallpaperGalleryController: ViewController {
 
                     itemNode.updateIsColorsPanelActive(strongSelf.colorsPanelEnabled, animated: true)
 
-                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
 
@@ -960,7 +992,7 @@ public class WallpaperGalleryController: ViewController {
                 colors = true
             }
             
-            self.galleryNode.pager.replaceItems(zip(0 ..< self.entries.count, self.entries).map({ WallpaperGalleryItem(context: self.context, index: $0, entry: $1, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source, mode: self.mode) }), centralItemIndex: self.centralEntryIndex)
+            self.galleryNode.pager.replaceItems(zip(0 ..< self.entries.count, self.entries).map({ WallpaperGalleryItem(context: self.context, index: $0, entry: $1, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source, mode: self.mode, interaction: self.interaction!) }), centralItemIndex: self.centralEntryIndex)
             
             if let initialOptions = self.initialOptions, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                 itemNode.options = initialOptions

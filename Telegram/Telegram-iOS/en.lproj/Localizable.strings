@@ -255,8 +255,8 @@
 
 "PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@|suggested you new profile photo";
 
-"PUSH_MESSAGE_WALLPAPER" = "%1$@ set a new background for the chat with you";
-"PUSH_MESSAGE_SAME_WALLPAPER" = "%1$@ set the same background for the chat with you";
+"PUSH_MESSAGE_WALLPAPER" = "%1$@ set a new wallpaper for the chat with you";
+"PUSH_MESSAGE_SAME_WALLPAPER" = "%1$@ set the same wallpaper for the chat with you";
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
@@ -9121,12 +9121,13 @@ Sorry for the inconvenience.";
 
 "Premium.GiftedTitle.Someone" = "Someone";
 
-"Notification.ChangedWallpaper" = "%1$@ set a new background for this chat";
-"Notification.YouChangedWallpaper" = "You set a new background for this chat";
-"Notification.Wallpaper.View" = "View Background";
+"Notification.ChangedWallpaper" = "%1$@ set a new wallpaper for this chat";
+"Notification.YouChangedWallpaper" = "You set a new wallpaper for this chat";
+"Notification.YouChangingWallpaper" = "Setting new wallpaper";
+"Notification.Wallpaper.View" = "View Wallpaper";
 
-"Notification.ChangedToSameWallpaper" = "%1$@ set the same background for this chat";
-"Notification.YouChangedToSameWallpaper" = "You set the same background for this chat";
+"Notification.ChangedToSameWallpaper" = "%1$@ set the same wallpaper for this chat";
+"Notification.YouChangedToSameWallpaper" = "You set the same wallpaper for this chat";
 
 "Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
 
@@ -9144,28 +9145,29 @@ Sorry for the inconvenience.";
 "PeerInfo.Bot.ChangeSettings" = "Change Bot Settings";
 "PeerInfo.Bot.BotFatherInfo" = "Use [@BotFather]() to manage this bot.";
 
-"WallpaperPreview.NotAppliedInfo" = "Background will not be applied for **%@**";
-"WallpaperPreview.ChatTopText" = "Apply the background in this chat.";
+"WallpaperPreview.NotAppliedInfo" = "**%@** will be able to apply this wallpaper";
+"WallpaperPreview.ChatTopText" = "Apply the wallpaper in this chat.";
 "WallpaperPreview.ChatBottomText" = "Enjoy the view.";
 
-"Conversation.Theme.SetPhotoWallpaper" = "Choose Background from Photos";
-"Conversation.Theme.SetColorWallpaper" = "Set a Color as a Background";
-"Conversation.Theme.OtherOptions" = "Other Options...";
+"Conversation.Theme.SetPhotoWallpaper" = "Choose Wallpaper from Photos";
+"Conversation.Theme.SetColorWallpaper" = "Set a Color as Wallpaper";
 
-"Conversation.Theme.ChooseWallpaperTitle" = "Choose Background";
-"Conversation.Theme.ResetWallpaper" = "Reset to Default Background";
+"Conversation.Theme.ChooseWallpaperTitle" = "Choose Wallpaper";
+"Conversation.Theme.ResetWallpaper" = "Remove Wallpaper";
 "Conversation.Theme.ChooseColorTitle" = "Set a Color";
 "Conversation.Theme.SetCustomColor" = "Set Custom";
 
 "Appearance.ShowNextMediaOnTap" = "Show Next Media on Tap";
+"Appearance.ShowNextMediaOnTapInfo" = "Tap near the edge of the screen while viewing media to navigate between photos.";
 
 "WebApp.LaunchMoreInfo" = "More about this bot";
 "WebApp.LaunchConfirmation" = "To launch this web app, you will connect to its website.";
 
-"WallpaperPreview.PreviewInNightMode" = "Preview this background in night mode.";
-"WallpaperPreview.PreviewInDayMode" = "Preview this background in day mode.";
+"WallpaperPreview.PreviewInNightMode" = "Preview this wallpaper in night mode.";
+"WallpaperPreview.PreviewInDayMode" = "Preview this wallpaper in day mode.";
 
-"Conversation.Theme.ApplyBackground" = "Set as Background";
+"PeerInfo.BotBlockedTitle" = "Bot Blocked";
+"PeerInfo.BotBlockedText" = "This bot will not be able to message you.";
 
 "ChatList.ContextMuteAll" = "Mute All";
 "ChatList.ContextUnmuteAll" = "Unmute All";

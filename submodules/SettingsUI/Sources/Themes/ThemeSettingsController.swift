@@ -129,7 +129,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case stickersAndEmoji
     case otherHeader(PresentationTheme, String)
     case showNextMediaOnTap(PresentationTheme, String, Bool)
-    case animationsInfo(PresentationTheme, String)
+    case showNextMediaOnTapInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -143,7 +143,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsControllerSection.icon.rawValue
             case .powerSaving, .stickersAndEmoji:
                 return ThemeSettingsControllerSection.message.rawValue
-            case .otherHeader, .showNextMediaOnTap, .animationsInfo:
+            case .otherHeader, .showNextMediaOnTap, .showNextMediaOnTapInfo:
                 return ThemeSettingsControllerSection.other.rawValue
         }
     }
@@ -180,7 +180,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 13
             case .showNextMediaOnTap:
                 return 14
-            case .animationsInfo:
+            case .showNextMediaOnTapInfo:
                 return 15
         }
     }
@@ -277,8 +277,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .animationsInfo(lhsTheme, lhsText):
-                if case let .animationsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .showNextMediaOnTapInfo(lhsTheme, lhsText):
+                if case let .showNextMediaOnTapInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -347,7 +347,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleShowNextMediaOnTap(value)
                 }, tag: ThemeSettingsEntryTag.animations)
-            case let .animationsInfo(_, text):
+            case let .showNextMediaOnTapInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -405,6 +405,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
     entries.append(.showNextMediaOnTap(presentationData.theme, strings.Appearance_ShowNextMediaOnTap, mediaSettings.showNextMediaOnTap))
+    entries.append(.showNextMediaOnTapInfo(presentationData.theme, strings.Appearance_ShowNextMediaOnTapInfo))
     
     return entries
 }

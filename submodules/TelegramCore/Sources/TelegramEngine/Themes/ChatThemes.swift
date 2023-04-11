@@ -124,18 +124,8 @@ func _internal_setChatWallpaper(postbox: Postbox, network: Network, stateManager
         guard let inputPeer = apiInputPeer(peer) else {
             return .complete()
         }
-        
         return postbox.transaction { transaction -> Signal<Api.Updates, NoError> in
-            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                if let current = current as? CachedUserData {
-                    return current.withUpdatedWallpaper(wallpaper)
-                } else {
-                    return current
-                }
-            })
-            
             var flags: Int32 = 0
-            
             var inputWallpaper: Api.InputWallPaper?
             var inputSettings: Api.WallPaperSettings?
             if let inputWallpaperAndInputSettings = wallpaper?.apiInputWallpaperAndSettings {
@@ -149,10 +139,19 @@ func _internal_setChatWallpaper(postbox: Postbox, network: Network, stateManager
                 return .complete()
             }
             |> mapToSignal { updates -> Signal<Api.Updates, NoError> in
-                if applyUpdates {
-                    stateManager.addUpdates(updates)
+                return postbox.transaction { transaction -> Api.Updates in
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        if let current = current as? CachedUserData {
+                            return current.withUpdatedWallpaper(wallpaper)
+                        } else {
+                            return current
+                        }
+                    })
+                    if applyUpdates {
+                        stateManager.addUpdates(updates)
+                    }
+                    return updates
                 }
-                return .single(updates)
             }
         } |> switchToLatest
     }
