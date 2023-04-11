@@ -693,9 +693,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                             buttons.append(button)
                                         } else if case .urlAuth = button.action {
                                             buttons.append(button)
-                                        } else if case let .switchInline(samePeer, query) = button.action, sourceSentViaBot {
+                                        } else if case let .switchInline(samePeer, query, peerTypes) = button.action, sourceSentViaBot {
                                             let samePeer = samePeer && peerId == sourceMessage.id.peerId
-                                            let updatedButton = ReplyMarkupButton(title: button.titleWhenForwarded ?? button.title, titleWhenForwarded: button.titleWhenForwarded,  action: .switchInline(samePeer: samePeer, query: query))
+                                            let updatedButton = ReplyMarkupButton(title: button.titleWhenForwarded ?? button.title, titleWhenForwarded: button.titleWhenForwarded,  action: .switchInline(samePeer: samePeer, query: query, peerTypes: peerTypes))
                                             buttons.append(updatedButton)
                                         } else {
                                             rows.removeAll()

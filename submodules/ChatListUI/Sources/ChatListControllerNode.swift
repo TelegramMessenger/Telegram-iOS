@@ -571,13 +571,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 self.topPanel = topPanel
             }
             
-            //TODO:localize
-            let title: String
-            if chatFolderUpdates.availableChatsToJoin == 1 {
-                title = "1 New Chat Available"
-            } else {
-                title = "\(chatFolderUpdates.availableChatsToJoin) New Chats Available"
-            }
+            let title: String = self.presentationData.strings.ChatList_PanelNewChatsAvailable(Int32(chatFolderUpdates.availableChatsToJoin))
             
             let topPanelHeight: CGFloat = 44.0
             

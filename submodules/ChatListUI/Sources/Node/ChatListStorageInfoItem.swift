@@ -221,8 +221,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     
                     switch item.notice {
                     case .chatFolderUpdates:
-                        //TODO:locallize
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: "Hide", icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.ChatList_HideAction, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                     default:
                         strongSelf.setRevealOptions((left: [], right: []))
                     }

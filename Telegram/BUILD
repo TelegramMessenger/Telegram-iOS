@@ -2009,6 +2009,16 @@ xcodeproj(
         ],
         target_environments = ["device", "simulator"],
     ),
+    xcode_configurations = {
+        "Debug": {
+            "//command_line_option:compilation_mode": "dbg",
+        },
+        "Release": {
+            "//command_line_option:compilation_mode": "opt",
+        },
+    },
+    default_xcode_configuration = "Debug"
+
 )
 
 # Temporary targets used to simplify webrtc build tests

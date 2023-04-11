@@ -9169,3 +9169,152 @@ Sorry for the inconvenience.";
 "PeerInfo.BotBlockedTitle" = "Bot Blocked";
 "PeerInfo.BotBlockedText" = "This bot will not be able to message you.";
 
+"ChatList.ContextMuteAll" = "Mute All";
+"ChatList.ContextUnmuteAll" = "Unmute All";
+"ChatList.ToastFolderMuted" = "All chats in **%@** are now muted";
+"ChatList.ToastFolderUnmuted" = "All chats in **%@** are now unmuted";
+"ChatList.ContextMenuShare" = "Share";
+"ChatList.ContextMenuBadgeNew" = "NEW";
+"ChatList.AlertDeleteFolderTitle" = "Delete Folder";
+"ChatList.AlertDeleteFolderText" = "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.";
+"ChatList.PanelNewChatsAvailable_1" = "1 New Chat Available";
+"ChatList.PanelNewChatsAvailable_any" = "%d New Chats Available";
+
+"ChatListFilter.SectionShare" = "SHARE FOLDER";
+"ChatListFilter.CreateLink" = "Create a new Link";
+"ChatListFilter.CreateLinkNew" = "Create an Invite Link";
+"ChatListFilter.ExcludeChatsAction" = "Add Chats to Exclude";
+"ChatListFilter.LinkListInfo" = "Create more links to set up different access levels for different people.";
+"ChatListFilter.LinkListInfoNew" = "Share access to some of this folder's groups and channels with others.";
+"ChatListFilter.ToastChatsAddedTitle_1" = "Сhat added to folder";
+"ChatListFilter.ToastChatsAddedTitle_any" = "%d chats added to folder";
+"ChatListFilter.ToastChatsAddedText" = "It will not affect chatlist of the links of this folder";
+"ChatListFilter.ToastChatsRemovedTitle_1" = "Сhat removed from folder";
+"ChatListFilter.ToastChatsRemovedTitle_any" = "%d chats added to folder";
+"ChatListFilter.ToastChatsRemovedText" = "It will not affect chatlist of the links of this folder";
+"ChatListFilter.AlertCreateFolderBeforeSharingText" = "Please finish creating this folder to share it.";
+"ChatListFilter.ErrorShareInvalidFolder" = "You can’t share folders which have chat types or excluded chats.";
+"ChatListFilter.SaveAlertActionSave" = "Save";
+"ChatListFilter.CreateLinkUnknownError" = "Error creating a share link";
+"ChatListFilter.CreateLinkErrorSomeoneHasChannelLimit" = "One of the groups in this folder can’t be added because one of its admins has too many groups and channels.";
+
+"ChatListFilterList.CreateFolder" = "Create a Folder";
+
+"FolderLinkScreen.LabelCanInvite" = "you can invite others here";
+
+"FolderLinkScreen.LabelUnavailableBot" = "you can't share chats with bots";
+"FolderLinkScreen.AlertTextUnavailableBot" = "You can't share chats with bots";
+
+"FolderLinkScreen.LabelUnavailableUser" = "you can't share private chats";
+"FolderLinkScreen.AlertTextUnavailableUser" = "You can't share private chats";
+
+"FolderLinkScreen.LabelUnavailableGeneric" = "you can't invite others here";
+"FolderLinkScreen.AlertTextUnavailablePrivateGroup" = "You don't have the admin rights to share invite links to this private group.";
+"FolderLinkScreen.AlertTextUnavailablePublicGroup" = "You don't have the admin rights to share invite links to this group chat.";
+"FolderLinkScreen.AlertTextUnavailablePrivateChannel" = "You don't have the admin rights to share invite links to this private channel.";
+"FolderLinkScreen.AlertTextUnavailablePublicChannel" = "You don't have the admin rights to share invite links to this channel.";
+
+"FolderLinkScreen.TitleDescriptionUnavailable" = "You can only share groups and channels in which you are allowed to create invite links.";
+"FolderLinkScreen.ChatCountHeaderUnavailable" = "There are no chats in this folder that you can share with others.";
+"FolderLinkScreen.ChatsSectionHeaderUnavailable" = "THESE CHATS CANNOT BE SHARED";
+
+"FolderLinkScreen.TitleDescriptionDeselected" = "Anyone with this link can add **%@** folder and the chats selected below.";
+"FolderLinkScreen.ChatsSectionHeader" = "CHATS";
+"FolderLinkScreen.ChatsSectionHeaderActionSelectAll" = "SELECT ALL";
+"FolderLinkScreen.ChatsSectionHeaderActionDeselectAll" = "DESELECT ALL";
+
+"FolderLinkScreen.TitleDescriptionSelectedCount_1" = "the 1 chat";
+"FolderLinkScreen.TitleDescriptionSelectedCount_any" = "the %d chats";
+"FolderLinkScreen.TitleDescriptionSelected" = "Anyone with this link can add **%1$@** folder and %2$@ selected below.";
+
+"FolderLinkScreen.ChatsSectionHeaderSelected_1" = "1 CHAT SELECTED";
+"FolderLinkScreen.ChatsSectionHeaderSelected_any" = "%d CHATS SELECTED";
+
+"FolderLinkScreen.LinkSectionHeader" = "INVITE LINK";
+
+"FolderLinkScreen.ContextActionNameLink" = "Name Link";
+"FolderLinkScreen.NameLink.Title" = "Name This Link";
+
+"FolderLinkScreen.ToastNewChatAdded" = "People who already used the invite link will be able to join newly added chats.";
+"FolderLinkScreen.SaveUnknownError" = "An error occurred while updating the link";
+"FolderLinkScreen.ToastLinkUpdated" = "Link updated";
+
+"FolderLinkScreen.Title" = "Share Folder";
+
+"FolderLinkScreen.SaveAlertTitle" = "Unsaved Changes";
+"FolderLinkScreen.SaveAlertText" = "You have changed the settings of this folder. Apply changes?";
+"FolderLinkScreen.SaveAlertActionDiscard" = "Discard";
+"FolderLinkScreen.SaveAlertActionApply" = "Apply";
+"FolderLinkScreen.SaveAlertActionContinue" = "Cancel";
+
+"FolderLinkScreen.LinkActionCopy" = "Copy";
+"FolderLinkScreen.LinkActionShare" = "Share";
+
+"InviteLink.LabelJoinedViaFolder" = "joined via a folder invite link";
+
+"ChatListFilter.LinkLabelChatCount_1" = "includes 1 chat";
+"ChatListFilter.LinkLabelChatCount_any" = "includes %d chats";
+"ChatListFilter.LinkActionDelete" = "Delete";
+
+"InviteLink.QRCodeFolder.Title" = "Invite by QR Code";
+"InviteLink.QRCodeFolder.Text" = "Everyone on Telegram can scan this code to add this folder and join the chats included in this invite link.";
+
+"FolderLinkPreview.IconTabLeft" = "All Chats";
+"FolderLinkPreview.IconTabRight" = "Personal";
+"FolderLinkPreview.TitleShare" = "Share Folder";
+"FolderLinkPreview.TitleRemove" = "Remove Folder";
+"FolderLinkPreview.TitleAddFolder" = "Add Folder";
+"FolderLinkPreview.TitleAddChats_1" = "Add %d Chat";
+"FolderLinkPreview.TitleAddChats_any" = "Add %d Chats";
+"FolderLinkPreview.LinkSectionHeader" = "INVITE LINKS";
+"FolderLinkPreview.RemoveSectionSelectedHeader_1" = "%d CHAT TO QUIT";
+"FolderLinkPreview.RemoveSectionSelectedHeader_any" = "%d CHATS TO QUIT";
+"FolderLinkPreview.ChatSectionHeader_1" = "1 CHAT IN THIS FOLDER";
+"FolderLinkPreview.ChatSectionHeader_any" = "%d CHATS IN THIS FOLDER";
+"FolderLinkPreview.ChatSectionJoinHeader_1" = "1 CHAT IN THIS FOLDER TO JOIN";
+"FolderLinkPreview.ChatSectionJoinHeader_any" = "%d CHATS IN THIS FOLDER TO JOIN";
+
+"FolderLinkPreview.ToastChatsAddedTitle" = "Folder %@ Updated";
+"FolderLinkPreview.ToastChatsAddedText_1" = "You have joined %d new chat";
+"FolderLinkPreview.ToastChatsAddedText_any" = "You have joined %d new chats";
+
+"FolderLinkPreview.ToastFolderAddedTitle" = "Folder %@ Added";
+"FolderLinkPreview.ToastFolderAddedText_1" = "You also joined %d chat";
+"FolderLinkPreview.ToastFolderAddedText_any" = "You also joined %d chats";
+
+"FolderLinkPreview.TextLinkList" = "Create more links to set up different access\nlevels for different people.";
+"FolderLinkPreview.TextRemoveFolder" = "Do you also want to quit the chats included in this folder?";
+"FolderLinkPreview.TextAllAdded" = "You have already added this\nfolder and its chats.";
+"FolderLinkPreview.TextAddFolder" = "Do you want to add a new chat folder\nand join its groups and channels?";
+
+"FolderLinkPreview.TextAddChatsCount_1" = "%d chat";
+"FolderLinkPreview.TextAddChatsCount_any" = "%d chats";
+"FolderLinkPreview.TextAddChats" = "Do you want to add **%1$@** to the\nfolder **%2$@**?";
+
+"FolderLinkPreview.LabelPeerSubscriber" = "You are already a subscriber";
+"FolderLinkPreview.LabelPeerSubscribers_1" = "%d subscriber";
+"FolderLinkPreview.LabelPeerSubscribers_any" = "%d subscribers";
+
+"FolderLinkPreview.LabelPeerMember" = "You are already a member";
+"FolderLinkPreview.LabelPeerMembers_1" = "%d member";
+"FolderLinkPreview.LabelPeerMembers_any" = "%d members";
+
+"FolderLinkPreview.ToastAlreadyMemberChannel" = "You are already subscribed to this channel.";
+"FolderLinkPreview.ToastAlreadyMemberGroup" = "You are already a member of this group.";
+
+"FolderLinkPreview.ButtonRemoveFolder" = "Remove Folder";
+"FolderLinkPreview.ButtonRemoveFolderAndChats" = "Remove Folder and Chats";
+
+"FolderLinkPreview.ButtonDoNotJoinChats" = "Do Not Join Any Chats";
+"FolderLinkPreview.ButtonJoinChats" = "Join Chats";
+"FolderLinkPreview.ButtonAddFolder" = "Add Folder";
+
+"FolderLinkPreview.ToastLeftTitle" = "Folder %@ deleted";
+"FolderLinkPreview.ToastLeftChatsText_1" = "You also left **%d** chat";
+"FolderLinkPreview.ToastLeftChatsText_any" = "You also left **%d** chats";
+
+"FolderLinkPreview.ListSelectionSelectAllDynamicPartSelect" = "SELECT";
+"FolderLinkPreview.ListSelectionSelectAllDynamicPartDeselect" = "DESELECT";
+"FolderLinkPreview.ListSelectionSelectAllStaticPartSelect" = "ALL";
+"FolderLinkPreview.ListSelectionSelectAllStaticPartDeselect" = "ALL";
+"FolderLinkPreview.ListSelectionSelectAllFormat" = "{dynamic}{static}";

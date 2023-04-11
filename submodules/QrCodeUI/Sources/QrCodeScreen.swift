@@ -239,9 +239,8 @@ public final class QrCodeScreen: ViewController {
                     title = self.presentationData.strings.InviteLink_QRCode_Title
                     text = isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel
                 case .chatFolder:
-                    //TODO:localize
-                    title = "Invite by QR Code"
-                    text = "Everyone on Telegram can scan this code to add this folder and join the chats included in this invite link."
+                    title = self.presentationData.strings.InviteLink_QRCodeFolder_Title
+                    text = self.presentationData.strings.InviteLink_QRCodeFolder_Text
                 default:
                     title = ""
                     text = ""

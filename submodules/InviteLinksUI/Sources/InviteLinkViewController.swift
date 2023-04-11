@@ -227,8 +227,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
             case let .importer(_, _, dateTimeFormat, peer, date, joinedViaFolderLink, loading):
                 let dateString: String
                 if joinedViaFolderLink {
-                    //TODO:localize
-                    dateString = "joined via a folder invite link"
+                    dateString = presentationData.strings.InviteLink_LabelJoinedViaFolder
                 } else {
                     dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 }
