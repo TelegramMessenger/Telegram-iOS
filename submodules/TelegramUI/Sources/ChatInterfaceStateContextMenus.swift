@@ -662,7 +662,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         )
     }
 
-    let readCounters = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: messages[0].id.peerId))
+    let readCounters: Signal<Bool, NoError>
+    if case let .replyThread(threadMessage) = chatPresentationInterfaceState.chatLocation, threadMessage.isForumPost {
+        readCounters = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThreadData(id: threadMessage.messageId.peerId, threadId: Int64(threadMessage.messageId.id)))
+        |> map { threadData -> Bool in
+            guard let threadData else {
+                return false
+            }
+            return threadData.maxOutgoingReadId >= message.id.id
+        }
+    } else {
+        readCounters = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: messages[0].id.peerId))
+        |> map { readCounters -> Bool in
+            return readCounters.isOutgoingMessageIndexRead(message.index)
+        }
+    }
     
     let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?, EnginePeer?), NoError> = combineLatest(
         loadLimits,
@@ -679,15 +693,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         context.engine.peers.notificationSoundList() |> take(1),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, infoSummaryData, readCounters, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList, accountPeer -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?, EnginePeer?) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, infoSummaryData, isMessageRead, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList, accountPeer -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?, EnginePeer?) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
             let message = messages[0]
             canEdit = canEditMessage(context: context, limitsConfiguration: limitsConfiguration, message: message)
         }
-
-        let isMessageRead = readCounters.isOutgoingMessageIndexRead(message.index)
         
         let translationSettings: TranslationSettings
         if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
