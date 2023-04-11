@@ -2000,6 +2000,36 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let _ = value
                 })
             })
+            
+            Queue.mainQueue().after(2.0, { [weak self] in
+                guard let self else {
+                    return
+                }
+                //TODO:generalize
+                var hasEmptyMark = false
+                self.chatListDisplayNode.mainContainerNode.currentItemNode.forEachItemNode { itemNode in
+                    if itemNode is ChatListSectionHeaderNode {
+                        hasEmptyMark = true
+                    }
+                }
+                if hasEmptyMark {
+                    if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                        if let rightButtonView = componentView.rightButtonView {
+                            let absoluteFrame = rightButtonView.convert(rightButtonView.bounds, to: self.view)
+                            //TODO:localize
+                            let text: String = "Send a message or\nstart a group here."
+                            
+                            let tooltipController = TooltipController(content: .text(text), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 30.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 6.0, innerPadding: UIEdgeInsets(top: 2.0, left: 3.0, bottom: 2.0, right: 3.0))
+                            self.present(tooltipController, in: .current, with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                                guard let self else {
+                                    return nil
+                                }
+                                return (self.displayNode, absoluteFrame.insetBy(dx: 4.0, dy: 8.0).offsetBy(dx: 4.0, dy: -1.0))
+                            }))
+                        }
+                    }
+                }
+            })
         }
         
         self.chatListDisplayNode.mainContainerNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
