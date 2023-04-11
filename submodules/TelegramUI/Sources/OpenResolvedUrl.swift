@@ -324,7 +324,14 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         }
                     })
                 } else {
-                    let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
+                    let _ = (context.engine.peers.resolvePeerByPhone(phone: to)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        if let peer = peer {
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            continueWithPeer(peer.id)
+                        }
+                    })
+                    /*let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
                     let _ = (context.account.postbox.searchContacts(query: query)
                     |> deliverOnMainQueue).start(next: { (peers, _) in
                         for case let peer as TelegramUser in peers {
@@ -334,7 +341,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                 break
                             }
                         }
-                    })
+                    })*/
                 }
             } else {
                 if let url = url, !url.isEmpty {
