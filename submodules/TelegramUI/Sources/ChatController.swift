@@ -858,9 +858,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             strongSelf.chatDisplayNode.dismissInput()
                             let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
-                            wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _ in
+                            wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, _ in
                                 if case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper, !file.isPattern && options.contains(.blur) {
-                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: entry, mode: options, cropRect: nil, brightness: nil, peerId: message.id.peerId, completion: {
+                                    uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: entry, mode: options, editedImage: nil, cropRect: nil, brightness: nil, peerId: message.id.peerId, completion: {
                                         wallpaperPreviewController?.dismiss()
                                     })
                                 } else {
@@ -1096,7 +1096,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                            legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
+                            legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
                                 transitionCompletion()
                             }, getCaptionPanelView: { [weak self] in
                                 return self?.getCaptionPanelView()
@@ -3970,7 +3970,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                         let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: inputText, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: inputText, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
                             return self?.getCaptionPanelView()
                         }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                             if let strongSelf = self {
@@ -5830,8 +5830,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let themeEmoticon: Signal<String?, NoError> = self.chatThemeEmoticonPromise.get()
         |> distinctUntilChanged
+    
+        let uploadingChatWallpaper: Signal<TelegramWallpaper?, NoError>
+        if let peerId = self.chatLocation.peerId {
+            uploadingChatWallpaper = self.context.account.pendingPeerMediaUploadManager.uploadingPeerMedia
+            |> map { uploadingPeerMedia -> TelegramWallpaper? in
+                if let item = uploadingPeerMedia[peerId], case let .wallpaper(wallpaper) = item.content {
+                    return wallpaper
+                } else {
+                    return nil
+                }
+            }
+            |> distinctUntilChanged
+        } else {
+            uploadingChatWallpaper = .single(nil)
+        }
         
-        let chatWallpaper: Signal<TelegramWallpaper?, NoError> = self.chatWallpaperPromise.get()
+        let chatWallpaper: Signal<TelegramWallpaper?, NoError> = combineLatest(self.chatWallpaperPromise.get(), uploadingChatWallpaper)
+        |> map { chatWallpaper, uploadingChatWallpaper in
+            return uploadingChatWallpaper ?? chatWallpaper
+        }
         |> distinctUntilChanged
         
         let themeSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
@@ -18615,9 +18633,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
                                 controller.navigationPresentation = .modal
-                                controller.apply = { [weak self] wallpaper, options, cropRect, brightness in
+                                controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness in
                                     if let strongSelf = self {
-                                        uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightness: brightness, peerId: peerId, completion: {
+                                        uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peerId, completion: {
                                             dismissControllers()
                                         })
                                     }

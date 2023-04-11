@@ -25,9 +25,9 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
         controller.selectionBlock = { [weak legacyController] asset, _ in
             if let asset = asset {
                 let controller = WallpaperGalleryController(context: context, source: .asset(asset.backingAsset))
-                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, cropRect, brightness in
+                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, editedImage, cropRect, brightness in
                     if let legacyController = legacyController, let controller = controller {
-                        uploadCustomWallpaper(context: context, wallpaper: wallpaper, mode: mode, cropRect: cropRect, brightness: brightness, completion: { [weak legacyController, weak controller] in
+                        uploadCustomWallpaper(context: context, wallpaper: wallpaper, mode: mode, editedImage: nil, cropRect: cropRect, brightness: brightness, completion: { [weak legacyController, weak controller] in
                             if let legacyController = legacyController, let controller = controller {
                                 legacyController.dismiss()
                                 controller.dismiss(forceAway: true)
@@ -47,8 +47,8 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
     })
 }
 
-func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, brightness: CGFloat?, completion: @escaping () -> Void) {
-    let imageSignal: Signal<UIImage, NoError>
+func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, completion: @escaping () -> Void) {
+    var imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
             switch wallpaper {
@@ -110,6 +110,10 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
             } else {
                 imageSignal = .complete()
             }
+    }
+    
+    if let editedImage {
+        imageSignal = .single(editedImage)
     }
     
     let _ = (imageSignal
@@ -196,7 +200,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
     }).start()
 }
 
-public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
+public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
     var imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
@@ -261,6 +265,10 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             } else {
                 imageSignal = .complete()
             }
+    }
+    
+    if let editedImage {
+        imageSignal = .single(editedImage)
     }
     
     let _ = (imageSignal

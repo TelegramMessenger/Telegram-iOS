@@ -38,6 +38,11 @@
     return (ABS(((NSNumber *)self.displayValue).floatValue - (float)self.defaultValue) < FLT_EPSILON);
 }
 
+- (bool)isRegional
+{
+    return true;
+}
+
 - (NSArray *)parameters
 {
     if (!_parameters)

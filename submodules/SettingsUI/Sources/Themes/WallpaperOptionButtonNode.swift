@@ -41,7 +41,7 @@ final class WallpaperLightButtonBackgroundNode: ASDisplayNode {
     private let lightNode: ASDisplayNode
     
     override init() {
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.45), enableBlur: true, enableSaturation: false)
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.35), enableBlur: true, enableSaturation: false)
         self.overlayNode = ASDisplayNode()
         self.overlayNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.75)
         self.overlayNode.layer.compositingFilter = "overlayBlendMode"
@@ -71,8 +71,15 @@ final class WallpaperLightButtonBackgroundNode: ASDisplayNode {
 final class WallpaperOptionBackgroundNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
     
+    var enableSaturation: Bool {
+        didSet {
+            self.backgroundNode.updateColor(color: UIColor(rgb: 0x333333, alpha: 0.35), enableBlur: true, enableSaturation: self.enableSaturation, transition: .immediate)
+        }
+    }
+    
     init(enableSaturation: Bool = false) {
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.45), enableBlur: true, enableSaturation: enableSaturation)
+        self.enableSaturation = enableSaturation
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.35), enableBlur: true, enableSaturation: enableSaturation)
 
         super.init()
         
@@ -97,7 +104,13 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         case dayNight(isNight: Bool)
     }
     
-    var enableSaturation: Bool = false
+    var enableSaturation: Bool = false {
+        didSet {
+            if let backgroundNode = self.backgroundNode as? WallpaperOptionBackgroundNode {
+                backgroundNode.enableSaturation = self.enableSaturation
+            }
+        }
+    }
     
     private let content: Content
     var dark: Bool {
@@ -128,7 +141,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         self.dark = dark
         
         if dark {
-            self.backgroundNode = WallpaperOptionBackgroundNode()
+            self.backgroundNode = WallpaperOptionBackgroundNode(enableSaturation: self.enableSaturation)
         } else {
             self.backgroundNode = WallpaperLightButtonBackgroundNode()
         }
@@ -252,7 +265,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
 
 
 final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
-    private let backgroundNode: WallpaperOptionBackgroundNode
+    let backgroundNode: WallpaperOptionBackgroundNode
     
     private let checkNode: CheckNode
     private let colorNode: ASImageNode
@@ -488,7 +501,7 @@ final class WallpaperSliderNode: ASDisplayNode {
         self.value = value
         self.valueChanged = valueChanged
         
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.45), enableBlur: true, enableSaturation: false)
+        self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x333333, alpha: 0.35), enableBlur: true, enableSaturation: false)
        
         self.foregroundNode = ASDisplayNode()
         self.foregroundNode.clipsToBounds = true

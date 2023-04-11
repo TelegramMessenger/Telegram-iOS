@@ -46,6 +46,7 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.subtitleNode.displaysAsynchronously = false
         
         self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true

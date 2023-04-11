@@ -26,26 +26,26 @@ import InstantPageUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
-private class CancelButtonNode: ASDisplayNode {
-    enum State {
+public class WebAppCancelButtonNode: ASDisplayNode {
+    public enum State {
         case cancel
         case back
     }
     
-    private let buttonNode: HighlightTrackingButtonNode
+    public let buttonNode: HighlightTrackingButtonNode
     private let arrowNode: ASImageNode
     private let labelNode: ImmediateTextNode
     
-    var state: State = .cancel
+    public var state: State = .cancel
     
-    var theme: PresentationTheme {
+    public var theme: PresentationTheme {
         didSet {
-            
+            self.setState(self.state, animated: false, force: true)
         }
     }
     private let strings: PresentationStrings
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    public init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         self.strings = strings
         
@@ -82,7 +82,7 @@ private class CancelButtonNode: ASDisplayNode {
         self.setState(.cancel, animated: false, force: true)
     }
     
-    func setState(_ state: State, animated: Bool, force: Bool = false) {
+    public func setState(_ state: State, animated: Bool, force: Bool = false) {
         guard self.state != state || force else {
             return
         }
@@ -1049,7 +1049,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     private var titleView: CounterContollerTitleView?
-    private let cancelButtonNode: CancelButtonNode
+    private let cancelButtonNode: WebAppCancelButtonNode
     private let moreButtonNode: MoreButtonNode
     
     private let context: AccountContext
@@ -1097,7 +1097,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
-        self.cancelButtonNode = CancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)

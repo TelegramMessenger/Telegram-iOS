@@ -166,6 +166,12 @@ static void adjustFrameRate(CAAnimation *animation) {
     [self dismissWhenReadyAnimated:animated force:false];
 }
 
+- (void)setScrollViewHidden:(bool)hidden {
+    TGDispatchAfter(0.01, dispatch_get_main_queue(), ^{
+        _view.scrollView.hidden = hidden;
+    });
+}
+
 - (void)dismissWhenReadyAnimated:(bool)animated force:(bool)force
 {
     if (animated) {

@@ -3906,6 +3906,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             var previousAbout: String?
             var currentAbout: String?
             
+            var previousIsBlocked: Bool?
+            var currentIsBlocked: Bool?
+            
             var previousPhotoIsPersonal: Bool?
             var currentPhotoIsPersonal: Bool?
             if let previousUser = previousData?.peer as? TelegramUser {
@@ -3932,6 +3935,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 currentVideoCallsAvailable = cachedData.videoCallsAvailable
                 previousAbout = previousCachedData.about
                 currentAbout = cachedData.about
+                previousIsBlocked = previousCachedData.isBlocked
+                currentIsBlocked = cachedData.isBlocked
             }
             
             if self.isSettings {
@@ -3952,6 +3957,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 infoUpdated = true
             }
             if let previousPhotoIsPersonal, let currentPhotoIsPersonal, previousPhotoIsPersonal != currentPhotoIsPersonal {
+                infoUpdated = true
+            }
+            if let previousIsBlocked, let currentIsBlocked, previousIsBlocked != currentIsBlocked {
                 infoUpdated = true
             }
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && (membersUpdated || infoUpdated) ? .animated(duration: 0.3, curve: .spring) : .immediate)
@@ -4091,7 +4099,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 
                 if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                    legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: message.associatedThreadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
+                    legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: message.associatedThreadInfo?.title, media: mediaReference, mode: .draw, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
                         transitionCompletion()
                     }, getCaptionPanelView: {
                         return nil
@@ -5396,6 +5404,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         case .leave:
             self.openLeavePeer(delete: false)
         case .stop:
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_banned", scale: 0.066, colors: [:], title: self.presentationData.strings.PeerInfo_BotBlockedTitle, text: self.presentationData.strings.PeerInfo_BotBlockedText, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
             self.updateBlocked(block: true)
         }
     }

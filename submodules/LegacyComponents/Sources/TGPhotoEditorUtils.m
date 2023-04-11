@@ -6,7 +6,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Accelerate/Accelerate.h>
 
-const CGSize TGPhotoEditorResultImageMaxSize = { 1280, 1280 };
+const CGSize TGPhotoEditorResultImageMaxSize = { 2560, 2560 };
 const CGSize TGPhotoEditorScreenImageHardLimitSize = { 1280, 1280 };
 const CGSize TGPhotoEditorScreenImageHardLimitLegacySize = { 750, 750 };
 

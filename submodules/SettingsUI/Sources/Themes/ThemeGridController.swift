@@ -120,9 +120,9 @@ public final class ThemeGridController: ViewController {
         self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
                 let controller = WallpaperGalleryController(context: strongSelf.context, source: source)
-                controller.apply = { [weak self, weak controller] wallpaper, options, cropRect, brightness in
+                controller.apply = { [weak self, weak controller] wallpaper, options, editedImage, cropRect, brightness in
                     if let strongSelf = self {
-                        uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightness: brightness, completion: { [weak self, weak controller] in
+                        uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: { [weak self, weak controller] in
                             if let strongSelf = self {
                                 strongSelf.deactivateSearch(animated: false)
                                 strongSelf.controllerNode.scrollToTop(animated: false)
@@ -148,9 +148,9 @@ public final class ThemeGridController: ViewController {
                         return
                     }
                     let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset))
-                    controller.apply = { [weak self, weak controller] wallpaper, options, cropRect, brightness in
+                    controller.apply = { [weak self, weak controller] wallpaper, options, editedImage, cropRect, brightness in
                         if let strongSelf = self, let controller = controller {
-                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, cropRect: cropRect, brightness: brightness, completion: { [weak controller] in
+                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: { [weak controller] in
                                 if let controller = controller {
                                     controller.dismiss(forceAway: true)
                                 }

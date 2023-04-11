@@ -323,7 +323,14 @@ final class MediaPickerGridItemNode: GridItemNode {
                 strongSelf.updateHasSpoiler(hasSpoiler)
             }))
             
-            if asset.mediaType == .video {
+            if asset.isFavorite {
+                self.typeIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
+                if self.typeIconNode.supernode == nil {
+                    self.addSubnode(self.gradientNode)
+                    self.addSubnode(self.typeIconNode)
+                    self.setNeedsLayout()
+                }
+            } else if asset.mediaType == .video {
                 if asset.mediaSubtypes.contains(.videoHighFrameRate) {
                     self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaSlomo")
                 } else if asset.mediaSubtypes.contains(.videoTimelapse) {

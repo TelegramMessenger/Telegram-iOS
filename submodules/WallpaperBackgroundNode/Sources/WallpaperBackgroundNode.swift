@@ -1030,6 +1030,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         } else {
                             strongSelf.blurredBackgroundContents = nil
                         }
+                        strongSelf.updateBubbles()
                         strongSelf._isReady.set(true)
                     }))
                 }

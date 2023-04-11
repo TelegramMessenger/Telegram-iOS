@@ -48,6 +48,8 @@ typedef NS_ENUM(NSUInteger, TGModernGalleryScrollAnimationDirection) {
 - (void)dismissWhenReady;
 - (void)dismissWhenReadyAnimated:(bool)animated;
 
+- (void)setScrollViewHidden:(bool)hidden;
+
 - (bool)isFullyOpaque;
 
 @end
