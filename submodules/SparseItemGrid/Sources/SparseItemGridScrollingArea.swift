@@ -759,7 +759,7 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
             let date = context.component.date
             
             let components = date.0.components(separatedBy: " ")
-            let month = components.first ?? ""
+            let month = String(components.prefix(upTo: components.count - 1).joined(separator: " "))
             let year = components.last ?? ""
             
             var monthAnimation: RollingText.AnimationDirection?
