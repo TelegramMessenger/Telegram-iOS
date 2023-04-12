@@ -283,7 +283,7 @@
     }
 }
 
-+ (void)presentEditorWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item fromRect:(CGRect)fromRect mainSnapshot:(UIView *)mainSnapshot snapshots:(NSArray *)snapshots completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
++ (void)presentEditorWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller withItem:(id<TGMediaEditableItem>)item cropRect:(CGRect)cropRect adjustments:(id<TGMediaEditAdjustments>)adjustments referenceView:(UIView *)referenceView completion:(void (^)(UIImage *, id<TGMediaEditAdjustments>))completion fullSizeCompletion:(void (^)(UIImage *))fullSizeCompletion beginTransitionOut:(void (^)())beginTransitionOut finishTransitionOut:(void (^)())finishTransitionOut;
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
@@ -291,40 +291,67 @@
     
     UIImage *thumbnailImage;
     
-    TGPhotoEditorController *editorController = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:item intent:TGPhotoEditorControllerWallpaperIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:TGPhotoEditorToolsTab selectedTab:TGPhotoEditorToolsTab];
+    NSDictionary *toolValues;
+    if (adjustments != nil) {
+        toolValues = adjustments.toolValues;
+    } else {
+        toolValues = @{};
+    }
+    PGPhotoEditorValues *editorValues = [PGPhotoEditorValues editorValuesWithOriginalSize:item.originalSize cropRect:cropRect cropRotation:0.0f cropOrientation:UIImageOrientationUp cropLockedAspectRatio:0.0 cropMirrored:false toolValues:toolValues paintingData:nil sendAsGif:false];
+    
+    TGPhotoEditorController *editorController = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:item intent:TGPhotoEditorControllerWallpaperIntent adjustments:editorValues caption:nil screenImage:thumbnailImage availableTabs:TGPhotoEditorToolsTab selectedTab:TGPhotoEditorToolsTab];
     editorController.editingContext = editingContext;
     editorController.dontHideStatusBar = true;
+    editorController.ignoreCropForResult = true;
     
-    editorController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
+    CGRect fromRect = referenceView.frame;// [referenceView convertRect:referenceView.bounds toView:nil];
+    editorController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView)
     {
         *referenceFrame = fromRect;
-        
-        UIImageView *imageView = [[UIImageView alloc] initWithFrame:fromRect];
+        *parentView = referenceView.superview;
+        //UIImageView *imageView = [[UIImageView alloc] initWithFrame:fromRect];
         //imageView.image = image;
         
-        return imageView;
+        return referenceView;
     };
     
-    editorController.beginTransitionOut = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
+    editorController.beginTransitionOut = ^UIView *(CGRect *referenceFrame, UIView **parentView)
     {
         CGRect startFrame = CGRectZero;
         if (referenceFrame != NULL)
         {
             startFrame = *referenceFrame;
             *referenceFrame = fromRect;
+            *parentView = referenceView.superview;
         }
         
-        //[strongSelf transitionBackFromResultControllerWithReferenceFrame:startFrame];
+        if (beginTransitionOut) {
+            beginTransitionOut();
+        }
         
-        return nil; //strongSelf->_previewView;
+        return referenceView;
+    };
+    
+    __weak TGPhotoEditorController *weakController = editorController;
+    editorController.finishedTransitionOut = ^(bool saved) {
+        TGPhotoEditorController *strongGalleryController = weakController;
+        if (strongGalleryController != nil && strongGalleryController.overlayWindow == nil)
+        {
+            TGNavigationController *navigationController = (TGNavigationController *)strongGalleryController.navigationController;
+            TGOverlayControllerWindow *window = (TGOverlayControllerWindow *)navigationController.view.window;
+            if ([window isKindOfClass:[TGOverlayControllerWindow class]])
+                [window dismiss];
+        }
+        if (finishTransitionOut) {
+            finishTransitionOut();
+        }
     };
         
     editorController.didFinishRenderingFullSizeImage = ^(UIImage *resultImage)
     {
-        
+        fullSizeCompletion(resultImage);
     };
     
-    __weak TGPhotoEditorController *weakController = editorController;
     editorController.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges, void(^commit)(void))
     {
         if (!hasChanges)
@@ -333,6 +360,8 @@
         __strong TGPhotoEditorController *strongController = weakController;
         if (strongController == nil)
             return;
+        
+        completion(resultImage, adjustments);
         
     };
     editorController.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
@@ -347,17 +376,7 @@
     
     editorController.requestOriginalFullSizeImage = ^(id<TGMediaEditableItem> editableItem, NSTimeInterval position)
     {
-        if (editableItem.isVideo) {
-            if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
-                return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem allowNetworkAccess:true];
-            } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
-                return ((TGCameraCapturedVideo *)editableItem).avAsset;
-            } else {
-                return [editableItem originalImageSignal:position];
-            }
-        } else {
-            return [editableItem originalImageSignal:position];
-        }
+        return [editableItem originalImageSignal:position];
     };
     
     TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:controller contentController:editorController];

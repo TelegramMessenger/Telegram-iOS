@@ -13,23 +13,17 @@ public final class PeerMediaUploadingItem: Equatable {
         case generic
     }
     
-    public enum PreviousState: Equatable {
-        case wallpaper(TelegramWallpaper?)
-    }
-    
     public enum Content: Equatable  {
         case wallpaper(TelegramWallpaper)
     }
 
     public let content: Content
     public let messageId: EngineMessage.Id?
-    public let previousState: PreviousState?
     public let progress: Float
     
-    init(content: Content, messageId: EngineMessage.Id?, previousState: PreviousState?, progress: Float) {
+    init(content: Content, messageId: EngineMessage.Id?, progress: Float) {
         self.content = content
         self.messageId = messageId
-        self.previousState = previousState
         self.progress = progress
     }
     
@@ -40,9 +34,6 @@ public final class PeerMediaUploadingItem: Equatable {
         if lhs.messageId != rhs.messageId {
             return false
         }
-        if lhs.previousState != rhs.previousState {
-            return false
-        }
         if lhs.progress != rhs.progress {
             return false
         }
@@ -50,15 +41,11 @@ public final class PeerMediaUploadingItem: Equatable {
     }
     
     func withMessageId(_ messageId: EngineMessage.Id) -> PeerMediaUploadingItem {
-        return PeerMediaUploadingItem(content: self.content, messageId: messageId, previousState: self.previousState, progress: self.progress)
+        return PeerMediaUploadingItem(content: self.content, messageId: messageId, progress: self.progress)
     }
     
     func withProgress(_ progress: Float) -> PeerMediaUploadingItem {
-        return PeerMediaUploadingItem(content: self.content, messageId: self.messageId, previousState: self.previousState, progress: progress)
-    }
-    
-    func withPreviousState(_ previousState: PreviousState?) -> PeerMediaUploadingItem {
-        return PeerMediaUploadingItem(content: self.content, messageId: self.messageId, previousState: previousState, progress: self.progress)
+        return PeerMediaUploadingItem(content: self.content, messageId: self.messageId, progress: progress)
     }
 }
 
@@ -129,38 +116,6 @@ private func generatePeerMediaMessage(network: Network, accountPeerId: EnginePee
     return StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: accountPeerId, text: "", attributes: attributes, media: media)
 }
 
-private func preparePeerMediaUpload(transaction: Transaction, peerId: EnginePeer.Id, content: PeerMediaUploadingItem.Content) -> PeerMediaUploadingItem.PreviousState? {
-    var previousState: PeerMediaUploadingItem.PreviousState?
-    switch content {
-    case let .wallpaper(wallpaper):
-        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
-            if let cachedData = cachedData as? CachedUserData {
-                previousState = .wallpaper(cachedData.wallpaper)
-                return cachedData.withUpdatedWallpaper(wallpaper)
-            } else {
-                return cachedData
-            }
-        })
-    }
-    return previousState
-}
-
-private func cancelPeerMediaUpload(transaction: Transaction, peerId: EnginePeer.Id, previousState: PeerMediaUploadingItem.PreviousState?) {
-    guard let previousState = previousState else {
-        return
-    }
-    switch previousState {
-    case let .wallpaper(previousWallpaper):
-        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
-            if let cachedData = cachedData as? CachedUserData {
-                return cachedData.withUpdatedWallpaper(previousWallpaper)
-            } else {
-                return cachedData
-            }
-        })
-    }
-}
-
 private final class PendingPeerMediaUploadContext {
     var value: PeerMediaUploadingItem
     let disposable = MetaDisposable()
@@ -225,98 +180,93 @@ private final class PendingPeerMediaUploadManagerImpl {
         let accountPeerId = self.accountPeerId
         
         let queue = self.queue
-        let context = PendingPeerMediaUploadContext(value: PeerMediaUploadingItem(content: content, messageId: nil, previousState: nil, progress: 0.0))
+        let context = PendingPeerMediaUploadContext(value: PeerMediaUploadingItem(content: content, messageId: nil, progress: 0.0))
         self.contexts[peerId] = context
         
         context.disposable.set(
-            (self.postbox.transaction({ transaction -> (EngineMessage.Id, PeerMediaUploadingItem.PreviousState?)? in
+            (self.postbox.transaction({ transaction -> EngineMessage.Id? in
                 let storeMessage = generatePeerMediaMessage(network: network, accountPeerId: accountPeerId, transaction: transaction, peerId: peerId, content: content)
                 let globallyUniqueIdToMessageId = transaction.addMessages([storeMessage], location: .Random)
                 guard let globallyUniqueId = storeMessage.globallyUniqueId, let messageId = globallyUniqueIdToMessageId[globallyUniqueId] else {
                     return nil
                 }
-                let previousState = preparePeerMediaUpload(transaction: transaction, peerId: peerId, content: content)
-                return (messageId, previousState)
+                return messageId
             })
-            |> deliverOn(queue)).start(next: { [weak self, weak context] messageIdAndPreviousState in
+            |> deliverOn(queue)).start(next: { [weak self, weak context] messageId in
                 guard let strongSelf = self, let initialContext = context else {
                     return
                 }
                 if let context = strongSelf.contexts[peerId], context === initialContext {
-                    guard let (messageId, previousState) = messageIdAndPreviousState else {
+                    guard let messageId = messageId else {
                         strongSelf.contexts.removeValue(forKey: peerId)
                         context.disposable.dispose()
                         strongSelf.updateValues()
                         return
                     }
-                    context.value = context.value.withMessageId(messageId).withPreviousState(previousState)
+                    context.value = context.value.withMessageId(messageId)
                     strongSelf.updateValues()
                     
                     context.disposable.set((uploadPeerMedia(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, content: content)
                     |> deliverOn(queue)).start(next: { [weak self, weak context] value in
-                        queue.async {
-                            guard let strongSelf = self, let initialContext = context else {
-                                return
-                            }
-                            if let context = strongSelf.contexts[peerId], context === initialContext {
-                                switch value {
-                                case let .done(result):
-                                    context.disposable.set(
-                                        (postbox.transaction({ transaction -> Message? in
-                                            return transaction.getMessage(messageId)
-                                        })
-                                        |> deliverOn(queue)
-                                        ).start(next: { [weak self, weak context] message in
-                                            guard let strongSelf = self, let initialContext = context else {
+                        guard let strongSelf = self, let initialContext = context else {
+                            return
+                        }
+                        if let context = strongSelf.contexts[peerId], context === initialContext {
+                            switch value {
+                            case let .done(result):
+                                context.disposable.set(
+                                    (postbox.transaction({ transaction -> Message? in
+                                        return transaction.getMessage(messageId)
+                                    })
+                                    |> deliverOn(queue)
+                                    ).start(next: { [weak self, weak context] message in
+                                        guard let strongSelf = self, let initialContext = context else {
+                                            return
+                                        }
+                                        if let context = strongSelf.contexts[peerId], context === initialContext {
+                                            guard let message = message else {
+                                                strongSelf.contexts.removeValue(forKey: peerId)
+                                                context.disposable.dispose()
+                                                strongSelf.updateValues()
                                                 return
                                             }
-                                            if let context = strongSelf.contexts[peerId], context === initialContext {
-                                                guard let message = message else {
-                                                    strongSelf.contexts.removeValue(forKey: peerId)
-                                                    context.disposable.dispose()
-                                                    strongSelf.updateValues()
-                                                    return
-                                                }
-                                                context.disposable.set(
-                                                    (applyUpdateMessage(
-                                                        postbox: postbox,
-                                                        stateManager: stateManager,
-                                                        message: message,
-                                                        cacheReferenceKey: nil,
-                                                        result: result,
-                                                        accountPeerId: accountPeerId
-                                                    )
-                                                    |> deliverOn(queue)).start(completed: { [weak self, weak context] in
-                                                        guard let strongSelf = self, let initialContext = context else {
-                                                            return
-                                                        }
-                                                        if let context = strongSelf.contexts[peerId], context === initialContext {
-                                                            strongSelf.contexts.removeValue(forKey: peerId)
-                                                            context.disposable.dispose()
-                                                            strongSelf.updateValues()
-                                                        }
-                                                    })
+                                            context.disposable.set(
+                                                (applyUpdateMessage(
+                                                    postbox: postbox,
+                                                    stateManager: stateManager,
+                                                    message: message,
+                                                    cacheReferenceKey: nil,
+                                                    result: result,
+                                                    accountPeerId: accountPeerId
                                                 )
-                                            }
-                                        })
-                                    )
-                                    strongSelf.updateValues()
-                                case let .progress(progress):
-                                    context.value = context.value.withProgress(progress)
-                                    strongSelf.updateValues()
-                                }
+                                                |> deliverOn(queue)).start(completed: { [weak self, weak context] in
+                                                    guard let strongSelf = self, let initialContext = context else {
+                                                        return
+                                                    }
+                                                    if let context = strongSelf.contexts[peerId], context === initialContext {
+                                                        strongSelf.contexts.removeValue(forKey: peerId)
+                                                        context.disposable.dispose()
+                                                        strongSelf.updateValues()
+                                                    }
+                                                })
+                                            )
+                                        }
+                                    })
+                                )
+                                strongSelf.updateValues()
+                            case let .progress(progress):
+                                context.value = context.value.withProgress(progress)
+                                strongSelf.updateValues()
                             }
                         }
                     }, error: { [weak self, weak context] error in
-                        queue.async {
-                            guard let strongSelf = self, let initialContext = context else {
-                                return
-                            }
-                            if let context = strongSelf.contexts[peerId], context === initialContext {
-                                strongSelf.contexts.removeValue(forKey: peerId)
-                                context.disposable.dispose()
-                                strongSelf.updateValues()
-                            }
+                        guard let strongSelf = self, let initialContext = context else {
+                            return
+                        }
+                        if let context = strongSelf.contexts[peerId], context === initialContext {
+                            strongSelf.contexts.removeValue(forKey: peerId)
+                            context.disposable.dispose()
+                            strongSelf.updateValues()
                         }
                     }))
                 }
@@ -330,7 +280,6 @@ private final class PendingPeerMediaUploadManagerImpl {
             
             if let messageId = context.value.messageId {
                 context.disposable.set(self.postbox.transaction({ transaction in
-                    cancelPeerMediaUpload(transaction: transaction, peerId: peerId, previousState: context.value.previousState)
                     transaction.deleteMessages([messageId], forEachMedia: nil)
                 }).start())
             } else {

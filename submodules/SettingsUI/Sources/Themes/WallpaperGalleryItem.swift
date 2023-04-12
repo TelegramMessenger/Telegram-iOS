@@ -99,6 +99,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     
     let wrapperNode: ASDisplayNode
     let imageNode: TransformImageNode
+    private let temporaryImageNode: ASImageNode
     let nativeNode: WallpaperBackgroundNode
     let brightnessNode: ASDisplayNode
     private let statusNode: RadialStatusNode
@@ -110,6 +111,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private let dayNightButtonNode: WallpaperNavigationButtonNode
     private let editButtonNode: WallpaperNavigationButtonNode
     
+    private let buttonsContainerNode: SparseNode
     private let blurButtonNode: WallpaperOptionButtonNode
     private let motionButtonNode: WallpaperOptionButtonNode
     private let patternButtonNode: WallpaperOptionButtonNode
@@ -159,6 +161,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
+        self.temporaryImageNode = ASImageNode()
+        self.temporaryImageNode.isUserInteractionEnabled = false
         self.nativeNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.cropNode = WallpaperCropNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
@@ -173,6 +177,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         self.messagesContainerNode.isUserInteractionEnabled = false
         
+        self.buttonsContainerNode = SparseNode()
         self.blurButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Blurred, value: .check(false))
         self.blurButtonNode.setEnabled(false)
         self.motionButtonNode = WallpaperOptionButtonNode(title: self.presentationData.strings.WallpaperPreview_Motion, value: .check(false))
@@ -248,20 +253,22 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.imageNode.clipsToBounds = true
         
         self.addSubnode(self.wrapperNode)
+        self.addSubnode(self.temporaryImageNode)
         //self.addSubnode(self.statusNode)
         self.addSubnode(self.serviceBackgroundNode)
         self.addSubnode(self.messagesContainerNode)
+        self.addSubnode(self.buttonsContainerNode)
         
-        self.addSubnode(self.blurButtonNode)
-        self.addSubnode(self.motionButtonNode)
-        self.addSubnode(self.patternButtonNode)
-        self.addSubnode(self.colorsButtonNode)
-        self.addSubnode(self.playButtonNode)
-        self.addSubnode(self.sliderNode)
-        self.addSubnode(self.cancelButtonNode)
-        self.addSubnode(self.shareButtonNode)
-        self.addSubnode(self.dayNightButtonNode)
-        self.addSubnode(self.editButtonNode)
+        self.buttonsContainerNode.addSubnode(self.blurButtonNode)
+        self.buttonsContainerNode.addSubnode(self.motionButtonNode)
+        self.buttonsContainerNode.addSubnode(self.patternButtonNode)
+        self.buttonsContainerNode.addSubnode(self.colorsButtonNode)
+        self.buttonsContainerNode.addSubnode(self.playButtonNode)
+        self.buttonsContainerNode.addSubnode(self.sliderNode)
+        self.buttonsContainerNode.addSubnode(self.cancelButtonNode)
+        self.buttonsContainerNode.addSubnode(self.shareButtonNode)
+        self.buttonsContainerNode.addSubnode(self.dayNightButtonNode)
+        self.buttonsContainerNode.addSubnode(self.editButtonNode)
         
         self.imageNode.addSubnode(self.brightnessNode)
         
@@ -295,15 +302,21 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         switch entry {
             case .asset, .contextResult:
-                if let editedImage = self.editedImage {
-                    let scale = editedImage.size.height / self.cropNode.cropRect.height
-                    let cropRect = self.cropNode.cropRect
-                    return CGRect(origin: CGPoint(x: cropRect.minX * scale, y: cropRect.minY * scale), size: CGSize(width: cropRect.width * scale, height: cropRect.height * scale))
-                } else {
-                    return self.cropNode.cropRect
-                }
+                return self.cropNode.cropRect
             default:
                 return nil
+        }
+    }
+    
+    var editedCropRect: CGRect? {
+        guard let cropRect = self.cropRect, let contentSize = self.contentSize else {
+            return nil
+        }
+        if let editedFullSizeImage = self.editedFullSizeImage {
+            let scale = editedFullSizeImage.size.height / contentSize.height
+            return CGRect(origin: CGPoint(x: cropRect.minX * scale, y: cropRect.minY * scale), size: CGSize(width: cropRect.width * scale, height: cropRect.height * scale))
+        } else {
+            return cropRect
         }
     }
     
@@ -467,67 +480,62 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     @objc private func editPressed() {
-        guard let image = self.imageNode.image else {
+        guard let image = self.imageNode.image, case let .asset(asset) = self.entry else {
             return
         }
-        
         let originalImage = self.originalImage ?? image
-        
-        var nodesToSnapshot = [
-            self.cancelButtonNode,
-            self.editButtonNode,
-            self.blurButtonNode,
-            self.motionButtonNode,
-            self.serviceBackgroundNode
-        ]
-        
-        if let messageNodes = self.messageNodes {
-            for node in messageNodes {
-                nodesToSnapshot.append(node)
+        guard let cropRect = self.cropRect else {
+            return
+        }
+        self.interaction?.editMedia(asset, originalImage, cropRect, self.currentAdjustments, self.cropNode.view, { [weak self] result, adjustments in
+            guard let self else {
+                return
             }
-        }
-        
-        var snapshots: [UIView] = []
-        for node in nodesToSnapshot {
-            if let snapshotView = node.view.snapshotContentTree() {
-                snapshotView.frame = node.view.convert(node.view.bounds, to: nil)
-                snapshots.append(snapshotView)
-            }
-        }
-        
-        if let snapshotView = self.dayNightButtonNode.view.snapshotView(afterScreenUpdates: false) {
-            snapshotView.frame = self.dayNightButtonNode.view.convert(self.dayNightButtonNode.view.bounds, to: nil)
-            snapshots.append(snapshotView)
-        }
-        
-        let mainSnapshotView: UIView
-        if let snapshotView = self.imageNode.view.snapshotView(afterScreenUpdates: false) {
-            snapshotView.frame = self.imageNode.view.convert(self.imageNode.view.bounds, to: nil)
-            mainSnapshotView = snapshotView
-        } else {
-            mainSnapshotView = UIView()
-        }
-    
-        let fromRect = self.imageNode.view.convert(self.imageNode.bounds, to: nil)
-        self.interaction?.editMedia(originalImage, fromRect, mainSnapshotView, snapshots, { [weak self] result, adjustments in
-            self?.originalImage = originalImage
-            self?.editedImage = result
-            self?.currentAdjustments = adjustments
+            self.originalImage = originalImage
+            self.editedImage = result
+            self.currentAdjustments = adjustments
             
-            self?.imageNode.setSignal(.single({ arguments in
+            self.imageNode.setSignal(.single({ arguments in
                 let context = DrawingContext(size: arguments.drawingSize, opaque: false)
                 context?.withFlippedContext({ context in
-                    if let cgImage = result.cgImage {
+                    let image = result ?? originalImage
+                    if let cgImage = image.cgImage {
                         context.draw(cgImage, in: CGRect(origin: .zero, size: arguments.drawingSize))
                     }
                 })
                 return context
             }))
+            
+            self.imageNode.imageUpdated = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.temporaryImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+                    self?.temporaryImageNode.image = nil
+                    self?.temporaryImageNode.layer.removeAllAnimations()
+                    self?.imageNode.imageUpdated = nil
+                })
+            }
+        }, { [weak self] image in
+            guard let self else {
+                return
+            }
+            self.editedFullSizeImage = image
+            
+            self.temporaryImageNode.frame = self.imageNode.view.convert(self.imageNode.bounds, to: self.view)
+            self.temporaryImageNode.image = image ?? originalImage
+            
+            if self.cropNode.isHidden {
+                self.temporaryImageNode.alpha = 0.0
+            }
         })
+        
+        self.beginTransitionToEditor()
     }
     
     private var originalImage: UIImage?
     public private(set) var editedImage: UIImage?
+    public private(set) var editedFullSizeImage: UIImage?
     private var currentAdjustments: TGMediaEditAdjustments?
     
     private func animateIntensityChange(delay: Double) {
@@ -557,6 +565,29 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
     }
     
+    func beginTransitionToEditor() {
+        self.cropNode.isHidden = true
+        
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+        transition.updateAlpha(node: self.messagesContainerNode, alpha: 0.0)
+        transition.updateAlpha(node: self.buttonsContainerNode, alpha: 0.0)
+        transition.updateAlpha(node: self.serviceBackgroundNode, alpha: 0.0)
+        
+        self.interaction?.beginTransitionToEditor()
+    }
+    
+    func beginTransitionFromEditor() {
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+        transition.updateAlpha(node: self.messagesContainerNode, alpha: 1.0)
+        transition.updateAlpha(node: self.buttonsContainerNode, alpha: 1.0)
+        transition.updateAlpha(node: self.serviceBackgroundNode, alpha: 1.0)
+    }
+    
+    func finishTransitionFromEditor() {
+        self.cropNode.isHidden = false
+        self.temporaryImageNode.alpha = 1.0
+    }
+    
     @objc private func cancelPressed() {
         self.dismiss()
     }
@@ -579,11 +610,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         var showPreviewTooltip = false
         
         if self.entry != entry || self.arguments.colorPreview != previousArguments.colorPreview {
-            let previousEntry = self.entry
             self.entry = entry
-            if previousEntry != entry {
-                self.preparePatternEditing()
-            }
 
             self.colorsButtonNode.colors = self.calculateGradientColors() ?? defaultBuiltinWallpaperGradientColors
             
@@ -1204,9 +1231,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
     }
     
-    private func preparePatternEditing() {
-    }
-    
     func setMotionEnabled(_ enabled: Bool, animated: Bool) {
         if enabled {
             let horizontal = UIInterpolatingMotionEffect(keyPath: "center.x", type: .tiltAlongHorizontalAxis)
@@ -1606,6 +1630,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.wrapperNode.bounds = CGRect(origin: CGPoint(), size: layout.size)
         self.updateWrapperLayout(layout: layout, offset: offset, transition: transition)
         self.messagesContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.buttonsContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         if self.cropNode.supernode == nil {
             self.imageNode.frame = self.wrapperNode.bounds

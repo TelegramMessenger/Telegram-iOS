@@ -167,10 +167,16 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
 }
 
 class WallpaperGalleryInteraction {
-    let editMedia: (UIImage, CGRect, UIView, [UIView], @escaping (UIImage, TGMediaEditAdjustments?) -> Void) -> Void
+    let editMedia: (PHAsset, UIImage, CGRect, TGMediaEditAdjustments?, UIView, @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, @escaping (UIImage?) -> Void) -> Void
+    let beginTransitionToEditor: () -> Void
+    let beginTransitionFromEditor: () -> Void
+    let finishTransitionFromEditor: () -> Void
     
-    init(editMedia: @escaping (UIImage, CGRect, UIView, [UIView], @escaping (UIImage, TGMediaEditAdjustments?) -> Void) -> Void) {
+    init(editMedia: @escaping (PHAsset, UIImage, CGRect, TGMediaEditAdjustments?, UIView, @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, @escaping (UIImage?) -> Void) -> Void, beginTransitionToEditor: @escaping () -> Void, beginTransitionFromEditor: @escaping () -> Void, finishTransitionFromEditor: @escaping () -> Void) {
         self.editMedia = editMedia
+        self.beginTransitionToEditor = beginTransitionToEditor
+        self.beginTransitionFromEditor = beginTransitionFromEditor
+        self.finishTransitionFromEditor = finishTransitionFromEditor
     }
 }
 
@@ -242,25 +248,50 @@ public class WallpaperGalleryController: ViewController {
         //self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.interaction = WallpaperGalleryInteraction(editMedia: { [weak self] image, fromRect, mainSnapshot, snapshots, apply in
+        self.interaction = WallpaperGalleryInteraction(editMedia: { [weak self] asset, image, cropRect, adjustments, referenceView, apply, fullSizeApply in
             guard let self else {
                 return
             }
-            var snapshots = snapshots
-            if let toolbarNode = self.toolbarNode, let snapshotView = toolbarNode.view.snapshotContentTree() {
-                snapshotView.frame = toolbarNode.view.convert(toolbarNode.view.bounds, to: nil)
-                snapshots.append(snapshotView)
-            }
-            
-            legacyWallpaperEditor(context: context, image: image, fromRect: fromRect, mainSnapshot: mainSnapshot, snapshots: snapshots, transitionCompletion: {
-                
+            let item = LegacyWallpaperItem(asset: asset, screenImage: image, dimensions: CGSize(width: asset.pixelWidth, height: asset.pixelHeight))
+            legacyWallpaperEditor(context: context, item: item, cropRect: cropRect, adjustments: adjustments, referenceView: referenceView, beginTransitionOut: { [weak self] in
+                self?.interaction?.beginTransitionFromEditor()
+            }, finishTransitionOut: { [weak self] in
+                self?.interaction?.finishTransitionFromEditor()
             }, completion: { image, adjustments in
                 apply(image, adjustments)
+            }, fullSizeCompletion: { image in
+                fullSizeApply(image)
             }, present: { [weak self] c, a in
                 if let self {
                     self.present(c, in: .window(.root))
                 }
             })
+        }, beginTransitionToEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            if let toolbarNode = self.toolbarNode {
+                transition.updateAlpha(node: toolbarNode, alpha: 0.0)
+            }
+        }, beginTransitionFromEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            if let toolbarNode = self.toolbarNode {
+                transition.updateAlpha(node: toolbarNode, alpha: 1.0)
+            }
+            if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                centralItemNode.beginTransitionFromEditor()
+            }
+        }, finishTransitionFromEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                centralItemNode.finishTransitionFromEditor()
+            }
         })
         
         var entries: [WallpaperGalleryEntry] = []
@@ -491,7 +522,7 @@ public class WallpaperGalleryController: ViewController {
                         let entry = strongSelf.entries[centralItemNode.index]
                         
                         if case .peer = strongSelf.mode {
-                            strongSelf.apply?(entry, options, centralItemNode.editedImage, centralItemNode.cropRect, centralItemNode.brightness)
+                            strongSelf.apply?(entry, options, centralItemNode.editedFullSizeImage, centralItemNode.editedCropRect, centralItemNode.brightness)
                             return
                         }
                         

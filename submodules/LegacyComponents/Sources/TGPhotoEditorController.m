@@ -982,14 +982,23 @@
     bool hasImageAdjustments = editorValues.toolsApplied || saveOnly;
     bool hasPainting = editorValues.hasPainting;
     bool hasAnimation = editorValues.paintingData.hasAnimation;
+    bool ignoreCropForResult = self.ignoreCropForResult;
     
     SSignal *(^imageCropSignal)(UIImage *, bool) = ^(UIImage *image, bool resize)
     {
         return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
         {
-            UIImage *paintingImage = !hasImageAdjustments ? editorValues.paintingData.image : nil;
-            UIImage *croppedImage = TGPhotoEditorCrop(image, paintingImage, photoEditor.cropOrientation, photoEditor.cropRotation, photoEditor.cropRect, photoEditor.cropMirrored, TGPhotoEditorResultImageMaxSize, photoEditor.originalSize, resize);
-            [subscriber putNext:croppedImage];
+            if (ignoreCropForResult) {
+                if (image.size.width > TGPhotoEditorResultImageWallpaperMaxSize.width || image.size.height > TGPhotoEditorResultImageWallpaperMaxSize.width) {
+                    [subscriber putNext:TGPhotoEditorFitImage(image, TGPhotoEditorResultImageWallpaperMaxSize)];
+                } else {
+                    [subscriber putNext:image];
+                }
+            } else {
+                UIImage *paintingImage = !hasImageAdjustments ? editorValues.paintingData.image : nil;
+                UIImage *croppedImage = TGPhotoEditorCrop(image, paintingImage, photoEditor.cropOrientation, photoEditor.cropRotation, photoEditor.cropRect, photoEditor.cropMirrored, TGPhotoEditorResultImageMaxSize, photoEditor.originalSize, resize);
+                [subscriber putNext:croppedImage];
+            }
             [subscriber putCompletion];
             
             return nil;
@@ -1045,12 +1054,18 @@
         void (^didFinishRenderingFullSizeImage)(UIImage *) = self.didFinishRenderingFullSizeImage;
         void (^didFinishEditing)(id<TGMediaEditAdjustments>, UIImage *, UIImage *, bool , void(^)(void)) = self.didFinishEditing;
         
+        TGPhotoEditorControllerIntent intent = _intent;
         [[[[renderedImageSignal map:^id(UIImage *image)
         {
             if (!hasImageAdjustments)
             {
-                if (hasPainting && !hasAnimation && didFinishRenderingFullSizeImage != nil)
-                    didFinishRenderingFullSizeImage(image);
+                if (didFinishRenderingFullSizeImage != nil) {
+                    if (hasPainting && !hasAnimation) {
+                        didFinishRenderingFullSizeImage(image);
+                    } else if (intent == TGPhotoEditorControllerWallpaperIntent) {
+                        didFinishRenderingFullSizeImage(nil);
+                    }
+                }
 
                 return image;
             }
@@ -1155,6 +1170,13 @@
         _portraitToolbarView.alpha = 1.0f;
         _landscapeToolbarView.alpha = 1.0f;
     } completion:nil];
+    
+    if (_intent == TGPhotoEditorControllerWallpaperIntent) {
+        [UIView animateWithDuration:0.25f delay:0.15 options:UIViewAnimationOptionCurveLinear animations:^
+        {
+            _backgroundView.alpha = 1.0f;
+        } completion:nil];
+    }
 }
 
 - (void)transitionOutSaving:(bool)saving completion:(void (^)(void))completion
@@ -1169,6 +1191,13 @@
         _portraitToolbarView.alpha = 0.0f;
         _landscapeToolbarView.alpha = 0.0f;
     }];
+    
+    if (_intent == TGPhotoEditorControllerWallpaperIntent) {
+        [UIView animateWithDuration:0.1f animations:^
+        {
+            _backgroundView.alpha = 0.0f;
+        }];
+    }
     
     _currentTabController.beginTransitionOut = self.beginTransitionOut;
     [self setToolbarHidden:false animated:true];
