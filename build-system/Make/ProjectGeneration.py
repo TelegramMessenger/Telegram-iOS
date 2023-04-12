@@ -24,6 +24,7 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
     bazel_generate_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
     if disable_extensions:
         bazel_generate_arguments += ['--//{}:disableExtensions'.format(app_target)]
+    bazel_generate_arguments += ['--//{}:disableStripping'.format('Telegram')]
 
     project_bazel_arguments = []
     for argument in bazel_app_arguments:
@@ -31,6 +32,7 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
     project_bazel_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
     if disable_extensions:
         project_bazel_arguments += ['--//{}:disableExtensions'.format(app_target)]
+    project_bazel_arguments += ['--//{}:disableStripping'.format('Telegram')]
 
     xcodeproj_bazelrc = os.path.join(build_environment.base_path, 'xcodeproj.bazelrc')
     if os.path.isfile(xcodeproj_bazelrc):
