@@ -63,9 +63,8 @@ public enum LegacyMediaEditorMode {
     case adjustments
 }
 
-public func legacyWallpaperEditor(context: AccountContext, image: UIImage, fromRect: CGRect, mainSnapshot: UIView, snapshots: [UIView], transitionCompletion: (() -> Void)?, completion: @escaping (UIImage, TGMediaEditAdjustments?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-    let item = TGCameraCapturedPhoto(existing: image)
-        
+
+public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditableItem, cropRect: CGRect, adjustments: TGMediaEditAdjustments?, referenceView: UIView, beginTransitionOut: (() -> Void)?, finishTransitionOut: (() -> Void)?, completion: @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, fullSizeCompletion: @escaping (UIImage?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
     legacyController.blocksBackgroundWhenInOverlay = true
@@ -85,17 +84,17 @@ public func legacyWallpaperEditor(context: AccountContext, image: UIImage, fromR
     
     present(legacyController, nil)
     
-    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, withItem: item, from: fromRect, mainSnapshot: mainSnapshot, snapshots: snapshots as [Any], completion: { item, editingContext in
-        let adjustments = editingContext?.adjustments(for: item)
-        if let imageSignal = editingContext?.fullSizeImageUrl(for: item) {
-            imageSignal.start(next: { value in
-                if let value = value as? NSURL, let data = try? Data(contentsOf: value as URL), let image = UIImage(data: data) {
-                    completion(image, adjustments)
-                }
-            }, error: { _ in }, completed: {})
+    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, with: item, cropRect: cropRect, adjustments: adjustments, referenceView: referenceView, completion: { image, adjustments in
+        completion(image, adjustments)
+    }, fullSizeCompletion: { image in
+        Queue.mainQueue().async {
+            fullSizeCompletion(image)
         }
-    }, dismissed: { [weak legacyController] in
+    }, beginTransitionOut: {
+        beginTransitionOut?()
+    }, finishTransitionOut: { [weak legacyController] in
         legacyController?.dismiss()
+        finishTransitionOut?()
     })
 }
 

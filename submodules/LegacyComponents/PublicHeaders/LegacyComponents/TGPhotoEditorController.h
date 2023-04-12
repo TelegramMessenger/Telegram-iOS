@@ -68,6 +68,8 @@ typedef enum {
 
 @property (nonatomic, strong) UIView<TGPhotoDrawingEntitiesView> *entitiesView;
 
+@property (nonatomic, assign) bool ignoreCropForResult;
+
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSAttributedString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab;
 
 - (void)dismissEditor;

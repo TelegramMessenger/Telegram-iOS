@@ -1071,7 +1071,13 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         }
         
-        self.cancelButtonNode.theme = presentationData.theme
+        if let animatingCrossFade = self.animatingCrossFade {
+            Queue.mainQueue().after(!animatingCrossFade ? ChatThemeScreen.themeCrossfadeDelay * UIView.animationDurationFactor() : 0.0, {
+                self.cancelButtonNode.setTheme(presentationData.theme, animated: true)
+            })
+        } else {
+            self.cancelButtonNode.setTheme(presentationData.theme, animated: false)
+        }
         
         let previousIconColors = iconColors(theme: previousTheme)
         let newIconColors = iconColors(theme: self.presentationData.theme)
@@ -1164,6 +1170,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     
+    private var animatingCrossFade: Bool?
     private func animateCrossfade(animateIcon: Bool) {
         if animateIcon, let snapshotView = self.animationNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.animationNode.frame
@@ -1174,6 +1181,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             })
         }
                 
+        self.animatingCrossFade = animateIcon
         Queue.mainQueue().after(ChatThemeScreen.themeCrossfadeDelay * UIView.animationDurationFactor()) {
             if let effectView = self.effectNode.view as? UIVisualEffectView {
                 UIView.animate(withDuration: ChatThemeScreen.themeCrossfadeDuration, delay: 0.0, options: .curveLinear) {
@@ -1185,6 +1193,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             let previousColor = self.contentBackgroundNode.backgroundColor ?? .clear
             self.contentBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
             self.contentBackgroundNode.layer.animate(from: previousColor.cgColor, to: (self.contentBackgroundNode.backgroundColor ?? .clear).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: ChatThemeScreen.themeCrossfadeDuration)
+            
+            self.animatingCrossFade = nil
         }
                 
         if let snapshotView = self.contentContainerNode.view.snapshotView(afterScreenUpdates: false) {

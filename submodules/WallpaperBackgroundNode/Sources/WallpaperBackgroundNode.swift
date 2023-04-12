@@ -917,8 +917,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             default:
                 break
             }
-            if let intensity, intensity < 100 {
-                dimAlpha = 1.0 - max(0.0, min(1.0, Float(intensity) / 100.0))
+            if let intensity, intensity > 0 {
+                dimAlpha = max(0.0, min(1.0, Float(intensity) / 100.0))
             }
         }
         self.dimLayer.opacity = dimAlpha

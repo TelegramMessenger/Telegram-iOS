@@ -38,15 +38,20 @@ public class WebAppCancelButtonNode: ASDisplayNode {
     
     public var state: State = .cancel
     
+    private var _theme: PresentationTheme
     public var theme: PresentationTheme {
-        didSet {
-            self.setState(self.state, animated: false, force: true)
+        get {
+            return self._theme
+        }
+        set {
+            self._theme = newValue
+            self.setState(self.state, animated: false, animateScale: false, force: true)
         }
     }
     private let strings: PresentationStrings
     
     public init(theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
+        self._theme = theme
         self.strings = strings
         
         self.buttonNode = HighlightTrackingButtonNode()
@@ -55,6 +60,7 @@ public class WebAppCancelButtonNode: ASDisplayNode {
         self.arrowNode.displaysAsynchronously = false
         
         self.labelNode = ImmediateTextNode()
+        self.labelNode.displaysAsynchronously = false
         
         super.init()
         
@@ -82,23 +88,40 @@ public class WebAppCancelButtonNode: ASDisplayNode {
         self.setState(.cancel, animated: false, force: true)
     }
     
-    public func setState(_ state: State, animated: Bool, force: Bool = false) {
+    public func setTheme(_ theme: PresentationTheme, animated: Bool) {
+        self._theme = theme
+        var animated = animated
+        if self.animatingStateChange {
+            animated = false
+        }
+        self.setState(self.state, animated: animated, animateScale: false, force: true)
+    }
+    
+    private var animatingStateChange = false
+    public func setState(_ state: State, animated: Bool, animateScale: Bool = true, force: Bool = false) {
         guard self.state != state || force else {
             return
         }
         self.state = state
         
         if animated, let snapshotView = self.buttonNode.view.snapshotContentTree() {
+            self.animatingStateChange = true
             snapshotView.layer.sublayerTransform = self.buttonNode.subnodeTransform
             self.view.addSubview(snapshotView)
             
-            snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            let duration: Double = animateScale ? 0.25 : 0.3
+            if animateScale {
+                snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
+            }
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
+                self.animatingStateChange = false
             })
             
-            self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-            self.buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.25)
+            if animateScale {
+                self.buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.25)
+            }
+            self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
         
         self.arrowNode.isHidden = state == .cancel

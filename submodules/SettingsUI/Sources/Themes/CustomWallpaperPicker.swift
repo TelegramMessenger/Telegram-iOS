@@ -303,7 +303,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             
             var intensity: Int32?
             if let brightness {
-                intensity = max(1, Int32(brightness * 100.0))
+                intensity = max(0, min(100, Int32(brightness * 100.0)))
             }
             
             let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
@@ -317,4 +317,78 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
         }
         return croppedImage
     }).start()
+}
+
+class LegacyWallpaperItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem {
+    var isVideo: Bool {
+        return false
+    }
+    
+    var uniqueIdentifier: String! {
+        return self.asset.localIdentifier
+    }
+    
+    let asset: PHAsset
+    let screenImage: UIImage
+    private(set) var thumbnailResource: TelegramMediaResource?
+    private(set) var imageResource: TelegramMediaResource?
+    let dimensions: CGSize
+
+
+    init(asset: PHAsset, screenImage: UIImage, dimensions: CGSize) {
+        self.asset = asset
+        self.screenImage = screenImage
+        self.dimensions = dimensions
+    }
+    
+    var originalSize: CGSize {
+        return self.dimensions
+    }
+    
+    func thumbnailImageSignal() -> SSignal! {
+        return SSignal.complete()
+//        return SSignal(generator: { subscriber -> SDisposable? in
+//            let disposable = self.thumbnailImage.start(next: { image in
+//                subscriber.putNext(image)
+//                subscriber.putCompletion()
+//            })
+//
+//            return SBlockDisposable(block: {
+//                disposable.dispose()
+//            })
+//        })
+    }
+    
+    func screenImageSignal(_ position: TimeInterval) -> SSignal! {
+        return SSignal.single(self.screenImage)
+    }
+    
+    var originalImage: Signal<UIImage, NoError> {
+        return fetchPhotoLibraryImage(localIdentifier: self.asset.localIdentifier, thumbnail: false)
+        |> filter { value in
+            return !(value?.1 ?? true)
+        }
+        |> mapToSignal { result -> Signal<UIImage, NoError> in
+            if let result = result {
+                return .single(result.0)
+            } else {
+                return .complete()
+            }
+        }
+    }
+    
+    func originalImageSignal(_ position: TimeInterval) -> SSignal! {
+        return SSignal(generator: { subscriber -> SDisposable? in
+            let disposable = self.originalImage.start(next: { image in
+                subscriber.putNext(image)
+                if !image.degraded() {
+                    subscriber.putCompletion()
+                }
+            })
+            
+            return SBlockDisposable(block: {
+                disposable.dispose()
+            })
+        })
+    }
 }
