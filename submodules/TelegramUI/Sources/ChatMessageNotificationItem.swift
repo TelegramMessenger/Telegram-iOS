@@ -314,7 +314,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             title = "📅 \(currentTitle)"
         }
         
-        if let message, item.messages.first, let attribute = message.attributes.first(where: { $0 is NotificationInfoMessageAttribute }) as? NotificationInfoMessageAttribute, attribute.flags.contains(.muted), let currentTitle = title {
+        if let message = item.messages.first, let attribute = message.attributes.first(where: { $0 is NotificationInfoMessageAttribute }) as? NotificationInfoMessageAttribute, attribute.flags.contains(.muted), let currentTitle = title {
             var isAction = false
             for media in message.media {
                 if media is TelegramMediaAction {
