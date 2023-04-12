@@ -181,7 +181,7 @@ then
 			echo "$CONFIGURE_FLAGS" > "$CONFIGURED_MARKER"
 		fi
 
-		CORE_COUNT=`sysctl -n hw.logicalcpu`
+		CORE_COUNT=`PATH="$PATH:/usr/sbin" sysctl -n hw.logicalcpu`
 		make -j$CORE_COUNT install $EXPORT || exit 1
 
 		popd

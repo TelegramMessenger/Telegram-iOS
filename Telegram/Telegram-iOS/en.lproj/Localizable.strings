@@ -9323,3 +9323,7 @@ Sorry for the inconvenience.";
 
 "Conversation.Theme.PreviewDarkShort" = "Tap to view this theme in the night mode.";
 "Conversation.Theme.PreviewLightShort" = "Tap to view this theme in the day mode.";
+
+"ChatList.EmptyListContactsHeader" = "YOUR CONTACTS ON TELEGRAM";
+"ChatList.EmptyListContactsHeaderHide" = "hide";
+"ChatList.EmptyListTooltip" = "Send a message or\nstart a group here.";

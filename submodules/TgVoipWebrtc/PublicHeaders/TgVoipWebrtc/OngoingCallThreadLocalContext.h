@@ -215,6 +215,14 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @end
 
+@protocol OngoingCallDirectConnection <NSObject>
+
+- (NSData * _Nonnull)addOnIncomingPacket:(void (^_Nonnull)(NSData * _Nonnull))addOnIncomingPacket;
+- (void)removeOnIncomingPacket:(NSData * _Nonnull)token;
+- (void)sendPacket:(NSData * _Nonnull)packet;
+
+@end
+
 @interface OngoingCallThreadLocalContextWebrtc : NSObject
 
 + (void)logMessage:(NSString * _Nonnull)string;
@@ -245,7 +253,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
                        sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
                      preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec
                       audioInputDeviceId:(NSString * _Nonnull)audioInputDeviceId
-                             audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice;
+                             audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
+                        directConnection:(id<OngoingCallDirectConnection> _Nullable)directConnection;
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
 
