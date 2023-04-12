@@ -314,8 +314,17 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             title = "📅 \(currentTitle)"
         }
         
-        if let attribute = item.messages.first?.attributes.first(where: { $0 is NotificationInfoMessageAttribute }) as? NotificationInfoMessageAttribute, attribute.flags.contains(.muted), let currentTitle = title {
-            title = "\(currentTitle) 🔕"
+        if let message, item.messages.first, let attribute = message.attributes.first(where: { $0 is NotificationInfoMessageAttribute }) as? NotificationInfoMessageAttribute, attribute.flags.contains(.muted), let currentTitle = title {
+            var isAction = false
+            for media in message.media {
+                if media is TelegramMediaAction {
+                    isAction = true
+                    break
+                }
+            }
+            if !isAction {
+                title = "\(currentTitle) 🔕"
+            }
         }
         
         let textFont = compact ? Font.regular(15.0) : Font.regular(16.0)

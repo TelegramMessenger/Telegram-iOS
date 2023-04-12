@@ -9318,3 +9318,8 @@ Sorry for the inconvenience.";
 "FolderLinkPreview.ListSelectionSelectAllStaticPartSelect" = "ALL";
 "FolderLinkPreview.ListSelectionSelectAllStaticPartDeselect" = "ALL";
 "FolderLinkPreview.ListSelectionSelectAllFormat" = "{dynamic}{static}";
+
+"UserInfo.ChangeWallpaper" = "Change Wallpaper";
+
+"Conversation.Theme.PreviewDarkShort" = "Tap to view this theme in the night mode.";
+"Conversation.Theme.PreviewLightShort" = "Tap to view this theme in the day mode.";

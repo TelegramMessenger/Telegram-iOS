@@ -170,6 +170,8 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         
         super.init()
         
+        self.isExclusiveTouch = true
+        
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.textNode)
@@ -320,6 +322,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         
         self.clipsToBounds = true
         self.cornerRadius = 14.0
+        self.isExclusiveTouch = true
         
         switch value {
         case let .check(selected):

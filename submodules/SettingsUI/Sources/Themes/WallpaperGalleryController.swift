@@ -515,8 +515,11 @@ public class WallpaperGalleryController: ViewController {
         var dismissed = false
         toolbarNode.done = { [weak self] in
             if let strongSelf = self, !dismissed {
-                dismissed = true
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                    if centralItemNode.cropNode.scrollNode.view.isDecelerating {
+                        return
+                    }
+                    dismissed = true
                     let options = centralItemNode.options
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
