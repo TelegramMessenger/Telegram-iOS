@@ -313,7 +313,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         switch entry {
         case .asset, .contextResult:
-            return self.sliderNode.value
+            return 1.0 - self.sliderNode.value
         default:
             return nil
         }
