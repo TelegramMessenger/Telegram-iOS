@@ -238,6 +238,9 @@ public final class QrCodeScreen: ViewController {
                 case let .invite(_, isGroup):
                     title = self.presentationData.strings.InviteLink_QRCode_Title
                     text = isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel
+                case .chatFolder:
+                    title = self.presentationData.strings.InviteLink_QRCodeFolder_Title
+                    text = self.presentationData.strings.InviteLink_QRCodeFolder_Text
                 default:
                     title = ""
                     text = ""

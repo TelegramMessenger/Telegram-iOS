@@ -97,7 +97,7 @@ public final class ActivityIndicator: ASDisplayNode {
         super.init()
         
         if case let .custom(_, _, _, forceCustom) = self.type, forceCustom {
-            self.isLayerBacked = true
+            //self.isLayerBacked = true
         }
         
         switch type {

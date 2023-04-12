@@ -1394,8 +1394,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if case .scheduledMessages = interfaceState.subject {
             
         } else {
-            if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
-                if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+            if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
+                    displayBotStartButton = true
+                } else if interfaceState.peerIsBlocked {
                     displayBotStartButton = true
                 }
             }
@@ -1470,43 +1472,47 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 } else {
                     transition.animatePosition(layer: self.startButton.layer, from: CGPoint(x: 0.0, y: 80.0), to: CGPoint(), additive: true)
                 }
-            }
-            
-            if let context = self.context {
-                let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil)
-                let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
-                
-                if let tooltipController = self.tooltipController {
-                    if self.view.window != nil {
-                        tooltipController.location = .point(location, .bottom)
-                    }
-                } else {
-                    let controller = TooltipScreen(account: context.account, text: interfaceState.strings.Bot_TapToUse, icon: .downArrows, location: .point(location, .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _ in
-                        return .ignore
-                    })
-                    controller.alwaysVisible = true
-                    self.tooltipController = controller
+                if let context = self.context {
+                    let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil)
+                    let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
                     
-                    let delay: Double
-                    if case .regular = metrics.widthClass {
-                        delay = 0.1
+                    if let tooltipController = self.tooltipController {
+                        if self.view.window != nil {
+                            tooltipController.location = .point(location, .bottom)
+                        }
                     } else {
-                        delay = 0.35
+                        let controller = TooltipScreen(account: context.account, sharedContext: context.sharedContext, text: interfaceState.strings.Bot_TapToUse, icon: .downArrows, location: .point(location, .bottom), displayDuration: .infinite, shouldDismissOnTouch: { _ in
+                            return .ignore
+                        })
+                        controller.alwaysVisible = true
+                        self.tooltipController = controller
+                        
+                        let delay: Double
+                        if case .regular = metrics.widthClass {
+                            delay = 0.1
+                        } else {
+                            delay = 0.35
+                        }
+                        Queue.mainQueue().after(delay, {
+                            let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil)
+                            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
+                            controller.location = .point(location, .bottom)
+                            self.interfaceInteraction?.presentControllerInCurrent(controller, nil)
+                        })
                     }
-                    Queue.mainQueue().after(delay, {
-                        let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil)
-                        let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
-                        controller.location = .point(location, .bottom)
-                        self.interfaceInteraction?.presentControllerInCurrent(controller, nil)
-                    })
+                }
+            } else {
+                if hasMenuButton && !self.animatingTransition {
+                    self.menuButton.isHidden = true
                 }
             }
         } else if !self.startButton.isHidden {
             if hasMenuButton {
                 self.animateBotButtonOutToMenu(transition: transition)
             } else {
-                transition.animatePosition(node: self.startButton, to: CGPoint(x: 0.0, y: 80.0), additive: true, completion: { _ in
+                transition.animatePosition(node: self.startButton, to: CGPoint(x: 0.0, y: 80.0), removeOnCompletion: false, additive: true, completion: { _ in
                     self.startButton.isHidden = true
+                    self.startButton.layer.removeAllAnimations()
                 })
             }
         }

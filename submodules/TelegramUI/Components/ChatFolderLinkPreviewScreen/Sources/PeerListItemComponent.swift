@@ -15,19 +15,6 @@ import TelegramStringFormatting
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 
-private func cancelContextGestures(view: UIView) {
-    if let gestureRecognizers = view.gestureRecognizers {
-        for gesture in gestureRecognizers {
-            if let gesture = gesture as? ContextGesture {
-                gesture.cancel()
-            }
-        }
-    }
-    for subview in view.subviews {
-        cancelContextGestures(view: subview)
-    }
-}
-
 final class PeerListItemComponent: Component {
     enum SelectionState: Equatable {
         case none
@@ -182,7 +169,7 @@ final class PeerListItemComponent: Component {
                     if themeUpdated {
                         var theme = CheckNodeTheme(theme: component.theme, style: .plain)
                         if isTinted {
-                            theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.35)
+                            theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.5)
                         }
                         checkLayer.theme = theme
                     }
@@ -190,7 +177,7 @@ final class PeerListItemComponent: Component {
                 } else {
                     var theme = CheckNodeTheme(theme: component.theme, style: .plain)
                     if isTinted {
-                        theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.35)
+                        theme.backgroundColor = theme.backgroundColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.5)
                     }
                     checkLayer = CheckLayer(theme: theme)
                     self.checkLayer = checkLayer
@@ -231,20 +218,19 @@ final class PeerListItemComponent: Component {
                 }
             }
             
-            //TODO:localize
             let labelData: (String, Bool)
             if let subtitle = component.subtitle {
                 labelData = (subtitle, false)
             } else if case .legacyGroup = component.peer {
-                labelData = ("group", false)
+                labelData = (component.strings.Group_Status, false)
             } else if case let .channel(channel) = component.peer {
                 if case .group = channel.info {
-                    labelData = ("group", false)
+                    labelData = (component.strings.Group_Status, false)
                 } else {
-                    labelData = ("channel", false)
+                    labelData = (component.strings.Channel_Status, false)
                 }
             } else {
-                labelData = ("group", false)
+                labelData = (component.strings.Group_Status, false)
             }
             
             let labelSize = self.label.update(

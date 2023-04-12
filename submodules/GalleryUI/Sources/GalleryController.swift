@@ -1211,7 +1211,9 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 })
             }
         })
-        self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
+        
+        let disableTapNavigation = !(self.context.sharedContext.currentMediaDisplaySettings.with { $0 }.showNextMediaOnTap)
+        self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction, disableTapNavigation: disableTapNavigation)
         self.displayNodeDidLoad()
         
         self.galleryNode.statusBar = self.statusBar

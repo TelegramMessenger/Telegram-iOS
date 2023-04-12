@@ -286,11 +286,11 @@ private extension CurrentImpl {
         case .mediaStream:
             let ssrcId = UInt32.random(in: 0 ..< UInt32(Int32.max - 1))
             let dict: [String: Any] = [
-                "fingerprints": [],
+                "fingerprints": [] as [Any],
                 "ufrag": "",
                 "pwd": "",
                 "ssrc": Int32(bitPattern: ssrcId),
-                "ssrc-groups": []
+                "ssrc-groups": [] as [Any]
             ]
             guard let jsonString = (try? JSONSerialization.data(withJSONObject: dict, options: [])).flatMap({ String(data: $0, encoding: .utf8) }) else {
                 return .never()

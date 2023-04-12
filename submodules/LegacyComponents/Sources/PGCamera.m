@@ -120,7 +120,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     TGLegacyLog(@"ERROR: Camera runtime error: %@", notification.userInfo[AVCaptureSessionErrorKey]);
 
     __weak PGCamera *weakSelf = self;
-    TGDispatchAfter(1.5f, [PGCamera cameraQueue]._dispatch_queue, ^
+    TGDispatchAfter(1.5f, [PGCameraCaptureSession cameraQueue]._dispatch_queue, ^
     {
         __strong PGCamera *strongSelf = weakSelf;
         if (strongSelf == nil || strongSelf->_invalidated)
@@ -198,7 +198,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     [previewView setupWithCamera:self];
 
     __weak PGCamera *weakSelf = self;
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         __strong PGCamera *strongSelf = weakSelf;
         if (strongSelf == nil || strongSelf->_invalidated)
@@ -225,7 +225,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     if (_invalidated)
         return;
     
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (self.captureSession.isRunning)
             return;
@@ -261,10 +261,11 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     
     TGLegacyLog(@"Camera: stop capture");
     
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (_invalidated)
         {
+#if !TARGET_IPHONE_SIMULATOR
             [self.captureSession beginConfiguration];
             
             [self.captureSession resetFlashMode];
@@ -279,16 +280,21 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             for (AVCaptureOutput *output in self.captureSession.outputs)
                 [self.captureSession removeOutput:output];
             
-#if !TARGET_IPHONE_SIMULATOR
             [self.captureSession commitConfiguration];
 #endif
         }
         
         TGLegacyLog(@"Camera: stop running");
 #if !TARGET_IPHONE_SIMULATOR
-        [self.captureSession stopRunning];
+        @try {
+            [self.captureSession stopRunning];
+        } @catch (NSException *exception) {
+            TGLegacyLog(@"Camera: caught exception – %@", exception.description);
+            [self.captureSession commitConfiguration];
+            [self.captureSession stopRunning];
+            TGLegacyLog(@"Camera: seems to be successfully resolved");
+        }
 #endif
-        
         _capturing = false;
         
         TGDispatchOnMainThread(^
@@ -328,9 +334,9 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     };
     
     if (synchronous)
-        [[PGCamera cameraQueue] dispatchSync:block];
+        [[PGCameraCaptureSession cameraQueue] dispatchSync:block];
     else
-        [[PGCamera cameraQueue] dispatch:block];
+        [[PGCameraCaptureSession cameraQueue] dispatch:block];
 }
 
 #pragma mark - 
@@ -361,7 +367,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 {
     bool videoMirrored = !self.disableResultMirroring ? _previewView.captureConnection.videoMirrored : false;
     
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (!self.captureSession.isRunning || self.captureSession.imageOutput.isCapturingStillImage || _invalidated)
             return;
@@ -410,13 +416,13 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         if (CFAbsoluteTimeGetCurrent() - _captureStartTime > 0.4)
             takePhoto();
         else
-            TGDispatchAfter(0.4 - delta, [[PGCamera cameraQueue] _dispatch_queue], takePhoto);
+            TGDispatchAfter(0.4 - delta, [[PGCameraCaptureSession cameraQueue] _dispatch_queue], takePhoto);
     }];
 }
 
 - (void)startVideoRecordingForMoment:(bool)moment completion:(void (^)(NSURL *, CGAffineTransform transform, CGSize dimensions, NSTimeInterval duration, bool success))completion
 {
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (!self.captureSession.isRunning || _invalidated)
             return;
@@ -440,11 +446,10 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             });
         };
         
-        NSTimeInterval delta = CFAbsoluteTimeGetCurrent() - _captureStartTime;
-        if (CFAbsoluteTimeGetCurrent() - _captureStartTime > 0.8)
+        if (CFAbsoluteTimeGetCurrent() - _captureStartTime > 1.5)
             startRecording();
         else
-            TGDispatchAfter(0.8 - delta, [[PGCamera cameraQueue] _dispatch_queue], startRecording);
+            TGDispatchAfter(1.5, [[PGCameraCaptureSession cameraQueue] _dispatch_queue], startRecording);
         
         TGDispatchOnMainThread(^
         {
@@ -456,7 +461,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)stopVideoRecording
 {
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         [self.captureSession stopVideoRecording];
         
@@ -497,9 +502,11 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         if (strongSelf == nil)
             return;
         
-        [[PGCamera cameraQueue] dispatch:^
+        [[PGCameraCaptureSession cameraQueue] dispatch:^
         {
             strongSelf.captureSession.currentMode = cameraMode;
+            
+            _captureStartTime = CFAbsoluteTimeGetCurrent();
              
             if (strongSelf.finishedModeChange != nil)
                 strongSelf.finishedModeChange();
@@ -583,7 +590,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)_setFocusPoint:(CGPoint)point focusMode:(AVCaptureFocusMode)focusMode exposureMode:(AVCaptureExposureMode)exposureMode monitorSubjectAreaChange:(bool)monitorSubjectAreaChange
 {
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (self.disabled)
             return;
@@ -599,7 +606,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)beginExposureTargetBiasChange
 {
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (self.disabled)
             return;
@@ -610,7 +617,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)setExposureTargetBias:(CGFloat)bias
 {
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (self.disabled)
             return;
@@ -621,7 +628,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)endExposureTargetBiasChange
 {
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (self.disabled)
             return;
@@ -660,7 +667,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (void)setFlashMode:(PGCameraFlashMode)flashMode
 {
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         self.captureSession.currentFlashMode = flashMode;
     }];
@@ -688,7 +695,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
         if (strongSelf == nil)
             return;
         
-        [[PGCamera cameraQueue] dispatch:^
+        [[PGCameraCaptureSession cameraQueue] dispatch:^
         {
             [strongSelf.captureSession setCurrentCameraPosition:targetCameraPosition];
              
@@ -743,7 +750,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     if (self.cameraMode == PGCameraModeVideo) {
         animated = false;
     }
-    [[PGCamera cameraQueue] dispatch:^
+    [[PGCameraCaptureSession cameraQueue] dispatch:^
     {
         if (self.disabled)
             return;
@@ -783,18 +790,6 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 + (bool)hasFrontCamera
 {
     return ([PGCameraCaptureSession _deviceWithCameraPosition:PGCameraPositionFront] != nil);
-}
-
-+ (SQueue *)cameraQueue
-{
-    static dispatch_once_t onceToken;
-    static SQueue *queue = nil;
-    dispatch_once(&onceToken, ^
-    {
-        queue = [[SQueue alloc] init];
-    });
-    
-    return queue;
 }
 
 + (AVCaptureVideoOrientation)_videoOrientationForInterfaceOrientation:(UIInterfaceOrientation)deviceOrientation mirrored:(bool)mirrored

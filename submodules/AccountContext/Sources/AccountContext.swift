@@ -756,6 +756,7 @@ public protocol SharedAccountContext: AnyObject {
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
     var currentStickerSettings: Atomic<StickerSettings> { get }
+    var currentMediaDisplaySettings: Atomic<MediaDisplaySettings> { get }
     
     var energyUsageSettings: EnergyUsageSettings { get }
     
@@ -898,6 +899,7 @@ public enum PremiumLimitSubject {
     case accounts
     case linksPerSharedFolder
     case membershipInSharedFolders
+    case channels
 }
 
 public protocol ComposeController: ViewController {

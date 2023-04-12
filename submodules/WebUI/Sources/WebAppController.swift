@@ -26,27 +26,32 @@ import InstantPageUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
-private class CancelButtonNode: ASDisplayNode {
-    enum State {
+public class WebAppCancelButtonNode: ASDisplayNode {
+    public enum State {
         case cancel
         case back
     }
     
-    private let buttonNode: HighlightTrackingButtonNode
+    public let buttonNode: HighlightTrackingButtonNode
     private let arrowNode: ASImageNode
     private let labelNode: ImmediateTextNode
     
-    var state: State = .cancel
+    public var state: State = .cancel
     
-    var theme: PresentationTheme {
-        didSet {
-            
+    private var _theme: PresentationTheme
+    public var theme: PresentationTheme {
+        get {
+            return self._theme
+        }
+        set {
+            self._theme = newValue
+            self.setState(self.state, animated: false, animateScale: false, force: true)
         }
     }
     private let strings: PresentationStrings
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
+    public init(theme: PresentationTheme, strings: PresentationStrings) {
+        self._theme = theme
         self.strings = strings
         
         self.buttonNode = HighlightTrackingButtonNode()
@@ -55,6 +60,7 @@ private class CancelButtonNode: ASDisplayNode {
         self.arrowNode.displaysAsynchronously = false
         
         self.labelNode = ImmediateTextNode()
+        self.labelNode.displaysAsynchronously = false
         
         super.init()
         
@@ -82,23 +88,40 @@ private class CancelButtonNode: ASDisplayNode {
         self.setState(.cancel, animated: false, force: true)
     }
     
-    func setState(_ state: State, animated: Bool, force: Bool = false) {
+    public func setTheme(_ theme: PresentationTheme, animated: Bool) {
+        self._theme = theme
+        var animated = animated
+        if self.animatingStateChange {
+            animated = false
+        }
+        self.setState(self.state, animated: animated, animateScale: false, force: true)
+    }
+    
+    private var animatingStateChange = false
+    public func setState(_ state: State, animated: Bool, animateScale: Bool = true, force: Bool = false) {
         guard self.state != state || force else {
             return
         }
         self.state = state
         
         if animated, let snapshotView = self.buttonNode.view.snapshotContentTree() {
+            self.animatingStateChange = true
             snapshotView.layer.sublayerTransform = self.buttonNode.subnodeTransform
             self.view.addSubview(snapshotView)
             
-            snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            let duration: Double = animateScale ? 0.25 : 0.3
+            if animateScale {
+                snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
+            }
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
+                self.animatingStateChange = false
             })
             
-            self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-            self.buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.25)
+            if animateScale {
+                self.buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.25)
+            }
+            self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
         
         self.arrowNode.isHidden = state == .cancel
@@ -629,7 +652,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_ready":
                     self.animateTransitionIn()
                 case "web_app_switch_inline_query":
-                    if controller.isInline, let json, let query = json["query"] as? String {
+                    if let json, let query = json["query"] as? String {
                         if let chatTypes = json["chat_types"] as? [String], !chatTypes.isEmpty {
                             var requestPeerTypes: [ReplyMarkupButtonRequestPeerType] = []
                             for type in chatTypes {
@@ -675,7 +698,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             
                             let isLoading = json["is_progress_visible"] as? Bool
                             let isEnabled = json["is_active"] as? Bool
-                            let state = AttachmentMainButtonState(text: text, background: .color(backgroundColor), textColor: textColor, isVisible: isVisible, progress: (isLoading ?? false) ? .side : .none, isEnabled: isEnabled ?? true)
+                            let state = AttachmentMainButtonState(text: text, font: .bold, background: .color(backgroundColor), textColor: textColor, isVisible: isVisible, progress: (isLoading ?? false) ? .side : .none, isEnabled: isEnabled ?? true)
                             self.mainButtonState = state
                         }
                     }
@@ -1049,7 +1072,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     private var titleView: CounterContollerTitleView?
-    private let cancelButtonNode: CancelButtonNode
+    private let cancelButtonNode: WebAppCancelButtonNode
     private let moreButtonNode: MoreButtonNode
     
     private let context: AccountContext
@@ -1097,7 +1120,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
-        self.cancelButtonNode = CancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)

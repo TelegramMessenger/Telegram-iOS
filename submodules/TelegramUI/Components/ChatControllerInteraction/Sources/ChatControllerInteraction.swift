@@ -105,7 +105,7 @@ public final class ChatControllerInteraction {
     public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool
     public let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
-    public let activateSwitchInline: (PeerId?, String) -> Void
+    public let activateSwitchInline: (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void
     public let openUrl: (String, Bool, Bool?, Message?) -> Void
     public let shareCurrentLocation: () -> Void
     public let shareAccountContact: () -> Void
@@ -217,7 +217,7 @@ public final class ChatControllerInteraction {
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
-        activateSwitchInline: @escaping (PeerId?, String) -> Void,
+        activateSwitchInline: @escaping (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void,
         openUrl: @escaping (String, Bool, Bool?, Message?) -> Void,
         shareCurrentLocation: @escaping () -> Void,
         shareAccountContact: @escaping () -> Void,

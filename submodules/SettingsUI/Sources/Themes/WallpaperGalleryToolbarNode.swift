@@ -11,6 +11,7 @@ enum WallpaperGalleryToolbarCancelButtonType {
 
 enum WallpaperGalleryToolbarDoneButtonType {
     case set
+    case setPeer
     case proceed
     case apply
     case none
@@ -31,9 +32,24 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         }
     }
     
+    var dark: Bool {
+        didSet {
+            if self.dark != oldValue {
+                self.doneButtonBackgroundNode.removeFromSupernode()
+                if self.dark {
+                    self.doneButtonBackgroundNode = WallpaperOptionBackgroundNode(enableSaturation: true)
+                } else {
+                    self.doneButtonBackgroundNode = WallpaperLightButtonBackgroundNode()
+                }
+                self.doneButtonBackgroundNode.cornerRadius = 14.0
+                self.insertSubnode(self.doneButtonBackgroundNode, at: 0)
+            }
+        }
+    }
+    
     private let doneButton = HighlightTrackingButtonNode()
-    private let doneButtonBackgroundNode: NavigationBackgroundNode
-    private let doneButtonBackgroundView: UIVisualEffectView
+    private var doneButtonBackgroundNode: ASDisplayNode
+    
     private let doneButtonTitleNode: ImmediateTextNode
     
     private let doneButtonSolidBackgroundNode: ASDisplayNode
@@ -47,25 +63,13 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.strings = strings
         self.cancelButtonType = cancelButtonType
         self.doneButtonType = doneButtonType
+        self.dark = false
         
-        self.doneButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xf2f2f2, alpha: 0.45))
+        self.doneButtonBackgroundNode = WallpaperLightButtonBackgroundNode()
         self.doneButtonBackgroundNode.cornerRadius = 14.0
-        
-        let blurEffect: UIBlurEffect
-        if #available(iOS 13.0, *) {
-            blurEffect = UIBlurEffect(style: .systemUltraThinMaterialLight)
-        } else {
-            blurEffect = UIBlurEffect(style: .light)
-        }
-        
-        self.doneButtonBackgroundView = UIVisualEffectView(effect: blurEffect)
-        self.doneButtonBackgroundView.clipsToBounds = true
-        self.doneButtonBackgroundView.layer.cornerRadius = 14.0
-        self.doneButtonBackgroundView.isUserInteractionEnabled = false
         
         self.doneButtonTitleNode = ImmediateTextNode()
         self.doneButtonTitleNode.displaysAsynchronously = false
-        self.doneButtonTitleNode.textShadowColor = UIColor(rgb: 0x000000, alpha: 0.1)
         self.doneButtonTitleNode.isUserInteractionEnabled = false
         
         self.doneButtonSolidBackgroundNode = ASDisplayNode()
@@ -152,6 +156,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         switch self.doneButtonType {
             case .set:
                 doneTitle = strings.Wallpaper_ApplyForAll
+            case .setPeer:
+                doneTitle = strings.Wallpaper_ApplyForChat
             case .proceed:
                 doneTitle = strings.Theme_Colors_Proceed
             case .apply:
@@ -173,17 +179,18 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         let doneFrame = CGRect(origin: CGPoint(x: inset, y: 2.0), size: CGSize(width: size.width - inset * 2.0, height: buttonHeight))
         self.doneButton.frame = doneFrame
         self.doneButtonBackgroundNode.frame = doneFrame
-        self.doneButtonBackgroundNode.update(size: doneFrame.size, cornerRadius: 14.0, transition: transition)
-        self.doneButtonBackgroundView.frame = doneFrame
-        
+        if let backgroundNode = self.doneButtonBackgroundNode as? WallpaperOptionBackgroundNode {
+            backgroundNode.updateLayout(size: doneFrame.size)
+        } else if let backgroundNode = self.doneButtonBackgroundNode as? WallpaperLightButtonBackgroundNode {
+            backgroundNode.updateLayout(size: doneFrame.size)
+        }
         self.doneButtonSolidBackgroundNode.frame = doneFrame
         
         let doneTitleSize = self.doneButtonTitleNode.updateLayout(doneFrame.size)
-        self.doneButtonTitleNode.frame = CGRect(origin: CGPoint(x: doneFrame.minX + floorToScreenPixels((doneFrame.width - doneTitleSize.width) / 2.0), y: doneFrame.minY + floorToScreenPixels((doneFrame.height - doneTitleSize.height) / 2.0)), size: doneTitleSize)
+        self.doneButtonTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((doneFrame.width - doneTitleSize.width) / 2.0), y: floorToScreenPixels((doneFrame.height - doneTitleSize.height) / 2.0)), size: doneTitleSize).offsetBy(dx: doneFrame.minX, dy: doneFrame.minY)
         
         let _ = self.doneButtonSolidTitleNode.updateLayout(doneFrame.size)
         self.doneButtonSolidTitleNode.frame = self.doneButtonTitleNode.frame
-
     }
     
     @objc func cancelPressed() {

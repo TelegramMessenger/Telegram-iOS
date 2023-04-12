@@ -25,14 +25,16 @@ final class MediaPickerGridItem: GridItem {
     let content: MediaPickerGridItemContent
     let interaction: MediaPickerInteraction
     let theme: PresentationTheme
+    let selectable: Bool
     let enableAnimations: Bool
     
     let section: GridSection? = nil
     
-    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, enableAnimations: Bool) {
+    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
         self.content = content
         self.interaction = interaction
         self.theme = theme
+        self.selectable = selectable
         self.enableAnimations = enableAnimations
     }
     
@@ -40,11 +42,11 @@ final class MediaPickerGridItem: GridItem {
         switch self.content {
         case let .asset(fetchResult, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
             return node
         case let .media(media, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
             return node
         }
     }
@@ -56,13 +58,13 @@ final class MediaPickerGridItem: GridItem {
                 assertionFailure()
                 return
             }
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
         case let .media(media, index):
             guard let node = node as? MediaPickerGridItemNode else {
                 assertionFailure()
                 return
             }
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
         }
     }
 }
@@ -84,6 +86,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     var currentMediaState: (TGMediaSelectableItem, Int)?
     var currentState: (PHFetchResult<PHAsset>, Int)?
     var enableAnimations: Bool = true
+    private var selectable: Bool = false
     
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
@@ -171,7 +174,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
     
     func updateSelectionState(animated: Bool = false) {
-        if self.checkNode == nil, let _ = self.interaction?.selectionState, let theme = self.theme {
+        if self.checkNode == nil, let _ = self.interaction?.selectionState, self.selectable, let theme = self.theme {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
                 if let strongSelf = self, let interaction = strongSelf.interaction, let selectableItem = strongSelf.selectableItem {
@@ -223,9 +226,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
         self.interaction = interaction
         self.theme = theme
+        self.selectable = selectable
         self.enableAnimations = enableAnimations
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
@@ -239,9 +243,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
         
-    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
         self.interaction = interaction
         self.theme = theme
+        self.selectable = selectable
         self.enableAnimations = enableAnimations
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
@@ -318,7 +323,14 @@ final class MediaPickerGridItemNode: GridItemNode {
                 strongSelf.updateHasSpoiler(hasSpoiler)
             }))
             
-            if asset.mediaType == .video {
+            if asset.isFavorite {
+                self.typeIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
+                if self.typeIconNode.supernode == nil {
+                    self.addSubnode(self.gradientNode)
+                    self.addSubnode(self.typeIconNode)
+                    self.setNeedsLayout()
+                }
+            } else if asset.mediaType == .video {
                 if asset.mediaSubtypes.contains(.videoHighFrameRate) {
                     self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaSlomo")
                 } else if asset.mediaSubtypes.contains(.videoTimelapse) {

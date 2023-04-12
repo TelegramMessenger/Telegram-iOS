@@ -12,6 +12,7 @@
 @property (nonatomic) bool delivered;
 @property (nonatomic) int64_t responseMessageId;
 @property (nonatomic) bool willInitializeApi;
+@property (nonatomic) double sentTimestamp;
 
 - (instancetype)initWithMessageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo transactionId:(id)transactionId quickAckId:(int32_t)quickAckId;
 

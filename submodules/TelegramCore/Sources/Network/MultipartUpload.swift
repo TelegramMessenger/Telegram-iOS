@@ -186,7 +186,7 @@ private final class MultipartUploadManager {
             self.bigTotalParts = nil
         } else {
             self.bigParts = false
-            self.defaultPartSize = 16 * 1024
+            self.defaultPartSize = 128 * 1024
             self.bigTotalParts = nil
         }
     }
@@ -317,7 +317,7 @@ private final class MultipartUploadManager {
                     switch resourceData {
                         case let .resourceData(data):
                             if let file = ManagedFile(queue: nil, path: data.path, mode: .read) {
-                                file.seek(position: Int64(partOffset))
+                                let _ = file.seek(position: Int64(partOffset))
                                 let data = file.readData(count: Int(partSize))
                                 if data.count == partSize {
                                     partData = data

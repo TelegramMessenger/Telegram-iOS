@@ -221,14 +221,20 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     
                     switch item.notice {
                     case .chatFolderUpdates:
-                        //TODO:locallize
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: "Hide", icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.ChatList_HideAction, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                     default:
                         strongSelf.setRevealOptions((left: [], right: []))
                     }
                 }
             })
         }
+    }
+    
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+        
+        //self.transitionOffset = self.bounds.size.height * 1.6
+        //self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
     }
     
     override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {

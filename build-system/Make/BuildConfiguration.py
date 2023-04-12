@@ -35,8 +35,10 @@ class BuildConfiguration:
         self.enable_siri = enable_siri
         self.enable_icloud = enable_icloud
 
-    def write_to_variables_file(self, aps_environment, path):
+    def write_to_variables_file(self, bazel_path, use_xcode_managed_codesigning, aps_environment, path):
         string = ''
+        string += 'telegram_bazel_path = "{}"\n'.format(bazel_path)
+        string += 'telegram_use_xcode_managed_codesigning = {}\n'.format('True' if use_xcode_managed_codesigning else 'False')
         string += 'telegram_bundle_id = "{}"\n'.format(self.bundle_id)
         string += 'telegram_api_id = "{}"\n'.format(self.api_id)
         string += 'telegram_api_hash = "{}"\n'.format(self.api_hash)
@@ -239,6 +241,9 @@ class CodesigningSource:
         raise Exception('Not implemented')
 
     def resolve_aps_environment(self):
+        raise Exception('Not implemented')
+
+    def use_xcode_managed_codesigning(self):
         raise Exception('Not implemented')        
 
     def copy_certificates_to_destination(self, destination_path):
@@ -279,6 +284,9 @@ class GitCodesigningSource(CodesigningSource):
         source_path = self.working_dir + '/decrypted/profiles/{}'.format(self.codesigning_type)
         return resolve_aps_environment_from_directory(source_path=source_path, team_id=self.team_id, bundle_id=self.bundle_id)
 
+    def use_xcode_managed_codesigning(self):
+        return False
+
     def copy_certificates_to_destination(self, destination_path):
         source_path = None
         if self.codesigning_type in ['adhoc', 'appstore']:
@@ -307,5 +315,28 @@ class DirectoryCodesigningSource(CodesigningSource):
     def resolve_aps_environment(self):
         return resolve_aps_environment_from_directory(source_path=self.directory_path + '/profiles', team_id=self.team_id, bundle_id=self.bundle_id)
 
+    def use_xcode_managed_codesigning(self):
+        return False
+
     def copy_certificates_to_destination(self, destination_path):
         copy_certificates_from_directory(source_path=self.directory_path + '/certs', destination_path=destination_path)
+
+
+class XcodeManagedCodesigningSource(CodesigningSource):
+    def __init__(self):
+        pass
+
+    def load_data(self, working_dir):
+        pass
+
+    def copy_profiles_to_destination(self, destination_path):
+        pass
+
+    def resolve_aps_environment(self):
+        return ""
+
+    def use_xcode_managed_codesigning(self):
+        return True
+
+    def copy_certificates_to_destination(self, destination_path):
+        pass

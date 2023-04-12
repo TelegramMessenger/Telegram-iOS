@@ -170,6 +170,7 @@ private final class LimitComponent: CombinedComponent {
                     badgeIconName: "",
                     badgeText: nil,
                     badgePosition: 0.0,
+                    badgeGraphPosition: 0.0,
                     isPremiumDisabled: false
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),

@@ -5,12 +5,16 @@ import Photos
 import AVFoundation
 
 class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
+    private let assetType: PHAssetMediaType?
+    
     private var registeredChangeObserver = false
     private let changeSink = ValuePipe<PHChange>()
     private let mediaAccessSink = ValuePipe<PHAuthorizationStatus>()
     private let cameraAccessSink = ValuePipe<AVAuthorizationStatus?>()
     
-    override init() {
+    init(assetType: PHAssetMediaType?) {
+        self.assetType = assetType
+        
         super.init()
         
         if PHPhotoLibrary.authorizationStatus() == .authorized {
@@ -30,7 +34,12 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
     }
     
     func fetchAssets(_ collection: PHAssetCollection) -> Signal<PHFetchResult<PHAsset>, NoError> {
-        let initialFetchResult = PHAsset.fetchAssets(in: collection, options: nil)
+        let options = PHFetchOptions()
+        if let assetType = self.assetType {
+            options.predicate = NSPredicate(format: "mediaType = %d", assetType.rawValue)
+        }
+        
+        let initialFetchResult = PHAsset.fetchAssets(in: collection, options: options)
         let fetchResult = Atomic<PHFetchResult<PHAsset>>(value: initialFetchResult)
         return .single(initialFetchResult)
         |> then(

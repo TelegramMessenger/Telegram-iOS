@@ -223,8 +223,7 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
     
     entries.append(.listHeader(presentationData.strings.ChatListFolderSettings_FoldersSection))
     
-    //TODO:localize
-    entries.append(.addItem(text: "Create a Folder", isEditing: state.isEditing))
+    entries.append(.addItem(text: presentationData.strings.ChatListFilterList_CreateFolder, isEditing: state.isEditing))
     
     if !filters.isEmpty || suggestedFilters.isEmpty {
         var folderCount = 0
@@ -324,7 +323,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                 var filters = filters
                 let id = context.engine.peers.generateNewChatListFilterId(filters: filters)
-                filters.insert(.filter(id: id, title: title, emoticon: nil, data: data), at: 0)
+                filters.append(.filter(id: id, title: title, emoticon: nil, data: data))
                 return filters
             }
             |> deliverOnMainQueue).start(next: { _ in
@@ -391,36 +390,75 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             if case let .filter(_, title, _, data) = filter, data.isShared {
-                let _ = (context.engine.data.get(
-                    EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                let _ = (combineLatest(
+                    context.engine.data.get(
+                        EngineDataList(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))),
+                        EngineDataMap(data.includePeers.peers.map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init(id:)))
+                    ),
+                    context.engine.peers.getExportedChatFolderLinks(id: id),
+                    context.engine.peers.requestLeaveChatFolderSuggestions(folderId: id)
                 )
-                |> deliverOnMainQueue).start(next: { peers in
+                |> deliverOnMainQueue).start(next: { peerData, links, defaultSelectedPeerIds in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     
-                    //TODO:localize
-                    presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Delete Folder", text: "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.", actions: [
-                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+                    let peers = peerData.0
+                    var memberCounts: [EnginePeer.Id: Int] = [:]
+                    for (id, count) in peerData.1 {
+                        if let count {
+                            memberCounts[id] = count
+                        }
+                    }
+                    
+                    var hasLinks = false
+                    if let links, !links.isEmpty {
+                        hasLinks = true
+                    }
+                    
+                    let confirmDeleteFolder: () -> Void = {
+                        let filteredPeers = peers.compactMap { $0 }.filter { peer in
+                            if case .channel = peer {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        
+                        if filteredPeers.isEmpty {
+                            let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
+                                var filters = filters
+                                if let index = filters.firstIndex(where: { $0.id == id }) {
+                                    filters.remove(at: index)
+                                }
+                                return filters
+                            }
+                            |> deliverOnMainQueue).start()
+                        } else {
                             let previewScreen = ChatFolderLinkPreviewScreen(
                                 context: context,
-                                subject: .remove(folderId: id),
+                                subject: .remove(folderId: id, defaultSelectedPeerIds: defaultSelectedPeerIds),
                                 contents: ChatFolderLinkContents(
                                     localFilterId: id,
                                     title: title,
-                                    peers: peers.compactMap { $0 }.filter { peer in
-                                        if case .channel = peer {
-                                            return true
-                                        } else {
-                                            return false
-                                        }
-                                    },
-                                    alreadyMemberPeerIds: Set()
+                                    peers: filteredPeers,
+                                    alreadyMemberPeerIds: Set(),
+                                    memberCounts: memberCounts
                                 )
                             )
                             pushControllerImpl?(previewScreen)
-                        }),
-                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
-                        })
-                    ]))
+                        }
+                    }
+                    
+                    if hasLinks {
+                        presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChatList_AlertDeleteFolderTitle, text: presentationData.strings.ChatList_AlertDeleteFolderText, actions: [
+                            TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+                                confirmDeleteFolder()
+                            }),
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                            })
+                        ]))
+                    } else {
+                        confirmDeleteFolder()
+                    }
                 })
             } else {
                 let actionSheet = ActionSheetController(presentationData: presentationData)

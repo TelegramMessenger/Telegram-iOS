@@ -1050,6 +1050,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
+            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                needsShareButton = false
+            }
+            
             var isEmoji = false
             if let _ = telegramDice {
                 imageSize = displaySize
@@ -1471,7 +1475,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                         }
                         
-                        let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
+                        let foregroundColor: UIColor = .clear// = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
                         strongSelf.placeholderNode.frame = animationNodeFrame

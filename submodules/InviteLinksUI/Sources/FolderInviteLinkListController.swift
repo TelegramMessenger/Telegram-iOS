@@ -30,7 +30,7 @@ private final class FolderInviteLinkListControllerArguments {
     let copyLink: (String) -> Void
     let mainLinkContextAction: (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void
     let peerAction: (EnginePeer, Bool) -> Void
-    let generateLink: () -> Void
+    let toggleAllSelected: () -> Void
     
     init(
         context: AccountContext,
@@ -39,7 +39,7 @@ private final class FolderInviteLinkListControllerArguments {
         copyLink: @escaping (String) -> Void,
         mainLinkContextAction: @escaping (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void,
         peerAction: @escaping (EnginePeer, Bool) -> Void,
-        generateLink: @escaping () -> Void
+        toggleAllSelected: @escaping () -> Void
     ) {
         self.context = context
         self.shareMainLink = shareMainLink
@@ -47,7 +47,7 @@ private final class FolderInviteLinkListControllerArguments {
         self.copyLink = copyLink
         self.mainLinkContextAction = mainLinkContextAction
         self.peerAction = peerAction
-        self.generateLink = generateLink
+        self.toggleAllSelected = toggleAllSelected
     }
 }
 
@@ -68,8 +68,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     case mainLinkHeader(String)
     case mainLink(link: ExportedChatFolderLink?, isGenerating: Bool)
     
-    case peersHeader(String)
-    case peer(index: Int, peer: EnginePeer, isSelected: Bool, isEnabled: Bool)
+    case peersHeader(String, String?)
+    case peer(index: Int, peer: EnginePeer, isSelected: Bool, disabledReasonText: String?)
     case peersInfo(String)
     
     var section: ItemListSectionId {
@@ -137,8 +137,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .peersHeader(text):
-            if case .peersHeader(text) = rhs {
+        case let .peersHeader(text, action):
+            if case .peersHeader(text, action) = rhs {
                 return true
             } else {
                 return false
@@ -149,8 +149,8 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .peer(index, peer, isSelected, isEnabled):
-            if case .peer(index, peer, isSelected, isEnabled) = rhs {
+        case let .peer(index, peer, isSelected, disabledReasonText):
+            if case .peer(index, peer, isSelected, disabledReasonText) = rhs {
                 return true
             } else {
                 return false
@@ -166,19 +166,17 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
         let arguments = arguments as! FolderInviteLinkListControllerArguments
         switch self {
         case let .header(text):
-            return InviteLinkHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "ChatListNewFolder", sectionId: self.section)
+            return InviteLinkHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "ChatListCloudFolderLink", sectionId: self.section)
         case let .mainLinkHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .mainLink(link, isGenerating):
-            return ItemListFolderInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: link, count: 0, peers: [], displayButton: true, enableButton: !isGenerating, buttonTitle: link != nil ? "Copy" : "Generate Invite Link", secondaryButtonTitle: link != nil ? "Share" : nil, displayImporters: false, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+            return ItemListFolderInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: link, count: 0, peers: [], displayButton: true, enableButton: !isGenerating, buttonTitle: presentationData.strings.FolderLinkScreen_LinkActionCopy, secondaryButtonTitle: link != nil ? presentationData.strings.FolderLinkScreen_LinkActionShare : nil, displayImporters: false, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                 if let link {
                     arguments.copyLink(link.link)
                 }
             }, shareAction: {
                 if let link {
                     arguments.copyLink(link.link)
-                } else {
-                    arguments.generateLink()
                 }
             }, secondaryAction: {
                 if let link {
@@ -191,12 +189,13 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     arguments.openMainLink(link.link)
                 }
             })
-        case let .peersHeader(text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .peersHeader(text, action):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, actionText: action, action: action == nil ? nil : {
+                arguments.toggleAllSelected()
+            }, sectionId: self.section)
         case let .peersInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-        case let .peer(_, peer, isSelected, isEnabled):
-            //TODO:localize
+        case let .peer(_, peer, isSelected, disabledReasonText):
             return ItemListPeerItem(
                 presentationData: presentationData,
                 dateTimeFormat: PresentationDateTimeFormat(),
@@ -204,16 +203,16 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                 context: arguments.context,
                 peer: peer,
                 presence: nil,
-                text: .text(isEnabled ? "you can invite others here" : "you can't invite others here", .secondary),
+                text: .text(disabledReasonText ?? presentationData.strings.FolderLinkScreen_LabelCanInvite, .secondary),
                 label: .none,
                 editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false),
-                switchValue: ItemListPeerItemSwitch(value: isSelected, style: .leftCheck, isEnabled: isEnabled),
+                switchValue: ItemListPeerItemSwitch(value: isSelected, style: .leftCheck, isEnabled: disabledReasonText == nil),
                 enabled: true,
                 selectable: true,
                 highlightable: false,
                 sectionId: self.section,
                 action: {
-                    arguments.peerAction(peer, isEnabled)
+                    arguments.peerAction(peer, disabledReasonText == nil)
                 },
                 setPeerIdWithRevealedOptions: { _, _ in
                 },
@@ -232,38 +231,40 @@ private func folderInviteLinkListControllerEntries(
 ) -> [InviteLinksListEntry] {
     var entries: [InviteLinksListEntry] = []
     
-    //TODO:localize
-    
     var infoString: String?
     let chatCountString: String
     let peersHeaderString: String
     
     let canShareChats = !allPeers.allSatisfy({ !canShareLinkToPeer(peer: $0) })
+    let allSelected = allPeers.filter({ canShareLinkToPeer(peer: $0) }).allSatisfy({ state.selectedPeerIds.contains($0.id) })
+    
+    var selectAllString: String?
     
     if !canShareChats {
-        infoString = "You can only share groups and channels in which you are allowed to create invite links."
-        chatCountString = "There are no chats in this folder that you can share with others."
-        peersHeaderString = "THESE CHATS CANNOT BE SHARED"
+        infoString = presentationData.strings.FolderLinkScreen_TitleDescriptionUnavailable
+        chatCountString = presentationData.strings.FolderLinkScreen_ChatCountHeaderUnavailable
+        peersHeaderString = presentationData.strings.FolderLinkScreen_ChatsSectionHeaderUnavailable
     } else if state.selectedPeerIds.isEmpty {
-        chatCountString = "Anyone with this link can add \(title) folder and the chats selected below."
-        peersHeaderString = "CHATS"
-    } else if state.selectedPeerIds.count == 1 {
-        chatCountString = "Anyone with this link can add \(title) folder and the 1 chat selected below."
-        peersHeaderString = "1 CHAT SELECTED"
+        chatCountString = presentationData.strings.FolderLinkScreen_TitleDescriptionDeselected(title).string
+        peersHeaderString = presentationData.strings.FolderLinkScreen_ChatsSectionHeader
+        if allPeers.count > 1 {
+            selectAllString = allSelected ? presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionDeselectAll : presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionSelectAll
+        }
     } else {
-        chatCountString = "Anyone with this link can add \(title) folder and the \(state.selectedPeerIds.count) chats selected below."
-        peersHeaderString = "\(state.selectedPeerIds.count) CHATS SELECTED"
+        chatCountString = presentationData.strings.FolderLinkScreen_TitleDescriptionSelected(title, presentationData.strings.FolderLinkScreen_TitleDescriptionSelectedCount(Int32(state.selectedPeerIds.count))).string
+        peersHeaderString = presentationData.strings.FolderLinkScreen_ChatsSectionHeaderSelected(Int32(state.selectedPeerIds.count))
+        if allPeers.count > 1 {
+            selectAllString = allSelected ? presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionDeselectAll : presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionSelectAll
+        }
     }
     entries.append(.header(chatCountString))
     
-    //TODO:localize
-    
     if canShareChats {
-        entries.append(.mainLinkHeader("INVITE LINK"))
+        entries.append(.mainLinkHeader(presentationData.strings.FolderLinkScreen_LinkSectionHeader))
         entries.append(.mainLink(link: state.currentLink, isGenerating: state.generatingLink))
     }
     
-    entries.append(.peersHeader(peersHeaderString))
+    entries.append(.peersHeader(peersHeaderString, selectAllString))
     
     var sortedPeers: [EnginePeer] = []
     for peer in allPeers.filter({ canShareLinkToPeer(peer: $0) }) {
@@ -274,8 +275,19 @@ private func folderInviteLinkListControllerEntries(
     }
     
     for peer in sortedPeers {
-        let isEnabled = canShareLinkToPeer(peer: peer)
-        entries.append(.peer(index: entries.count, peer: peer, isSelected: state.selectedPeerIds.contains(peer.id), isEnabled: isEnabled))
+        var disabledReasonText: String?
+        if !canShareLinkToPeer(peer: peer) {
+            if case let .user(user) = peer {
+                if user.botInfo != nil {
+                    disabledReasonText = presentationData.strings.FolderLinkScreen_LabelUnavailableBot
+                } else {
+                    disabledReasonText = presentationData.strings.FolderLinkScreen_LabelUnavailableUser
+                }
+            } else {
+                disabledReasonText = presentationData.strings.FolderLinkScreen_LabelUnavailableGeneric
+            }
+        }
+        entries.append(.peer(index: entries.count, peer: peer, isSelected: state.selectedPeerIds.contains(peer.id), disabledReasonText: disabledReasonText))
     }
     
     if let infoString {
@@ -293,7 +305,7 @@ private struct FolderInviteLinkListControllerState: Equatable {
     var isSaving: Bool = false
 }
 
-public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: String, allPeerIds: [PeerId], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) -> ViewController {
+public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: String, allPeerIds: [PeerId], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void, presentController parentPresentController: ((ViewController) -> Void)?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     let _ = pushControllerImpl
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
@@ -323,9 +335,23 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         
     var getControllerImpl: (() -> ViewController?)?
     
-    var displayTooltipImpl: ((UndoOverlayContent) -> Void)?
+    var displayTooltipImpl: ((UndoOverlayContent, Bool) -> Void)?
     
     var didDisplayAddPeerNotice: Bool = false
+    
+    var combinedPeerIds: [EnginePeer.Id] = []
+    if let currentInvitation {
+        for peerId in currentInvitation.peerIds {
+            if !combinedPeerIds.contains(peerId) {
+                combinedPeerIds.append(peerId)
+            }
+        }
+    }
+    for peerId in allPeerIds {
+        if !combinedPeerIds.contains(peerId) {
+            combinedPeerIds.append(peerId)
+        }
+    }
     
     let arguments = FolderInviteLinkListControllerArguments(context: context, shareMainLink: { inviteLink in
         let shareController = ShareController(context: context, subject: .url(inviteLink), updatedPresentationData: updatedPresentationData)
@@ -383,15 +409,14 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         var items: [ContextMenuItem] = []
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Name Link", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.FolderLinkScreen_ContextActionNameLink, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pencil"), color: theme.contextMenu.primaryColor)
         }, action: { _, f in
             f(.dismissWithoutContent)
             
             let state = stateValue.with({ $0 })
             
-            let promptController = promptController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, text: "Link title", value: state.title ?? "", apply: { value in
+            let promptController = promptController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, text: presentationData.strings.FolderLinkScreen_NameLink_Title, titleFont: .bold, value: state.title ?? "", characterLimit: 32, apply: { value in
                 if let value {
                     updateState { state in
                         var state = state
@@ -402,11 +427,6 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     }
                 }
             })
-            /*promptController.dismissed = { byOutsideTap in
-                if byOutsideTap {
-                    completionHandler(nil)
-                }
-            }*/
             presentControllerImpl?(promptController, nil)
         })))
 
@@ -449,6 +469,8 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, peerAction: { peer, isEnabled in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
         if isEnabled {
             var added = false
             updateState { state in
@@ -458,7 +480,10 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     state.selectedPeerIds.remove(peer.id)
                 } else {
                     state.selectedPeerIds.insert(peer.id)
-                    added = true
+                    
+                    if let currentInvitation, !currentInvitation.peerIds.contains(peer.id) {
+                        added = true
+                    }
                 }
                 
                 return state
@@ -468,69 +493,89 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                 didDisplayAddPeerNotice = true
                 
                 dismissTooltipsImpl?()
-                //TODO:localize
-                displayTooltipImpl?(.info(title: nil, text: "People who already used the invite link will be able to join newly added chats."))
+                displayTooltipImpl?(.info(title: nil, text: presentationData.strings.FolderLinkScreen_ToastNewChatAdded, timeout: 8), true)
             }
         } else {
-            //TODO:localize
-            var text = "You can't invite others here."
-            switch peer {
-            case .channel:
-                text = "You don't have the admin rights to share invite links to this group chat."
-            default:
-                break
+            let text: String
+            if case let .user(user) = peer {
+                if user.botInfo != nil {
+                    text = presentationData.strings.FolderLinkScreen_AlertTextUnavailableBot
+                } else {
+                    text = presentationData.strings.FolderLinkScreen_AlertTextUnavailableUser
+                }
+            } else {
+                var isGroup = true
+                let isPrivate = peer.addressName == nil
+                if case let .channel(channel) = peer, case .broadcast = channel.info {
+                    isGroup = false
+                }
+                if isGroup {
+                    if isPrivate {
+                        text = presentationData.strings.FolderLinkScreen_AlertTextUnavailablePrivateGroup
+                    } else {
+                        text = presentationData.strings.FolderLinkScreen_AlertTextUnavailablePublicGroup
+                    }
+                } else {
+                    if isPrivate {
+                        text = presentationData.strings.FolderLinkScreen_AlertTextUnavailablePrivateChannel
+                    } else {
+                        text = presentationData.strings.FolderLinkScreen_AlertTextUnavailablePublicChannel
+                    }
+                }
             }
             dismissTooltipsImpl?()
-            displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil))
+            displayTooltipImpl?(.peers(context: context, peers: [peer], title: nil, text: text, customUndoText: nil), true)
         }
-    }, generateLink: {
-        let currentState = stateValue.with({ $0 })
-        if !currentState.generatingLink {
+    }, toggleAllSelected: {
+        let _ = (context.engine.data.get(
+            EngineDataList(combinedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+        )
+        |> deliverOnMainQueue).start(next: { allPeers in
+            let allPeers = allPeers.compactMap({ $0 })
+            
+            let selectablePeers = allPeers.filter({ canShareLinkToPeer(peer: $0) })
+            let state = stateValue.with({ $0 })
+            let allSelected = selectablePeers.allSatisfy({ state.selectedPeerIds.contains($0.id) })
+            
             updateState { state in
                 var state = state
                 
-                state.generatingLink = true
+                if allSelected {
+                    state.selectedPeerIds.removeAll()
+                } else {
+                    state.selectedPeerIds.removeAll()
+                    for peer in selectablePeers {
+                        state.selectedPeerIds.insert(peer.id)
+                    }
+                }
                 
                 return state
             }
-            
-            actionsDisposable.add((context.engine.peers.exportChatFolder(filterId: filterId, title: "", peerIds: Array(currentState.selectedPeerIds))
-            |> deliverOnMainQueue).start(next: { result in
-                linkUpdated(result)
-                
-                updateState { state in
-                    var state = state
-                    
-                    state.generatingLink = false
-                    state.currentLink = result
-                    
-                    return state
-                }
-            }, error: { _ in
-            }))
-        }
+        })
     })
-    
-    var combinedPeerIds: [EnginePeer.Id] = []
-    if let currentInvitation {
-        for peerId in currentInvitation.peerIds {
-            if !combinedPeerIds.contains(peerId) {
-                combinedPeerIds.append(peerId)
-            }
-        }
-    }
-    for peerId in allPeerIds {
-        if !combinedPeerIds.contains(peerId) {
-            combinedPeerIds.append(peerId)
-        }
-    }
     
     let allPeers = context.engine.data.subscribe(
         EngineDataList(combinedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
     )
+    |> map { peers -> [EnginePeer] in
+        return peers.compactMap({ peer -> EnginePeer? in
+            guard let peer else {
+                return nil
+            }
+            if case let .legacyGroup(group) = peer, group.migrationReference != nil {
+                return nil
+            }
+            return peer
+        })
+    }
     
     let applyChangesImpl: (() -> Void)? = {
         let state = stateValue.with({ $0 })
+        
+        if state.selectedPeerIds.isEmpty {
+            return
+        }
+        
         if let currentLink = state.currentLink {
             if currentLink.title != state.title || Set(currentLink.peerIds) != state.selectedPeerIds {
                 updateState { state in
@@ -548,10 +593,12 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     
                     dismissTooltipsImpl?()
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
-                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "An error occurred."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.FolderLinkScreen_SaveUnknownError, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                 }, completed: {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     linkUpdated(ExportedChatFolderLink(title: state.title ?? "", link: currentLink.link, peerIds: Array(state.selectedPeerIds), isRevoked: false))
+                    displayTooltipImpl?(.info(title: nil, text: presentationData.strings.FolderLinkScreen_ToastLinkUpdated, timeout: 3), false)
+                    
                     dismissImpl?()
                 }))
             } else {
@@ -560,7 +607,6 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         } else {
             dismissImpl?()
         }
-        dismissImpl?()
     }
     
     let _ = (allPeers
@@ -574,9 +620,9 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     state.selectedPeerIds.insert(peerId)
                 }
             } else {
-                for peerId in allPeerIds {
-                    if let peer = peers.first(where: { $0?.id == peerId }), let peerValue = peer {
-                        if canShareLinkToPeer(peer: peerValue) {
+                for peerId in peers.map(\.id) {
+                    if let peer = peers.first(where: { $0.id == peerId }) {
+                        if canShareLinkToPeer(peer: peer) {
                             state.selectedPeerIds.insert(peerId)
                         }
                     }
@@ -587,6 +633,8 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         }
     })
     
+    let previousState = Atomic<FolderInviteLinkListControllerState?>(value: nil)
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(queue: .mainQueue(),
         presentationData,
@@ -594,23 +642,44 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
         allPeers
     )
     |> map { presentationData, state, allPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let crossfade = false
-        let animateChanges = false
+        let allPeers = allPeers.compactMap { $0 }
         
-        //TODO:localize
+        let crossfade = false
+        
+        var animateChanges = false
+        
+        let previousStateValue = previousState.swap(state)
+        if let previousStateValue, previousStateValue.selectedPeerIds != state.selectedPeerIds {
+            animateChanges = true
+        }
+        
         let title: ItemListControllerTitle
         
-        var folderTitle = "Share Folder"
+        var folderTitle = presentationData.strings.FolderLinkScreen_Title
         if let title = state.title, !title.isEmpty {
             folderTitle = title
         }
         title = .text(folderTitle)
         
         var doneButton: ItemListNavigationButton?
-        if state.isSaving {
+        
+        let canShareChats = !allPeers.allSatisfy({ !canShareLinkToPeer(peer: $0) })
+        
+        if !canShareChats {
+            doneButton = nil
+        } else if state.isSaving {
             doneButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         } else {
-            doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+            var saveEnabled = false
+            if let currentLink = state.currentLink {
+                if currentLink.title != state.title || Set(currentLink.peerIds) != state.selectedPeerIds {
+                    saveEnabled = true
+                }
+            } else {
+                saveEnabled = true
+            }
+            
+            doneButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Save), style: .bold, enabled: !state.selectedPeerIds.isEmpty && saveEnabled, action: {
                 applyChangesImpl?()
             })
         }
@@ -620,7 +689,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             presentationData: presentationData,
             state: state,
             title: filterTitle,
-            allPeers: allPeers.compactMap { $0 }
+            allPeers: allPeers
         ), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
@@ -659,13 +728,12 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             
             if hasChanges {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                //TODO:localize
-                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Unsaved Changes", text: "You have changed the settings of this folder. Apply changes?", actions: [
-                    TextAlertAction(type: .genericAction, title: "Discard", action: {
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.FolderLinkScreen_SaveAlertTitle, text: presentationData.strings.FolderLinkScreen_SaveAlertText, actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.FolderLinkScreen_SaveAlertActionDiscard, action: {
                         f()
                         dismissImpl?()
                     }),
-                    TextAlertAction(type: .defaultAction, title: "Apply", action: {
+                    TextAlertAction(type: .defaultAction, title: state.selectedPeerIds.isEmpty ? presentationData.strings.FolderLinkScreen_SaveAlertActionApply : presentationData.strings.FolderLinkScreen_SaveAlertActionContinue, action: {
                         applyChangesImpl?()
                     })
                 ]), nil)
@@ -700,18 +768,15 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     getControllerImpl = { [weak controller] in
         return controller
     }
-    displayTooltipImpl = { [weak controller] c in
-        if let controller = controller {
-            let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+    displayTooltipImpl = { [weak controller] c, inCurrentContext in
+        let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+        if let controller = controller, inCurrentContext {
             controller.present(UndoOverlayController(presentationData: presentationData, content: c, elevatedLayout: false, action: { _ in return false }), in: .current)
+        } else if !inCurrentContext {
+            parentPresentController?(UndoOverlayController(presentationData: presentationData, content: c, elevatedLayout: false, action: { _ in return false }))
         }
     }
     dismissTooltipsImpl = { [weak controller] in
-        controller?.window?.forEachController({ controller in
-            if let controller = controller as? UndoOverlayController {
-                controller.dismissWithCommitAction()
-            }
-        })
         controller?.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()

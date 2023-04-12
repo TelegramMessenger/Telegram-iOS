@@ -38,6 +38,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let tapAction: ((ExportedChatFolderLink) -> Void)?
+    let removeAction: ((ExportedChatFolderLink) -> Void)?
     let contextAction: ((ExportedChatFolderLink, ASDisplayNode, ContextGesture?) -> Void)?
     public let tag: ItemListItemTag?
     
@@ -48,6 +49,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
         sectionId: ItemListSectionId,
         style: ItemListStyle,
         tapAction: ((ExportedChatFolderLink) -> Void)?,
+        removeAction: ((ExportedChatFolderLink) -> Void)?,
         contextAction: ((ExportedChatFolderLink, ASDisplayNode, ContextGesture?) -> Void)?,
         tag: ItemListItemTag? = nil
     ) {
@@ -57,6 +59,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.tapAction = tapAction
+        self.removeAction = removeAction
         self.contextAction = contextAction
         self.tag = tag
     }
@@ -125,7 +128,7 @@ public class ItemListFolderInviteLinkListItem: ListViewItem, ItemListItem {
     }
 }
 
-public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListItemNode {
+public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -141,6 +144,10 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
     private var nonExtractedRect: CGRect?
     
     private let offsetContainerNode: ASDisplayNode
+    public override var controlsContainer: ASDisplayNode {
+        //return super.controlsContainer
+        return self.containerNode
+    }
     
     private let iconBackgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
@@ -301,12 +308,7 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
                     titleText = invite.title
                 }
                 
-                //TODO:localize
-                if invite.peerIds.count == 1 {
-                    subtitleText = "includes 1 chat"
-                } else {
-                    subtitleText = "includes \(invite.peerIds.count) chats"
-                }
+                subtitleText = item.presentationData.strings.ChatListFilter_LinkLabelChatCount(Int32(invite.peerIds.count))
             } else {
                 titleText = " "
                 subtitleText = " "
@@ -425,7 +427,9 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                             }
                             if strongSelf.maskNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                //strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                strongSelf.maskNode.isUserInteractionEnabled = false
+                                strongSelf.addSubnode(strongSelf.maskNode)
                             }
                             
                             let hasCorners = itemListHasRoundedBlockLayout(params)
@@ -506,6 +510,14 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
                         strongSelf.placeholderNode = nil
                         shimmerNode.removeFromSupernode()
                     }
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    if item.removeAction != nil {
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.ChatListFilter_LinkActionDelete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                    } else {
+                        strongSelf.setRevealOptions((left: [], right: []))
+                    }
                 }
             })
         }
@@ -564,6 +576,21 @@ public class ItemListFolderInviteLinkListItemNode: ListViewItemNode, ItemListIte
         if let shimmerNode = self.placeholderNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)
         }
+    }
+    
+    override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        transition.updateSublayerTransformOffset(layer: self.offsetContainerNode.layer, offset: CGPoint(x: offset + (self.contextSourceNode.isExtractedToContextPreview ? 12.0 : 0.0), y: 0.0))
+    }
+    
+    override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        if let item = self.layoutParams?.0, let invite = item.invite {
+            item.removeAction?(invite)
+        }
+        
+        self.setRevealOptionsOpened(false, animated: true)
+        self.revealOptionsInteractivelyClosed()
     }
 }
 

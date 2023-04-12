@@ -20,6 +20,7 @@ final class TooltipControllerNode: ASDisplayNode {
     var arrowOnBottom: Bool = true
     
     var padding: CGFloat = 8.0
+    var innerPadding: UIEdgeInsets = UIEdgeInsets()
     
     private var dismissedByTouchOutside = false
     private var dismissByTapOutsideSource = false
@@ -98,14 +99,14 @@ final class TooltipControllerNode: ASDisplayNode {
             textSize.width = ceil(textSize.width / 2.0) * 2.0
             textSize.height = ceil(textSize.height / 2.0) * 2.0
            
-            contentSize = CGSize(width: imageSizeWithInset.width + textSize.width + 12.0, height: textSize.height + 34.0)
+            contentSize = CGSize(width: imageSizeWithInset.width + textSize.width + 12.0 + self.innerPadding.left + self.innerPadding.right, height: textSize.height + 34.0 + self.innerPadding.top + self.innerPadding.bottom)
             
-            let textFrame = CGRect(origin: CGPoint(x: 6.0 + imageSizeWithInset.width, y: 17.0), size: textSize)
+            let textFrame = CGRect(origin: CGPoint(x: 6.0 + self.innerPadding.left + imageSizeWithInset.width, y: 17.0 + self.innerPadding.top), size: textSize)
             if transition.isAnimated, textFrame.size != self.textNode.frame.size {
                 transition.animatePositionAdditive(node: self.textNode, offset: CGPoint(x: textFrame.minX - self.textNode.frame.minX, y: 0.0))
             }
             
-            let imageFrame = CGRect(origin: CGPoint(x: 10.0, y: floor((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+            let imageFrame = CGRect(origin: CGPoint(x: self.innerPadding.left + 10.0, y: floor((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
             self.imageNode.frame = imageFrame
             self.textNode.frame = textFrame
         }

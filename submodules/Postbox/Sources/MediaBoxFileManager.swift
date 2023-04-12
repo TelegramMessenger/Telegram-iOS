@@ -32,8 +32,8 @@ final class MediaBoxFileManager {
                 return self.file.readData(count: count)
             }
             
-            func seek(position: Int64) {
-                self.file.seek(position: position)
+            func seek(position: Int64) -> Bool {
+                return self.file.seek(position: position)
             }
         }
         

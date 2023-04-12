@@ -308,7 +308,6 @@ public final class WebSearchController: ViewController {
                 self.updateSearchQuery(query)
             }
         })
-       
     }
     
     required public init(coder aDecoder: NSCoder) {

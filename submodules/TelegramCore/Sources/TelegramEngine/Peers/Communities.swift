@@ -7,10 +7,20 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
     var isEnabled = false
     switch peer {
     case let .channel(channel):
-        if channel.adminRights != nil && channel.hasPermission(.inviteMembers) {
+        if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
             isEnabled = true
         } else if channel.username != nil {
+            if !channel.flags.contains(.requestToJoin) {
+                isEnabled = true
+            }
+        }
+    case let .legacyGroup(group):
+        if case .creator = group.role {
             isEnabled = true
+        } else if case let .admin(rights, _) = group.role {
+            if rights.rights.contains(.canInviteUsers) {
+                isEnabled = true
+            }
         }
     default:
         break
@@ -20,7 +30,11 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
 
 public enum ExportChatFolderError {
     case generic
+    case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
     case limitExceeded(limit: Int32, premiumLimit: Int32)
+    case tooManyChannels(limit: Int32, premiumLimit: Int32)
+    case tooManyChannelsInAccount(limit: Int32, premiumLimit: Int32)
+    case someUserTooManyChannels
 }
 
 public struct ExportedChatFolderLink: Equatable {
@@ -58,22 +72,22 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
     }
     |> castError(ExportChatFolderError.self)
     |> mapToSignal { inputPeers -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
-        return account.network.request(Api.functions.communities.exportCommunityInvite(community: .inputCommunityDialogFilter(filterId: filterId), title: title, peers: inputPeers))
-        |> `catch` { error -> Signal<Api.communities.ExportedCommunityInvite, ExportChatFolderError> in
-            if error.errorDescription == "INVITES_TOO_MUCH" || error.errorDescription == "FILTERS_TOO_MUCH" {
+        return account.network.request(Api.functions.chatlists.exportChatlistInvite(chatlist: .inputChatlistDialogFilter(filterId: filterId), title: title, peers: inputPeers))
+        |> `catch` { error -> Signal<Api.chatlists.ExportedChatlistInvite, ExportChatFolderError> in
+            if error.errorDescription == "INVITES_TOO_MUCH" || error.errorDescription == "CHATLISTS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
                 |> castError(ExportChatFolderError.self)
-                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.communities.ExportedCommunityInvite, ExportChatFolderError> in
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.chatlists.ExportedChatlistInvite, ExportChatFolderError> in
                     let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
                     let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
                     
-                    if error.errorDescription == "FILTERS_TOO_MUCH" {
+                    if error.errorDescription == "CHATLISTS_TOO_MUCH" {
                         if isPremium {
-                            return .fail(.limitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                            return .fail(.sharedFolderLimitExceeded(limit: userPremiumLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                         } else {
-                            return .fail(.limitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
+                            return .fail(.sharedFolderLimitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                         }
                     } else {
                         if isPremium {
@@ -83,6 +97,23 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                         }
                     }
                 }
+            } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
+                return .fail(.someUserTooManyChannels)
+            } else if error.errorDescription == "CHANNELS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(ExportChatFolderError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.chatlists.ExportedChatlistInvite, ExportChatFolderError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
+                    } else {
+                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
+                    }
+                }
             } else {
                 return .fail(.generic)
             }
@@ -90,7 +121,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
         |> mapToSignal { result -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
             return account.postbox.transaction { transaction -> Signal<ExportedChatFolderLink, ExportChatFolderError> in
                 switch result {
-                case let .exportedCommunityInvite(filter, invite):
+                case let .exportedChatlistInvite(filter, invite):
                     let parsedFilter = ChatListFilter(apiFilter: filter)
                     
                     let _ = updateChatListFiltersState(transaction: transaction, { state in
@@ -105,7 +136,7 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
                     })
                     
                     switch invite {
-                    case let .exportedCommunityInvite(flags, title, url, peers):
+                    case let .exportedChatlistInvite(flags, title, url, peers):
                         return .single(ExportedChatFolderLink(
                             title: title,
                             link: url,
@@ -122,9 +153,9 @@ func _internal_exportChatFolder(account: Account, filterId: Int32, title: String
 }
 
 func _internal_getExportedChatFolderLinks(account: Account, id: Int32) -> Signal<[ExportedChatFolderLink]?, NoError> {
-    return account.network.request(Api.functions.communities.getExportedInvites(community: .inputCommunityDialogFilter(filterId: id)))
+    return account.network.request(Api.functions.chatlists.getExportedInvites(chatlist: .inputChatlistDialogFilter(filterId: id)))
     |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.communities.ExportedInvites?, NoError> in
+    |> `catch` { _ -> Signal<Api.chatlists.ExportedInvites?, NoError> in
         return .single(nil)
     }
     |> mapToSignal { result -> Signal<[ExportedChatFolderLink]?, NoError> in
@@ -156,7 +187,7 @@ func _internal_getExportedChatFolderLinks(account: Account, id: Int32) -> Signal
                 var result: [ExportedChatFolderLink] = []
                 for invite in invites {
                     switch invite {
-                    case let .exportedCommunityInvite(flags, title, url, peers):
+                    case let .exportedChatlistInvite(flags, title, url, peers):
                         result.append(ExportedChatFolderLink(
                             title: title,
                             link: url,
@@ -190,13 +221,13 @@ func _internal_editChatFolderLink(account: Account, filterId: Int32, link: Expor
             flags |= 1 << 2
             peers = peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
         }
-        return account.network.request(Api.functions.communities.editExportedInvite(flags: flags, community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug, title: title, peers: peers))
+        return account.network.request(Api.functions.chatlists.editExportedInvite(flags: flags, chatlist: .inputChatlistDialogFilter(filterId: filterId), slug: link.slug, title: title, peers: peers))
         |> mapError { _ -> EditChatFolderLinkError in
             return .generic
         }
         |> map { result in
             switch result {
-            case let .exportedCommunityInvite(flags, title, url, peers):
+            case let .exportedChatlistInvite(flags, title, url, peers):
                 return ExportedChatFolderLink(
                     title: title,
                     link: url,
@@ -208,7 +239,6 @@ func _internal_editChatFolderLink(account: Account, filterId: Int32, link: Expor
     }
     |> castError(EditChatFolderLinkError.self)
     |> switchToLatest
-    
 }
 
 public enum RevokeChatFolderLinkError {
@@ -216,7 +246,7 @@ public enum RevokeChatFolderLinkError {
 }
 
 func _internal_deleteChatFolderLink(account: Account, filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
-    return account.network.request(Api.functions.communities.deleteExportedInvite(community: .inputCommunityDialogFilter(filterId: filterId), slug: link.slug))
+    return account.network.request(Api.functions.chatlists.deleteExportedInvite(chatlist: .inputChatlistDialogFilter(filterId: filterId), slug: link.slug))
     |> mapError { error -> RevokeChatFolderLinkError in
         return .generic
     }
@@ -232,33 +262,37 @@ public final class ChatFolderLinkContents {
     public let title: String?
     public let peers: [EnginePeer]
     public let alreadyMemberPeerIds: Set<EnginePeer.Id>
+    public let memberCounts: [EnginePeer.Id: Int]
     
     public init(
         localFilterId: Int32?,
         title: String?,
         peers: [EnginePeer],
-        alreadyMemberPeerIds: Set<EnginePeer.Id>
+        alreadyMemberPeerIds: Set<EnginePeer.Id>,
+        memberCounts: [EnginePeer.Id: Int]
     ) {
         self.localFilterId = localFilterId
         self.title = title
         self.peers = peers
         self.alreadyMemberPeerIds = alreadyMemberPeerIds
+        self.memberCounts = memberCounts
     }
 }
 
 func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> {
-    return account.network.request(Api.functions.communities.checkCommunityInvite(slug: slug))
+    return account.network.request(Api.functions.chatlists.checkChatlistInvite(slug: slug))
     |> mapError { _ -> CheckChatFolderLinkError in
         return .generic
     }
     |> mapToSignal { result -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> in
         return account.postbox.transaction { transaction -> ChatFolderLinkContents in
             switch result {
-            case let .communityInvite(_, title, emoticon, peers, chats, users):
+            case let .chatlistInvite(_, title, emoticon, peers, chats, users):
                 let _ = emoticon
                 
                 var allPeers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
+                var memberCounts: [PeerId: Int] = [:]
                 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
@@ -268,6 +302,11 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 for chat in chats {
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         allPeers.append(peer)
+                    }
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
+                        if let participantsCount = participantsCount {
+                            memberCounts[chat.peerId] = Int(participantsCount)
+                        }
                     }
                 }
                 
@@ -287,14 +326,12 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                         }
                     }
                 }
-                alreadyMemberPeerIds.removeAll()
                 
-                return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds)
-            case let .communityInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
-                let _ = alreadyPeers
-                
+                return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
+            case let .chatlistInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
                 var allPeers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
+                var memberCounts: [PeerId: Int] = [:]
                 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
@@ -305,6 +342,11 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         allPeers.append(peer)
                     }
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
+                        if let participantsCount = participantsCount {
+                            memberCounts[chat.peerId] = Int(participantsCount)
+                        }
+                    }
                 }
                 
                 updatePeers(transaction: transaction, peers: allPeers, update: { _, updated -> Peer in
@@ -314,12 +356,10 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 
                 let currentFilters = _internal_currentChatListFilters(transaction: transaction)
                 var currentFilterTitle: String?
-                var currentFilterPeers: [EnginePeer.Id] = []
                 if let index = currentFilters.firstIndex(where: { $0.id == filterId }) {
                     switch currentFilters[index] {
-                    case let .filter(_, title, _, data):
+                    case let .filter(_, title, _, _):
                         currentFilterTitle = title
-                        currentFilterPeers = data.includePeers.peers
                     default:
                         break
                     }
@@ -330,31 +370,28 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 for peer in missingPeers {
                     if let peerValue = transaction.getPeer(peer.peerId) {
                         resultPeers.append(EnginePeer(peerValue))
-                        
-                        if currentFilterPeers.contains(where: { $0 == peer.peerId }) && transaction.getPeerChatListIndex(peer.peerId) != nil {
-                            alreadyMemberPeerIds.insert(peer.peerId)
-                        }
-                    }
-                }
-                for peerId in currentFilterPeers {
-                    if resultPeers.contains(where: { $0.id == peerId }) {
-                        continue
-                    }
-                    if let peerValue = transaction.getPeer(peerId) {
-                        if canShareLinkToPeer(peer: EnginePeer(peerValue)) {
-                            resultPeers.append(EnginePeer(peerValue))
-                            
-                            if transaction.getPeerChatListIndex(peerId) != nil {
-                                alreadyMemberPeerIds.insert(peerId)
-                            }
-                        }
                     }
                 }
                 
-                return ChatFolderLinkContents(localFilterId: filterId, title: currentFilterTitle, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds)
+                for peer in alreadyPeers {
+                    if !resultPeers.contains(where: { $0.id == peer.peerId }) {
+                        if let peerValue = transaction.getPeer(peer.peerId) {
+                            resultPeers.append(EnginePeer(peerValue))
+                        }
+                    }
+                    alreadyMemberPeerIds.insert(peer.peerId)
+                }
+                
+                return ChatFolderLinkContents(localFilterId: filterId, title: currentFilterTitle, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
             }
         }
         |> castError(CheckChatFolderLinkError.self)
+        |> mapToSignal { result -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> in
+            if result.localFilterId == nil && result.peers.isEmpty {
+                return .fail(.generic)
+            }
+            return .single(result)
+        }
     }
 }
 
@@ -362,17 +399,83 @@ public enum JoinChatFolderLinkError {
     case generic
     case dialogFilterLimitExceeded(limit: Int32, premiumLimit: Int32)
     case sharedFolderLimitExceeded(limit: Int32, premiumLimit: Int32)
+    case tooManyChannels(limit: Int32, premiumLimit: Int32)
+    case tooManyChannelsInAccount(limit: Int32, premiumLimit: Int32)
 }
 
-func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
-    return account.postbox.transaction { transaction -> [Api.InputPeer] in
-        return peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
+public final class JoinChatFolderResult {
+    public let folderId: Int32
+    public let title: String
+    public let newChatCount: Int
+    
+    public init(folderId: Int32, title: String, newChatCount: Int) {
+        self.folderId = folderId
+        self.title = title
+        self.newChatCount = newChatCount
+    }
+}
+
+func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> {
+    /*#if DEBUG
+    if "".isEmpty {
+        return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+            return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+        }
+        |> castError(JoinChatFolderLinkError.self)
+        |> mapToSignal { appConfiguration, isPremium -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> in
+            let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+            let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+            
+            if isPremium {
+                return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+            } else {
+                return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+            }
+        }
+    }
+    #endif*/
+    
+    return account.postbox.transaction { transaction -> ([Api.InputPeer], Int) in
+        var newChatCount = 0
+        for peerId in peerIds {
+            if transaction.getPeerChatListIndex(peerId) == nil {
+                var canJoin = true
+                if let peer = transaction.getPeer(peerId) {
+                    if let channel = peer as? TelegramChannel {
+                        if case .kicked = channel.participationStatus {
+                            canJoin = false
+                        }
+                    }
+                }
+                
+                if canJoin {
+                    newChatCount += 1
+                }
+            }
+        }
+        
+        return (peerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer), newChatCount)
     }
     |> castError(JoinChatFolderLinkError.self)
-    |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
-        return account.network.request(Api.functions.communities.joinCommunityInvite(slug: slug, peers: inputPeers))
+    |> mapToSignal { inputPeers, newChatCount -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> in
+        return account.network.request(Api.functions.chatlists.joinChatlistInvite(slug: slug, peers: inputPeers))
         |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
-            if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
+            if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.tooManyChannels(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                    } else {
+                        return .fail(.tooManyChannels(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
+                    }
+                }
+            } else if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
@@ -387,7 +490,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
                         return .fail(.dialogFilterLimitExceeded(limit: userDefaultLimits.maxFoldersCount, premiumLimit: userPremiumLimits.maxFoldersCount))
                     }
                 }
-            } else if error.errorDescription == "FILTERS_TOO_MUCH" {
+            } else if error.errorDescription == "CHATLISTS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
                     return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
                 }
@@ -402,39 +505,83 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
                         return .fail(.sharedFolderLimitExceeded(limit: userDefaultLimits.maxSharedFolderJoin, premiumLimit: userPremiumLimits.maxSharedFolderJoin))
                     }
                 }
+            } else if error.errorDescription == "CHANNELS_TOO_MUCH" {
+                return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
+                    return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
+                }
+                |> castError(JoinChatFolderLinkError.self)
+                |> mapToSignal { appConfiguration, isPremium -> Signal<Api.Updates, JoinChatFolderLinkError> in
+                    let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
+                    let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
+                    
+                    if isPremium {
+                        return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
+                    } else {
+                        return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxChannelsCount, premiumLimit: userPremiumLimits.maxChannelsCount))
+                    }
+                }
             } else {
                 return .fail(.generic)
             }
         }
-        |> mapToSignal { result -> Signal<Never, JoinChatFolderLinkError> in
+        |> mapToSignal { result -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> in
             account.stateManager.addUpdates(result)
             
-            return .complete()
+            var folderResult: JoinChatFolderResult?
+            for update in result.allUpdates {
+                if case let .updateDialogFilter(_, id, data) = update {
+                    if let data = data, case let .filter(_, title, _, _) = ChatListFilter(apiFilter: data) {
+                        folderResult = JoinChatFolderResult(folderId: id, title: title, newChatCount: newChatCount)
+                    }
+                    break
+                }
+            }
+            
+            if let folderResult = folderResult {
+                return _internal_updatedChatListFilters(postbox: account.postbox)
+                |> castError(JoinChatFolderLinkError.self)
+                |> filter { filters -> Bool in
+                    if filters.contains(where: { $0.id == folderResult.folderId }) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                |> take(1)
+                |> map { _ -> JoinChatFolderResult in
+                    return folderResult
+                }
+            } else {
+                return .fail(.generic)
+            }
         }
     }
 }
 
 public final class ChatFolderUpdates: Equatable {
-    fileprivate let folderId: Int32
+    public let folderId: Int32
     fileprivate let title: String
     fileprivate let missingPeers: [EnginePeer]
+    fileprivate let memberCounts: [EnginePeer.Id: Int]
     
     public var availableChatsToJoin: Int {
         return self.missingPeers.count
     }
     
     public var chatFolderLinkContents: ChatFolderLinkContents {
-        return ChatFolderLinkContents(localFilterId: self.folderId, title: self.title, peers: self.missingPeers, alreadyMemberPeerIds: Set())
+        return ChatFolderLinkContents(localFilterId: self.folderId, title: self.title, peers: self.missingPeers, alreadyMemberPeerIds: Set(), memberCounts: self.memberCounts)
     }
     
     fileprivate init(
         folderId: Int32,
         title: String,
-        missingPeers: [EnginePeer]
+        missingPeers: [EnginePeer],
+        memberCounts: [EnginePeer.Id: Int]
     ) {
         self.folderId = folderId
         self.title = title
         self.missingPeers = missingPeers
+        self.memberCounts = memberCounts
     }
     
     public static func ==(lhs: ChatFolderUpdates, rhs: ChatFolderUpdates) -> Bool {
@@ -448,28 +595,46 @@ public final class ChatFolderUpdates: Equatable {
     }
 }
 
+private struct FirstTimeFolderUpdatesKey: Hashable {
+    var accountId: AccountRecordId
+    var folderId: Int32
+}
+private var firstTimeFolderUpdates = Set<FirstTimeFolderUpdatesKey>()
+
 func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> ChatListFiltersState in
-        return _internal_currentChatListFiltersState(transaction: transaction)
+    return account.postbox.transaction { transaction -> (ChatListFiltersState, AppConfiguration) in
+        return (_internal_currentChatListFiltersState(transaction: transaction), currentAppConfiguration(transaction: transaction))
     }
-    |> mapToSignal { state -> Signal<Never, NoError> in
+    |> mapToSignal { state, appConfig -> Signal<Never, NoError> in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        if let current = state.updates.first(where: { $0.folderId == folderId }) {
-            let updateInterval: Int32
-            #if DEBUG
-            updateInterval = 5
-            #else
-            updateInterval = 60 * 60
-            #endif
-            
-            if current.timestamp + updateInterval >= timestamp {
-                return .complete()
+        let key = FirstTimeFolderUpdatesKey(accountId: account.id, folderId: folderId)
+        
+        if firstTimeFolderUpdates.contains(key) {
+            if let current = state.updates.first(where: { $0.folderId == folderId }) {
+                var updateInterval: Int32 = 3600
+                
+                if let data = appConfig.data {
+                    if let value = data["chatlist_update_period"] as? Double {
+                        updateInterval = Int32(value)
+                    }
+                }
+#if DEBUG
+                if "".isEmpty {
+                    updateInterval = 5
+                }
+#endif
+                
+                if current.timestamp + updateInterval >= timestamp {
+                    return .complete()
+                }
             }
+        } else {
+            firstTimeFolderUpdates.insert(key)
         }
             
-        return account.network.request(Api.functions.communities.getCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
+        return account.network.request(Api.functions.chatlists.getChatlistUpdates(chatlist: .inputChatlistDialogFilter(filterId: folderId)))
         |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.communities.CommunityUpdates?, NoError> in
+        |> `catch` { _ -> Signal<Api.chatlists.ChatlistUpdates?, NoError> in
             return .single(nil)
         }
         |> mapToSignal { result -> Signal<Never, NoError> in
@@ -479,7 +644,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                         var state = state
                         
                         state.updates.removeAll(where: { $0.folderId == folderId })
-                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: []))
+                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: [], memberCounts: []))
                         
                         return state
                     })
@@ -487,10 +652,11 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                 |> ignoreValues
             }
             switch result {
-            case let .communityUpdates(missingPeers, chats, users):
+            case let .chatlistUpdates(missingPeers, chats, users):
                 return account.postbox.transaction { transaction -> Void in
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: Api.User] = [:]
+                    var memberCounts: [ChatListFiltersState.ChatListFilterUpdates.MemberCount] = []
                     
                     for user in users {
                         let telegramUser = TelegramUser(user: user)
@@ -500,6 +666,11 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                     for chat in chats {
                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                             peers.append(peer)
+                        }
+                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _) = chat {
+                            if let participantsCount = participantsCount {
+                                memberCounts.append(ChatListFiltersState.ChatListFilterUpdates.MemberCount(id: chat.peerId, count: participantsCount))
+                            }
                         }
                     }
                     
@@ -512,7 +683,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                         var state = state
                         
                         state.updates.removeAll(where: { $0.folderId == folderId })
-                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: missingPeers.map(\.peerId)))
+                        state.updates.append(ChatListFiltersState.ChatListFilterUpdates(folderId: folderId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970), peerIds: missingPeers.map(\.peerId), memberCounts: memberCounts))
                         
                         return state
                     })
@@ -527,6 +698,7 @@ func _internal_subscribedChatFolderUpdates(account: Account, folderId: Int32) ->
     struct InternalData: Equatable {
         var title: String
         var peerIds: [EnginePeer.Id]
+        var memberCounts: [EnginePeer.Id: Int]
     }
     
     return _internal_updatedChatListFiltersState(postbox: account.postbox)
@@ -541,7 +713,11 @@ func _internal_subscribedChatFolderUpdates(account: Account, folderId: Int32) ->
             return nil
         }
         let filteredPeerIds: [PeerId] = update.peerIds.filter { !data.includePeers.peers.contains($0) }
-        return InternalData(title: title, peerIds: filteredPeerIds)
+        var memberCounts: [PeerId: Int] = [:]
+        for item in update.memberCounts {
+            memberCounts[item.id] = Int(item.count)
+        }
+        return InternalData(title: title, peerIds: filteredPeerIds, memberCounts: memberCounts)
     }
     |> distinctUntilChanged
     |> mapToSignal { internalData -> Signal<ChatFolderUpdates?, NoError> in
@@ -558,7 +734,7 @@ func _internal_subscribedChatFolderUpdates(account: Account, folderId: Int32) ->
                     peers.append(EnginePeer(peer))
                 }
             }
-            return ChatFolderUpdates(folderId: folderId, title: internalData.title, missingPeers: peers)
+            return ChatFolderUpdates(folderId: folderId, title: internalData.title, missingPeers: peers, memberCounts: internalData.memberCounts)
         }
     }
 }
@@ -569,7 +745,7 @@ func _internal_joinAvailableChatsInFolder(account: Account, updates: ChatFolderU
     }
     |> castError(JoinChatFolderLinkError.self)
     |> mapToSignal { inputPeers -> Signal<Never, JoinChatFolderLinkError> in
-        return account.network.request(Api.functions.communities.joinCommunityUpdates(community: .inputCommunityDialogFilter(filterId: updates.folderId), peers: inputPeers))
+        return account.network.request(Api.functions.chatlists.joinChatlistUpdates(chatlist: .inputChatlistDialogFilter(filterId: updates.folderId), peers: inputPeers))
         |> `catch` { error -> Signal<Api.Updates, JoinChatFolderLinkError> in
             if error.errorDescription == "DIALOG_FILTERS_TOO_MUCH" {
                 return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
@@ -624,7 +800,7 @@ func _internal_hideChatFolderUpdates(account: Account, folderId: Int32) -> Signa
         })
     }
     |> mapToSignal { _ -> Signal<Never, NoError> in
-        return account.network.request(Api.functions.communities.hideCommunityUpdates(community: .inputCommunityDialogFilter(filterId: folderId)))
+        return account.network.request(Api.functions.chatlists.hideChatlistUpdates(chatlist: .inputChatlistDialogFilter(filterId: folderId)))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }
@@ -637,7 +813,7 @@ func _internal_leaveChatFolder(account: Account, folderId: Int32, removePeerIds:
         return removePeerIds.compactMap(transaction.getPeer).compactMap(apiInputPeer)
     }
     |> mapToSignal { inputPeers -> Signal<Never, NoError> in
-        return account.network.request(Api.functions.communities.leaveCommunity(community: .inputCommunityDialogFilter(filterId: folderId), peers: inputPeers))
+        return account.network.request(Api.functions.chatlists.leaveChatlist(chatlist: .inputChatlistDialogFilter(filterId: folderId), peers: inputPeers))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
@@ -650,5 +826,15 @@ func _internal_leaveChatFolder(account: Account, folderId: Int32, removePeerIds:
             }
             |> ignoreValues
         }
+    }
+}
+
+func _internal_requestLeaveChatFolderSuggestions(account: Account, folderId: Int32) -> Signal<[EnginePeer.Id], NoError> {
+    return account.network.request(Api.functions.chatlists.getLeaveChatlistSuggestions(chatlist: .inputChatlistDialogFilter(filterId: folderId)))
+    |> map { result -> [EnginePeer.Id] in
+        return result.map(\.peerId)
+    }
+    |> `catch` { _ -> Signal<[EnginePeer.Id], NoError> in
+        return .single([])
     }
 }

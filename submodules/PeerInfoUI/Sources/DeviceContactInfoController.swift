@@ -1063,6 +1063,10 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
     let signal = combineLatest(presentationData, statePromise.get(), contactData, hiddenAvatarPromise.get())
     |> map { presentationData, state, peerAndContactData, hiddenAvatar -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        let updatedTheme = presentationData.theme.withModalBlocksBackground()
+        presentationData = presentationData.withUpdated(theme: updatedTheme)
+        
         var leftNavigationButton: ItemListNavigationButton?
         switch subject {
             case .vcard:

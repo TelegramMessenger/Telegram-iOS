@@ -101,6 +101,9 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                 displayActionsPanel = true
             }
         }
+        if peerStatusSettings.requestChatTitle != nil {
+            displayActionsPanel = true
+        }
     }
     
     if displayActionsPanel && (selectedContext == nil || selectedContext! <= .pinnedMessage) {

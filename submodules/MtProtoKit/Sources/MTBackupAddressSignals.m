@@ -313,7 +313,7 @@ static NSString *makeRandomPadding() {
     
     __weak MTContext *weakCurrentContext = currentContext;
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        [request setCompleted:^(MTDatacenterAddressListData *result, __unused NSTimeInterval completionTimestamp, id error)
+        [request setCompleted:^(MTDatacenterAddressListData *result, __unused MTRequestResponseInfo *info, id error)
          {
              if (error == nil) {
                  __strong MTContext *strongCurrentContext = weakCurrentContext;

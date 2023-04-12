@@ -350,7 +350,11 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
         
         let otherUsernames = peer.usernames.filter { !$0.flags.contains(.isEditable) }
         if case .bot = mode {
-            entries.append(.publicLinkInfo(presentationData.theme, "This username cannot be edited."))
+            var infoText = presentationData.strings.Username_BotLinkHint
+            if otherUsernames.isEmpty {
+                infoText = presentationData.strings.Username_BotLinkHintExtended
+            }
+            entries.append(.publicLinkInfo(presentationData.theme, infoText))
         } else {
             var infoText = presentationData.strings.Username_Help
             if otherUsernames.isEmpty {
@@ -460,21 +464,25 @@ public func usernameSetupController(context: AccountContext, mode: UsernameSetup
         let _ = (context.account.postbox.loadedPeerWithId(peerId)
         |> take(1)
         |> deliverOnMainQueue).start(next: { peer in
-            var currentAddressName: String = peer.addressName ?? ""
-            updateState { state in
-                if let current = state.editingPublicLinkText {
-                    currentAddressName = current
+            if let user = peer as? TelegramUser, user.botInfo != nil {
+                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://fragment.com/", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+            } else {
+                var currentAddressName: String = peer.addressName ?? ""
+                updateState { state in
+                    if let current = state.editingPublicLinkText {
+                        currentAddressName = current
+                    }
+                    return state
                 }
-                return state
-            }
-            if !currentAddressName.isEmpty {
-                dismissInputImpl?()
-                let shareController = ShareController(context: context, subject: .url("https://t.me/\(currentAddressName)"))
-                shareController.actionCompleted = {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                if !currentAddressName.isEmpty {
+                    dismissInputImpl?()
+                    let shareController = ShareController(context: context, subject: .url("https://t.me/\(currentAddressName)"))
+                    shareController.actionCompleted = {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
+                    presentControllerImpl?(shareController, nil)
                 }
-                presentControllerImpl?(shareController, nil)
             }
         })
     }, activateLink: { name in

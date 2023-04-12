@@ -45,17 +45,21 @@ public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let multiline: Bool
     let activityIndicator: ItemListSectionHeaderActivityIndicator
     let accessoryText: ItemListSectionHeaderAccessoryText?
+    let actionText: String?
+    let action: (() -> Void)?
     public let sectionId: ItemListSectionId
     
     public let isAlwaysPlain: Bool = true
     
-    public init(presentationData: ItemListPresentationData, text: String, badge: String? = nil, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
+    public init(presentationData: ItemListPresentationData, text: String, badge: String? = nil, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, actionText: String? = nil, action: (() -> Void)? = nil, sectionId: ItemListSectionId) {
         self.presentationData = presentationData
         self.text = text
         self.badge = badge
         self.multiline = multiline
         self.activityIndicator = activityIndicator
         self.accessoryText = accessoryText
+        self.actionText = actionText
+        self.action = action
         self.sectionId = sectionId
     }
     
@@ -104,6 +108,8 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
     private let accessoryTextNode: TextNode
     private var accessoryImageNode: ASImageNode?
     private var activityIndicator: ActivityIndicator?
+    private var actionNode: TextNode?
+    private var actionButtonNode: HighlightableButtonNode?
 
     private let activateArea: AccessibilityAreaNode
     
@@ -130,6 +136,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
     
     public func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeActionLayout = TextNode.asyncLayout(self.actionNode)
         let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let makeAccessoryTextLayout = TextNode.asyncLayout(self.accessoryTextNode)
         
@@ -150,6 +157,13 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
             var textRightInset: CGFloat = 20.0
             if let badgeLayoutAndApply {
                 textRightInset += badgeLayoutAndApply.0.size.width + badgeSpacing
+            }
+            
+            var actionLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let actionText = item.actionText {
+                let actionLayoutAndApplyValue = makeActionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: actionText, font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                actionLayoutAndApply = actionLayoutAndApplyValue
+                textRightInset += actionLayoutAndApplyValue.0.size.width + 2.0
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -194,6 +208,39 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                     strongSelf.activateArea.accessibilityLabel = item.text
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: titleLayout.size)
+                    
+                    if let (actionLayout, actionApply) = actionLayoutAndApply {
+                        let actionButtonNode: HighlightableButtonNode
+                        if let current = strongSelf.actionButtonNode {
+                            actionButtonNode = current
+                        } else {
+                            actionButtonNode = HighlightableButtonNode()
+                            strongSelf.actionButtonNode = actionButtonNode
+                            actionButtonNode.hitTestSlop = UIEdgeInsets(top: -4.0, left: -4.0, bottom: -4.0, right: -4.0)
+                            strongSelf.addSubnode(actionButtonNode)
+                            actionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.actionButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        
+                        let actionNode = actionApply()
+                        if strongSelf.actionNode !== actionNode {
+                            strongSelf.actionNode?.removeFromSupernode()
+                            strongSelf.actionNode = actionNode
+                            actionButtonNode.addSubnode(actionNode)
+                        }
+                        
+                        actionButtonNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - actionLayout.size.width, y: 7.0), size: actionLayout.size)
+                        
+                        actionNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actionLayout.size)
+                    } else {
+                        if let actionNode = strongSelf.actionNode {
+                            strongSelf.actionNode = nil
+                            actionNode.removeFromSupernode()
+                        }
+                        if let actionButtonNode = strongSelf.actionButtonNode {
+                            strongSelf.actionButtonNode = nil
+                            actionButtonNode.removeFromSupernode()
+                        }
+                    }
                     
                     if let badgeLayoutAndApply {
                         let badgeTextNode = badgeLayoutAndApply.1()
@@ -294,6 +341,10 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                 }
             })
         }
+    }
+    
+    @objc private func actionButtonPressed() {
+        self.item?.action?()
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {

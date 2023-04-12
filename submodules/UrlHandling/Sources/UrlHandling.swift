@@ -194,6 +194,22 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         if let phone = phone, let hash = hash {
                             return .cancelAccountReset(phone: phone, hash: hash)
                         }
+                    } else if peerName == "msg" {
+                        var url: String?
+                        var text: String?
+                        var to: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "url" {
+                                    url = value
+                                } else if queryItem.name == "text" {
+                                    text = value
+                                } else if queryItem.name == "to" {
+                                    to = value
+                                }
+                            }
+                        }
+                        return .share(url: url, text: text, to: to)
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -418,7 +434,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
                     return .theme(pathComponents[1])
-                } else if pathComponents[0] == "list" || pathComponents[0] == "folder" {
+                } else if pathComponents[0] == "addlist" || pathComponents[0] == "folder" || pathComponents[0] == "list" {
                     return .chatFolder(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {

@@ -120,25 +120,28 @@ final class AlertControllerNode: ASDisplayNode {
 
             self.existingAlertControllerNode = nil
         } else {
+            self.centerDimView.backgroundColor = nil
+            self.centerDimView.image = generateStretchableFilledCircleImage(radius: 16.0, color: nil, backgroundColor: UIColor(white: 0.0, alpha: 0.5))
             self.centerDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            
             self.topDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             self.bottomDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             self.leftDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             self.rightDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] finished in
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)/*, completion: { [weak self] finished in
                 if finished {
                     self?.centerDimView.backgroundColor = nil
                     self?.centerDimView.image = generateStretchableFilledCircleImage(radius: 16.0, color: nil, backgroundColor: UIColor(white: 0.0, alpha: 0.5))
                 }
-            })
+            })*/
             self.containerNode.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
         }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         self.containerNode.layer.removeAllAnimations()
-        self.centerDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
-        self.centerDimView.image = nil
+        //self.centerDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        //self.centerDimView.image = nil
         
         self.centerDimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         self.topDimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)

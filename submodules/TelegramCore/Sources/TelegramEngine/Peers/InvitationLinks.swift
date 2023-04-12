@@ -664,6 +664,7 @@ public struct PeerInvitationImportersState: Equatable {
         public var date: Int32
         public var about: String?
         public var approvedBy: PeerId?
+        public var joinedViaFolderLink: Bool
     }
     public var importers: [Importer]
     public var isLoadingMore: Bool
@@ -708,6 +709,7 @@ final class CachedPeerInvitationImporters: Codable {
     let peerIds: [PeerId]
     let dates: [PeerId: Int32]
     let abouts: [PeerId: String]
+    let joinedViaFolderLink: [PeerId: Bool]
     let count: Int32
     
     static func key(peerId: PeerId, link: String, requested: Bool) -> ValueBoxKey {
@@ -727,13 +729,17 @@ final class CachedPeerInvitationImporters: Codable {
                 $0[$1.peer.peerId] = about
             }
         }
+        self.joinedViaFolderLink = importers.reduce(into: [PeerId: Bool]()) {
+            $0[$1.peer.peerId] = $1.joinedViaFolderLink
+        }
         self.count = count
     }
     
-    init(peerIds: [PeerId], dates: [PeerId: Int32], abouts: [PeerId: String], count: Int32) {
+    init(peerIds: [PeerId], dates: [PeerId: Int32], abouts: [PeerId: String], joinedViaFolderLink: [PeerId: Bool], count: Int32) {
         self.peerIds = peerIds
         self.dates = dates
         self.abouts = abouts
+        self.joinedViaFolderLink = joinedViaFolderLink
         self.count = count
     }
     
@@ -751,6 +757,16 @@ final class CachedPeerInvitationImporters: Codable {
             dates[peerId] = Int32(clamping: date)
         }
         self.dates = dates
+        
+        var joinedViaFolderLink: [PeerId: Bool] = [:]
+        let joinedViaFolderLinkArray = try container.decode([Int64].self, forKey: "joinedViaFolderLink")
+        for index in stride(from: 0, to: joinedViaFolderLinkArray.endIndex, by: 2) {
+            let userId = datesArray[index]
+            let value = datesArray[index + 1]
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+            joinedViaFolderLink[peerId] = value != 0
+        }
+        self.joinedViaFolderLink = joinedViaFolderLink
         
         var abouts: [PeerId: String] = [:]
         let aboutsArray = try container.decodeIfPresent([DictionaryPair].self, forKey: "abouts")
@@ -776,6 +792,13 @@ final class CachedPeerInvitationImporters: Codable {
             dates.append(Int64(date))
         }
         try container.encode(dates, forKey: "dates")
+        
+        var joinedViaFolderLink: [Int64] = []
+        for (peerId, value) in self.joinedViaFolderLink {
+            joinedViaFolderLink.append(peerId.id._internalGetInt64Value())
+            joinedViaFolderLink.append(Int64(value ? 1 : 0))
+        }
+        try container.encode(joinedViaFolderLink, forKey: "joinedViaFolderLink")
         
         var abouts: [DictionaryPair] = []
         for (peerId, about) in self.abouts {
@@ -847,7 +870,7 @@ private final class PeerInvitationImportersContextImpl {
                 var result: [PeerInvitationImportersState.Importer] = []
                 for peerId in cachedResult.peerIds {
                     if let peer = transaction.getPeer(peerId), let date = cachedResult.dates[peerId] {
-                        result.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: cachedResult.abouts[peerId]))
+                        result.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: cachedResult.abouts[peerId], joinedViaFolderLink: cachedResult.joinedViaFolderLink[peerId] ?? false))
                     } else {
                         return nil
                     }
@@ -958,15 +981,17 @@ private final class PeerInvitationImportersContextImpl {
                                 let date: Int32
                                 let about: String?
                                 let approvedBy: PeerId?
+                                let joinedViaFolderLink: Bool
                                 switch importer {
-                                    case let .chatInviteImporter(_, userId, dateValue, aboutValue, approvedByValue):
+                                    case let .chatInviteImporter(flags, userId, dateValue, aboutValue, approvedByValue):
+                                        joinedViaFolderLink = (flags & (1 << 3)) != 0
                                         peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                         date = dateValue
                                         about = aboutValue
                                         approvedBy = approvedByValue.flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
                                 }
                                 if let peer = transaction.getPeer(peerId) {
-                                    resultImporters.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: about, approvedBy: approvedBy))
+                                    resultImporters.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: about, approvedBy: approvedBy, joinedViaFolderLink: joinedViaFolderLink))
                                 }
                             }
                             if populateCache && query == nil {

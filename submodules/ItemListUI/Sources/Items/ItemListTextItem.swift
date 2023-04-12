@@ -75,7 +75,8 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
 }
 
 public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
-    private let titleNode: TextNode
+    private let textNode: TextNode
+    private var linkHighlightingNode: LinkHighlightingNode?
     private let activateArea: AccessibilityAreaNode
     
     private var item: ItemListTextItem?
@@ -85,17 +86,17 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     public init() {
-        self.titleNode = TextNode()
-        self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.contentMode = .left
-        self.titleNode.contentsScale = UIScreen.main.scale
+        self.textNode = TextNode()
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.contentMode = .left
+        self.textNode.contentsScale = UIScreen.main.scale
         
         self.activateArea = AccessibilityAreaNode()
         self.activateArea.accessibilityTraits = .staticText
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.titleNode)
+        self.addSubnode(self.textNode)
         self.addSubnode(self.activateArea)
     }
     
@@ -106,11 +107,16 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
         recognizer.tapActionAtPoint = { _ in
             return .waitForSingleTap
         }
+        recognizer.highlight = { [weak self] point in
+            if let strongSelf = self {
+                strongSelf.updateTouchesAtPoint(point)
+            }
+        }
         self.view.addGestureRecognizer(recognizer)
     }
     
     public func asyncLayout() -> (_ item: ItemListTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeTitleLayout = TextNode.asyncLayout(self.textNode)
         
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0
@@ -158,7 +164,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let _ = titleApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
                 }
             })
         }
@@ -178,9 +184,9 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            let titleFrame = self.titleNode.frame
+                            let titleFrame = self.textNode.frame
                             if let item = self.item, titleFrame.contains(location) {
-                                if let (_, attributes) = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                                if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
                                     if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                         item.linkAction?(.tap(url))
                                     }
@@ -192,6 +198,48 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                 }
             default:
                 break
+        }
+    }
+    
+    private func updateTouchesAtPoint(_ point: CGPoint?) {
+        if let item = self.item {
+            var rects: [CGRect]?
+            if let point = point {
+                let textNodeFrame = self.textNode.frame
+                if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                    let possibleNames: [String] = [
+                        TelegramTextAttributes.URL,
+                        TelegramTextAttributes.PeerMention,
+                        TelegramTextAttributes.PeerTextMention,
+                        TelegramTextAttributes.BotCommand,
+                        TelegramTextAttributes.Hashtag
+                    ]
+                    for name in possibleNames {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
+                            rects = self.textNode.attributeRects(name: name, at: index)
+                            break
+                        }
+                    }
+                }
+            }
+            
+            if let rects = rects {
+                let linkHighlightingNode: LinkHighlightingNode
+                if let current = self.linkHighlightingNode {
+                    linkHighlightingNode = current
+                } else {
+                    linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.2))
+                    self.linkHighlightingNode = linkHighlightingNode
+                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
+                }
+                linkHighlightingNode.frame = self.textNode.frame
+                linkHighlightingNode.updateRects(rects)
+            } else if let linkHighlightingNode = self.linkHighlightingNode {
+                self.linkHighlightingNode = nil
+                linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                    linkHighlightingNode?.removeFromSupernode()
+                })
+            }
         }
     }
 }

@@ -94,13 +94,22 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         var isUserInteractionEnabled = false
         switch content {
-            case let .removedChat(text):
+            case let .removedChat(title, text):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                if let text {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                    
+                    let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                    self.textNode.attributedText = attributedText
+                } else {
+                    self.textNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                }
                 displayUndo = true
                 self.originalRemainingSeconds = 5
                 self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
@@ -173,7 +182,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 5
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .info(title, text):
+            case let .info(title, text, timeout):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -193,11 +202,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 10
                 displayUndo = false
-                self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
+                if let timeout {
+                    self.originalRemainingSeconds = timeout
+                } else {
+                    self.originalRemainingSeconds = Double(max(5, min(8, text.count / 14)))
+                }
             
                 if text.contains("](") {
                     isUserInteractionEnabled = true
                 }
+            
             case let .actionSucceeded(title, text, cancel):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -847,20 +861,31 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
                 self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
                 self.animatedStickerNode = nil
-                if let title = title {
-                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
-                } else {
-                    self.titleNode.attributedText = nil
-                }
-                
-                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
-                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
-                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
-                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
-                    return ("URL", contents)
-                }), textAlignment: .natural)
-                self.textNode.attributedText = attributedText
             
+                if let title = title, text.isEmpty {
+                    self.titleNode.attributedText = nil
+                    let body = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                    let attributedText = parseMarkdownIntoAttributedString(title, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                        return ("URL", contents)
+                    }), textAlignment: .natural)
+                    self.textNode.attributedText = attributedText
+                } else {
+                    if let title = title {
+                        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                    } else {
+                        self.titleNode.attributedText = nil
+                    }
+                    
+                    let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                        return ("URL", contents)
+                    }), textAlignment: .natural)
+                    self.textNode.attributedText = attributedText
+                }
             
                 if text.contains("](") {
                     isUserInteractionEnabled = true
