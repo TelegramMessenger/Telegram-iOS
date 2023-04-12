@@ -251,10 +251,9 @@ class ChatListSectionHeaderNode: ListViewItemNode {
                     strongSelf.addSubnode(headerNode)
                 }
                 
-                //TODO:localize
-                headerNode.title = "YOUR CONTACTS ON TELEGRAM"
+                headerNode.title = item.strings.ChatList_EmptyListContactsHeader
                 if item.hide != nil {
-                    headerNode.action = "hide"
+                    headerNode.action = item.strings.ChatList_EmptyListContactsHeaderHide
                     headerNode.actionType = .generic
                     headerNode.activateAction = {
                         guard let self else {
