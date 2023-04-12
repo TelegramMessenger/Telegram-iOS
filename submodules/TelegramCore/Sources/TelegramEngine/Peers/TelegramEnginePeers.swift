@@ -657,6 +657,7 @@ public extension TelegramEngine {
         }
 
         public func getNextUnreadChannel(peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<(peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)?, NoError> {
+            let startTime = CFAbsoluteTimeGetCurrent()
             return self.account.postbox.transaction { transaction -> (peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)? in
                 func getForFilter(predicate: ChatListFilterPredicate?, isArchived: Bool) -> (peer: EnginePeer, unreadCount: Int)? {
                     let additionalFilter: (Peer) -> Bool = { peer in
@@ -754,6 +755,12 @@ public extension TelegramEngine {
                         }
                     }
                     return nil
+                }
+            }
+            |> beforeNext { _ in
+                let delayTime = CFAbsoluteTimeGetCurrent() - startTime
+                if delayTime > 0.3 {
+                    Logger.shared.log("getNextUnreadChannel", "took \(delayTime) s")
                 }
             }
         }

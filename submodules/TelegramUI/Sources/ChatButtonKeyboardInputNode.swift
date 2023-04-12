@@ -391,7 +391,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     if let message = self.message {
                         self.controllerInteraction.requestMessageActionCallback(message.id, data, false, requiresPassword)
                     }
-                case let .switchInline(samePeer, query):
+                case let .switchInline(samePeer, query, _):
                     if let message = message {
                         var botPeer: Peer?
                         

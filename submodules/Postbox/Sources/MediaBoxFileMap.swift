@@ -203,7 +203,7 @@ final class MediaBoxFileMap {
         }
         
         let _ = try? fileItem.access { file in
-            file.seek(position: 0)
+            let _ = file.seek(position: 0)
             let buffer = WriteBuffer()
             var magic: UInt32 = 0x7bac1487
             buffer.write(&magic, offset: 0, length: 4)

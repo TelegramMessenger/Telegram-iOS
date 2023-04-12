@@ -154,7 +154,7 @@
     }
 }
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSAttributedString *)caption withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext snapshots:(NSArray *)snapshots immediate:(bool)immediate appeared:(void (^)(void))appeared completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
++ (void)presentWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller caption:(NSAttributedString *)caption withItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)item paint:(bool)paint adjustments:(bool)adjustments recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext fromRect:(CGRect)fromRect mainSnapshot:(UIView *)mainSnapshot snapshots:(NSArray *)snapshots immediate:(bool)immediate appeared:(void (^)(void))appeared completion:(void (^)(id<TGMediaEditableItem>, TGMediaEditingContext *))completion dismissed:(void (^)())dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     id<LegacyComponentsContext> windowContext = [windowManager context];
@@ -199,6 +199,11 @@
     model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSAttributedString *caption)
     {
         [editingContext setCaption:caption forItem:editableItem];
+    };
+    
+    model.didFinishRenderingFullSizeImage = ^(id<TGMediaEditableItem> editableItem, UIImage *resultImage)
+    {
+        [editingContext setFullSizeImage:resultImage forItem:editableItem];
     };
     
     model.interfaceView.hasSwipeGesture = false;
@@ -255,10 +260,10 @@
         }
     };
     
-    if (paint) {
+    if (paint || adjustments) {
         [model.interfaceView immediateEditorTransitionIn];
     }
-    
+        
     for (UIView *view in snapshots) {
         [galleryController.view addSubview:view];
     }
@@ -269,9 +274,235 @@
     
     if (paint) {
         TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
-            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab snapshots:snapshots];
+            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab snapshots:snapshots fromRect:fromRect];
+        });
+    } else if (adjustments) {
+        TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorToolsTab snapshots:snapshots fromRect:fromRect];
         });
     }
 }
+
++ (void)presentEditorWithContext:(id<LegacyComponentsContext>)context controller:(TGViewController *)controller withItem:(id<TGMediaEditableItem>)item cropRect:(CGRect)cropRect adjustments:(id<TGMediaEditAdjustments>)adjustments referenceView:(UIView *)referenceView completion:(void (^)(UIImage *, id<TGMediaEditAdjustments>))completion fullSizeCompletion:(void (^)(UIImage *))fullSizeCompletion beginTransitionOut:(void (^)())beginTransitionOut finishTransitionOut:(void (^)())finishTransitionOut;
+{
+    id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
+    
+    TGMediaEditingContext *editingContext = [[TGMediaEditingContext alloc] init];
+    
+    UIImage *thumbnailImage;
+    
+    NSDictionary *toolValues;
+    if (adjustments != nil) {
+        toolValues = adjustments.toolValues;
+    } else {
+        toolValues = @{};
+    }
+    PGPhotoEditorValues *editorValues = [PGPhotoEditorValues editorValuesWithOriginalSize:item.originalSize cropRect:cropRect cropRotation:0.0f cropOrientation:UIImageOrientationUp cropLockedAspectRatio:0.0 cropMirrored:false toolValues:toolValues paintingData:nil sendAsGif:false];
+    
+    TGPhotoEditorController *editorController = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:item intent:TGPhotoEditorControllerWallpaperIntent adjustments:editorValues caption:nil screenImage:thumbnailImage availableTabs:TGPhotoEditorToolsTab selectedTab:TGPhotoEditorToolsTab];
+    editorController.editingContext = editingContext;
+    editorController.dontHideStatusBar = true;
+    editorController.ignoreCropForResult = true;
+    
+    CGRect fromRect = referenceView.frame;// [referenceView convertRect:referenceView.bounds toView:nil];
+    editorController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView)
+    {
+        *referenceFrame = fromRect;
+        *parentView = referenceView.superview;
+        //UIImageView *imageView = [[UIImageView alloc] initWithFrame:fromRect];
+        //imageView.image = image;
+        
+        return referenceView;
+    };
+    
+    editorController.beginTransitionOut = ^UIView *(CGRect *referenceFrame, UIView **parentView)
+    {
+        CGRect startFrame = CGRectZero;
+        if (referenceFrame != NULL)
+        {
+            startFrame = *referenceFrame;
+            *referenceFrame = fromRect;
+            *parentView = referenceView.superview;
+        }
+        
+        if (beginTransitionOut) {
+            beginTransitionOut();
+        }
+        
+        return referenceView;
+    };
+    
+    __weak TGPhotoEditorController *weakController = editorController;
+    editorController.finishedTransitionOut = ^(bool saved) {
+        TGPhotoEditorController *strongGalleryController = weakController;
+        if (strongGalleryController != nil && strongGalleryController.overlayWindow == nil)
+        {
+            TGNavigationController *navigationController = (TGNavigationController *)strongGalleryController.navigationController;
+            TGOverlayControllerWindow *window = (TGOverlayControllerWindow *)navigationController.view.window;
+            if ([window isKindOfClass:[TGOverlayControllerWindow class]])
+                [window dismiss];
+        }
+        if (finishTransitionOut) {
+            finishTransitionOut();
+        }
+    };
+        
+    editorController.didFinishRenderingFullSizeImage = ^(UIImage *resultImage)
+    {
+        fullSizeCompletion(resultImage);
+    };
+    
+    editorController.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges, void(^commit)(void))
+    {
+        if (!hasChanges)
+            return;
+        
+        __strong TGPhotoEditorController *strongController = weakController;
+        if (strongController == nil)
+            return;
+        
+        completion(resultImage, adjustments);
+        
+    };
+    editorController.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
+    {
+        return [editableItem thumbnailImageSignal];
+    };
+    
+    editorController.requestOriginalScreenSizeImage = ^(id<TGMediaEditableItem> editableItem, NSTimeInterval position)
+    {
+        return [editableItem screenImageSignal:position];
+    };
+    
+    editorController.requestOriginalFullSizeImage = ^(id<TGMediaEditableItem> editableItem, NSTimeInterval position)
+    {
+        return [editableItem originalImageSignal:position];
+    };
+    
+    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:controller contentController:editorController];
+    controllerWindow.hidden = false;
+    controller.view.clipsToBounds = true;
+    
+//    TGModernGalleryController *galleryController = [[TGModernGalleryController alloc] initWithContext:windowContext];
+//    galleryController.adjustsStatusBarVisibility = true;
+//    galleryController.animateTransition = false;
+//    galleryController.finishedTransitionIn = ^(id<TGModernGalleryItem> item, TGModernGalleryItemView *itemView) {
+//        appeared();
+//    };
+//    //galleryController.hasFadeOutTransition = true;
+//
+//    id<TGModernGalleryEditableItem> galleryItem = nil;
+//    if (item.isVideo)
+//        galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:item];
+//    else
+//        galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:item];
+//    galleryItem.editingContext = editingContext;
+//    galleryItem.stickersContext = stickersContext;
+//
+//    TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:@[galleryItem] focusItem:galleryItem selectionContext:nil editingContext:editingContext hasCaptions:true allowCaptionEntities:true hasTimer:false onlyCrop:false inhibitDocumentCaptions:false hasSelectionPanel:false hasCamera:false recipientName:recipientName];
+//    model.controller = galleryController;
+//    model.stickersContext = stickersContext;
+//
+//    model.willFinishEditingItem = ^(id<TGMediaEditableItem> editableItem, id<TGMediaEditAdjustments> adjustments, id representation, bool hasChanges)
+//    {
+//        if (hasChanges)
+//        {
+//            [editingContext setAdjustments:adjustments forItem:editableItem];
+//            [editingContext setTemporaryRep:representation forItem:editableItem];
+//        }
+//    };
+//
+//    model.didFinishEditingItem = ^(id<TGMediaEditableItem> editableItem, __unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage)
+//    {
+//        [editingContext setImage:resultImage thumbnailImage:thumbnailImage forItem:editableItem synchronous:false];
+//    };
+//
+//    model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSAttributedString *caption)
+//    {
+//        [editingContext setCaption:caption forItem:editableItem];
+//    };
+//
+//    model.didFinishRenderingFullSizeImage = ^(id<TGMediaEditableItem> editableItem, UIImage *resultImage)
+//    {
+//        [editingContext setFullSizeImage:resultImage forItem:editableItem];
+//    };
+//
+//    model.interfaceView.hasSwipeGesture = false;
+//    galleryController.model = model;
+//
+//    __weak TGModernGalleryController *weakGalleryController = galleryController;
+//
+//    [model.interfaceView updateSelectionInterface:1 counterVisible:false animated:false];
+//    model.interfaceView.thumbnailSignalForItem = ^SSignal *(id item)
+//    {
+//        return nil;
+//    };
+//    model.interfaceView.donePressed = ^(TGMediaPickerGalleryItem *item)
+//    {
+//        __strong TGModernGalleryController *strongController = weakGalleryController;
+//        if (strongController == nil)
+//            return;
+//
+//        if ([item isKindOfClass:[TGMediaPickerGalleryVideoItem class]])
+//        {
+//            TGMediaPickerGalleryVideoItemView *itemView = (TGMediaPickerGalleryVideoItemView *)[strongController itemViewForItem:item];
+//            [itemView stop];
+//            [itemView setPlayButtonHidden:true animated:true];
+//        }
+//
+//        if (completion != nil)
+//            completion(item.asset, editingContext);
+//
+//        [strongController dismissWhenReadyAnimated:true];
+//    };
+//
+//    galleryController.beginTransitionIn = ^UIView *(__unused TGMediaPickerGalleryItem *item, __unused TGModernGalleryItemView *itemView)
+//    {
+//        return nil;
+//    };
+//
+//    galleryController.beginTransitionOut = ^UIView *(__unused TGMediaPickerGalleryItem *item, __unused TGModernGalleryItemView *itemView)
+//    {
+//        return nil;
+//    };
+//
+//    galleryController.completedTransitionOut = ^
+//    {
+//        TGModernGalleryController *strongGalleryController = weakGalleryController;
+//        if (strongGalleryController != nil && strongGalleryController.overlayWindow == nil)
+//        {
+//            TGNavigationController *navigationController = (TGNavigationController *)strongGalleryController.navigationController;
+//            TGOverlayControllerWindow *window = (TGOverlayControllerWindow *)navigationController.view.window;
+//            if ([window isKindOfClass:[TGOverlayControllerWindow class]])
+//                [window dismiss];
+//        }
+//        if (dismissed) {
+//            dismissed();
+//        }
+//    };
+//
+//    if (paint || adjustments) {
+//        [model.interfaceView immediateEditorTransitionIn];
+//    }
+//
+//    for (UIView *view in snapshots) {
+//        [galleryController.view addSubview:view];
+//    }
+//
+//    TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:controller contentController:galleryController];
+//    controllerWindow.hidden = false;
+//    galleryController.view.clipsToBounds = true;
+//
+//    if (paint) {
+//        TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+//            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab snapshots:snapshots fromRect:fromRect];
+//        });
+//    } else if (adjustments) {
+//        TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+//            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorToolsTab snapshots:snapshots fromRect:fromRect];
+//        });
+//    }
+}
+
 
 @end

@@ -119,7 +119,11 @@ private func uploadedWallpaper(postbox: Postbox, network: Network, resource: Med
 }
 
 public func uploadWallpaper(account: Account, resource: MediaResource, mimeType: String = "image/jpeg", settings: WallpaperSettings, forChat: Bool) -> Signal<UploadWallpaperStatus, UploadWallpaperError> {
-    return uploadedWallpaper(postbox: account.postbox, network: account.network, resource: resource)
+    return _internal_uploadWallpaper(postbox: account.postbox, network: account.network, resource: resource, settings: settings, forChat: forChat)
+}
+
+func _internal_uploadWallpaper(postbox: Postbox, network: Network, resource: MediaResource, mimeType: String = "image/jpeg", settings: WallpaperSettings, forChat: Bool) -> Signal<UploadWallpaperStatus, UploadWallpaperError> {
+    return uploadedWallpaper(postbox: postbox, network: network, resource: resource)
     |> mapError { _ -> UploadWallpaperError in }
     |> mapToSignal { result -> Signal<(UploadWallpaperStatus, MediaResource?), UploadWallpaperError> in
         switch result.content {
@@ -134,11 +138,11 @@ public func uploadWallpaper(account: Account, resource: MediaResource, mimeType:
                     if forChat {
                         flags |= 1 << 0
                     }
-                    return account.network.request(Api.functions.account.uploadWallPaper(flags: flags, file: file, mimeType: mimeType, settings: apiWallpaperSettings(settings)))
-                        |> mapError { _ in return UploadWallpaperError.generic }
-                        |> map { wallpaper -> (UploadWallpaperStatus, MediaResource?) in
-                            return (.complete(TelegramWallpaper(apiWallpaper: wallpaper)), result.resource)
-                        }
+                    return network.request(Api.functions.account.uploadWallPaper(flags: flags, file: file, mimeType: mimeType, settings: apiWallpaperSettings(settings)))
+                    |> mapError { _ in return UploadWallpaperError.generic }
+                    |> map { wallpaper -> (UploadWallpaperStatus, MediaResource?) in
+                        return (.complete(TelegramWallpaper(apiWallpaper: wallpaper)), result.resource)
+                    }
                     default:
                         return .fail(.generic)
                 }

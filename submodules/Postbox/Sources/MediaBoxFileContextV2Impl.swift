@@ -421,21 +421,28 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         private func processWrite(resourceOffset: Int64, data: Data, dataRange: Range<Int64>) {
             if let destinationFile = self.destinationFile {
                 do {
+                    var success = true
                     try destinationFile.access { fd in
-                        fd.seek(position: resourceOffset)
-                        let written = data.withUnsafeBytes { rawBytes -> Int in
-                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
-
-                            return fd.write(bytes.advanced(by: Int(dataRange.lowerBound)), count: dataRange.count)
+                        if fd.seek(position: resourceOffset) {
+                            let written = data.withUnsafeBytes { rawBytes -> Int in
+                                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                
+                                return fd.write(bytes.advanced(by: Int(dataRange.lowerBound)), count: dataRange.count)
+                            }
+                            assert(written == dataRange.count)
+                        } else {
+                            success = false
                         }
-                        assert(written == dataRange.count)
                     }
-                    
-                    let range: Range<Int64> = resourceOffset ..< (resourceOffset + Int64(dataRange.count))
-                    self.fileMap.fill(range)
-                    self.fileMap.serialize(manager: self.manager, to: self.metaPath)
-                    
-                    self.storageBox.update(id: self.resourceId, size: self.fileMap.sum)
+                    if success {
+                        let range: Range<Int64> = resourceOffset ..< (resourceOffset + Int64(dataRange.count))
+                        self.fileMap.fill(range)
+                        self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+                        
+                        self.storageBox.update(id: self.resourceId, size: self.fileMap.sum)
+                    } else {
+                        postboxLog("MediaBoxFileContextV2Impl: error seeking file to \(resourceOffset) at \(self.partialPath)")
+                    }
                 } catch let e {
                     postboxLog("MediaBoxFileContextV2Impl: error writing file at \(self.partialPath): \(e)")
                 }

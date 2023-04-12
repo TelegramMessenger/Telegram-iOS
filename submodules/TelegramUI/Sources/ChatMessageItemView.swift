@@ -860,7 +860,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                     item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true, false)
                 case let .callback(requiresPassword, data):
                     item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false, requiresPassword)
-                case let .switchInline(samePeer, query):
+                case let .switchInline(samePeer, query, peerTypes):
                     var botPeer: Peer?
                     
                     var found = false
@@ -881,7 +881,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                         peerId = item.message.id.peerId
                     }
                     if let botPeer = botPeer, let addressName = botPeer.addressName {
-                        item.controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)")
+                        item.controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)", peerTypes)
                     }
                 case .payment:
                     item.controllerInteraction.openCheckoutOrReceipt(item.message.id)

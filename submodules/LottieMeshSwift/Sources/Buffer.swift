@@ -75,7 +75,7 @@ public final class MeshWriteBuffer {
     }
     
     public func seek(offset: Int) {
-        self.file.seek(position: Int64(offset))
+        let _ = self.file.seek(position: Int64(offset))
         self.offset = offset
     }
 }

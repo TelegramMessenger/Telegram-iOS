@@ -606,14 +606,19 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                 
                 let activityPosition = floor(context.availableSize.width * component.badgeGraphPosition)
                 
+                var inactiveTitleOpacity: CGFloat = 1.0
                 var inactiveValueOpacity: CGFloat = 1.0
-                if inactiveValue.size.width + inactiveTitle.size.width >= activityPosition - 8.0 {
-                    inactiveValueOpacity = 0.0
+                
+                if 12.0 + inactiveValue.size.width + 4.0 + inactiveTitle.size.width + 12.0 >= activityPosition - 8.0 {
+                    inactiveTitleOpacity = 0.0
+                    if 12.0 + inactiveValue.size.width + 12.0 >= activityPosition - 8.0 {
+                        inactiveValueOpacity = 0.0
+                    }
                 }
                 
                 context.add(inactiveTitle
                     .position(CGPoint(x: inactiveTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
-                    .opacity(inactiveValueOpacity)
+                    .opacity(inactiveTitleOpacity)
                 )
                 
                 context.add(inactiveValue

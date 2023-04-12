@@ -144,7 +144,11 @@ public func wallpaperDatas(account: Account, accountManager: AccountManager<Tele
                                         return (thumbnailData, betterFullSizeData ?? fullSizeData, complete)
                                     })
                             } else {
-                                return .single((thumbnailData, fullSizeData, complete))
+                                if thumbnailData == nil, let decodedThumbnailData = decodedThumbnailData {
+                                    return .single((decodedThumbnailData, fullSizeData, complete))
+                                } else {
+                                    return .single((thumbnailData, fullSizeData, complete))
+                                }
                             }
                         }
                     }
@@ -254,7 +258,7 @@ public func wallpaperImage(account: Account, accountManager: AccountManager<Tele
             if let thumbnailImage = thumbnailImage {
                 let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                 
-                let initialThumbnailContextFittingSize = fittedSize.fitted(CGSize(width: 90.0, height: 90.0))
+                let initialThumbnailContextFittingSize = fittedSize.fitted(thumbnail ? CGSize(width: 240.0, height: 240.0) : CGSize(width: 320.0, height: 320.0))
                 
                 let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
                 guard let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) else {
@@ -263,6 +267,7 @@ public func wallpaperImage(account: Account, accountManager: AccountManager<Tele
                 thumbnailContext.withFlippedContext { c in
                     c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
                 }
+                telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
                 var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))

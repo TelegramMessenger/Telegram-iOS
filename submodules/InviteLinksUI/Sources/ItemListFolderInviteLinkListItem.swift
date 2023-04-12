@@ -308,12 +308,7 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
                     titleText = invite.title
                 }
                 
-                //TODO:localize
-                if invite.peerIds.count == 1 {
-                    subtitleText = "includes 1 chat"
-                } else {
-                    subtitleText = "includes \(invite.peerIds.count) chats"
-                }
+                subtitleText = item.presentationData.strings.ChatListFilter_LinkLabelChatCount(Int32(invite.peerIds.count))
             } else {
                 titleText = " "
                 subtitleText = " "
@@ -519,8 +514,7 @@ public class ItemListFolderInviteLinkListItemNode: ItemListRevealOptionsItemNode
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.removeAction != nil {
-                        //TODO:localize
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: "Delete", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.ChatListFilter_LinkActionDelete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                     } else {
                         strongSelf.setRevealOptions((left: [], right: []))
                     }

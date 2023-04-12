@@ -12,7 +12,10 @@ enum ChatListNodeEntryId: Hashable {
     case PeerId(Int64)
     case ThreadId(Int64)
     case GroupId(EngineChatList.Group)
+    case ContactId(EnginePeer.Id)
     case ArchiveIntro
+    case EmptyIntro
+    case SectionHeader
     case Notice
     case additionalCategory(Int)
 }
@@ -20,6 +23,8 @@ enum ChatListNodeEntryId: Hashable {
 enum ChatListNodeEntrySortIndex: Comparable {
     case index(EngineChatList.Item.Index)
     case additionalCategory(Int)
+    case sectionHeader
+    case contact(id: EnginePeer.Id, presence: EnginePeer.Presence)
     
     static func <(lhs: ChatListNodeEntrySortIndex, rhs: ChatListNodeEntrySortIndex) -> Bool {
         switch lhs {
@@ -29,6 +34,10 @@ enum ChatListNodeEntrySortIndex: Comparable {
                 return lhsIndex < rhsIndex
             case .additionalCategory:
                 return false
+            case .sectionHeader:
+                return true
+            case .contact:
+                return true
             }
         case let .additionalCategory(lhsIndex):
             switch rhs {
@@ -36,6 +45,30 @@ enum ChatListNodeEntrySortIndex: Comparable {
                 return lhsIndex < rhsIndex
             case .index:
                 return true
+            case .sectionHeader:
+                return true
+            case .contact:
+                return true
+            }
+        case .sectionHeader:
+            switch rhs {
+            case .additionalCategory, .index, .sectionHeader:
+                return false
+            case .contact:
+                return true
+            }
+        case let .contact(lhsId, lhsPresense):
+            switch rhs {
+            case .sectionHeader:
+                return false
+            case let .contact(rhsId, rhsPresense):
+                if lhsPresense != rhsPresense {
+                    return rhsPresense.status > rhsPresense.status
+                } else {
+                    return lhsId < rhsId
+                }
+            default:
+                return false
             }
         }
     }
@@ -238,11 +271,39 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         }
     }
     
+    struct ContactEntryData: Equatable {
+        var presentationData: ChatListPresentationData
+        var peer: EnginePeer
+        var presence: EnginePeer.Presence
+        
+        init(presentationData: ChatListPresentationData, peer: EnginePeer, presence: EnginePeer.Presence) {
+            self.presentationData = presentationData
+            self.peer = peer
+            self.presence = presence
+        }
+        
+        static func ==(lhs: ContactEntryData, rhs: ContactEntryData) -> Bool {
+            if lhs.presentationData !== rhs.presentationData {
+                return false
+            }
+            if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.presence != rhs.presence {
+                return false
+            }
+            return true
+        }
+    }
+    
     case HeaderEntry
     case PeerEntry(PeerEntryData)
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
     case GroupReferenceEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, editing: Bool, unreadCount: Int, revealed: Bool, hiddenByDefault: Bool)
+    case ContactEntry(ContactEntryData)
     case ArchiveIntro(presentationData: ChatListPresentationData)
+    case EmptyIntro(presentationData: ChatListPresentationData)
+    case SectionHeader(presentationData: ChatListPresentationData, displayHide: Bool)
     case Notice(presentationData: ChatListPresentationData, notice: ChatListNotice)
     case AdditionalCategory(index: Int, id: Int, title: String, image: UIImage?, appearance: ChatListNodeAdditionalCategory.Appearance, selected: Bool, presentationData: ChatListPresentationData)
     
@@ -256,8 +317,14 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .index(.chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: holeIndex)))
         case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
             return .index(index)
+        case let .ContactEntry(contactEntry):
+            return .contact(id: contactEntry.peer.id, presence: contactEntry.presence)
         case .ArchiveIntro:
             return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor))
+        case .EmptyIntro:
+            return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor))
+        case .SectionHeader:
+            return .sectionHeader
         case .Notice:
             return .index(.chatList(EngineChatList.Item.Index.ChatList.absoluteUpperBound.successor.successor))
         case let .AdditionalCategory(index, _, _, _, _, _, _):
@@ -280,8 +347,14 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .Hole(Int64(holeIndex.id.id))
         case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
             return .GroupId(groupId)
+        case let .ContactEntry(contactEntry):
+            return .ContactId(contactEntry.peer.id)
         case .ArchiveIntro:
             return .ArchiveIntro
+        case .EmptyIntro:
+            return .EmptyIntro
+        case .SectionHeader:
+            return .SectionHeader
         case .Notice:
             return .Notice
         case let .AdditionalCategory(_, id, _, _, _, _, _):
@@ -347,9 +420,36 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .ContactEntry(contactEntry):
+                if case .ContactEntry(contactEntry) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .ArchiveIntro(lhsPresentationData):
                 if case let .ArchiveIntro(rhsPresentationData) = rhs {
                     if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            case let .EmptyIntro(lhsPresentationData):
+                if case let .EmptyIntro(rhsPresentationData) = rhs {
+                    if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    return true
+                } else {
+                    return false
+                }
+            case let .SectionHeader(lhsPresentationData, lhsDisplayHide):
+                if case let .SectionHeader(rhsPresentationData, rhsDisplayHide) = rhs {
+                    if lhsPresentationData !== rhsPresentationData {
+                        return false
+                    }
+                    if lhsDisplayHide != rhsDisplayHide {
                         return false
                     }
                     return true
@@ -407,8 +507,31 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation) -> (entries: [ChatListNodeEntry], loading: Bool) {
+struct ChatListContactPeer {
+    var peer: EnginePeer
+    var presence: EnginePeer.Presence
+    
+    init(peer: EnginePeer, presence: EnginePeer.Presence) {
+        self.peer = peer
+        self.presence = presence
+    }
+}
+
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer]) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
+    
+    if !view.hasEarlier {
+        for contact in contacts {
+            result.append(.ContactEntry(ChatListNodeEntry.ContactEntryData(
+                presentationData: state.presentationData,
+                peer: contact.peer,
+                presence: contact.presence
+            )))
+        }
+        if !contacts.isEmpty {
+            result.append(.SectionHeader(presentationData: state.presentationData, displayHide: !view.items.isEmpty))
+        }
+    }
     
     var pinnedIndexOffset: UInt16 = 0
     
@@ -668,6 +791,14 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             
             if displayArchiveIntro {
                 result.append(.ArchiveIntro(presentationData: state.presentationData))
+            } else if !contacts.isEmpty && !result.contains(where: { entry in
+                if case .PeerEntry = entry {
+                    return true
+                } else {
+                    return false
+                }
+            }) {
+                result.append(.EmptyIntro(presentationData: state.presentationData))
             }
             
             if let notice {

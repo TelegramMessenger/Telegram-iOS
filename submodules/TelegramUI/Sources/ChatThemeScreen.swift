@@ -20,27 +20,7 @@ import TooltipUI
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
-
-private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        
-        context.setFillColor(UIColor(rgb: 0x808084, alpha: 0.1).cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        
-        context.setLineWidth(2.0)
-        context.setLineCap(.round)
-        context.setStrokeColor(theme.actionSheet.inputClearButtonColor.cgColor)
-        
-        context.move(to: CGPoint(x: 10.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
-        context.strokePath()
-        
-        context.move(to: CGPoint(x: 20.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
-        context.strokePath()
-    })
-}
+import WebUI
 
 private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let index: Int
@@ -554,9 +534,10 @@ final class ChatThemeScreen: ViewController {
     private let animatedEmojiStickers: [String: [StickerPackItem]]
     private let initiallySelectedEmoticon: String?
     private let peerName: String
+    let canResetWallpaper: Bool
     private let previewTheme: (String?, Bool?) -> Void
     fileprivate let changeWallpaper: () -> Void
-    fileprivate let changeColor: () -> Void
+    fileprivate let resetWallpaper: () -> Void
     private let completion: (String?) -> Void
     
     private var presentationData: PresentationData
@@ -578,9 +559,10 @@ final class ChatThemeScreen: ViewController {
         animatedEmojiStickers: [String: [StickerPackItem]],
         initiallySelectedEmoticon: String?,
         peerName: String,
+        canResetWallpaper: Bool,
         previewTheme: @escaping (String?, Bool?) -> Void,
         changeWallpaper: @escaping () -> Void,
-        changeColor: @escaping () -> Void,
+        resetWallpaper: @escaping () -> Void,
         completion: @escaping (String?) -> Void
     ) {
         self.context = context
@@ -588,14 +570,17 @@ final class ChatThemeScreen: ViewController {
         self.animatedEmojiStickers = animatedEmojiStickers
         self.initiallySelectedEmoticon = initiallySelectedEmoticon
         self.peerName = peerName
+        self.canResetWallpaper = canResetWallpaper
         self.previewTheme = previewTheme
         self.changeWallpaper = changeWallpaper
-        self.changeColor = changeColor
+        self.resetWallpaper = resetWallpaper
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.blocksBackgroundWhenInOverlay = true
         
@@ -634,20 +619,20 @@ final class ChatThemeScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.dismiss()
+            strongSelf.dismiss(animated: true)
             if strongSelf.initiallySelectedEmoticon == nil && emoticon == nil {
             } else {
                 strongSelf.completion(emoticon)
             }
         }
         self.controllerNode.dismiss = { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            self?.dismiss(animated: false)
         }
         self.controllerNode.cancel = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.dismiss()
+            strongSelf.dismiss(animated: true)
             strongSelf.previewTheme(nil, nil)
         }
     }
@@ -667,15 +652,22 @@ final class ChatThemeScreen: ViewController {
         }
     }
     
-    override public func dismiss(completion: (() -> Void)? = nil) {
+    override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
                 controller.dismiss()
             }
             return true
         })
-    
-        self.controllerNode.animateOut(completion: completion)
+        
+        if flag {
+            self.controllerNode.animateOut(completion: {
+                super.dismiss(animated: flag, completion: completion)
+                completion?()
+            })
+        } else {
+            super.dismiss(animated: flag, completion: completion)
+        }
         
         self.dismissed?()
     }
@@ -733,7 +725,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     private let contentBackgroundNode: ASDisplayNode
     private let titleNode: ASTextNode
     private let textNode: ImmediateTextNode
-    private let cancelButton: HighlightableButtonNode
+    private let cancelButtonNode: WebAppCancelButtonNode
     private let switchThemeButton: HighlightTrackingButtonNode
     private let animationContainerNode: ASDisplayNode
     private var animationNode: AnimationNode
@@ -818,13 +810,13 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_Theme_Title, font: Font.semibold(16.0), textColor: textColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_Theme_Title, font: Font.semibold(17.0), textColor: textColor)
         
         self.textNode = ImmediateTextNode()
-        self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_Theme_Subtitle(peerName).string, font: Font.regular(12.0), textColor: secondaryTextColor)
+        self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_Theme_Subtitle(peerName).string, font: Font.regular(15.0), textColor: secondaryTextColor)
+        self.textNode.isHidden = true
         
-        self.cancelButton = HighlightableButtonNode()
-        self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
+        self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.switchThemeButton = HighlightTrackingButtonNode()
         self.animationContainerNode = ASDisplayNode()
@@ -833,7 +825,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.animationNode = AnimationNode(animation: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme), scale: 1.0)
         self.animationNode.isUserInteractionEnabled = false
         
-        self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
+        self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
         
         self.otherButton = HighlightableButtonNode()
         
@@ -860,7 +852,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.backgroundNode.addSubnode(self.effectNode)
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
         self.contentContainerNode.addSubnode(self.titleNode)
-        self.contentContainerNode.addSubnode(self.textNode)
+        self.buttonsContentContainerNode.addSubnode(self.textNode)
         self.buttonsContentContainerNode.addSubnode(self.doneButton)
         self.buttonsContentContainerNode.addSubnode(self.otherButton)
         
@@ -868,10 +860,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.animationContainerNode.addSubnode(self.animationNode)
         self.topContentContainerNode.addSubnode(self.switchThemeButton)
         self.topContentContainerNode.addSubnode(self.listNode)
-        self.topContentContainerNode.addSubnode(self.cancelButton)
+        self.topContentContainerNode.addSubnode(self.cancelButtonNode)
         
         self.switchThemeButton.addTarget(self, action: #selector(self.switchThemePressed), forControlEvents: .touchUpInside)
-        self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
+        self.cancelButtonNode.buttonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.doneButton.isUserInteractionEnabled = false
@@ -889,6 +881,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 return
             }
             
+            let selectedEmoticon = selectedEmoticon?.strippedEmoji
+            
             let isFirstTime = strongSelf.entries == nil
             let presentationData = strongSelf.presentationData
                 
@@ -898,7 +892,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 guard let emoticon = theme.emoticon else {
                     continue
                 }
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon?.strippedEmoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
@@ -956,6 +950,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 }
             }
         }
+        
+        self.updateCancelButton()
     }
     
     private func enqueueTransition(_ transition: ThemeSettingsThemeItemNodeTransition) {
@@ -981,7 +977,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized {
             if let index = transition.entries.firstIndex(where: { entry in
-                return entry.emoticon == self.initiallySelectedEmoticon
+                return entry.emoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji
             }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-57.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
@@ -1004,6 +1000,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         UIView.transition(with: self.buttonsContentContainerNode.view, duration: ChatThemeScreen.themeCrossfadeDuration, options: [.transitionCrossDissolve, .curveLinear]) {
             self.updateButtons()
         }
+        self.updateCancelButton()
         self.skipButtonsUpdate = false
         
         self.themeSelectionsCount += 1
@@ -1014,18 +1011,16 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     
     private func updateButtons() {
         let doneButtonTitle: String
-        let otherButtonTitle: String
         var accentButtonTheme = true
-        if self.selectedEmoticon == self.initiallySelectedEmoticon {
+        var otherIsEnabled = false
+        if self.selectedEmoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji {
             doneButtonTitle = self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper
-            otherButtonTitle = self.presentationData.strings.Conversation_Theme_SetColorWallpaper
+            otherIsEnabled = self.controller?.canResetWallpaper == true
             accentButtonTheme = false
         } else if self.selectedEmoticon == nil && self.initiallySelectedEmoticon != nil {
             doneButtonTitle = self.presentationData.strings.Conversation_Theme_Reset
-            otherButtonTitle = self.presentationData.strings.Conversation_Theme_OtherOptions
         } else {
             doneButtonTitle = self.presentationData.strings.Conversation_Theme_Apply
-            otherButtonTitle = self.presentationData.strings.Conversation_Theme_OtherOptions
         }
     
         let buttonTheme: SolidRoundedButtonTheme
@@ -1040,7 +1035,25 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
         self.doneButton.updateTheme(buttonTheme)
         
-        self.otherButton.setTitle(otherButtonTitle, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.otherButton.setTitle(self.presentationData.strings.Conversation_Theme_ResetWallpaper, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.destructiveActionTextColor, for: .normal)
+        self.otherButton.isHidden = !otherIsEnabled
+        self.textNode.isHidden = !accentButtonTheme || self.controller?.canResetWallpaper == false
+        
+        if let (layout, navigationBarHeight) = self.containerLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        }
+    }
+    
+    private func updateCancelButton() {
+        var cancelButtonState: WebAppCancelButtonNode.State = .cancel
+        if self.selectedEmoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji {
+
+        } else if self.selectedEmoticon == nil && self.initiallySelectedEmoticon != nil {
+            cancelButtonState = .back
+        } else {
+            cancelButtonState = .back
+        }
+        self.cancelButtonNode.setState(cancelButtonState, animated: true)
     }
     
     private var switchThemeIconAnimator: DisplayLinkAnimator?
@@ -1051,14 +1064,20 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         let previousTheme = self.presentationData.theme
         self.presentationData = presentationData
                         
-        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(16.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
-        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(12.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(15.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
         
         if previousTheme !== presentationData.theme, let (layout, navigationBarHeight) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
         }
         
-        self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
+        if let animatingCrossFade = self.animatingCrossFade {
+            Queue.mainQueue().after(!animatingCrossFade ? ChatThemeScreen.themeCrossfadeDelay * UIView.animationDurationFactor() : 0.0, {
+                self.cancelButtonNode.setTheme(presentationData.theme, animated: true)
+            })
+        } else {
+            self.cancelButtonNode.setTheme(presentationData.theme, animated: false)
+        }
         
         let previousIconColors = iconColors(theme: previousTheme)
         let newIconColors = iconColors(theme: self.presentationData.theme)
@@ -1095,19 +1114,28 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     @objc func cancelButtonPressed() {
-        self.cancel?()
+        if self.cancelButtonNode.state == .back {
+            self.setEmoticon(self.initiallySelectedEmoticon)
+        } else {
+            self.cancel?()
+        }
     }
     
     @objc func otherButtonPressed() {
-        if self.selectedEmoticon != self.initiallySelectedEmoticon {
+        if self.selectedEmoticon?.strippedEmoji != self.initiallySelectedEmoticon?.strippedEmoji {
             self.setEmoticon(self.initiallySelectedEmoticon)
         } else {
-            self.controller?.changeColor()
+            if self.controller?.canResetWallpaper == true {
+                self.controller?.resetWallpaper()
+                self.cancelButtonPressed()
+            } else {
+                self.cancelButtonPressed()
+            }
         }
     }
     
     func dimTapped() {
-        if self.selectedEmoticon == self.initiallySelectedEmoticon {
+        if self.selectedEmoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji {
             self.cancelButtonPressed()
         } else {
             let alertController = textAlertController(context: self.context, updatedPresentationData: (self.presentationData, .single(self.presentationData)), title: nil, text: self.presentationData.strings.Conversation_Theme_DismissAlert, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_Theme_DismissAlertApply, action: { [weak self] in
@@ -1142,6 +1170,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     
+    private var animatingCrossFade: Bool?
     private func animateCrossfade(animateIcon: Bool) {
         if animateIcon, let snapshotView = self.animationNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.animationNode.frame
@@ -1152,6 +1181,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             })
         }
                 
+        self.animatingCrossFade = animateIcon
         Queue.mainQueue().after(ChatThemeScreen.themeCrossfadeDelay * UIView.animationDurationFactor()) {
             if let effectView = self.effectNode.view as? UIVisualEffectView {
                 UIView.animate(withDuration: ChatThemeScreen.themeCrossfadeDuration, delay: 0.0, options: .curveLinear) {
@@ -1163,6 +1193,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             let previousColor = self.contentBackgroundNode.backgroundColor ?? .clear
             self.contentBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
             self.contentBackgroundNode.layer.animate(from: previousColor.cgColor, to: (self.contentBackgroundNode.backgroundColor ?? .clear).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: ChatThemeScreen.themeCrossfadeDuration)
+            
+            self.animatingCrossFade = nil
         }
                 
         if let snapshotView = self.contentContainerNode.view.snapshotView(afterScreenUpdates: false) {
@@ -1229,7 +1261,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             if let strongSelf = self, count < 2 && currentTimestamp > timestamp + 24 * 60 * 60 {
                 strongSelf.displayedPreviewTooltip = true
                 
-                strongSelf.present?(TooltipScreen(account: strongSelf.context.account, text: isDark ? strongSelf.presentationData.strings.Conversation_Theme_PreviewLight(strongSelf.peerName).string : strongSelf.presentationData.strings.Conversation_Theme_PreviewDark(strongSelf.peerName).string, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                strongSelf.present?(TooltipScreen(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, text: isDark ? strongSelf.presentationData.strings.Conversation_Theme_PreviewLightShort : strongSelf.presentationData.strings.Conversation_Theme_PreviewDarkShort, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
                     return .dismiss(consume: false)
                 }))
                 
@@ -1294,7 +1326,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
-        let contentHeight = titleHeight + bottomInset + 188.0 + 50.0
+        var contentHeight = titleHeight + bottomInset + 168.0
+        if self.controller?.canResetWallpaper == true {
+            contentHeight += 50.0
+        }
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
@@ -1313,29 +1348,38 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let titleSize = self.titleNode.measure(CGSize(width: width - 90.0, height: titleHeight))
-        let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 11.0 + UIScreenPixel), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 18.0 + UIScreenPixel), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        let textSize = self.textNode.updateLayout(CGSize(width: width - 90.0, height: titleHeight))
-        let textFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - textSize.width) / 2.0), y: 31.0), size: textSize)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
-        
         let switchThemeSize = CGSize(width: 44.0, height: 44.0)
-        let switchThemeFrame = CGRect(origin: CGPoint(x: 3.0, y: 6.0), size: switchThemeSize)
+        let switchThemeFrame = CGRect(origin: CGPoint(x: contentFrame.width - switchThemeSize.width - 3.0, y: 6.0), size: switchThemeSize)
         transition.updateFrame(node: self.switchThemeButton, frame: switchThemeFrame)
         transition.updateFrame(node: self.animationContainerNode, frame: switchThemeFrame.insetBy(dx: 9.0, dy: 9.0))
         transition.updateFrameAsPositionAndBounds(node: self.animationNode, frame: CGRect(origin: .zero, size: self.animationContainerNode.frame.size))
         
-        let cancelSize = CGSize(width: 44.0, height: 44.0)
-        let cancelFrame = CGRect(origin: CGPoint(x: contentFrame.width - cancelSize.width - 3.0, y: 6.0), size: cancelSize)
-        transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
-        
+        let cancelSize = self.cancelButtonNode.calculateSizeThatFits(CGSize(width: layout.size.width, height: 56.0))
+        let cancelFrame = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: cancelSize)
+        transition.updateFrame(node: self.cancelButtonNode, frame: cancelFrame)
+
         let buttonInset: CGFloat = 16.0
         let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - 50.0 - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
+        var doneY = contentHeight - doneButtonHeight - 2.0 - insets.bottom
+        if self.controller?.canResetWallpaper == true {
+            doneY = contentHeight - doneButtonHeight - 52.0 - insets.bottom
+        }
+        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: doneY, width: contentFrame.width, height: doneButtonHeight))
         
-        let colorButtonSize = self.otherButton.measure(CGSize(width: contentFrame.width - buttonInset * 2.0, height: .greatestFiniteMagnitude))
-        transition.updateFrame(node: self.otherButton, frame: CGRect(origin: CGPoint(x: floor((contentFrame.width - colorButtonSize.width) / 2.0), y: contentHeight - colorButtonSize.height - insets.bottom - 6.0 - 9.0), size: colorButtonSize))
+        let otherButtonSize = self.otherButton.measure(CGSize(width: contentFrame.width - buttonInset * 2.0, height: .greatestFiniteMagnitude))
+        self.otherButton.frame = CGRect(origin: CGPoint(x: floor((contentFrame.width - otherButtonSize.width) / 2.0), y: contentHeight - otherButtonSize.height - insets.bottom - 15.0), size: otherButtonSize)
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: width - 90.0, height: titleHeight))
+        let textFrame: CGRect
+        if self.controller?.canResetWallpaper == true {
+            textFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - textSize.width) / 2.0), y: contentHeight - textSize.height - insets.bottom - 17.0), size: textSize)
+        } else {
+            textFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - textSize.width) / 2.0), y: contentHeight - textSize.height - insets.bottom - 15.0), size: textSize)
+        }
+        transition.updateFrame(node: self.textNode, frame: textFrame)
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.topContentContainerNode, frame: contentContainerFrame)
@@ -1348,7 +1392,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         let contentSize = CGSize(width: contentFrame.width, height: 120.0)
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: contentSize.height, height: contentSize.width)
-        self.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 + titleHeight + 6.0)
+        self.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 + titleHeight - 4.0)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

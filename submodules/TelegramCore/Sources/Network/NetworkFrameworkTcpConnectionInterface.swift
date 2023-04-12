@@ -222,9 +222,10 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
                 self.currentReadRequest = nil
                 
                 weak var delegate = self.delegate
+                let currentInterfaceIsWifi = self.currentInterfaceIsWifi
                 self.delegateQueue.async {
                     if let delegate = delegate {
-                        delegate.connectionInterfaceDidRead(currentReadRequest.data, withTag: currentReadRequest.request.tag)
+                        delegate.connectionInterfaceDidRead(currentReadRequest.data, withTag: currentReadRequest.request.tag, networkType: currentInterfaceIsWifi ? 0 : 1)
                     }
                 }
                 

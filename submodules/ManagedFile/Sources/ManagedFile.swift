@@ -99,12 +99,14 @@ public final class ManagedFile {
         return result
     }
     
-    public func seek(position: Int64) {
+    @discardableResult
+    public func seek(position: Int64) -> Bool {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
         assert(!self.isClosed)
-        lseek(self.fd, position, SEEK_SET)
+        let result = lseek(self.fd, position, SEEK_SET)
+        return result == position
     }
     
     public func truncate(count: Int64) {

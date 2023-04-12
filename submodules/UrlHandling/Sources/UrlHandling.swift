@@ -194,6 +194,22 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         if let phone = phone, let hash = hash {
                             return .cancelAccountReset(phone: phone, hash: hash)
                         }
+                    } else if peerName == "msg" {
+                        var url: String?
+                        var text: String?
+                        var to: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "url" {
+                                    url = value
+                                } else if queryItem.name == "text" {
+                                    text = value
+                                } else if queryItem.name == "to" {
+                                    to = value
+                                }
+                            }
+                        }
+                        return .share(url: url, text: text, to: to)
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {

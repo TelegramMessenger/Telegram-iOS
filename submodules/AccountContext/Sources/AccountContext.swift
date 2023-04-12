@@ -756,6 +756,7 @@ public protocol SharedAccountContext: AnyObject {
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
     var currentStickerSettings: Atomic<StickerSettings> { get }
+    var currentMediaDisplaySettings: Atomic<MediaDisplaySettings> { get }
     
     var energyUsageSettings: EnergyUsageSettings { get }
     

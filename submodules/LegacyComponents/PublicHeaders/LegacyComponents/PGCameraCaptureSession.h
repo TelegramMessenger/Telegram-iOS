@@ -4,6 +4,7 @@
 
 @class PGCameraMovieWriter;
 @class PGRectangleDetector;
+@class SQueue;
 
 @interface PGCameraCaptureSession : AVCaptureSession
 
@@ -64,5 +65,7 @@
 + (AVCaptureDevice *)_deviceWithCameraPosition:(PGCameraPosition)position;
 
 + (bool)_isZoomAvailableForDevice:(AVCaptureDevice *)device;
+
++ (SQueue *)cameraQueue;
 
 @end

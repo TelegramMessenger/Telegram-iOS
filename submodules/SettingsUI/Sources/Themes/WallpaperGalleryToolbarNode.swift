@@ -32,12 +32,25 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         }
     }
     
+    var dark: Bool {
+        didSet {
+            if self.dark != oldValue {
+                self.doneButtonBackgroundNode.removeFromSupernode()
+                if self.dark {
+                    self.doneButtonBackgroundNode = WallpaperOptionBackgroundNode(enableSaturation: true)
+                } else {
+                    self.doneButtonBackgroundNode = WallpaperLightButtonBackgroundNode()
+                }
+                self.doneButtonBackgroundNode.cornerRadius = 14.0
+                self.insertSubnode(self.doneButtonBackgroundNode, at: 0)
+            }
+        }
+    }
+    
     private let doneButton = HighlightTrackingButtonNode()
-    private let doneButtonBackgroundNode: NavigationBackgroundNode
+    private var doneButtonBackgroundNode: ASDisplayNode
     
     private let doneButtonTitleNode: ImmediateTextNode
-    private let doneButtonVibrancyView: UIVisualEffectView
-    private let doneButtonVibrancyTitleNode: ImmediateTextNode
     
     private let doneButtonSolidBackgroundNode: ASDisplayNode
     private let doneButtonSolidTitleNode: ImmediateTextNode
@@ -50,25 +63,14 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.strings = strings
         self.cancelButtonType = cancelButtonType
         self.doneButtonType = doneButtonType
+        self.dark = false
         
-        self.doneButtonBackgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0xf2f2f2, alpha: 0.75))
+        self.doneButtonBackgroundNode = WallpaperLightButtonBackgroundNode()
         self.doneButtonBackgroundNode.cornerRadius = 14.0
-        
-        let blurEffect: UIBlurEffect
-        if #available(iOS 13.0, *) {
-            blurEffect = UIBlurEffect(style: .extraLight)
-        } else {
-            blurEffect = UIBlurEffect(style: .light)
-        }
-        self.doneButtonVibrancyView = UIVisualEffectView(effect: UIVibrancyEffect(blurEffect: blurEffect))
         
         self.doneButtonTitleNode = ImmediateTextNode()
         self.doneButtonTitleNode.displaysAsynchronously = false
         self.doneButtonTitleNode.isUserInteractionEnabled = false
-        
-        self.doneButtonVibrancyTitleNode = ImmediateTextNode()
-        self.doneButtonVibrancyTitleNode.displaysAsynchronously = false
-        self.doneButtonVibrancyTitleNode.isUserInteractionEnabled = false
         
         self.doneButtonSolidBackgroundNode = ASDisplayNode()
         self.doneButtonSolidBackgroundNode.alpha = 0.0
@@ -85,11 +87,11 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.doneButtonSolidTitleNode.isUserInteractionEnabled = false
 
         super.init()
+        
+        self.doneButton.isExclusiveTouch = true
 
         self.addSubnode(self.doneButtonBackgroundNode)
-        self.doneButtonVibrancyView.contentView.addSubnode(self.doneButtonVibrancyTitleNode)
-        self.doneButtonBackgroundNode.view.addSubview(self.doneButtonVibrancyView)
-        self.doneButtonBackgroundNode.addSubnode(self.doneButtonTitleNode)
+        self.addSubnode(self.doneButtonTitleNode)
         
         self.addSubnode(self.doneButtonSolidBackgroundNode)
         self.addSubnode(self.doneButtonSolidTitleNode)
@@ -109,8 +111,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
                     } else {
                         strongSelf.doneButtonBackgroundNode.layer.removeAnimation(forKey: "opacity")
                         strongSelf.doneButtonBackgroundNode.alpha = 0.55
-                        strongSelf.doneButtonVibrancyTitleNode.layer.removeAnimation(forKey: "opacity")
-                        strongSelf.doneButtonVibrancyTitleNode.alpha = 0.55
+                        strongSelf.doneButtonTitleNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.doneButtonTitleNode.alpha = 0.55
                     }
                 } else {
                     if strongSelf.isSolid {
@@ -121,8 +123,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
                     } else {
                         strongSelf.doneButtonBackgroundNode.alpha = 1.0
                         strongSelf.doneButtonBackgroundNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
-                        strongSelf.doneButtonVibrancyTitleNode.alpha = 1.0
-                        strongSelf.doneButtonVibrancyTitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.doneButtonTitleNode.alpha = 1.0
+                        strongSelf.doneButtonTitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     }
                 }
             }
@@ -146,7 +148,6 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         transition.updateAlpha(node: self.doneButtonBackgroundNode, alpha: isSolid ? 0.0 : 1.0)
         transition.updateAlpha(node: self.doneButtonSolidBackgroundNode, alpha: isSolid ? 1.0 : 0.0)
         transition.updateAlpha(node: self.doneButtonTitleNode, alpha: isSolid ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.doneButtonVibrancyTitleNode, alpha: isSolid ? 0.0 : 1.0)
         transition.updateAlpha(node: self.doneButtonSolidTitleNode, alpha: isSolid ? 1.0 : 0.0)
     }
     
@@ -167,8 +168,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
                 doneTitle = ""
                 self.doneButton.isUserInteractionEnabled = false
         }
-        self.doneButtonTitleNode.attributedText = NSAttributedString(string: doneTitle, font: Font.semibold(17.0), textColor: UIColor(rgb: 0x000000, alpha: 0.25))
-        self.doneButtonVibrancyTitleNode.attributedText = NSAttributedString(string: doneTitle, font: Font.semibold(17.0), textColor: .white)
+        self.doneButtonTitleNode.attributedText = NSAttributedString(string: doneTitle, font: Font.semibold(17.0), textColor: .white)
         
         self.doneButtonSolidBackgroundNode.backgroundColor = theme.list.itemCheckColors.fillColor
         self.doneButtonSolidTitleNode.attributedText = NSAttributedString(string: doneTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
@@ -181,18 +181,18 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         let doneFrame = CGRect(origin: CGPoint(x: inset, y: 2.0), size: CGSize(width: size.width - inset * 2.0, height: buttonHeight))
         self.doneButton.frame = doneFrame
         self.doneButtonBackgroundNode.frame = doneFrame
-        self.doneButtonBackgroundNode.update(size: doneFrame.size, cornerRadius: 14.0, transition: transition)
-        self.doneButtonVibrancyView.frame = self.doneButtonBackgroundNode.bounds
+        if let backgroundNode = self.doneButtonBackgroundNode as? WallpaperOptionBackgroundNode {
+            backgroundNode.updateLayout(size: doneFrame.size)
+        } else if let backgroundNode = self.doneButtonBackgroundNode as? WallpaperLightButtonBackgroundNode {
+            backgroundNode.updateLayout(size: doneFrame.size)
+        }
         self.doneButtonSolidBackgroundNode.frame = doneFrame
         
         let doneTitleSize = self.doneButtonTitleNode.updateLayout(doneFrame.size)
-        self.doneButtonTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((doneFrame.width - doneTitleSize.width) / 2.0), y: floorToScreenPixels((doneFrame.height - doneTitleSize.height) / 2.0)), size: doneTitleSize)
-        
-        let _ = self.doneButtonVibrancyTitleNode.updateLayout(doneFrame.size)
-        self.doneButtonVibrancyTitleNode.frame = self.doneButtonTitleNode.frame
+        self.doneButtonTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((doneFrame.width - doneTitleSize.width) / 2.0), y: floorToScreenPixels((doneFrame.height - doneTitleSize.height) / 2.0)), size: doneTitleSize).offsetBy(dx: doneFrame.minX, dy: doneFrame.minY)
         
         let _ = self.doneButtonSolidTitleNode.updateLayout(doneFrame.size)
-        self.doneButtonSolidTitleNode.frame = self.doneButtonTitleNode.frame.offsetBy(dx: doneFrame.minX, dy: doneFrame.minY)
+        self.doneButtonSolidTitleNode.frame = self.doneButtonTitleNode.frame
     }
     
     @objc func cancelPressed() {

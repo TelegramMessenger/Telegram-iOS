@@ -35,6 +35,7 @@ typedef enum
 @property (nonatomic, readonly) NSInteger order;
 
 @property (nonatomic, readonly) bool isHidden;
+@property (nonatomic, readonly) bool isRegional;
 
 @property (nonatomic, readonly) NSString *shaderString;
 @property (nonatomic, readonly) NSString *ancillaryShaderString;

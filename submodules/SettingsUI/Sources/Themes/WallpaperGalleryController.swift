@@ -16,6 +16,8 @@ import GalleryUI
 import HexColor
 import CounterContollerTitleView
 import UndoUI
+import LegacyComponents
+import LegacyMediaPickerUI
 
 public enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)
@@ -164,6 +166,20 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
     return .file(TelegramWallpaper.File(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(colors: colorValues, intensity: intensityValue, rotation: rotation)))
 }
 
+class WallpaperGalleryInteraction {
+    let editMedia: (PHAsset, UIImage, CGRect, TGMediaEditAdjustments?, UIView, @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, @escaping (UIImage?) -> Void) -> Void
+    let beginTransitionToEditor: () -> Void
+    let beginTransitionFromEditor: () -> Void
+    let finishTransitionFromEditor: () -> Void
+    
+    init(editMedia: @escaping (PHAsset, UIImage, CGRect, TGMediaEditAdjustments?, UIView, @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, @escaping (UIImage?) -> Void) -> Void, beginTransitionToEditor: @escaping () -> Void, beginTransitionFromEditor: @escaping () -> Void, finishTransitionFromEditor: @escaping () -> Void) {
+        self.editMedia = editMedia
+        self.beginTransitionToEditor = beginTransitionToEditor
+        self.beginTransitionFromEditor = beginTransitionFromEditor
+        self.finishTransitionFromEditor = finishTransitionFromEditor
+    }
+}
+
 public class WallpaperGalleryController: ViewController {
     public enum Mode {
         case `default`
@@ -176,7 +192,9 @@ public class WallpaperGalleryController: ViewController {
     private let context: AccountContext
     private let source: WallpaperListSource
     private let mode: Mode
-    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, CGRect?) -> Void)?
+    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, UIImage?, CGRect?, CGFloat?) -> Void)?
+    
+    private var interaction: WallpaperGalleryInteraction?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -230,9 +248,54 @@ public class WallpaperGalleryController: ViewController {
         //self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
+        self.interaction = WallpaperGalleryInteraction(editMedia: { [weak self] asset, image, cropRect, adjustments, referenceView, apply, fullSizeApply in
+            guard let self else {
+                return
+            }
+            let item = LegacyWallpaperItem(asset: asset, screenImage: image, dimensions: CGSize(width: asset.pixelWidth, height: asset.pixelHeight))
+            legacyWallpaperEditor(context: context, item: item, cropRect: cropRect, adjustments: adjustments, referenceView: referenceView, beginTransitionOut: { [weak self] in
+                self?.interaction?.beginTransitionFromEditor()
+            }, finishTransitionOut: { [weak self] in
+                self?.interaction?.finishTransitionFromEditor()
+            }, completion: { image, adjustments in
+                apply(image, adjustments)
+            }, fullSizeCompletion: { image in
+                fullSizeApply(image)
+            }, present: { [weak self] c, a in
+                if let self {
+                    self.present(c, in: .window(.root))
+                }
+            })
+        }, beginTransitionToEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            if let toolbarNode = self.toolbarNode {
+                transition.updateAlpha(node: toolbarNode, alpha: 0.0)
+            }
+        }, beginTransitionFromEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            if let toolbarNode = self.toolbarNode {
+                transition.updateAlpha(node: toolbarNode, alpha: 1.0)
+            }
+            if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                centralItemNode.beginTransitionFromEditor()
+            }
+        }, finishTransitionFromEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                centralItemNode.finishTransitionFromEditor()
+            }
+        })
+        
         var entries: [WallpaperGalleryEntry] = []
         var centralEntryIndex: Int?
-        
         switch source {
             case let .list(wallpapers, central, type):
                 entries = wallpapers.map { .wallpaper($0, nil) }
@@ -350,7 +413,7 @@ public class WallpaperGalleryController: ViewController {
         var i: Int = 0
         var updateItems: [GalleryPagerUpdateItem] = []
         for entry in entries {
-            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, index: updateItems.count, entry: entry, arguments: arguments, source: self.source, mode: self.mode))
+            let item = GalleryPagerUpdateItem(index: i, previousIndex: i, item: WallpaperGalleryItem(context: self.context, index: updateItems.count, entry: entry, arguments: arguments, source: self.source, mode: self.mode, interaction: self.interaction!))
             updateItems.append(item)
             i += 1
         }
@@ -361,7 +424,7 @@ public class WallpaperGalleryController: ViewController {
         var updateItems: [GalleryPagerUpdateItem] = []
         for i in 0 ..< self.entries.count {
             if i == index {
-                let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source, mode: self.mode))
+                let item = GalleryPagerUpdateItem(index: index, previousIndex: index, item: WallpaperGalleryItem(context: self.context, index: index, entry: entry, arguments: arguments, source: self.source, mode: self.mode, interaction: self.interaction!))
                 updateItems.append(item)
             }
         }
@@ -437,6 +500,12 @@ public class WallpaperGalleryController: ViewController {
         }
                 
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
+        switch self.source {
+        case .asset, .contextResult:
+            toolbarNode.dark = false
+        default:
+            toolbarNode.dark = true
+        }
         self.toolbarNode = toolbarNode
         overlayNode.addSubnode(toolbarNode)
         
@@ -446,14 +515,17 @@ public class WallpaperGalleryController: ViewController {
         var dismissed = false
         toolbarNode.done = { [weak self] in
             if let strongSelf = self, !dismissed {
-                dismissed = true
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
+                    if centralItemNode.cropNode.scrollNode.view.isDecelerating {
+                        return
+                    }
+                    dismissed = true
                     let options = centralItemNode.options
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
                         
                         if case .peer = strongSelf.mode {
-                            strongSelf.apply?(entry, options, centralItemNode.cropRect)
+                            strongSelf.apply?(entry, options, centralItemNode.editedFullSizeImage, centralItemNode.editedCropRect, centralItemNode.brightness)
                             return
                         }
                         
@@ -611,7 +683,7 @@ public class WallpaperGalleryController: ViewController {
                                 break
                         }
 
-                        strongSelf.apply?(entry, options, centralItemNode.cropRect)
+                        strongSelf.apply?(entry, options, nil, centralItemNode.cropRect, centralItemNode.brightness)
                     }
                 }
             }
@@ -689,7 +761,7 @@ public class WallpaperGalleryController: ViewController {
                             break
                         }
                     }
-                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
 
@@ -717,7 +789,7 @@ public class WallpaperGalleryController: ViewController {
 
                     itemNode.updateIsColorsPanelActive(strongSelf.colorsPanelEnabled, animated: true)
 
-                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                    strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
 
@@ -954,7 +1026,7 @@ public class WallpaperGalleryController: ViewController {
                 colors = true
             }
             
-            self.galleryNode.pager.replaceItems(zip(0 ..< self.entries.count, self.entries).map({ WallpaperGalleryItem(context: self.context, index: $0, entry: $1, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source, mode: self.mode) }), centralItemIndex: self.centralEntryIndex)
+            self.galleryNode.pager.replaceItems(zip(0 ..< self.entries.count, self.entries).map({ WallpaperGalleryItem(context: self.context, index: $0, entry: $1, arguments: WallpaperGalleryItemArguments(isColorsList: colors), source: self.source, mode: self.mode, interaction: self.interaction!) }), centralItemIndex: self.centralEntryIndex)
             
             if let initialOptions = self.initialOptions, let itemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                 itemNode.options = initialOptions

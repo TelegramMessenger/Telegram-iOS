@@ -647,8 +647,8 @@ private final class FetchImpl {
                                 Logger.shared.log("FetchV2", "\(self.loggingIdentifier): setting known size to \(resultingSize)")
                                 self.knownSize = resultingSize
                             }
-                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): reporting resource size \(fetchRange.lowerBound + actualLength)")
-                            self.onNext(.resourceSizeUpdated(fetchRange.lowerBound + actualLength))
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): reporting resource size \(resultingSize)")
+                            self.onNext(.resourceSizeUpdated(resultingSize))
                         }
                         
                         state.completedRanges.formUnion(RangeSet<Int64>(partRange))

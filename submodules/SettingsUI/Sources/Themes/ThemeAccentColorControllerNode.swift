@@ -152,6 +152,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let context: AccountContext
     private var theme: PresentationTheme
     private let mode: ThemeAccentColorControllerMode
+    private let resultMode: ThemeAccentColorController.ResultMode
     private var presentationData: PresentationData
     
     private let animationCache: AnimationCache
@@ -227,6 +228,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ThemeAccentColorController.ResultMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void, ready: Promise<Bool>) {
         self.context = context
         self.mode = mode
+        self.resultMode = resultMode
         self.state = ThemeColorState()
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = theme
@@ -311,6 +313,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             doneButtonType = .set
         }
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
+        self.toolbarNode.dark = true
         self.toolbarNode.setDoneIsSolid(true, transition: .immediate)
         
         self.maskNode = ASImageNode()
@@ -766,6 +769,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             } else {
                 if case .edit(_, _, _, _, _, true, _) = self.mode {
                     doneButtonType = .proceed
+                } else if case .peer = self.resultMode {
+                    doneButtonType = .setPeer
                 } else {
                     doneButtonType = .set
                 }
@@ -1173,11 +1178,15 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let colorPanelHeight = max(standardInputHeight, layout.inputHeight ?? 0.0) - bottomInset + inputFieldPanelHeight
         
         var colorPanelOffset: CGFloat = 0.0
+        var colorPanelY = layout.size.height - bottomInset - colorPanelHeight
         if self.state.colorPanelCollapsed {
             colorPanelOffset = colorPanelHeight
+            colorPanelY = layout.size.height
         }
-        let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset - colorPanelHeight + colorPanelOffset), size: CGSize(width: layout.size.width, height: colorPanelHeight))
+        let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: colorPanelY), size: CGSize(width: layout.size.width, height: colorPanelHeight))
         bottomInset += (colorPanelHeight - colorPanelOffset)
+        
+        self.toolbarNode.setDoneIsSolid(!self.state.colorPanelCollapsed, transition: transition)
         
         if bottomInset + navigationBarHeight > bounds.height {
             return

@@ -3312,6 +3312,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.trailingLineWidth + 3.0 + titleOffset
+                    let lastLineRect: CGRect
+                    if let rect = titleLayout.linesRects().last {
+                        lastLineRect = CGRect(origin: CGPoint(x: 0.0, y: titleLayout.size.height - rect.height - 2.0), size: CGSize(width: rect.width, height: rect.height + 2.0))
+                    } else {
+                        lastLineRect = CGRect(origin: CGPoint(), size: titleLayout.size)
+                    }
                     
                     if let currentCredibilityIconContent = currentCredibilityIconContent {
                         let credibilityIconView: ComponentHostView<Empty>
@@ -3339,7 +3345,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             environment: {},
                             containerSize: CGSize(width: 20.0, height: 20.0)
                         )
-                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
+                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
                         nextTitleIconOrigin += credibilityIconView.bounds.width + 4.0
                     } else if let credibilityIconView = strongSelf.credibilityIconView {
                         strongSelf.credibilityIconView = nil
@@ -3349,7 +3355,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let currentMutedIconImage = currentMutedIconImage {
                         strongSelf.mutedIconNode.image = currentMutedIconImage
                         strongSelf.mutedIconNode.isHidden = false
-                        transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 5.0, y: floorToScreenPixels(titleFrame.midY - currentMutedIconImage.size.height / 2.0)), size: currentMutedIconImage.size))
+                        transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 5.0, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - currentMutedIconImage.size.height / 2.0)), size: currentMutedIconImage.size))
                         nextTitleIconOrigin += currentMutedIconImage.size.width + 1.0
                     } else {
                         strongSelf.mutedIconNode.image = nil

@@ -483,7 +483,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild)
+        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: buildConfig.isICloudEnabled)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
@@ -752,8 +752,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 completion(false)
             }
         }, siriAuthorization: {
-            if #available(iOS 10, *) {
-                switch INPreferences.siriAuthorizationStatus() {
+            if buildConfig.isSiriEnabled {
+                if #available(iOS 10, *) {
+                    switch INPreferences.siriAuthorizationStatus() {
                     case .authorized:
                         return .allowed
                     case .denied, .restricted:
@@ -762,6 +763,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         return .notDetermined
                     @unknown default:
                         return .notDetermined
+                    }
+                } else {
+                    return .denied
                 }
             } else {
                 return .denied

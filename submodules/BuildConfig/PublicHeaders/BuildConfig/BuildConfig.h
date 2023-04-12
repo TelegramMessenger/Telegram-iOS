@@ -18,6 +18,8 @@
 @property (nonatomic, readonly) bool isAppStoreBuild;
 @property (nonatomic, readonly) int64_t appStoreId;
 @property (nonatomic, strong, readonly) NSString * _Nonnull appSpecificUrlScheme;
+@property (nonatomic, readonly) bool isICloudEnabled;
+@property (nonatomic, readonly) bool isSiriEnabled;
 
 + (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId;
 - (NSData * _Nullable)bundleDataWithAppToken:(NSData * _Nullable)appToken signatureDict:(NSDictionary * _Nullable)signatureDict;

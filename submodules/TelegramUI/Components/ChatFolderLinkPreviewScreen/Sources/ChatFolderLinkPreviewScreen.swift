@@ -386,27 +386,25 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             let titleString: String
             var allChatsAdded = false
+            var canAddChatCount = 0
             if case .linkList = component.subject {
-                //TODO:localize
-                titleString = "Share Folder"
+                titleString = environment.strings.FolderLinkPreview_TitleShare
             } else if let linkContents = component.linkContents {
-                //TODO:localize
                 if case .remove = component.subject {
-                    titleString = "Remove Folder"
+                    titleString = environment.strings.FolderLinkPreview_TitleRemove
                 } else if linkContents.localFilterId != nil {
                     if linkContents.alreadyMemberPeerIds == Set(linkContents.peers.map(\.id)) {
                         allChatsAdded = true
                     }
+                    canAddChatCount = linkContents.peers.map(\.id).count - linkContents.alreadyMemberPeerIds.count
                     
                     if allChatsAdded {
-                        titleString = "Add Folder"
-                    } else if linkContents.peers.count == 1 {
-                        titleString = "Add \(linkContents.peers.count) chat"
+                        titleString = environment.strings.FolderLinkPreview_TitleAddFolder
                     } else {
-                        titleString = "Add \(linkContents.peers.count) chats"
+                        titleString = environment.strings.FolderLinkPreview_TitleAddChats(Int32(canAddChatCount))
                     }
                 } else {
-                    titleString = "Add Folder"
+                    titleString = environment.strings.FolderLinkPreview_TitleAddFolder
                 }
             } else {
                 titleString = " "
@@ -433,8 +431,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             var topBadge: String?
             if case .linkList = component.subject {
             } else if case .remove = component.subject {
-            } else if !allChatsAdded, let linkContents = component.linkContents, linkContents.localFilterId != nil {
-                topBadge = "+\(linkContents.peers.count)"
+            } else if !allChatsAdded, let linkContents = component.linkContents, linkContents.localFilterId != nil, canAddChatCount != 0 {
+                topBadge = "+\(canAddChatCount)"
             }
             
             let topIconSize = self.topIcon.update(
@@ -462,26 +460,17 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             let text: String
             if case .linkList = component.subject {
-                text = "Create more links to set up different access\nlevels for different people."
+                text = environment.strings.FolderLinkPreview_TextLinkList
             } else if let linkContents = component.linkContents {
                 if case .remove = component.subject {
-                    text = "Do you also want to quit the chats included in this folder?"
+                    text = environment.strings.FolderLinkPreview_TextRemoveFolder
                 } else if allChatsAdded {
-                    text = "You have already added this\nfolder and its chats."
+                    text = environment.strings.FolderLinkPreview_TextAllAdded
                 } else if linkContents.localFilterId == nil {
-                    text = "Do you want to add a new chat folder\nand join its groups and channels?"
+                    text = environment.strings.FolderLinkPreview_TextAddFolder
                 } else {
-                    let chatCountString: String
-                    if linkContents.peers.count == 1 {
-                        chatCountString = "1 chat"
-                    } else {
-                        chatCountString = "\(linkContents.peers.count) chats"
-                    }
-                    if let title = linkContents.title {
-                        text = "Do you want to add **\(chatCountString)** to the\nfolder **\(title)**?"
-                    } else {
-                        text = "Do you want to add **\(chatCountString)** chats to the\nfolder?"
-                    }
+                    let chatCountString: String = environment.strings.FolderLinkPreview_TextAddChatsCount(Int32(canAddChatCount))
+                    text = environment.strings.FolderLinkPreview_TextAddChats(chatCountString, linkContents.title ?? "").string
                 }
             } else {
                 text = " "
@@ -542,7 +531,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             theme: environment.theme,
                             sideInset: 0.0,
                             iconName: "Contact List/LinkActionIcon",
-                            title: "Create a New Link",
+                            title: environment.strings.InviteLink_Create,
                             hasNext: !self.linkListItems.isEmpty,
                             action: { [weak self] in
                                 self?.openCreateLink()
@@ -580,12 +569,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                         self.items[id] = item
                     }
                     
-                    let subtitle: String
-                    if link.peerIds.count == 1 {
-                        subtitle = "includes 1 chat"
-                    } else {
-                        subtitle = "includes \(link.peerIds.count) chats"
-                    }
+                    let subtitle: String = environment.strings.ChatListFilter_LinkLabelChatCount(Int32(link.peerIds.count))
                     
                     let itemComponent = LinkListItemComponent(
                         theme: environment.theme,
@@ -711,15 +695,15 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     var subtitle: String?
                     if case let .channel(channel) = peer, case .broadcast = channel.info {
                         if linkContents.alreadyMemberPeerIds.contains(peer.id) {
-                            subtitle = "You are already a subscriber"
+                            subtitle = environment.strings.FolderLinkPreview_LabelPeerSubscriber
                         } else if let memberCount = linkContents.memberCounts[peer.id] {
-                            subtitle = "\(memberCount) subscribers"
+                            subtitle = environment.strings.FolderLinkPreview_LabelPeerSubscribers(Int32(memberCount))
                         }
                     } else {
                         if linkContents.alreadyMemberPeerIds.contains(peer.id) {
-                            subtitle = "You are already a member"
+                            subtitle = environment.strings.FolderLinkPreview_LabelPeerMember
                         } else if let memberCount = linkContents.memberCounts[peer.id] {
-                            subtitle = "\(memberCount) participants"
+                            subtitle = environment.strings.FolderLinkPreview_LabelPeerMembers(Int32(memberCount))
                         }
                     }
                     
@@ -751,9 +735,9 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                                     let text: String
                                     if case let .channel(channel) = peer, case .broadcast = channel.info {
-                                        text = "You are already a member of this channel."
+                                        text = presentationData.strings.FolderLinkPreview_ToastAlreadyMemberChannel
                                     } else {
-                                        text = "You are already a member of this group."
+                                        text = presentationData.strings.FolderLinkPreview_ToastAlreadyMemberGroup
                                     }
                                     controller.present(UndoOverlayController(presentationData: presentationData, content: .peers(context: component.context, peers: [peer], title: nil, text: text, customUndoText: nil), elevatedLayout: false, action: { _ in true }), in: .current)
                                 } else {
@@ -796,43 +780,59 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             
             let listHeaderTitle: String
             if case .linkList = component.subject {
-                listHeaderTitle = "INVITE LINKS"
+                listHeaderTitle = environment.strings.FolderLinkPreview_LinkSectionHeader
             } else if let linkContents = component.linkContents {
                 if case .remove = component.subject {
-                    if linkContents.peers.count == 1 {
-                        listHeaderTitle = "1 CHAT TO QUIT"
-                    } else {
-                        listHeaderTitle = "\(linkContents.peers.count) CHATS TO QUIT"
-                    }
+                    listHeaderTitle = environment.strings.FolderLinkPreview_RemoveSectionSelectedHeader(Int32(linkContents.peers.count))
                 } else if allChatsAdded {
-                    if linkContents.peers.count == 1 {
-                        listHeaderTitle = "1 CHAT IN THIS FOLDER"
-                    } else {
-                        listHeaderTitle = "\(linkContents.peers.count) CHATS IN THIS FOLDER"
-                    }
+                    listHeaderTitle = environment.strings.FolderLinkPreview_ChatSectionHeader(Int32(linkContents.peers.count))
                 } else {
-                    if linkContents.peers.count == 1 {
-                        listHeaderTitle = "1 CHAT IN FOLDER TO JOIN"
-                    } else {
-                        listHeaderTitle = "\(linkContents.peers.count) CHATS IN FOLDER TO JOIN"
-                    }
+                    listHeaderTitle = environment.strings.FolderLinkPreview_ChatSectionJoinHeader(Int32(linkContents.peers.count))
                 }
             } else {
                 listHeaderTitle = " "
             }
             
-            //TODO:localize
-            let listHeaderActionItems: [AnimatedCounterComponent.Item]
+            var listHeaderActionItems: [AnimatedCounterComponent.Item] = []
+            
+            let dynamicIndex = environment.strings.FolderLinkPreview_ListSelectionSelectAllFormat.range(of: "{dynamic}")
+            let staticIndex = environment.strings.FolderLinkPreview_ListSelectionSelectAllFormat.range(of: "{static}")
+            var headerActionItemIndices: [Int: Int] = [:]
+            if let dynamicIndex, let staticIndex {
+                if dynamicIndex.lowerBound < staticIndex.lowerBound {
+                    headerActionItemIndices[0] = 0
+                    headerActionItemIndices[1] = 1
+                } else {
+                    headerActionItemIndices[0] = 1
+                    headerActionItemIndices[1] = 0
+                }
+            } else if dynamicIndex != nil {
+                headerActionItemIndices[0] = 0
+            } else if staticIndex != nil {
+                headerActionItemIndices[1] = 0
+            }
+            
+            let dynamicItem: AnimatedCounterComponent.Item
+            let staticItem: AnimatedCounterComponent.Item
+            
             if self.selectedItems.count == self.items.count {
-                listHeaderActionItems = [
-                    AnimatedCounterComponent.Item(id: AnyHashable(0), text: "DESELECT", numericValue: 0),
-                    AnimatedCounterComponent.Item(id: AnyHashable(1), text: "ALL", numericValue: 1)
-                ]
+                dynamicItem = AnimatedCounterComponent.Item(id: AnyHashable(0), text: environment.strings.FolderLinkPreview_ListSelectionSelectAllDynamicPartDeselect, numericValue: 0)
+                staticItem = AnimatedCounterComponent.Item(id: AnyHashable(1), text: environment.strings.FolderLinkPreview_ListSelectionSelectAllStaticPartDeselect, numericValue: 1)
             } else {
-                listHeaderActionItems = [
-                    AnimatedCounterComponent.Item(id: AnyHashable(0), text: "SELECT", numericValue: 1),
-                    AnimatedCounterComponent.Item(id: AnyHashable(1), text: "ALL", numericValue: 1)
-                ]
+                dynamicItem = AnimatedCounterComponent.Item(id: AnyHashable(0), text: environment.strings.FolderLinkPreview_ListSelectionSelectAllDynamicPartSelect, numericValue: 1)
+                staticItem = AnimatedCounterComponent.Item(id: AnyHashable(1), text: environment.strings.FolderLinkPreview_ListSelectionSelectAllStaticPartSelect, numericValue: 1)
+            }
+             
+            if let dynamicIndex = headerActionItemIndices[0], let staticIndex = headerActionItemIndices[1] {
+                if dynamicIndex < staticIndex {
+                    listHeaderActionItems = [dynamicItem, staticItem]
+                } else {
+                    listHeaderActionItems = [staticItem, dynamicItem]
+                }
+            } else if headerActionItemIndices[0] != nil {
+                listHeaderActionItems = [dynamicItem]
+            } else if headerActionItemIndices[1] != nil {
+                listHeaderActionItems = [staticItem]
             }
             
             let listHeaderBody = MarkdownAttributeSet(font: Font.with(size: 13.0, design: .regular, traits: [.monospacedNumbers]), textColor: environment.theme.list.freeTextColor)
@@ -926,23 +926,23 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             if case .remove = component.subject {
                 actionButtonBadge = self.selectedItems.count
                 if self.selectedItems.isEmpty {
-                    actionButtonTitle = "Remove Folder"
+                    actionButtonTitle = environment.strings.FolderLinkPreview_ButtonRemoveFolder
                 } else {
-                    actionButtonTitle = "Remove Folder and Chats"
+                    actionButtonTitle = environment.strings.FolderLinkPreview_ButtonRemoveFolderAndChats
                 }
             } else if allChatsAdded {
                 actionButtonBadge = 0
-                actionButtonTitle = "OK"
+                actionButtonTitle = environment.strings.Common_OK
             } else if let linkContents = component.linkContents {
-                actionButtonBadge = self.selectedItems.count
+                actionButtonBadge = max(0, self.selectedItems.count - (linkContents.peers.count - canAddChatCount))
                 if linkContents.localFilterId != nil {
                     if self.selectedItems.isEmpty {
-                        actionButtonTitle = "Do Not Join Any Chats"
+                        actionButtonTitle = environment.strings.FolderLinkPreview_ButtonDoNotJoinChats
                     } else {
-                        actionButtonTitle = "Join Chats"
+                        actionButtonTitle = environment.strings.FolderLinkPreview_ButtonJoinChats
                     }
                 } else {
-                    actionButtonTitle = "Add Folder"
+                    actionButtonTitle = environment.strings.FolderLinkPreview_ButtonAddFolder
                 }
             } else {
                 actionButtonTitle = " "
@@ -985,16 +985,12 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             
                             let folderTitle = linkContents.title ?? ""
                             
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                            
                             var additionalText: String?
                             if !self.selectedItems.isEmpty {
-                                if self.selectedItems.count == 1 {
-                                    additionalText = "You also left **1** chat"
-                                } else {
-                                    additionalText = "You also left **\(self.selectedItems.count)** chats"
-                                }
+                                additionalText = presentationData.strings.FolderLinkPreview_ToastLeftChatsText(Int32(self.selectedItems.count))
                             }
-                            
-                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
                             
                             var chatListController: ChatListController?
                             if let navigationController = controller.navigationController as? NavigationController {
@@ -1023,7 +1019,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             let selectedItems = self.selectedItems
                             let undoOverlayController = UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .removedChat(title: "Folder \(folderTitle) deleted", text: additionalText),
+                                content: .removedChat(title: presentationData.strings.FolderLinkPreview_ToastLeftTitle(folderTitle).string, text: additionalText),
                                 elevatedLayout: false,
                                 action: { value in
                                     if case .commit = value {
@@ -1104,7 +1100,6 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                     return
                                                 }
                                                 
-                                                //TODO:localize
                                                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
                                                 
                                                 var isUpdates = false
@@ -1117,29 +1112,15 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                 }
                                                 
                                                 if isUpdates {
-                                                    let chatCountString: String
-                                                    if result.newChatCount == 1 {
-                                                        chatCountString = "1 new chat"
-                                                    } else {
-                                                        chatCountString = "\(result.newChatCount) new chats"
-                                                    }
-                                                    
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: "Folder \(result.title) Updated", text: "You have joined \(chatCountString)", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: presentationData.strings.FolderLinkPreview_ToastChatsAddedTitle(result.title).string, text: presentationData.strings.FolderLinkPreview_ToastChatsAddedText(Int32(result.newChatCount)), customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else if result.newChatCount != 0 {
-                                                    let chatCountString: String
-                                                    if result.newChatCount == 1 {
-                                                        chatCountString = "1 chat"
-                                                    } else {
-                                                        chatCountString = "\(result.newChatCount) chats"
-                                                    }
-                                                    
                                                     let animationBackgroundColor: UIColor
                                                     if presentationData.theme.overallDarkAppearance {
                                                         animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
                                                     } else {
                                                         animationBackgroundColor = UIColor(rgb: 0x474747)
                                                     }
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "Folder \(result.title) Added", text: "You also joined \(chatCountString)", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: presentationData.strings.FolderLinkPreview_ToastFolderAddedTitle(result.title).string, text: presentationData.strings.FolderLinkPreview_ToastFolderAddedText(Int32(result.newChatCount)), customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else {
                                                     let animationBackgroundColor: UIColor
                                                     if presentationData.theme.overallDarkAppearance {
@@ -1147,7 +1128,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                     } else {
                                                         animationBackgroundColor = UIColor(rgb: 0x474747)
                                                     }
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "Folder \(result.title) Added", text: "", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: presentationData.strings.FolderLinkPreview_ToastFolderAddedTitle(result.title).string, text: "", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 }
                                             })
                                         }
@@ -1421,11 +1402,12 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             let context = component.context
                             let navigationController = controller.navigationController as? NavigationController
                             
-                            //TODO:localize
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            
                             let text: String
                             switch error {
                             case .generic:
-                                text = "An error occurred"
+                                text = presentationData.strings.ChatListFilter_CreateLinkUnknownError
                             case let .sharedFolderLimitExceeded(limit, _):
                                 let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .membershipInSharedFolders, count: limit, action: {  [weak navigationController] in
                                     guard let navigationController else {
@@ -1470,10 +1452,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 
                                 return
                             case .someUserTooManyChannels:
-                                //TODO:localize
-                                text = "One of the groups in this folder can’t be added because one of its admins has too many groups and channels."
+                                text = presentationData.strings.ChatListFilter_CreateLinkErrorSomeoneHasChannelLimit
                             }
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                             controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         })
                     }

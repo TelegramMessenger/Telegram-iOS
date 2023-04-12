@@ -88,7 +88,7 @@ final class MediaPickerTitleView: UIView {
         let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: min(300.0, size.width - 36.0)), transition: .immediate)
         self.segmentedControlNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - controlSize.width) / 2.0), y: floorToScreenPixels((size.height - controlSize.height) / 2.0)), size: controlSize)
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: 44.0))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: 210.0, height: 44.0))
         self.titleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
     }
 }
