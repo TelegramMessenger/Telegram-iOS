@@ -87,6 +87,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.doneButtonSolidTitleNode.isUserInteractionEnabled = false
 
         super.init()
+        
+        self.doneButton.isExclusiveTouch = true
 
         self.addSubnode(self.doneButtonBackgroundNode)
         self.addSubnode(self.doneButtonTitleNode)

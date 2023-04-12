@@ -451,6 +451,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         
         super.init(pointerStyle: pointerStyle)
         
+        self.isExclusiveTouch = true
         self.clipsToBounds = true
                 
         self.addSubnode(self.backgroundAnimationNode)
