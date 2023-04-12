@@ -286,14 +286,37 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                                 let boundingSize = imageSize
                                 var imageSize = boundingSize
                                 let updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
+                                var patternArguments: PatternWallpaperArguments?
                                 switch media.content {
-                                case let .file(file, _, _, _, _, _):
+                                case let .file(file, patternColors, rotation, intensity, _, _):
                                     var representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(item.message), media: file).resourceReference($0.resource)) })
                                     if file.mimeType == "image/svg+xml" || file.mimeType == "application/x-tgwallpattern" {
                                         representations.append(ImageRepresentationWithReference(representation: .init(dimensions: PixelDimensions(width: 1440, height: 2960), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), reference: AnyMediaReference.message(message: MessageReference(item.message), media: file).resourceReference(file.resource)))
+                                        
+                                        var colors: [UIColor] = []
+                                        var customPatternColor: UIColor? = nil
+                                        var bakePatternAlpha: CGFloat = 1.0
+                                        if let intensity = intensity, intensity < 0 {
+                                            if patternColors.isEmpty {
+                                                colors.append(UIColor(rgb: 0xd6e2ee, alpha: 0.5))
+                                            } else {
+                                                colors.append(contentsOf: patternColors.map(UIColor.init(rgb:)))
+                                            }
+                                            customPatternColor = UIColor(white: 0.0, alpha: 1.0 - CGFloat(abs(intensity)))
+                                        } else {
+                                            if patternColors.isEmpty {
+                                                colors.append(UIColor(rgb: 0xd6e2ee, alpha: 0.5))
+                                            } else {
+                                                colors.append(contentsOf: patternColors.map(UIColor.init(rgb:)))
+                                            }
+                                            let isLight = UIColor.average(of: patternColors.map(UIColor.init(rgb:))).hsb.b > 0.3
+                                            customPatternColor = isLight ? .black : .white
+                                            bakePatternAlpha = CGFloat(intensity ?? 50) / 100.0
+                                        }
+                                        patternArguments = PatternWallpaperArguments(colors: colors, rotation: rotation, customPatternColor: customPatternColor, bakePatternAlpha: bakePatternAlpha)
                                     }
                                     if ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType) {
-                                        updateImageSignal = patternWallpaperImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, representations: representations, mode: .screen)
+                                        updateImageSignal = patternWallpaperImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, representations: representations, mode: .thumbnail)
                                         |> mapToSignal { value -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
                                             if let value {
                                                 return .single(value)
@@ -322,7 +345,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                                 
                                 strongSelf.imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)
                                 
-                                let arguments = TransformImageArguments(corners: ImageCorners(radius: boundingSize.width / 2.0), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+                                let arguments = TransformImageArguments(corners: ImageCorners(radius: boundingSize.width / 2.0), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments)
                                 let apply = makeImageLayout(arguments)
                                 apply()
                                 

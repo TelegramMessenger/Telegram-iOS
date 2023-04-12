@@ -146,7 +146,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
     
     private var previousContentOffset: GridNodeVisibleContentOffset?
     
-    fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
+    fileprivate var mainButtonState: AttachmentMainButtonState?
     
     var pushController: (ViewController) -> Void = { _ in }
     var dismissControllers: (() -> Void)?
@@ -193,7 +193,7 @@ public final class ThemeColorsGridController: ViewController, AttachmentContaina
             self?.push(controller)
         }
         
-        self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true)))
+        self.mainButtonState = AttachmentMainButtonState(text: self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper, font: .regular, background: .color(.clear), textColor: self.presentationData.theme.actionSheet.controlAccentColor, isVisible: true, progress: .none, isEnabled: true)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -362,7 +362,7 @@ private final class ThemeColorsGridContext: AttachmentMediaPickerContext {
     }
     
     public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
+        return .single(self.controller?.mainButtonState)
     }
     
     init(controller: ThemeColorsGridController) {

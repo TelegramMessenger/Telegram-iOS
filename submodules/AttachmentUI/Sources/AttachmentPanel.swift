@@ -1469,7 +1469,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: buttonSize.height + insets.bottom))
-        let containerTransition: ContainedViewLayoutTransition
+        var containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
         if isButtonVisible {
             var height: CGFloat
@@ -1518,6 +1518,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                     textInputPanelNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 44.0), duration: 0.25, additive: true)
                 }
             }
+        }
+        
+        if self.containerNode.frame.size.width.isZero {
+            containerTransition = .immediate
         }
         
         containerTransition.updateFrame(node: self.containerNode, frame: containerFrame)

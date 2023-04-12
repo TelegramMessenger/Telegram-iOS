@@ -183,6 +183,7 @@ public class AttachmentController: ViewController {
     private let fromMenu: Bool
     private let hasTextInput: Bool
     private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+    public var animateAppearance: Bool = false
     
     public var willDismiss: () -> Void = {}
     public var didDismiss: () -> Void = {}
@@ -619,14 +620,26 @@ public class AttachmentController: ViewController {
         
         private var animating = false
         func animateIn() {
-            guard let layout = self.validLayout else {
+            guard let layout = self.validLayout, let controller = self.controller else {
                 return
             }
             
             self.animating = true
             if case .regular = layout.metrics.widthClass {
-                self.animating = false
-                
+                if controller.animateAppearance {
+                    let targetPosition = self.position
+                    let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
+                    
+                    self.position = startPosition
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    transition.animateView(allowUserInteraction: true, {
+                        self.position = targetPosition
+                    }, completion: { _ in
+                        self.animating = false
+                    })
+                } else {
+                    self.animating = false
+                }
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 0.1)
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)

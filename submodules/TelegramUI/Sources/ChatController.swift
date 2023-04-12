@@ -18543,6 +18543,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public func presentThemeSelection() {
+        guard self.themeScreen == nil else {
+            return
+        }
         let context = self.context
         let peerId = self.chatLocation.peerId
         
@@ -18618,8 +18621,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             navigationController.setViewControllers(controllers, animated: true)
                         }
                     }
-                    var openWallpaperPickerImpl: (() -> Void)?
-                    let openWallpaperPicker = { [weak self] in
+                    var openWallpaperPickerImpl: ((Bool) -> Void)?
+                    let openWallpaperPicker = { [weak self] animateAppearance in
                         guard let strongSelf = self else {
                             return
                         }
@@ -18627,6 +18630,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             context: strongSelf.context,
                             updatedPresentationData: strongSelf.updatedPresentationData,
                             peer: EnginePeer(peer),
+                            animateAppearance: animateAppearance,
                             completion: { [weak self] asset in
                                 guard let strongSelf = self else {
                                     return
@@ -18636,7 +18640,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness in
                                     if let strongSelf = self {
                                         uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peerId, completion: {
-                                            dismissControllers()
+                                            Queue.mainQueue().after(0.3, {
+                                                dismissControllers()
+                                            })
                                         })
                                     }
                                 }
@@ -18651,7 +18657,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         strongSelf.push(controller)
                                     }
                                 }, openGallery: {
-                                    openWallpaperPickerImpl?()
+                                    openWallpaperPickerImpl?(false)
                                 })
                                 controller.navigationPresentation = .flatModal
                                 strongSelf.push(controller)
@@ -18661,7 +18667,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.push(controller)
                     }
                     openWallpaperPickerImpl = openWallpaperPicker
-                    openWallpaperPicker()
+                    openWallpaperPicker(true)
                 },
                 resetWallpaper: { [weak self] in
                     guard let strongSelf = self, let peerId else {

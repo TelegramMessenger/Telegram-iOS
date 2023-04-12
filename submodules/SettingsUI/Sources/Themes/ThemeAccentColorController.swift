@@ -119,11 +119,8 @@ final class ThemeAccentColorController: ViewController {
         } else {
             self.navigationItem.titleView = self.segmentedTitleView
         }
-        if case .peer = resultMode {
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
-        } else {
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
-        }
+        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
     }
     
     required init(coder aDecoder: NSCoder) {

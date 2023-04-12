@@ -960,8 +960,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     var image = isBlurrable ? image : nil
                     if let imageToScale = image {
                         let actualSize = CGSize(width: imageToScale.size.width * imageToScale.scale, height: imageToScale.size.height * imageToScale.scale)
-                        if actualSize.width > 1280.0 || actualSize.height > 1280.0 {
-                            image = TGScaleImageToPixelSize(image, actualSize.fitted(CGSize(width: 1280.0, height: 1280.0)))
+                        if actualSize.width > 960.0 || actualSize.height > 960.0 {
+                            image = TGScaleImageToPixelSize(image, actualSize.fitted(CGSize(width: 960.0, height: 960.0)))
                         }
                     }
                     strongSelf.blurredNode.image = image
@@ -1092,11 +1092,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     }
     
     @objc func toggleBlur() {
+        guard !self.animatingBlur else {
+            return
+        }
         let value = !self.blurButtonNode.isSelected
         self.blurButtonNode.setSelected(value, animated: true)
         self.setBlurEnabled(value, animated: true)
     }
     
+    private var animatingBlur = false
     func setBlurEnabled(_ enabled: Bool, animated: Bool) {
         let blurRadius: CGFloat = 30.0
         
@@ -1114,19 +1118,24 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
             
             if animated {
+                self.animatingBlur = true
                 self.blurredNode.blurView.blurRadius = 0.0
                 UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                     self.blurredNode.blurView.blurRadius = blurRadius
-                }, completion: nil)
+                }, completion: { _ in
+                    self.animatingBlur = false
+                })
             } else {
                 self.blurredNode.blurView.blurRadius = blurRadius
             }
         } else {
             if self.blurredNode.supernode != nil {
                 if animated {
+                    self.animatingBlur = true
                     UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
                         self.blurredNode.blurView.blurRadius = 0.0
                     }, completion: { finished in
+                        self.animatingBlur = false
                         if finished {
                             self.blurredNode.removeFromSupernode()
                         }

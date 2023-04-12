@@ -2022,12 +2022,14 @@ public func wallpaperMediaPickerController(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     peer: EnginePeer,
+    animateAppearance: Bool,
     completion: @escaping (PHAsset) -> Void = { _ in },
     openColors: @escaping () -> Void
 ) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
+    controller.animateAppearance = animateAppearance
     //controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     controller.requestController = { [weak controller] _, present in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
