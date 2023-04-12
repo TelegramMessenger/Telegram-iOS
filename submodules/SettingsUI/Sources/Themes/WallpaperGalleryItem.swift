@@ -505,17 +505,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 })
                 return context
             }))
-            
-            self.imageNode.imageUpdated = { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                self.temporaryImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
-                    self?.temporaryImageNode.image = nil
-                    self?.temporaryImageNode.layer.removeAllAnimations()
-                    self?.imageNode.imageUpdated = nil
-                })
-            }
+
+            self.temporaryImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+                self?.temporaryImageNode.image = nil
+                self?.temporaryImageNode.layer.removeAllAnimations()
+                self?.imageNode.imageUpdated = nil
+            })
         }, { [weak self] image in
             guard let self else {
                 return
