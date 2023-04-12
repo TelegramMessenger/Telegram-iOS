@@ -88,7 +88,7 @@ final class MediaBoxPartialFile {
         guard let clippedRange = fileMap.contains(range) else {
             return nil
         }
-        fd.seek(position: Int64(clippedRange.lowerBound))
+        let _ = fd.seek(position: Int64(clippedRange.lowerBound))
         return fd.readData(count: Int(clippedRange.upperBound - clippedRange.lowerBound))
     }
     
@@ -227,7 +227,7 @@ final class MediaBoxPartialFile {
         
         do {
             try self.fd.access { fd in
-                fd.seek(position: offset)
+                let _ = fd.seek(position: offset)
                 let written = data.withUnsafeBytes { rawBytes -> Int in
                     let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
 
@@ -330,7 +330,7 @@ final class MediaBoxPartialFile {
             do {
                 var result: Data?
                 try self.fd.access { fd in
-                    fd.seek(position: Int64(actualRange.lowerBound))
+                    let _ = fd.seek(position: Int64(actualRange.lowerBound))
                     var data = Data(count: actualRange.count)
                     let dataCount = data.count
                     let readBytes = data.withUnsafeMutableBytes { rawBytes -> Int in

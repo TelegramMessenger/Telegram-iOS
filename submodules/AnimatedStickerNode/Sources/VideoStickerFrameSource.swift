@@ -100,7 +100,7 @@ private final class VideoStickerFrameSourceCache {
             return true
         }
        
-        self.file.seek(position: 0)
+        let _ = self.file.seek(position: 0)
         var frameRate: Int32 = 0
         if self.file.read(&frameRate, 4) != 4 {
             return false
@@ -113,7 +113,7 @@ private final class VideoStickerFrameSourceCache {
         }
         self.frameRate = frameRate
         
-        self.file.seek(position: 4)
+        let _ = self.file.seek(position: 4)
         
         var frameCount: Int32 = 0
         if self.file.read(&frameCount, 4) != 4 {
@@ -144,7 +144,7 @@ private final class VideoStickerFrameSourceCache {
             return .notFound
         }
         
-        self.file.seek(position: Int64(8 + index * 4 * 2))
+        let _ = self.file.seek(position: Int64(8 + index * 4 * 2))
         var offset: Int32 = 0
         var length: Int32 = 0
         if self.file.read(&offset, 4) != 4 {
@@ -167,11 +167,11 @@ private final class VideoStickerFrameSourceCache {
     }
     
     func storeFrameRateAndCount(frameRate: Int, frameCount: Int) {
-        self.file.seek(position: 0)
+        let _ = self.file.seek(position: 0)
         var frameRate = Int32(frameRate)
         let _ = self.file.write(&frameRate, count: 4)
        
-        self.file.seek(position: 4)
+        let _ = self.file.seek(position: 4)
         var frameCount = Int32(frameCount)
         let _ = self.file.write(&frameCount, count: 4)
     }
@@ -203,12 +203,12 @@ private final class VideoStickerFrameSourceCache {
                     return
                 }
                 
-                strongSelf.file.seek(position: Int64(8 + index * 4 * 2))
+                let _ = strongSelf.file.seek(position: Int64(8 + index * 4 * 2))
                 var offset = Int32(currentSize)
                 var length = Int32(compressedData.count)
                 let _ = strongSelf.file.write(&offset, count: 4)
                 let _ = strongSelf.file.write(&length, count: 4)
-                strongSelf.file.seek(position: Int64(currentSize))
+                let _ = strongSelf.file.seek(position: Int64(currentSize))
                 compressedData.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
                     if let baseAddress = buffer.baseAddress {
                         let _ = strongSelf.file.write(baseAddress, count: Int(length))
@@ -226,7 +226,7 @@ private final class VideoStickerFrameSourceCache {
         
         switch rangeResult {
         case let .range(range):
-            self.file.seek(position: Int64(range.lowerBound))
+            let _ = self.file.seek(position: Int64(range.lowerBound))
             let length = range.upperBound - range.lowerBound
             let compressedData = self.file.readData(count: length)
             if compressedData.count != length {

@@ -172,6 +172,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case sendWhenOnlineTip = 38
     case chatWallpaperLightPreviewTip = 39
     case chatWallpaperDarkPreviewTip = 40
+    case displayChatListContacts = 41
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -388,6 +389,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func sendWhenOnlineTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.sendWhenOnlineTip.key)
+    }
+    
+    static func displayChatListContacts() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayChatListContacts.key)
     }
 }
 
@@ -1418,6 +1423,26 @@ public struct ApplicationSpecificNotice {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.sendWhenOnlineTip(), entry)
             }
         }
+    }
+    
+    public static func displayChatListContacts(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayChatListContacts())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func setDisplayChatListContacts(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayChatListContacts(), entry)
+            }
+        }
+        |> ignoreValues
     }
     
     public static func reset(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {

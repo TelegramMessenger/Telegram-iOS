@@ -387,7 +387,7 @@ public func cacheVideoStickerFrames(path: String, size: CGSize, cacheKey: String
             }
             
             if frameCount > 0 {
-                file.seek(position: 4)
+                let _ = file.seek(position: 4)
                 let _ = file.write(&frameCount, count: 4)
             }
             

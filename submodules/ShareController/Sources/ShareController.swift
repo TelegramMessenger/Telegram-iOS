@@ -181,9 +181,17 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                     case .progress:
                         return .progress
                     case let .done(data):
-                        if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: fileData) {
+                        guard let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                            return .progress
+                        }
+                        if let image = UIImage(data: fileData) {
                             return .done(.image(image))
                         } else {
+                            #if DEBUG
+                            if "".isEmpty {
+                                return .done(.file(URL(fileURLWithPath: data.path), "image.bin", "application/octet-stream"))
+                            }
+                            #endif
                             return .progress
                         }
                 }
