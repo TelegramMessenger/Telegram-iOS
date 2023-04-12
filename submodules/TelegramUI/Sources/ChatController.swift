@@ -4298,22 +4298,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             switch adAttribute.target {
             case let .peer(id, messageId, startParam):
-                let navigationData: ChatControllerInteractionNavigateToPeer
-                if let bot = message.author as? TelegramUser, bot.botInfo != nil, let startParam = startParam {
-                    navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
+                if case let .peer(currentPeerId) = self.chatLocation, currentPeerId == id {
+                    if let messageId {
+                        self.navigateToMessage(from: nil, to: .id(messageId, nil), rememberInStack: false)
+                    }
                 } else {
-                    var subject: ChatControllerSubject?
-                    if let messageId = messageId {
-                        subject = .message(id: .id(messageId), highlight: true, timecode: nil)
+                    let navigationData: ChatControllerInteractionNavigateToPeer
+                    if let bot = message.author as? TelegramUser, bot.botInfo != nil, let startParam = startParam {
+                        navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
+                    } else {
+                        var subject: ChatControllerSubject?
+                        if let messageId = messageId {
+                            subject = .message(id: .id(messageId), highlight: true, timecode: nil)
+                        }
+                        navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                     }
-                    navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
+                    let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
+                             |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        if let self, let peer = peer {
+                            self.openPeer(peer: peer, navigation: navigationData, fromMessage: nil)
+                        }
+                    })
                 }
-                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    if let self, let peer = peer {
-                        self.openPeer(peer: peer, navigation: navigationData, fromMessage: nil)
-                    }
-                })
             case let .join(_, joinHash):
                 self.controllerInteraction?.openJoinLink(joinHash)
             }
