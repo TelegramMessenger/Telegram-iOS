@@ -10,7 +10,7 @@ url=https://github.com/ali-fareed/rules_apple.git
 url=https://github.com/bazelbuild/rules_swift.git
 [submodule "build-system/bazel-rules/apple_support"]
 	path = build-system/bazel-rules/apple_support
-url=https://github.com/ali-fareed/apple_support.git
+	url = https://github.com/bazelbuild/apple_support.git
 [submodule "submodules/TgVoip/libtgvoip"]
 	path = submodules/TgVoip/libtgvoip
 	url = https://github.com/telegramdesktop/libtgvoip.git

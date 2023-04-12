@@ -123,7 +123,7 @@ genrule(
 )
 
 minimum_os_version = "11.0"
-minimum_watchos_version="5.0"
+minimum_watchos_version="9.0"
 
 empty_languages = [
     "ar",
@@ -740,7 +740,7 @@ genrule(
     name = "StripWatchosStubBinary",
     cmd_bash =
 """
-    echo 'lipo -remove arm64e $$1/TelegramWatch.app/_WatchKitStub/WK -output $$1/TelegramWatch.app/_WatchKitStub/WK && lipo -remove arm64e $$1/TelegramWatch.app/TelegramWatch -output $$1/TelegramWatch.app/TelegramWatch' > $(location StripWatchosStubBinary.sh)
+    echo 'lipo -remove armv7k -remove arm64 -remove arm64e $$1/TelegramWatch.app/_WatchKitStub/WK -output $$1/TelegramWatch.app/_WatchKitStub/WK' > $(location StripWatchosStubBinary.sh)
     echo '' >> $(location StripWatchosStubBinary.sh)
 """,
     outs = [
@@ -1970,7 +1970,7 @@ ios_application(
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
-        "//conditions:default": ":TelegramWatchApp",
+        "//conditions:default": None#":TelegramWatchApp",
     }) if telegram_enable_watch else None,
     deps = [
         ":Main",

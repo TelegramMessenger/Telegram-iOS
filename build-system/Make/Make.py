@@ -149,7 +149,18 @@ class BazelCommandLine:
         self.disable_provisioning_profiles = True
 
     def set_configuration(self, configuration):
-        if configuration == 'debug_arm64':
+        if configuration == 'debug_universal':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                # Build universal binaries.
+                '--ios_multi_cpus=armv7,arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=arm64_32'
+            ] + self.common_debug_args
+        elif configuration == 'debug_arm64':
             self.configuration_args = [
                 # bazel debug build configuration
                 '-c', 'dbg',
@@ -182,6 +193,16 @@ class BazelCommandLine:
                 # Always build universal Watch binaries.
                 '--watchos_cpus=arm64_32'
             ] + self.common_debug_args
+        elif configuration == 'debug_armv7':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                '--ios_multi_cpus=armv7',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=arm64_32'
+            ] + self.common_debug_args
         elif configuration == 'release_arm64':
             self.configuration_args = [
                 # bazel optimized build configuration
@@ -191,8 +212,42 @@ class BazelCommandLine:
                 '--ios_multi_cpus=arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32,arm64',
+                '--watchos_cpus=arm64_32',
 
+                # Generate DSYM files when building.
+                '--apple_generate_dsym',
+
+                # Require DSYM files as build output.
+                '--output_groups=+dsyms'
+            ] + self.common_release_args
+        elif configuration == 'release_armv7':
+            self.configuration_args = [
+                # bazel optimized build configuration
+                '-c', 'opt',
+
+                # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
+                '--ios_multi_cpus=armv7',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=arm64_32',
+
+                # Generate DSYM files when building.
+                '--apple_generate_dsym',
+
+                # Require DSYM files as build output.
+                '--output_groups=+dsyms'
+            ] + self.common_release_args
+        elif configuration == 'release_universal':
+            self.configuration_args = [
+                # bazel optimized build configuration
+                '-c', 'opt',
+
+                # Build universal binaries.
+                '--ios_multi_cpus=armv7,arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=arm64_32',
+                
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
 
