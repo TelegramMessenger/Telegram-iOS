@@ -118,10 +118,8 @@ deploy_beta_testflight:
 submit_appstore:
   tags:
     - ios_beta
-  stage: submit
   needs:
     - deploy_beta_testflight
-  allow_failure: false
   when: manual
   only:
     - beta
