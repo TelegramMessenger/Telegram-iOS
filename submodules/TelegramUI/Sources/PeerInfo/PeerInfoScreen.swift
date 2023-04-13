@@ -1401,7 +1401,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemBotInfo = 9
             
             if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
-                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Username, icon: nil, action: {
+                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_BotLinks, icon: nil, action: {
                     interaction.editingOpenPublicLinkSetup()
                 }))
                 
