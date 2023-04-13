@@ -117,7 +117,7 @@ deploy_beta_testflight:
 
 submit_appstore:
   tags:
-    - ios_beta
+    - deploy
   stage: submit
   needs: []
   when: manual
