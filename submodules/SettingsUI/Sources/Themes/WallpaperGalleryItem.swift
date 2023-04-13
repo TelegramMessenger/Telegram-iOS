@@ -668,6 +668,20 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.patternButtonNode.isSelected = false
                     self.playButtonNode.setIcon(self.playButtonRotateImage)
                 }
+                
+                if let settings = wallpaper.settings {
+                    if settings.blur {
+                        self.blurButtonNode.setSelected(true, animated: false)
+                        self.setBlurEnabled(true, animated: false)
+                    }
+                    if settings.motion {
+                        self.motionButtonNode.setSelected(true, animated: false)
+                        self.setMotionEnabled(true, animated: false)
+                    }
+                    if case let .file(file) = wallpaper, !file.isPattern, let intensity = file.settings.intensity {
+                        self.sliderNode.value = (1.0 - CGFloat(intensity) / 100.0)
+                    }
+                }
             case .asset:
                 self.nativeNode._internalUpdateIsSettingUpWallpaper()
                 self.nativeNode.isHidden = true

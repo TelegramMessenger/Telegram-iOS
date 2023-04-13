@@ -118,13 +118,19 @@ func managedChatThemesUpdates(accountManager: AccountManager<TelegramAccountMana
     return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
-func _internal_setChatWallpaper(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, wallpaper: TelegramWallpaper?, applyUpdates: Bool = true) -> Signal<Api.Updates, NoError> {
+public enum SetChatWallpaperError {
+    case generic
+    case flood
+}
+
+func _internal_setChatWallpaper(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, wallpaper: TelegramWallpaper?, applyUpdates: Bool = true) -> Signal<Api.Updates, SetChatWallpaperError> {
     return postbox.loadedPeerWithId(peerId)
+    |> castError(SetChatWallpaperError.self)
     |> mapToSignal { peer in
         guard let inputPeer = apiInputPeer(peer) else {
             return .complete()
         }
-        return postbox.transaction { transaction -> Signal<Api.Updates, NoError> in
+        return postbox.transaction { transaction -> Signal<Api.Updates, SetChatWallpaperError> in
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                 if let current = current as? CachedUserData {
                     return current.withUpdatedWallpaper(wallpaper)
@@ -143,16 +149,22 @@ func _internal_setChatWallpaper(postbox: Postbox, network: Network, stateManager
                 inputSettings = inputWallpaperAndInputSettings.1
             }
             return network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: inputWallpaper, settings: inputSettings, id: nil), automaticFloodWait: false)
-            |> `catch` { error in
-                return .complete()
+            |> mapError { error -> SetChatWallpaperError in
+                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                    return .flood
+                } else {
+                    return .generic
+                }
             }
-            |> mapToSignal { updates -> Signal<Api.Updates, NoError> in
+            |> mapToSignal { updates -> Signal<Api.Updates, SetChatWallpaperError> in
                 if applyUpdates {
                     stateManager.addUpdates(updates)
                 }
                 return .single(updates)
             }
-        } |> switchToLatest
+        }
+        |> castError(SetChatWallpaperError.self)
+        |> switchToLatest
     }
 }
 

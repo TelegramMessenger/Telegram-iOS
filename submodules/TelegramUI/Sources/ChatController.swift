@@ -857,15 +857,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()
-                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
+                            var options = WallpaperPresentationOptions()
+                            var intensity: Int32?
+                            if let settings = wallpaper.settings {
+                                if settings.blur {
+                                    options.insert(.blur)
+                                }
+                                if settings.motion {
+                                    options.insert(.motion)
+                                }
+                                if case let .file(file) = wallpaper, !file.isPattern {
+                                    intensity = settings.intensity
+                                }
+                            }
+                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, options, [], intensity, nil, nil), mode: .peer(EnginePeer(peer), true))
                             wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, brightness in
                                 var settings: WallpaperSettings?
-                                if case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper, !file.isPattern {
-                                    var intensity: Int32?
-                                    if let brightness {
-                                        intensity = max(0, min(100, Int32(brightness * 100.0)))
+                                if case let .wallpaper(wallpaper, _) = entry {
+                                    let baseSettings = wallpaper.settings
+                                    var intensity: Int32? = baseSettings?.intensity
+                                    if case let .file(file) = wallpaper, !file.isPattern {
+                                        if let brightness {
+                                            intensity = max(0, min(100, Int32(brightness * 100.0)))
+                                        }
                                     }
-                                    settings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), intensity: intensity)
+                                    settings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), colors: baseSettings?.colors ?? [], intensity: intensity, rotation: baseSettings?.rotation)
                                 }
                                 let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, settings: settings)
                                 |> deliverOnMainQueue).start()

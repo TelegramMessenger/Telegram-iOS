@@ -488,13 +488,23 @@ public func usernameSetupController(context: AccountContext, mode: UsernameSetup
     }, activateLink: { name in
         dismissInputImpl?()
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_ActivateAlertTitle, text: presentationData.strings.Username_ActivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_ActivateAlertShow, action: {
+        let alertText: String
+        if case .bot = mode {
+            alertText = presentationData.strings.Username_BotActivateAlertText
+        } else {
+            alertText = presentationData.strings.Username_ActivateAlertText
+        }
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_ActivateAlertTitle, text: alertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_ActivateAlertShow, action: {
             let _ = (context.engine.peers.toggleAddressNameActive(domain: domain, name: name, active: true)
             |> deliverOnMainQueue).start(error: { error in
                 let errorText: String
                 switch error {
                 case .activeLimitReached:
-                    errorText = presentationData.strings.Username_ActiveLimitReachedError
+                    if case .bot = mode {
+                        errorText = presentationData.strings.Username_BotActiveLimitReachedError
+                    } else {
+                        errorText = presentationData.strings.Username_ActiveLimitReachedError
+                    }
                 default:
                     errorText = presentationData.strings.Login_UnknownError
                 }
@@ -504,7 +514,13 @@ public func usernameSetupController(context: AccountContext, mode: UsernameSetup
     }, deactivateLink: { name in
         dismissInputImpl?()
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_DeactivateAlertTitle, text: presentationData.strings.Username_DeactivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_DeactivateAlertHide, action: {
+        let alertText: String
+        if case .bot = mode {
+            alertText = presentationData.strings.Username_BotDeactivateAlertText
+        } else {
+            alertText = presentationData.strings.Username_DeactivateAlertText
+        }
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_DeactivateAlertTitle, text: alertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_DeactivateAlertHide, action: {
             let _ = context.engine.peers.toggleAddressNameActive(domain: domain, name: name, active: false).start()
         })]), nil)
     }, openAuction: { username in
@@ -577,7 +593,13 @@ public func usernameSetupController(context: AccountContext, mode: UsernameSetup
             dismissImpl?()
         })
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Username_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let title: String
+        if case .bot = mode {
+            title = presentationData.strings.Username_BotTitle
+        } else {
+            title = presentationData.strings.Username_Title
+        }
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state, temporaryOrder: temporaryOrder, mode: mode), style: .blocks, focusItemTag: mode == .account ? UsernameEntryTag.username : nil, animateChanges: true)
             
         return (controllerState, (listState, arguments))

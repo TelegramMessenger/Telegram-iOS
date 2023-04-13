@@ -1022,6 +1022,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
 
 final class PeerInfoAvatarListNode: ASDisplayNode {
     private let isSettings: Bool
+    let containerNode: ASDisplayNode
     let pinchSourceNode: PinchSourceContainerNode
     let bottomCoverNode: ASDisplayNode
     fileprivate let maskNode: DynamicIslandMaskNode
@@ -1040,6 +1041,8 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     init(context: AccountContext, readyWhenGalleryLoads: Bool, isSettings: Bool) {
         self.isSettings = isSettings
+        
+        self.containerNode = ASDisplayNode()
 
         self.bottomCoverNode = ASDisplayNode()
         self.bottomCoverNode.backgroundColor = .black
@@ -1057,12 +1060,13 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         
         super.init()
 
-        self.addSubnode(self.bottomCoverNode)
-        self.addSubnode(self.pinchSourceNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.bottomCoverNode)
+        self.containerNode.addSubnode(self.pinchSourceNode)
         self.pinchSourceNode.contentNode.addSubnode(self.avatarContainerNode)
         self.listContainerTransformNode.addSubnode(self.listContainerNode)
         self.pinchSourceNode.contentNode.addSubnode(self.listContainerTransformNode)
-        self.addSubnode(self.topCoverNode)
+        self.containerNode.addSubnode(self.topCoverNode)
         
         let avatarReady = (self.avatarContainerNode.avatarNode.ready
         |> mapToSignal { _ -> Signal<Bool, NoError> in
@@ -1129,6 +1133,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.arguments = (peer, threadId, threadInfo, theme, avatarSize, isExpanded)
         self.maskNode.isForum = isForum
         self.pinchSourceNode.update(size: size, transition: transition)
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
         self.pinchSourceNode.frame = CGRect(origin: CGPoint(), size: size)
         self.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
     }
@@ -2244,6 +2249,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var skipCollapseCompletion = false
     var ignoreCollapse = false
     
+    let avatarClippingNode: SparseNode
     let avatarListNode: PeerInfoAvatarListNode
     
     let buttonsContainerNode: SparseNode
@@ -2305,6 +2311,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var emojiStatusPackDisposable = MetaDisposable()
     var emojiStatusFileAndPackTitle = Promise<(TelegramMediaFile, LoadedStickerPack)?>()
     
+    private var validLayout: (width: CGFloat, deviceMetrics: DeviceMetrics)?
+    
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
         self.context = context
         self.isAvatarExpanded = avatarInitiallyExpanded
@@ -2314,6 +2322,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.forumTopicThreadId = forumTopicThreadId
         self.chatLocation = chatLocation
         
+        self.avatarClippingNode = SparseNode()
+        self.avatarClippingNode.clipsToBounds = true
         self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded, isSettings: isSettings)
         
         self.titleNodeContainer = ASDisplayNode()
@@ -2388,7 +2398,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self?.requestUpdateLayout?(false)
         }
         
-        
         if !isMediaOnly {
             self.addSubnode(self.buttonsContainerNode)
         }
@@ -2400,7 +2409,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 //        self.subtitleNodeContainer.addSubnode(self.nextPanelSubtitleNode)
         self.usernameNodeContainer.addSubnode(self.usernameNode)
 
-        self.regularContentNode.addSubnode(self.avatarListNode)
+        self.regularContentNode.addSubnode(self.avatarClippingNode)
+        self.avatarClippingNode.addSubnode(self.avatarListNode)
         self.regularContentNode.addSubnode(self.avatarListNode.listContainerNode.controlsClippingOffsetNode)
         self.regularContentNode.addSubnode(self.titleNodeContainer)
         self.regularContentNode.addSubnode(self.subtitleNodeContainer)
@@ -2567,6 +2577,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.peer = peer
         self.threadData = threadData
         self.avatarListNode.listContainerNode.peer = peer
+        
+        let isFirstTime = self.validLayout == nil
+        self.validLayout = (width, deviceMetrics)
         
         let previousPanelStatusData = self.currentPanelStatusData
         self.currentPanelStatusData = panelStatusData.0
@@ -3277,6 +3290,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             apparentAvatarFrame = CGRect(origin: CGPoint(x: avatarCenter.x - avatarFrame.width / 2.0, y: -contentOffset + avatarOffset + avatarCenter.y - avatarFrame.height / 2.0), size: avatarFrame.size)
             controlsClippingFrame = apparentAvatarFrame
         }
+        
+        let avatarClipOffset: CGFloat = !self.isAvatarExpanded && deviceMetrics.hasDynamicIsland ? 48.0 : 0.0
+        let clippingNodeTransition = ContainedViewLayoutTransition.immediate
+        clippingNodeTransition.updateFrame(layer: self.avatarClippingNode.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: avatarClipOffset), size: CGSize(width: width, height: 1000.0)))
+        clippingNodeTransition.updateSublayerTransformOffset(layer: self.avatarClippingNode.layer, offset: CGPoint(x: 0.0, y: -avatarClipOffset))
+        let clippingNodeRadiusTransition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
+        clippingNodeRadiusTransition.updateCornerRadius(node: self.avatarClippingNode, cornerRadius: avatarClipOffset > 0.0 ? width / 2.5 : 0.0)
+        
         transition.updateFrameAdditive(node: self.avatarListNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
         transition.updateFrameAdditive(node: self.avatarOverlayNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
         
@@ -3318,26 +3339,34 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if deviceMetrics.hasDynamicIsland && self.forumTopicThreadId == nil {
-            self.avatarListNode.maskNode.frame = CGRect(origin: CGPoint(x: -85.5, y: -self.avatarListNode.frame.minY + 48.0), size: CGSize(width: 171.0, height: 171.0))
-            self.avatarListNode.bottomCoverNode.frame = self.avatarListNode.maskNode.frame
-            self.avatarListNode.topCoverNode.frame = self.avatarListNode.maskNode.frame
-            
             let maskValue = max(0.0, min(1.0, contentOffset / 120.0))
+            self.avatarListNode.containerNode.view.mask = self.avatarListNode.maskNode.view
             if maskValue > 0.03 {
                 self.avatarListNode.bottomCoverNode.isHidden = false
                 self.avatarListNode.topCoverNode.isHidden = false
-                self.avatarListNode.view.mask = self.avatarListNode.maskNode.view
+                self.avatarListNode.maskNode.backgroundColor = .clear
             } else {
                 self.avatarListNode.bottomCoverNode.isHidden = true
                 self.avatarListNode.topCoverNode.isHidden = true
-                self.avatarListNode.view.mask = nil
+                self.avatarListNode.maskNode.backgroundColor = .white
             }
-            self.avatarListNode.maskNode.update(maskValue)
             self.avatarListNode.topCoverNode.update(maskValue)
+            self.avatarListNode.maskNode.update(maskValue)
+            
+            self.avatarListNode.listContainerNode.topShadowNode.isHidden = !self.isAvatarExpanded
+            
+            self.avatarListNode.maskNode.position = CGPoint(x: 0.0, y: -self.avatarListNode.frame.minY + 48.0 + 85.5)
+            self.avatarListNode.maskNode.bounds = CGRect(origin: .zero, size: CGSize(width: 171.0, height: 171.0))
+            
+            self.avatarListNode.bottomCoverNode.position = self.avatarListNode.maskNode.position
+            self.avatarListNode.bottomCoverNode.bounds = self.avatarListNode.maskNode.bounds
+            
+            self.avatarListNode.topCoverNode.position = self.avatarListNode.maskNode.position
+            self.avatarListNode.topCoverNode.bounds = self.avatarListNode.maskNode.bounds
         } else {
             self.avatarListNode.bottomCoverNode.isHidden = true
             self.avatarListNode.topCoverNode.isHidden = true
-            self.avatarListNode.view.mask = nil
+            self.avatarListNode.containerNode.view.mask = nil
         }
         
         self.avatarListNode.listContainerNode.update(size: expandedAvatarListSize, peer: peer, isExpanded: self.isAvatarExpanded, transition: transition)
@@ -3601,6 +3630,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateFrame(node: self.separatorNode, frame: separatorFrame)
         }
         
+        if isFirstTime {
+            self.updateAvatarMask(transition: .immediate)
+        }
+        
         return resolvedHeight
     }
     
@@ -3662,12 +3695,27 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if case .animated = transition, !isAvatarExpanded {
                 self.avatarListNode.animateAvatarCollapse(transition: transition)
             }
+            
+            self.updateAvatarMask(transition: transition)
         }
+    }
+    
+    private func updateAvatarMask(transition: ContainedViewLayoutTransition) {
+        guard let (width, deviceMetrics) = self.validLayout, deviceMetrics.hasDynamicIsland else {
+            return
+        }
+        let maskScale: CGFloat = isAvatarExpanded ? width / 100.0 : 1.0
+        transition.updateTransformScale(layer: self.avatarListNode.maskNode.layer, scale: maskScale)
+        transition.updateTransformScale(layer: self.avatarListNode.bottomCoverNode.layer, scale: maskScale)
+        transition.updateTransformScale(layer: self.avatarListNode.topCoverNode.layer, scale: maskScale)
+        
+        let maskAnchorPoint = CGPoint(x: 0.5, y: isAvatarExpanded ? 0.37 : 0.5)
+        transition.updateAnchorPoint(layer: self.avatarListNode.maskNode.layer, anchorPoint: maskAnchorPoint)
     }
 }
 
 private class DynamicIslandMaskNode: ASDisplayNode {
-    private var animationNode: AnimationNode?
+    var animationNode: AnimationNode?
     
     var isForum = false {
         didSet {
@@ -3693,6 +3741,8 @@ private class DynamicIslandMaskNode: ASDisplayNode {
         self.animationNode?.setProgress(value)
     }
     
+    var animating = false
+    
     override func layout() {
         self.animationNode?.frame = self.bounds
     }
@@ -3701,7 +3751,7 @@ private class DynamicIslandMaskNode: ASDisplayNode {
 private class DynamicIslandBlurNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private let fadeNode = ASDisplayNode()
-    private let gradientNode = ASImageNode()
+    let gradientNode = ASImageNode()
 
     private var hierarchyTrackingNode: HierarchyTrackingNode?
     

@@ -117,6 +117,12 @@ public final class AnimationNode: ASDisplayNode {
         self.animationView()?.currentProgress = progress
     }
     
+    public func animate(from: CGFloat, to: CGFloat, completion: @escaping () -> Void) {
+        self.animationView()?.play(fromProgress: from, toProgress: to, completion: { _ in
+            completion()
+        })
+    }
+    
     public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
         self.currentParams = (name, colors)
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let animation = Animation.filepath(url.path) {

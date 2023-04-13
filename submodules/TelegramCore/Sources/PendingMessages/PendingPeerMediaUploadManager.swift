@@ -11,6 +11,7 @@ public final class PeerMediaUploadingItem: Equatable {
     
     public enum Error {
         case generic
+        case flood
     }
     
     public enum Content: Equatable  {
@@ -69,7 +70,14 @@ private func uploadPeerMedia(postbox: Postbox, network: Network, stateManager: A
                         }
                     }
                     return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: result, applyUpdates: false)
-                    |> castError(PeerMediaUploadingItem.Error.self)
+                    |> mapError { error -> PeerMediaUploadingItem.Error in
+                        switch error {
+                        case .generic:
+                            return .generic
+                        case .flood:
+                            return .flood
+                        }
+                    }
                     |> map { updates -> PeerMediaUploadingItem.ProgressValue in
                         return .done(updates)
                     }
@@ -78,7 +86,14 @@ private func uploadPeerMedia(postbox: Postbox, network: Network, stateManager: A
             }
         } else {
             return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: wallpaper, applyUpdates: false)
-            |> castError(PeerMediaUploadingItem.Error.self)
+            |> mapError { error -> PeerMediaUploadingItem.Error in
+                switch error {
+                case .generic:
+                    return .generic
+                case .flood:
+                    return .flood
+                }
+            }
             |> map { updates -> PeerMediaUploadingItem.ProgressValue in
                 return .done(updates)
             }
@@ -265,7 +280,15 @@ private final class PendingPeerMediaUploadManagerImpl {
                         }
                         if let context = strongSelf.contexts[peerId], context === initialContext {
                             strongSelf.contexts.removeValue(forKey: peerId)
-                            context.disposable.dispose()
+                            
+                            if let messageId = context.value.messageId {
+                                context.disposable.set(strongSelf.postbox.transaction({ transaction in
+                                    transaction.deleteMessages([messageId], forEachMedia: nil)
+                                }).start())
+                            } else {
+                                context.disposable.dispose()
+                            }
+                            
                             strongSelf.updateValues()
                         }
                     }))
