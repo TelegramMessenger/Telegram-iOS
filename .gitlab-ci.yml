@@ -122,7 +122,7 @@ submit_appstore:
   needs:
     - deploy_beta_testflight
   allow_failure: false
-  manual: true
+  when: manual
   only:
     - beta
   except:
