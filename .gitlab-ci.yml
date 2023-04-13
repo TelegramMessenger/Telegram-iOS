@@ -127,6 +127,7 @@ submit_appstore:
   except:
     - tags
   script:
+    - sleep 60
     - exit 1
   environment:
     name: testflight_llc
@@ -135,6 +136,8 @@ verifysanity_beta_testflight:
   tags:
     - ios_beta
   stage: verifysanity
+  needs:
+    - deploy_beta_testflight
   only:
     - beta
     - hotfix
@@ -157,6 +160,8 @@ verify_beta_testflight:
   tags:
     - ios_beta
   stage: verify
+  needs:
+    - verifysanity_beta_testflight
   only:
     - beta
     - hotfix
