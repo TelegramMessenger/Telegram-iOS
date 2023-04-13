@@ -166,7 +166,14 @@ private enum StorageUsageExceptionsEntry: ItemListNodeEntry {
                 optionText = timeIntervalString(strings: presentationData.strings, value: value)
             }
             
-            return ItemListDisclosureItem(presentationData: presentationData, icon: nil, context: arguments.context, iconPeer: EnginePeer(peer.peer), title: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: .firstLast), enabled: true, titleFont: .bold, label: optionText, labelStyle: .text, additionalDetailLabel: additionalDetailLabel, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
+            let title: String
+            if peer.peer.id == arguments.context.account.peerId {
+                title = presentationData.strings.DialogList_SavedMessages
+            } else {
+                title = EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: .firstLast)
+            }
+            
+            return ItemListDisclosureItem(presentationData: presentationData, icon: nil, context: arguments.context, iconPeer: EnginePeer(peer.peer), title: title, enabled: true, titleFont: .bold, label: optionText, labelStyle: .text, additionalDetailLabel: additionalDetailLabel, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
                 arguments.openPeerMenu(peer.peer.id, value)
             }, tag: StorageUsageExceptionsEntryTag.peer(peer.peer.id))
         }
