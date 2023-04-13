@@ -1,6 +1,7 @@
 stages:
   - build
   - deploy
+  - submit
   - verifysanity
   - verify
 
@@ -111,6 +112,23 @@ deploy_beta_testflight:
     - tags
   script:
     - python3 -u build-system/Make/Make.py remote-deploy-testflight --darwinContainers="$DARWIN_CONTAINERS" --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
+  environment:
+    name: testflight_llc
+
+submit_appstore:
+  tags:
+    - ios_beta
+  stage: submit
+  needs:
+    - deploy_beta_testflight
+  allow_failure: false
+  manual: true
+  only:
+    - beta
+  except:
+    - tags
+  script:
+    - exit 1
   environment:
     name: testflight_llc
 
