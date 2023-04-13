@@ -9154,6 +9154,7 @@ Sorry for the inconvenience.";
 "WallpaperPreview.ChatBottomText" = "Enjoy the view.";
 
 "Conversation.Theme.SetPhotoWallpaper" = "Choose Wallpaper from Photos";
+"Conversation.Theme.SetNewPhotoWallpaper" = "Choose a New Wallpaper";
 "Conversation.Theme.SetColorWallpaper" = "Set a Color as Wallpaper";
 
 "Conversation.Theme.ChooseWallpaperTitle" = "Choose Wallpaper";

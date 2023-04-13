@@ -1015,8 +1015,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         var accentButtonTheme = true
         var otherIsEnabled = false
         if self.selectedEmoticon?.strippedEmoji == self.initiallySelectedEmoticon?.strippedEmoji {
-            doneButtonTitle = self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper
             otherIsEnabled = self.controller?.canResetWallpaper == true
+            doneButtonTitle = otherIsEnabled ? self.presentationData.strings.Conversation_Theme_SetNewPhotoWallpaper : self.presentationData.strings.Conversation_Theme_SetPhotoWallpaper
             accentButtonTheme = false
         } else if self.selectedEmoticon == nil && self.initiallySelectedEmoticon != nil {
             doneButtonTitle = self.presentationData.strings.Conversation_Theme_Reset

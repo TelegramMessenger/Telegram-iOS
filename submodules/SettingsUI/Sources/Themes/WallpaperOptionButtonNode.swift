@@ -219,6 +219,11 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
         self.animationNode?.setAnimation(name: !isNight ? "anim_sun_reverse" : "anim_sun", colors: [:])
         self.animationNode?.speed = 1.66
         self.animationNode?.playOnce()
+        
+        self.isUserInteractionEnabled = false
+        Queue.mainQueue().after(0.4) {
+            self.isUserInteractionEnabled = true
+        }
     }
     
     var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
