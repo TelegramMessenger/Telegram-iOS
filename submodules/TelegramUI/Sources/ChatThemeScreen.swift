@@ -1331,6 +1331,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         if self.controller?.canResetWallpaper == true {
             contentHeight += 50.0
         }
+        if cleanInsets.bottom.isZero {
+            insets.bottom += 14.0
+            contentHeight += 14.0
+        }
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         

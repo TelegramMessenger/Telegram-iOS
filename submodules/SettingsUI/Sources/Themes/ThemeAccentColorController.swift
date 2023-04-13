@@ -116,11 +116,11 @@ final class ThemeAccentColorController: ViewController {
         
         if case .background = mode {
             self.title = self.presentationData.strings.Wallpaper_Title
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         } else {
             self.navigationItem.titleView = self.segmentedTitleView
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         }
-        
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
     }
     
     required init(coder aDecoder: NSCoder) {

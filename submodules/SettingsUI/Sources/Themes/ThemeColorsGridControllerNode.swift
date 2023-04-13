@@ -259,6 +259,12 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         
+        self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        
+        self.topBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
+        
         self.customColorItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.WallpaperColors_SetCustomColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentColorPicker()
         })

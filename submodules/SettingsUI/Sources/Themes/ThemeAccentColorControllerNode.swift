@@ -188,7 +188,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private var messageNodes: [ListViewItemNode]?
     private let colorPanelNode: WallpaperColorPanelNode
     private let patternPanelNode: WallpaperPatternPanelNode
-    private let toolbarNode: WallpaperGalleryToolbarNode
+    private let toolbarNode: WallpaperGalleryToolbar
     
     private var serviceColorDisposable: Disposable?
     private var stateDisposable: Disposable?
@@ -312,9 +312,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         } else {
             doneButtonType = .set
         }
-        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
-        self.toolbarNode.dark = true
-        self.toolbarNode.setDoneIsSolid(true, transition: .immediate)
+        if case .background = mode {
+            let toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
+            toolbarNode.dark = true
+            toolbarNode.setDoneIsSolid(true, transition: .immediate)
+            self.toolbarNode = toolbarNode
+        } else {
+            self.toolbarNode = WallpaperGalleryOldToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
+        }
         
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
@@ -1168,8 +1173,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             self.pageControlNode.setPage(0.0)
         }
         
-        let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
-        transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
+        var toolbarBottomInset = layout.intrinsicInsets.bottom
+        if case .background = mode, toolbarBottomInset.isZero {
+            toolbarBottomInset = 16.0
+        }
+        let toolbarHeight = 49.0 + toolbarBottomInset
+        transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         var bottomInset = toolbarHeight
@@ -1179,26 +1188,29 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         var colorPanelOffset: CGFloat = 0.0
         var colorPanelY = layout.size.height - bottomInset - colorPanelHeight
+        let originalBottomInset = bottomInset
         if self.state.colorPanelCollapsed {
             colorPanelOffset = colorPanelHeight
             colorPanelY = layout.size.height
         }
-        let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: colorPanelY), size: CGSize(width: layout.size.width, height: colorPanelHeight))
         bottomInset += (colorPanelHeight - colorPanelOffset)
         
-        self.toolbarNode.setDoneIsSolid(!self.state.colorPanelCollapsed, transition: transition)
+        if let toolbarNode = self.toolbarNode as? WallpaperGalleryToolbarNode {
+            toolbarNode.setDoneIsSolid(!self.state.colorPanelCollapsed, transition: transition)
+        }
         
         if bottomInset + navigationBarHeight > bounds.height {
             return
         }
         
-        transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
-        self.colorPanelNode.updateLayout(size: colorPanelFrame.size, bottomInset: 0.0, transition: transition)
+        let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: colorPanelY), size: CGSize(width: layout.size.width, height: colorPanelHeight))
+        transition.updateFrame(node: self.colorPanelNode, frame: CGRect(origin: colorPanelFrame.origin, size: CGSize(width: colorPanelFrame.width, height: colorPanelFrame.height + originalBottomInset)))
+        self.colorPanelNode.updateLayout(size: colorPanelFrame.size, bottomInset: originalBottomInset, transition: transition)
         
         let patternPanelAlpha: CGFloat = self.state.displayPatternPanel ? 1.0 : 0.0
         let patternPanelFrame = colorPanelFrame
         transition.updateFrame(node: self.patternPanelNode, frame: patternPanelFrame)
-        self.patternPanelNode.updateLayout(size: patternPanelFrame.size, bottomInset: 0.0, transition: transition)
+        self.patternPanelNode.updateLayout(size: patternPanelFrame.size, bottomInset: originalBottomInset, transition: transition)
         self.patternPanelNode.isUserInteractionEnabled = self.state.displayPatternPanel
         transition.updateAlpha(node: self.patternPanelNode, alpha: patternPanelAlpha)
         
