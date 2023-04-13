@@ -9,7 +9,7 @@ public func canShareLinkToPeer(peer: EnginePeer) -> Bool {
     case let .channel(channel):
         if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
             isEnabled = true
-        } else if channel.username != nil {
+        } else if channel.username != nil || !channel.usernames.isEmpty {
             if !channel.flags.contains(.requestToJoin) {
                 isEnabled = true
             }
