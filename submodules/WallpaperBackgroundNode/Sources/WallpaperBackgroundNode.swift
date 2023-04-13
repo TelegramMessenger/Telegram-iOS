@@ -1058,12 +1058,12 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         if let (size, displayMode) = self.validLayout {
             self.updateLayout(size: size, displayMode: displayMode, transition: .immediate)
-            self.updateBubbles()
             
             if scheduleLoopingEvent {
                 self.animateEvent(transition: .animated(duration: 0.7, curve: .linear), extendAnimation: false)
             }
         }
+        self.updateBubbles()
         
         self.updateDimming()
     }

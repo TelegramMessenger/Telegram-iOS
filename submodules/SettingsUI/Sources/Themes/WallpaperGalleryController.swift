@@ -523,9 +523,42 @@ public class WallpaperGalleryController: ViewController {
                     let options = centralItemNode.options
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
-                        
+                        let apply = strongSelf.apply
                         if case .peer = strongSelf.mode {
-                            strongSelf.apply?(entry, options, centralItemNode.editedFullSizeImage, centralItemNode.editedCropRect, centralItemNode.brightness)
+                            if case let .wallpaper(wallpaper, _) = entry, options.contains(.blur) {
+                                var resource: MediaResource?
+                                switch wallpaper {
+                                    case let .file(file):
+                                        resource = file.file.resource
+                                    case let .image(representations, _):
+                                        if let largestSize = largestImageRepresentation(representations) {
+                                            resource = largestSize.resource
+                                        }
+                                    default:
+                                        break
+                                }
+                                if let resource = resource {
+                                    let representation = CachedBlurredWallpaperRepresentation()
+                                    var data: Data?
+                                    if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                        data = maybeData
+                                    } else if let path = strongSelf.context.sharedContext.accountManager.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
+                                        data = maybeData
+                                    }
+                                    
+                                    if let data = data {
+                                        strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                        let _ = (strongSelf.context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: true, fetch: true)
+                                        |> filter({ $0.complete })
+                                        |> take(1)
+                                        |> deliverOnMainQueue).start(next: { _ in
+                                            apply?(entry, options, nil, nil, centralItemNode.brightness)
+                                        })
+                                    }
+                                }
+                            } else {
+                                apply?(entry, options, centralItemNode.editedFullSizeImage, centralItemNode.editedCropRect, centralItemNode.brightness)
+                            }
                             return
                         }
                         
@@ -595,7 +628,6 @@ public class WallpaperGalleryController: ViewController {
                                     if options.contains(.blur) {
                                         if let resource = resource {
                                             let representation = CachedBlurredWallpaperRepresentation()
-
                                             var data: Data?
                                             if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
                                                 data = maybeData

@@ -640,7 +640,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.nativeNode.isHidden = false
                     self.patternButtonNode.isSelected = file.isPattern
 
-                    if file.isPattern && file.settings.colors.count >= 3 {
+                    if file.settings.colors.count >= 3 {
                         self.playButtonNode.setIcon(self.playButtonPlayImage)
                     } else {
                         self.playButtonNode.setIcon(self.playButtonRotateImage)
@@ -733,7 +733,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
                             contentSize = dimensions.cgSize
                             displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
-                            
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
                             for representation in file.file.previewRepresentations {
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: message, slug: file.slug)))
