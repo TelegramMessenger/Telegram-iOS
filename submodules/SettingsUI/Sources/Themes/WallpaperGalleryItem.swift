@@ -343,7 +343,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private func switchTheme() {
         if let messageNodes = self.messageNodes {
             for messageNode in messageNodes.prefix(2) {
-                if let snapshotView = messageNode.view.snapshotContentTree() {
+                if let snapshotView = messageNode.view.snapshotContentTree(keepPortals: true) {
                     messageNode.view.addSubview(snapshotView)
                     snapshotView.frame = messageNode.bounds
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -640,7 +640,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.nativeNode.isHidden = false
                     self.patternButtonNode.isSelected = file.isPattern
 
-                    if file.isPattern && file.settings.colors.count >= 3 {
+                    if file.settings.colors.count >= 3 {
                         self.playButtonNode.setIcon(self.playButtonPlayImage)
                     } else {
                         self.playButtonNode.setIcon(self.playButtonRotateImage)
@@ -733,7 +733,6 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
                             contentSize = dimensions.cgSize
                             displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
-                            
                             var convertedRepresentations: [ImageRepresentationWithReference] = []
                             for representation in file.file.previewRepresentations {
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: message, slug: file.slug)))
@@ -857,7 +856,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 case let .asset(asset):
                     let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                     contentSize = dimensions
-                    displaySize = dimensions.dividedByScreenScale().integralFloor
+                    displaySize = dimensions.aspectFittedOrSmaller(CGSize(width: 2048.0, height: 2048.0))
                     signal = photoWallpaper(postbox: context.account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max)))
                     fetchSignal = .complete()
                     statusSignal = .single(.Local)
@@ -899,7 +898,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     
                     if let imageResource = imageResource, let imageDimensions = imageDimensions {
                         contentSize = imageDimensions
-                        displaySize = imageDimensions.dividedByScreenScale().integralFloor
+                        displaySize = imageDimensions.aspectFittedOrSmaller(CGSize(width: 2048.0, height: 2048.0))
                         
                         var representations: [TelegramMediaImageRepresentation] = []
                         if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {

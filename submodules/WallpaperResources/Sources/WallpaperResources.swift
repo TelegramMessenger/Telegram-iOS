@@ -553,6 +553,8 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         c.restoreGState()
                     }
 
+                    var patternIsLoaded = false
+                    var patternIsInverted = false
                     let displayMode = customArguments.displayMode
                     let overlayImage = generateImage(arguments.drawingRect.size, rotatedContext: { size, c in
                         c.clear(CGRect(origin: CGPoint(), size: size))
@@ -566,6 +568,7 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         }
 
                         if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
+                            patternIsInverted = true
                             c.setBlendMode(.copy)
                             c.setFillColor(UIColor.black.cgColor)
                             c.fill(CGRect(origin: CGPoint(), size: size))
@@ -574,6 +577,7 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         }
 
                         if let image = image {
+                            patternIsLoaded = true
                             var fittedSize = image.size
                             if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
                                 fittedSize.width = arguments.boundingSize.width
@@ -659,6 +663,10 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: -drawingRect.midX, y: -drawingRect.midY)
                         c.setAlpha(1.0)
+                    }
+                    if !patternIsLoaded && patternIsInverted {
+                        c.setFillColor(UIColor.black.cgColor)
+                        c.fill(CGRect(origin: .zero, size: drawingRect.size))
                     }
                 }
                 addCorners(context, arguments: arguments)
@@ -1526,7 +1534,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                                         let image = context?.generateImage()
                                         
                                         if !file.settings.colors.isEmpty {
-                                            return .single((effectiveBackgroundColor, incomingColors, outgoingColors, image, false, isMask, alpha, rotation))
+                                            return .single((image == nil ? backgroundColor : effectiveBackgroundColor, incomingColors, outgoingColors, image, false, isMask, alpha, rotation))
                                         } else {
                                             return .complete()
                                         }
@@ -1569,8 +1577,10 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
             context.withContext { c in
                 let isBlack = UIColor.average(of: colors.0.2.map(UIColor.init(rgb:))).hsb.b <= 0.01
                 var patternIntensity: CGFloat = 0.5
+                var isPattern = false
                 if let wallpaper = wallpaper, case let .file(file) = wallpaper {
                     if !file.settings.colors.isEmpty {
+                        isPattern = file.isPattern
                         if let intensity = file.settings.intensity {
                             patternIntensity = CGFloat(intensity) / 100.0
                         }
@@ -1578,8 +1588,13 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                 }
                                 
                 if colors.0.2.count >= 3 {
-                    let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors.0.2.map(UIColor.init(rgb:)))
-                    c.draw(image.cgImage!, in: drawingRect)
+                    if isPattern && patternIntensity < 0.0 && colors.3 == nil {
+                        c.setFillColor(UIColor.black.cgColor)
+                        c.fill(drawingRect)
+                    } else {
+                        let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors.0.2.map(UIColor.init(rgb:)))
+                        c.draw(image.cgImage!, in: drawingRect)
+                    }
                 } else if let secondBackgroundColor = colors.0.1 {
                     let gradientColors = [colors.0.0, secondBackgroundColor].map { $0.cgColor } as CFArray
                     var locations: [CGFloat] = [0.0, 1.0]

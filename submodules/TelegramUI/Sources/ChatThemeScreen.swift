@@ -270,6 +270,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         self.imageNode.isLayerBacked = true
         self.imageNode.cornerRadius = 8.0
         self.imageNode.clipsToBounds = true
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         
         self.overlayNode = ASImageNode()
         self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 84.0, height: 110.0))
@@ -1329,6 +1330,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         var contentHeight = titleHeight + bottomInset + 168.0
         if self.controller?.canResetWallpaper == true {
             contentHeight += 50.0
+        }
+        if cleanInsets.bottom.isZero {
+            insets.bottom += 14.0
+            contentHeight += 14.0
         }
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
