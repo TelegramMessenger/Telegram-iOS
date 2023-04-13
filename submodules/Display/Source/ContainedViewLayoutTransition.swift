@@ -423,6 +423,29 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateAnchorPoint(layer: CALayer, anchorPoint: CGPoint, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if layer.anchorPoint.equalTo(anchorPoint) && !force {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                layer.removeAnimation(forKey: "anchorPoint")
+                layer.anchorPoint = anchorPoint
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousAnchorPoint = layer.anchorPoint
+                layer.anchorPoint = anchorPoint
+                layer.animateAnchorPoint(from: previousAnchorPoint, to: anchorPoint, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+            }
+        }
+    }
+    
     func animatePosition(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self {
         case .immediate:

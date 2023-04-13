@@ -9100,7 +9100,7 @@ Sorry for the inconvenience.";
 
 "TextFormat.EditLinkTitle" = "Edit Link";
 
-"PeerInfo.Username" = "Username";
+"PeerInfo.BotLinks" = "Public Links";
 "Username.BotLinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on the bot info page.";
 
 "Wallpaper.ApplyForAll" = "Apply For All Chats";
@@ -9140,6 +9140,10 @@ Sorry for the inconvenience.";
 "Username.BotLinkHint" = "This username cannot be edited.";
 "Username.BotLinkHintExtended" = "This username cannot be edited. You can acquire additional usernames on [Fragment]().";
 
+"Username.BotActivateAlertText" = "Do you want to show this link on the bot's info page?";
+"Username.BotDeactivateAlertText" = "Do you want to hide this link from the bot's info page?";
+"Username.BotActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of the bot's active public links first.";
+
 "PeerInfo.Bot.EditIntro" = "Edit Intro";
 "PeerInfo.Bot.EditCommands" = "Edit Commands";
 "PeerInfo.Bot.ChangeSettings" = "Change Bot Settings";
@@ -9150,6 +9154,7 @@ Sorry for the inconvenience.";
 "WallpaperPreview.ChatBottomText" = "Enjoy the view.";
 
 "Conversation.Theme.SetPhotoWallpaper" = "Choose Wallpaper from Photos";
+"Conversation.Theme.SetNewPhotoWallpaper" = "Choose a New Wallpaper";
 "Conversation.Theme.SetColorWallpaper" = "Set a Color as Wallpaper";
 
 "Conversation.Theme.ChooseWallpaperTitle" = "Choose Wallpaper";
@@ -9327,3 +9332,5 @@ Sorry for the inconvenience.";
 "ChatList.EmptyListContactsHeader" = "YOUR CONTACTS ON TELEGRAM";
 "ChatList.EmptyListContactsHeaderHide" = "hide";
 "ChatList.EmptyListTooltip" = "Send a message or\nstart a group here.";
+
+"Username.BotTitle" = "Public Links";
