@@ -516,7 +516,7 @@
         [zoomableItemView reset];
     };
     
-    controller.beginTransitionOut = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
+    controller.beginTransitionOut = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView, __unused bool saving)
     {
         __strong TGMediaPickerGalleryModel *strongSelf = weakSelf;
         if (strongSelf == nil)

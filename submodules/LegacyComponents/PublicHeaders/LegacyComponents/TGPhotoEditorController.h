@@ -34,7 +34,7 @@ typedef enum {
 
 @property (nonatomic, copy) UIView *(^beginTransitionIn)(CGRect *referenceFrame, UIView **parentView);
 @property (nonatomic, copy) void (^finishedTransitionIn)(void);
-@property (nonatomic, copy) UIView *(^beginTransitionOut)(CGRect *referenceFrame, UIView **parentView);
+@property (nonatomic, copy) UIView *(^beginTransitionOut)(CGRect *referenceFrame, UIView **parentView, bool saving);
 @property (nonatomic, copy) void (^finishedTransitionOut)(bool saved);
 
 @property (nonatomic, copy) void (^onDismiss)();
