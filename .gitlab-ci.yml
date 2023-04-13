@@ -1,9 +1,9 @@
 stages:
-  - submit
   - build
   - deploy
   - verifysanity
   - verify
+  - submit
 
 variables:
   LANG: "en_US.UTF-8"
