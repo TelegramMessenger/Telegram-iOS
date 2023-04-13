@@ -64,7 +64,7 @@ public enum LegacyMediaEditorMode {
 }
 
 
-public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditableItem, cropRect: CGRect, adjustments: TGMediaEditAdjustments?, referenceView: UIView, beginTransitionOut: (() -> Void)?, finishTransitionOut: (() -> Void)?, completion: @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, fullSizeCompletion: @escaping (UIImage?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditableItem, cropRect: CGRect, adjustments: TGMediaEditAdjustments?, referenceView: UIView, beginTransitionOut: ((Bool) -> Void)?, finishTransitionOut: (() -> Void)?, completion: @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, fullSizeCompletion: @escaping (UIImage?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
     legacyController.blocksBackgroundWhenInOverlay = true
@@ -90,8 +90,8 @@ public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditable
         Queue.mainQueue().async {
             fullSizeCompletion(image)
         }
-    }, beginTransitionOut: {
-        beginTransitionOut?()
+    }, beginTransitionOut: { saving in
+        beginTransitionOut?(saving)
     }, finishTransitionOut: { [weak legacyController] in
         legacyController?.dismiss()
         finishTransitionOut?()

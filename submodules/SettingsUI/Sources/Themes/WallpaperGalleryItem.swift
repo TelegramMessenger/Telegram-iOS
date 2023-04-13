@@ -506,10 +506,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 return context
             }))
 
-            self.temporaryImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
-                self?.temporaryImageNode.image = nil
-                self?.temporaryImageNode.layer.removeAllAnimations()
-            })
+            Queue.mainQueue().after(0.1) {
+                self.brightnessNode.isHidden = false
+                self.temporaryImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+                    self?.temporaryImageNode.image = nil
+                    self?.temporaryImageNode.layer.removeAllAnimations()
+                })
+            }
         }, { [weak self] image in
             guard let self else {
                 return
@@ -532,13 +535,38 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     public private(set) var editedFullSizeImage: UIImage?
     private var currentAdjustments: TGMediaEditAdjustments?
     
+    func beginTransitionToEditor() {
+        self.cropNode.isHidden = true
+        
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+        transition.updateAlpha(node: self.messagesContainerNode, alpha: 0.0)
+        transition.updateAlpha(node: self.buttonsContainerNode, alpha: 0.0)
+        transition.updateAlpha(node: self.serviceBackgroundNode, alpha: 0.0)
+        
+        self.interaction?.beginTransitionToEditor()
+    }
+    
+    func beginTransitionFromEditor(saving: Bool) {
+        if saving {
+            self.brightnessNode.isHidden = true
+        }
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+        transition.updateAlpha(node: self.messagesContainerNode, alpha: 1.0)
+        transition.updateAlpha(node: self.buttonsContainerNode, alpha: 1.0)
+        transition.updateAlpha(node: self.serviceBackgroundNode, alpha: 1.0)
+    }
+    
+    func finishTransitionFromEditor() {
+        self.cropNode.isHidden = false
+        self.temporaryImageNode.alpha = 1.0
+    }
+    
     private func animateIntensityChange(delay: Double) {
         let targetValue: CGFloat = self.sliderNode.value
         self.sliderNode.internalUpdateLayout(size: self.sliderNode.frame.size, value: 1.0)
         self.sliderNode.ignoreUpdates = true
         Queue.mainQueue().after(delay, {
             self.brightnessNode.backgroundColor = UIColor(rgb: 0x000000)
-            self.brightnessNode.layer.compositingFilter = nil
             
             self.sliderNode.ignoreUpdates = false
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .easeInOut)
@@ -551,35 +579,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         let value = self.isDarkAppearance ? self.sliderNode.value : 1.0
         if value < 1.0 {
             self.brightnessNode.backgroundColor = UIColor(rgb: 0x000000)
-            self.brightnessNode.layer.compositingFilter = nil
             transition.updateAlpha(node: self.brightnessNode, alpha: 1.0 - value)
         } else {
-            self.brightnessNode.layer.compositingFilter = nil
             transition.updateAlpha(node: self.brightnessNode, alpha: 0.0)
         }
-    }
-    
-    func beginTransitionToEditor() {
-        self.cropNode.isHidden = true
-        
-        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
-        transition.updateAlpha(node: self.messagesContainerNode, alpha: 0.0)
-        transition.updateAlpha(node: self.buttonsContainerNode, alpha: 0.0)
-        transition.updateAlpha(node: self.serviceBackgroundNode, alpha: 0.0)
-        
-        self.interaction?.beginTransitionToEditor()
-    }
-    
-    func beginTransitionFromEditor() {
-        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
-        transition.updateAlpha(node: self.messagesContainerNode, alpha: 1.0)
-        transition.updateAlpha(node: self.buttonsContainerNode, alpha: 1.0)
-        transition.updateAlpha(node: self.serviceBackgroundNode, alpha: 1.0)
-    }
-    
-    func finishTransitionFromEditor() {
-        self.cropNode.isHidden = false
-        self.temporaryImageNode.alpha = 1.0
     }
     
     @objc private func cancelPressed() {
@@ -667,6 +670,21 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     self.nativeNode.isHidden = true
                     self.patternButtonNode.isSelected = false
                     self.playButtonNode.setIcon(self.playButtonRotateImage)
+                }
+                
+                if let settings = wallpaper.settings {
+                    if settings.blur {
+                        self.blurButtonNode.setSelected(true, animated: false)
+                        self.setBlurEnabled(true, animated: false)
+                    }
+                    if settings.motion {
+                        self.motionButtonNode.setSelected(true, animated: false)
+                        self.setMotionEnabled(true, animated: false)
+                    }
+                    if case let .file(file) = wallpaper, !file.isPattern, let intensity = file.settings.intensity {
+                        self.sliderNode.value = (1.0 - CGFloat(intensity) / 100.0)
+                        self.updateIntensity(transition: .immediate)
+                    }
                 }
             case .asset:
                 self.nativeNode._internalUpdateIsSettingUpWallpaper()

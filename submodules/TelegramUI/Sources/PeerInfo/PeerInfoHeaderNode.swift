@@ -2311,7 +2311,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var emojiStatusPackDisposable = MetaDisposable()
     var emojiStatusFileAndPackTitle = Promise<(TelegramMediaFile, LoadedStickerPack)?>()
     
-    private var validWidth: CGFloat?
+    private var validLayout: (width: CGFloat, deviceMetrics: DeviceMetrics)?
     
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
         self.context = context
@@ -2577,7 +2577,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.peer = peer
         self.threadData = threadData
         self.avatarListNode.listContainerNode.peer = peer
-        self.validWidth = width
+        
+        let isFirstTime = self.validLayout == nil
+        self.validLayout = (width, deviceMetrics)
         
         let previousPanelStatusData = self.currentPanelStatusData
         self.currentPanelStatusData = panelStatusData.0
@@ -3628,6 +3630,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateFrame(node: self.separatorNode, frame: separatorFrame)
         }
         
+        if isFirstTime {
+            self.updateAvatarMask(transition: .immediate)
+        }
+        
         return resolvedHeight
     }
     
@@ -3690,16 +3696,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.avatarListNode.animateAvatarCollapse(transition: transition)
             }
             
-            if let width = self.validWidth {
-                let maskScale: CGFloat = isAvatarExpanded ? width / 100.0 : 1.0
-                transition.updateTransformScale(layer: self.avatarListNode.maskNode.layer, scale: maskScale)
-                transition.updateTransformScale(layer: self.avatarListNode.bottomCoverNode.layer, scale: maskScale)
-                transition.updateTransformScale(layer: self.avatarListNode.topCoverNode.layer, scale: maskScale)
-                
-                let maskAnchorPoint = CGPoint(x: 0.5, y: isAvatarExpanded ? 0.37 : 0.5)
-                transition.updateAnchorPoint(layer: self.avatarListNode.maskNode.layer, anchorPoint: maskAnchorPoint)
-            }
+            self.updateAvatarMask(transition: transition)
         }
+    }
+    
+    private func updateAvatarMask(transition: ContainedViewLayoutTransition) {
+        guard let (width, deviceMetrics) = self.validLayout, deviceMetrics.hasDynamicIsland else {
+            return
+        }
+        let maskScale: CGFloat = isAvatarExpanded ? width / 100.0 : 1.0
+        transition.updateTransformScale(layer: self.avatarListNode.maskNode.layer, scale: maskScale)
+        transition.updateTransformScale(layer: self.avatarListNode.bottomCoverNode.layer, scale: maskScale)
+        transition.updateTransformScale(layer: self.avatarListNode.topCoverNode.layer, scale: maskScale)
+        
+        let maskAnchorPoint = CGPoint(x: 0.5, y: isAvatarExpanded ? 0.37 : 0.5)
+        transition.updateAnchorPoint(layer: self.avatarListNode.maskNode.layer, anchorPoint: maskAnchorPoint)
     }
 }
 

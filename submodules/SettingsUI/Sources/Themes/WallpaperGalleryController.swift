@@ -169,10 +169,10 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
 class WallpaperGalleryInteraction {
     let editMedia: (PHAsset, UIImage, CGRect, TGMediaEditAdjustments?, UIView, @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, @escaping (UIImage?) -> Void) -> Void
     let beginTransitionToEditor: () -> Void
-    let beginTransitionFromEditor: () -> Void
+    let beginTransitionFromEditor: (Bool) -> Void
     let finishTransitionFromEditor: () -> Void
     
-    init(editMedia: @escaping (PHAsset, UIImage, CGRect, TGMediaEditAdjustments?, UIView, @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, @escaping (UIImage?) -> Void) -> Void, beginTransitionToEditor: @escaping () -> Void, beginTransitionFromEditor: @escaping () -> Void, finishTransitionFromEditor: @escaping () -> Void) {
+    init(editMedia: @escaping (PHAsset, UIImage, CGRect, TGMediaEditAdjustments?, UIView, @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, @escaping (UIImage?) -> Void) -> Void, beginTransitionToEditor: @escaping () -> Void, beginTransitionFromEditor: @escaping (Bool) -> Void, finishTransitionFromEditor: @escaping () -> Void) {
         self.editMedia = editMedia
         self.beginTransitionToEditor = beginTransitionToEditor
         self.beginTransitionFromEditor = beginTransitionFromEditor
@@ -253,8 +253,8 @@ public class WallpaperGalleryController: ViewController {
                 return
             }
             let item = LegacyWallpaperItem(asset: asset, screenImage: image, dimensions: CGSize(width: asset.pixelWidth, height: asset.pixelHeight))
-            legacyWallpaperEditor(context: context, item: item, cropRect: cropRect, adjustments: adjustments, referenceView: referenceView, beginTransitionOut: { [weak self] in
-                self?.interaction?.beginTransitionFromEditor()
+            legacyWallpaperEditor(context: context, item: item, cropRect: cropRect, adjustments: adjustments, referenceView: referenceView, beginTransitionOut: { [weak self] saving in
+                self?.interaction?.beginTransitionFromEditor(saving)
             }, finishTransitionOut: { [weak self] in
                 self?.interaction?.finishTransitionFromEditor()
             }, completion: { image, adjustments in
@@ -274,7 +274,7 @@ public class WallpaperGalleryController: ViewController {
             if let toolbarNode = self.toolbarNode {
                 transition.updateAlpha(node: toolbarNode, alpha: 0.0)
             }
-        }, beginTransitionFromEditor: { [weak self] in
+        }, beginTransitionFromEditor: { [weak self] saving in
             guard let self else {
                 return
             }
@@ -283,7 +283,7 @@ public class WallpaperGalleryController: ViewController {
                 transition.updateAlpha(node: toolbarNode, alpha: 1.0)
             }
             if let centralItemNode = self.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
-                centralItemNode.beginTransitionFromEditor()
+                centralItemNode.beginTransitionFromEditor(saving: saving)
             }
         }, finishTransitionFromEditor: { [weak self] in
             guard let self else {

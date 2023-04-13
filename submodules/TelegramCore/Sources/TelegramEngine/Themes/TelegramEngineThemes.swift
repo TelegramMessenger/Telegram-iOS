@@ -17,7 +17,7 @@ public extension TelegramEngine {
             return _internal_setChatTheme(account: self.account, peerId: peerId, emoticon: emoticon)
         }
         
-        public func setChatWallpaper(peerId: PeerId, wallpaper: TelegramWallpaper?) -> Signal<Never, NoError> {
+        public func setChatWallpaper(peerId: PeerId, wallpaper: TelegramWallpaper?) -> Signal<Never, SetChatWallpaperError> {
             return _internal_setChatWallpaper(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, wallpaper: wallpaper)
             |> ignoreValues
         }

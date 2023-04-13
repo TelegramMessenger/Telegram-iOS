@@ -284,11 +284,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             finalCropRect = CGRect(x: (image.size.width - fittedSize.width) / 2.0, y: (image.size.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height)
         }
         croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 1440.0, height: 2960.0), image.size, true)
-        
-        if mode.contains(.blur) {
-            croppedImage = blurredImage(croppedImage, radius: 30.0)!
-        }
-        
+                
         let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
         let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
         
@@ -301,19 +297,23 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             
+            let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+            
             var intensity: Int32?
             if let brightness {
                 intensity = max(0, min(100, Int32(brightness * 100.0)))
             }
             
-            let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
-            let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
-            
-            Queue.mainQueue().async {
-                completion()
+            Queue.mainQueue().after(0.05) {
+                let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
+                let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
+                
+                context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
+                
+                Queue.mainQueue().async {
+                    completion()
+                }
             }
-            
-            context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
         }
         return croppedImage
     }).start()
