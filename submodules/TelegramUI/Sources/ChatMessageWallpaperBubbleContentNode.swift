@@ -328,7 +328,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                                         if let dimensions = file.dimensions?.cgSize {
                                             imageSize = dimensions.aspectFilled(boundingSize)
                                         }
-                                        updateImageSignal = wallpaperImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), representations: representations, alwaysShowThumbnailFirst: true, thumbnail: true, autoFetchFullSize: true)
+                                        updateImageSignal = wallpaperImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), representations: representations, alwaysShowThumbnailFirst: true, thumbnail: true, autoFetchFullSize: true, blurred: wallpaper?.settings?.blur == true)
                                     }
                                 case let .image(representations):
                                     if let dimensions = representations.last?.dimensions.cgSize {

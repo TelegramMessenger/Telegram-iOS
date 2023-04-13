@@ -142,18 +142,28 @@ public final class ThemeGridController: ViewController {
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
+                let dismissControllers = { [weak self] in
+                    if let self, let navigationController = self.navigationController as? NavigationController {
+                        let controllers = navigationController.viewControllers.filter({ controller in
+                            if controller is WallpaperGalleryController || controller is MediaPickerScreen {
+                                return false
+                            }
+                            return true
+                        })
+                        navigationController.setViewControllers(controllers, animated: true)
+                    }
+                }
+                
                 let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
                 controller.customSelection = { [weak self] asset in
                     guard let strongSelf = self else {
                         return
                     }
                     let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset))
-                    controller.apply = { [weak self, weak controller] wallpaper, options, editedImage, cropRect, brightness in
-                        if let strongSelf = self, let controller = controller {
-                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: { [weak controller] in
-                                if let controller = controller {
-                                    controller.dismiss(forceAway: true)
-                                }
+                    controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness in
+                        if let strongSelf = self {
+                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
+                                dismissControllers()
                             })
                         }
                     }

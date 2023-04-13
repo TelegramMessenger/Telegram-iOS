@@ -857,7 +857,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()
-                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, nil, [], nil, nil, nil), mode: .peer(EnginePeer(peer), true))
+                            var options = WallpaperPresentationOptions()
+                            var intensity: Int32?
+                            if let settings = wallpaper.settings {
+                                if settings.blur {
+                                    options.insert(.blur)
+                                }
+                                if settings.motion {
+                                    options.insert(.motion)
+                                }
+                                if case let .file(file) = wallpaper, !file.isPattern {
+                                    intensity = settings.intensity
+                                }
+                            }
+                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, options, [], intensity, nil, nil), mode: .peer(EnginePeer(peer), true))
                             wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, brightness in
                                 var settings: WallpaperSettings?
                                 if case let .wallpaper(wallpaper, _) = entry {

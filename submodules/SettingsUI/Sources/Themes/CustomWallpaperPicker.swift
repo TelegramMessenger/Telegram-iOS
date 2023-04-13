@@ -284,11 +284,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             finalCropRect = CGRect(x: (image.size.width - fittedSize.width) / 2.0, y: (image.size.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height)
         }
         croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 1440.0, height: 2960.0), image.size, true)
-        
-        if mode.contains(.blur) {
-            croppedImage = blurredImage(croppedImage, radius: 30.0)!
-        }
-        
+                
         let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
         let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
         
