@@ -394,7 +394,6 @@ public func standaloneColorPickerController(
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
-    //controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     controller.requestController = { _, present in
         let colorPickerController = ThemeColorsGridController(context: context, mode: .peer(peer))
         colorPickerController.pushController = { controller in
@@ -406,5 +405,6 @@ public func standaloneColorPickerController(
         colorPickerController.openGallery = openGallery
         present(colorPickerController, colorPickerController.mediaPickerContext)
     }
+    controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     return controller
 }

@@ -169,7 +169,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
             _upperTransitionView.alpha = 0.0;
             _upperTransitionView.frame = [parentView convertRect:referenceFrame toView:self.view];
             _upperTransitionTargetFrame = [self _targetFrameForTransitionInFromFrame:referenceFrame];
-            [self.view insertSubview:_upperTransitionView atIndex:0];
+            [self.view insertSubview:_upperTransitionView atIndex:2];
         }
     }
     
@@ -219,8 +219,13 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         }
          
         [self _finishedTransitionInWithView:transitionView];
-        [_upperTransitionView removeFromSuperview];
-        _upperTransitionView = nil;
+        
+        [UIView animateWithDuration:0.2 animations:^{
+            _upperTransitionView.alpha = 0.0;
+        } completion:^(BOOL finished) {
+            [_upperTransitionView removeFromSuperview];
+            _upperTransitionView = nil;
+        }];
     }];
 }
 

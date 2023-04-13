@@ -232,6 +232,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
         self.imageNode.isLayerBacked = true
         self.imageNode.cornerRadius = 8.0
         self.imageNode.clipsToBounds = true
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         
         self.overlayNode = ASImageNode()
         self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 84.0, height: 110.0))

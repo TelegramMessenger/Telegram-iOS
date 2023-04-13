@@ -343,7 +343,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
     private func switchTheme() {
         if let messageNodes = self.messageNodes {
             for messageNode in messageNodes.prefix(2) {
-                if let snapshotView = messageNode.view.snapshotContentTree() {
+                if let snapshotView = messageNode.view.snapshotContentTree(keepPortals: true) {
                     messageNode.view.addSubview(snapshotView)
                     snapshotView.frame = messageNode.bounds
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -857,7 +857,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                 case let .asset(asset):
                     let dimensions = CGSize(width: asset.pixelWidth, height: asset.pixelHeight)
                     contentSize = dimensions
-                    displaySize = dimensions.dividedByScreenScale().integralFloor
+                    displaySize = dimensions.aspectFittedOrSmaller(CGSize(width: 2048.0, height: 2048.0))
                     signal = photoWallpaper(postbox: context.account.postbox, photoLibraryResource: PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max)))
                     fetchSignal = .complete()
                     statusSignal = .single(.Local)
@@ -899,7 +899,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     
                     if let imageResource = imageResource, let imageDimensions = imageDimensions {
                         contentSize = imageDimensions
-                        displaySize = imageDimensions.dividedByScreenScale().integralFloor
+                        displaySize = imageDimensions.aspectFittedOrSmaller(CGSize(width: 2048.0, height: 2048.0))
                         
                         var representations: [TelegramMediaImageRepresentation] = []
                         if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
