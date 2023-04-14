@@ -4213,9 +4213,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return
         }
         let engine = self.context.engine
+        
+        let hasArchived = engine.messages.chatList(group: .archive, count: 10)
+        |> take(1)
+        |> map { list -> Bool in
+            return !list.items.isEmpty
+        }
+        
         self.chatListDisplayNode.mainContainerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds[0], threadId: nil))
-        let _ = (ApplicationSpecificNotice.incrementArchiveChatTips(accountManager: self.context.sharedContext.accountManager, count: 1)
-        |> deliverOnMainQueue).start(next: { [weak self] previousHintCount in
+        let _ = (combineLatest(
+            ApplicationSpecificNotice.incrementArchiveChatTips(accountManager: self.context.sharedContext.accountManager, count: 1),
+            hasArchived
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] previousHintCount, hasArchived in
             let _ = (engine.peers.updatePeersGroupIdInteractively(peerIds: peerIds, groupId: .archive)
             |> deliverOnMainQueue).start(completed: {
                 guard let strongSelf = self else {
@@ -4256,14 +4266,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 var title = peerIds.count == 1 ? strongSelf.presentationData.strings.ChatList_UndoArchiveTitle : strongSelf.presentationData.strings.ChatList_UndoArchiveMultipleTitle
                 let text: String
                 let undo: Bool
-                switch previousHintCount {
-                    case 0:
-                        text = strongSelf.presentationData.strings.ChatList_UndoArchiveText1
-                        undo = false
-                    default:
-                        text = title
-                        title = ""
-                        undo = true
+                if hasArchived || previousHintCount != 0 {
+                    text = title
+                    title = ""
+                    undo = true
+                } else {
+                    text = strongSelf.presentationData.strings.ChatList_UndoArchiveText1
+                    undo = false
                 }
                 let controller = UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .archivedChat(peerId: peerIds[0].toInt64(), title: title, text: text, undo: undo), elevatedLayout: false, animateInAsReplacement: true, action: action)
                 strongSelf.present(controller, in: .current)
