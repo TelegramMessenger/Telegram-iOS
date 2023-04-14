@@ -46,6 +46,9 @@ public enum ContextMenuActionItemTextColor {
 public enum ContextMenuActionResult {
     case `default`
     case dismissWithoutContent
+    /// Temporary
+    static var safeStreamRecordingDismissWithoutContent: ContextMenuActionResult { .dismissWithoutContent }
+    
     case custom(ContainedViewLayoutTransition)
 }
 

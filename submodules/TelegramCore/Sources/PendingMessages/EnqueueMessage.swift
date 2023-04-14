@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import Emoji
 
 public enum EnqueueMessageGrouping {
     case none
@@ -287,18 +288,25 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                     var filteredAttributes: [MessageAttribute] = []
                     var replyToMessageId: MessageId?
                     var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                    var forwardSource: MessageId?
                     inner: for attribute in message.attributes {
                         if let attribute = attribute as? ReplyMessageAttribute {
                             replyToMessageId = attribute.messageId
                         } else if let attribute = attribute as? OutgoingMessageInfoAttribute {
                             bubbleUpEmojiOrStickersets = attribute.bubbleUpEmojiOrStickersets
                             continue inner
+                        } else if let attribute = attribute as? ForwardSourceInfoAttribute {
+                            forwardSource = attribute.messageId
                         } else {
                             filteredAttributes.append(attribute)
                         }
                     }
-                    
-                    messages.append(.message(text: message.text, attributes: filteredAttributes, inlineStickers: [:], mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
+
+                    if let forwardSource {
+                        messages.append(.forward(source: forwardSource, threadId: nil, grouping: .auto, attributes: filteredAttributes, correlationId: nil))
+                    } else {
+                        messages.append(.message(text: message.text, attributes: filteredAttributes, inlineStickers: [:], mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
+                    }
                 }
             }
             let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages.map { (false, $0) })
@@ -397,6 +405,14 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                 case let .message(text, requestedAttributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _, _):
                     for (_, file) in inlineStickers {
                         transaction.storeMediaIfNotPresent(media: file)
+                    }
+                
+                    for emoji in text.emojis {
+                        if emoji.isSingleEmoji {
+                            if !emojiItems.contains(where: { $0.content == .text(emoji) }) {
+                                emojiItems.append(RecentEmojiItem(.text(emoji)))
+                            }
+                        }
                     }
                 
                     var peerAutoremoveTimeout: Int32?

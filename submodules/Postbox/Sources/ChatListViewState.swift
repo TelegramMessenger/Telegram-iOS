@@ -1599,6 +1599,37 @@ struct ChatListViewState {
                         }
                     }
                     
+                    var needsMigrationMerge = false
+                    for message in renderedMessages {
+                        if postbox.seedConfiguration.isPeerUpgradeMessage(message) {
+                            if renderedMessages.count == 1 {
+                                needsMigrationMerge = true
+                            }
+                        }
+                    }
+                    
+                    if needsMigrationMerge, let associatedMessageId = postbox.cachedPeerDataTable.get(index.messageIndex.id.peerId)?.associatedHistoryMessageId {
+                        let innerMessages = postbox.messageHistoryTable.fetch(
+                            peerId: associatedMessageId.peerId,
+                            namespace: associatedMessageId.namespace,
+                            tag: nil,
+                            threadId: nil,
+                            from: .absoluteUpperBound().withPeerId(associatedMessageId.peerId).withNamespace(associatedMessageId.namespace),
+                            includeFrom: true,
+                            to: .absoluteLowerBound().withPeerId(associatedMessageId.peerId).withNamespace(associatedMessageId.namespace),
+                            ignoreMessagesInTimestampRange: nil,
+                            limit: 2
+                        )
+                        for innerMessage in innerMessages {
+                            let message = postbox.renderIntermediateMessage(innerMessage)
+                            if !postbox.seedConfiguration.isPeerUpgradeMessage(message) {
+                                renderedMessages.removeAll()
+                                renderedMessages.append(message)
+                                break
+                            }
+                        }
+                    }
+                    
                     var autoremoveTimeout: Int32?
                     if let cachedData = postbox.cachedPeerDataTable.get(index.messageIndex.id.peerId) {
                         autoremoveTimeout = postbox.seedConfiguration.decodeAutoremoveTimeout(cachedData)

@@ -5171,27 +5171,28 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             subItems.append(.separator)
                             
-                            if case .group = channel.info {
-                                subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo + "\n\n" + strongSelf.presentationData.strings.AutoremoveSetup_AdditionalGlobalSettingsInfo, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
-                                    return nil
-                                }, textLinkAction: { [weak c] in
-                                    c?.dismiss(completion: nil)
-                                    
+                            let baseText: String
+                            if case .broadcast = channel.info {
+                                baseText = strongSelf.presentationData.strings.PeerInfo_ChannelAutoDeleteInfo
+                            } else {
+                                baseText = strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo
+                            }
+                            
+                            subItems.append(.action(ContextMenuActionItem(text: baseText + "\n\n" + strongSelf.presentationData.strings.AutoremoveSetup_AdditionalGlobalSettingsInfo, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
+                                return nil
+                            }, textLinkAction: { [weak c] in
+                                c?.dismiss(completion: nil)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
                                     guard let self else {
                                         return
                                     }
-                                    self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
-                                        guard let self else {
-                                            return
-                                        }
-                                        self.controller?.view.endEditing(true)
-                                    }, contentContext: nil)
-                                }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
-                            } else {
-                                subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo, textLayout: .multiline, textFont: .small, icon: { _ in
-                                    return nil
-                                }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
-                            }
+                                    self.controller?.view.endEditing(true)
+                                }, contentContext: nil)
+                            }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
                             
                             c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
                         })))

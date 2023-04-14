@@ -30,7 +30,8 @@ public extension TelegramGroup {
                 .banSendStickers,
                 .banSendPolls,
                 .banSendFiles,
-                .banSendInline
+                .banSendInline,
+                .banSendMusic
             ]
             if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.intersection(flags) == flags {
                 return false

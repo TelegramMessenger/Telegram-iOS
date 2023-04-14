@@ -1583,7 +1583,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             ),
             externalExpansionView: self.view,
             useOpaqueTheme: false,
-            hideBackground: false
+            hideBackground: false,
+            stateContext: nil
         )
     }
     

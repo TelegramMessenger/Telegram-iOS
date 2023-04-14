@@ -414,11 +414,13 @@ public func foldLineBreaks(_ text: String) -> String {
 
 public func foldLineBreaks(_ text: NSAttributedString) -> NSAttributedString {
     let remainingString = NSMutableAttributedString(attributedString: text)
+    
     var lines: [NSAttributedString] = []
     while true {
         if let range = remainingString.string.range(of: "\n") {
             let mappedRange = NSRange(range, in: remainingString.string)
-            lines.append(remainingString.attributedSubstring(from: NSRange(location: 0, length: mappedRange.upperBound - 1)))
+            let restString = remainingString.attributedSubstring(from: NSRange(location: 0, length: mappedRange.upperBound - 1))
+            lines.append(restString)
             remainingString.replaceCharacters(in: NSRange(location: 0, length: mappedRange.upperBound), with: "")
         } else {
             if lines.isEmpty {

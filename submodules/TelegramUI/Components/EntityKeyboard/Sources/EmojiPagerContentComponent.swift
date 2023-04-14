@@ -2244,6 +2244,13 @@ public final class EmojiPagerContentComponent: Component {
         }
     }
     
+    public final class StateContext {
+        var scrollPosition: CGFloat = 0.0
+        
+        public init() {
+        }
+    }
+    
     public final class SynchronousLoadBehavior {
         public let isDisabled: Bool
         
@@ -2313,6 +2320,7 @@ public final class EmojiPagerContentComponent: Component {
         public let useOpaqueTheme: Bool
         public let hideBackground: Bool
         public let scrollingStickersGridPromise = ValuePromise<Bool>(false)
+        public let stateContext: StateContext?
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
@@ -2337,7 +2345,8 @@ public final class EmojiPagerContentComponent: Component {
             externalBackground: ExternalBackground?,
             externalExpansionView: UIView?,
             useOpaqueTheme: Bool,
-            hideBackground: Bool
+            hideBackground: Bool,
+            stateContext: StateContext?
         ) {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
@@ -2362,6 +2371,7 @@ public final class EmojiPagerContentComponent: Component {
             self.externalExpansionView = externalExpansionView
             self.useOpaqueTheme = useOpaqueTheme
             self.hideBackground = hideBackground
+            self.stateContext = stateContext
         }
     }
     
@@ -5209,6 +5219,10 @@ public final class EmojiPagerContentComponent: Component {
             self.updateVisibleItems(transition: .immediate, attemptSynchronousLoads: false, previousItemPositions: nil, updatedItemPositions: nil)
             
             self.updateScrollingOffset(isReset: false, transition: .immediate)
+            
+            if let stateContext = self.component?.inputInteractionHolder.inputInteraction?.stateContext {
+                stateContext.scrollPosition = scrollView.bounds.minY
+            }
         }
         
         public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
@@ -6493,8 +6507,12 @@ public final class EmojiPagerContentComponent: Component {
             
             let previousSize = self.scrollView.bounds.size
             var resetScrolling = false
+            var isFirstUpdate = false
             if self.scrollView.bounds.isEmpty && component.displaySearchWithPlaceholder != nil {
                 resetScrolling = true
+            }
+            if previousComponent == nil {
+                isFirstUpdate = true
             }
             if previousComponent?.itemContentUniqueId != component.itemContentUniqueId {
                 resetScrolling = true
@@ -6601,7 +6619,11 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             if resetScrolling {
-                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: scrollSize)
+                var resetScrollY: CGFloat = 0.0
+                if isFirstUpdate, let stateContext = component.inputInteractionHolder.inputInteraction?.stateContext {
+                    resetScrollY = stateContext.scrollPosition
+                }
+                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: resetScrollY), size: scrollSize)
             }
             
             self.ignoreScrolling = false
@@ -7072,10 +7094,15 @@ public final class EmojiPagerContentComponent: Component {
             var itemGroups: [ItemGroup] = []
             var itemGroupIndexById: [AnyHashable: Int] = [:]
             
-            let appendUnicodeEmoji = {
+            let maybeAppendUnicodeEmoji = {
+                let groupId: AnyHashable = "static"
+                
+                if itemGroupIndexById[groupId] != nil {
+                    return
+                }
+                
                 if areUnicodeEmojiEnabled {
                     for (subgroupId, list) in staticEmojiMapping {
-                        let groupId: AnyHashable = "static"
                         for emojiString in list {
                             let resultItem = EmojiPagerContentComponent.Item(
                                 animationData: nil,
@@ -7095,10 +7122,6 @@ public final class EmojiPagerContentComponent: Component {
                         }
                     }
                 }
-            }
-            
-            if !hasPremium {
-                appendUnicodeEmoji()
             }
             
             var installedCollectionIds = Set<ItemCollectionId>()
@@ -7744,6 +7767,10 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
+            if !hasPremium {
+                maybeAppendUnicodeEmoji()
+            }
+            
             if areCustomEmojiEnabled {
                 for entry in view.entries {
                     guard let item = entry.item as? StickerPackItem else {
@@ -7889,7 +7916,7 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             if hasPremium {
-                appendUnicodeEmoji()
+                maybeAppendUnicodeEmoji()
             }
                         
             var displaySearchWithPlaceholder: String?

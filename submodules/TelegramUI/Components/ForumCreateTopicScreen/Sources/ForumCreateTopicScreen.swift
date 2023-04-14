@@ -1013,7 +1013,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         externalBackground: nil,
                         externalExpansionView: nil,
                         useOpaqueTheme: true,
-                        hideBackground: false
+                        hideBackground: false,
+                        stateContext: nil
                     )
                 }
             }

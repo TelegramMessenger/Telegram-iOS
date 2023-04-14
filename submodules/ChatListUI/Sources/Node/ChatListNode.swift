@@ -1775,7 +1775,7 @@ public final class ChatListNode: ListView {
         })*/
         
         let contacts: Signal<[ChatListContactPeer], NoError>
-        if case .chatList(groupId: .root) = location, chatListFilter == nil {
+        if case .chatList(groupId: .root) = location, chatListFilter == nil, case .chatList = mode {
             contacts = ApplicationSpecificNotice.displayChatListContacts(accountManager: context.sharedContext.accountManager)
             |> distinctUntilChanged
             |> mapToSignal { value -> Signal<[ChatListContactPeer], NoError> in
