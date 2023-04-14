@@ -1070,13 +1070,16 @@ private final class NotificationServiceHandler {
                             }
 
                             if let category = aps["category"] as? String {
-                                if let _ = aps["r"] {
-                                    content.category = "r"
-                                }
                                 if peerId.isGroupOrChannel && ["r", "m"].contains(category) {
                                     content.category = "g\(category)"
                                 } else {
                                     content.category = category
+                                }
+                                
+                                if aps["r"] != nil || aps["react_emoji"] != nil {
+                                    content.category = "t"
+                                } else if payloadJson["r"] != nil || payloadJson["react_emoji"] != nil {
+                                    content.category = "t"
                                 }
 
                                 let _ = messageId
@@ -1610,7 +1613,7 @@ private final class NotificationServiceHandler {
                             UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
                                 var removeIdentifiers: [String] = []
                                 for notification in notifications {
-                                    if notification.request.content.categoryIdentifier != "r" {
+                                    if notification.request.content.categoryIdentifier != "t" {
                                         continue
                                     }
                                     if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerIdValue = Int64(peerIdString), let messageIdString = notification.request.content.userInfo["msg_id"] as? String, let messageIdValue = Int32(messageIdString) {
