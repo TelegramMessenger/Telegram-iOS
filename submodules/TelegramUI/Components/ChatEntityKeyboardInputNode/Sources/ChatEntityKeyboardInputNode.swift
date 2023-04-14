@@ -87,6 +87,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
+    public final class StateContext {
+        let emojiState = EmojiPagerContentComponent.StateContext()
+        
+        public init() {
+        }
+    }
+    
     public static func hasPremium(context: AccountContext, chatPeerId: EnginePeer.Id?, premiumIfSavedMessages: Bool) -> Signal<Bool, NoError> {
         let hasPremium: Signal<Bool, NoError>
         if premiumIfSavedMessages, let chatPeerId = chatPeerId, chatPeerId == context.account.peerId {
@@ -237,6 +244,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     }
     
     private let context: AccountContext
+    private let stateContext: StateContext?
     private let entityKeyboardView: ComponentHostView<Empty>
     
     private let defaultToEmojiTab: Bool
@@ -581,11 +589,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         |> distinctUntilChanged
     }
     
-    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
+    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?, stateContext: StateContext?) {
         self.context = context
         self.currentInputData = currentInputData
         self.defaultToEmojiTab = defaultToEmojiTab
         self.opaqueTopPanelBackground = opaqueTopPanelBackground
+        self.stateContext = stateContext
         
         self.controllerInteraction = controllerInteraction
         
@@ -1217,7 +1226,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             externalBackground: nil,
             externalExpansionView: nil,
             useOpaqueTheme: false,
-            hideBackground: false
+            hideBackground: false,
+            stateContext: self.stateContext?.emojiState
         )
         
         self.stickerInputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -1510,7 +1520,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             externalBackground: nil,
             externalExpansionView: nil,
             useOpaqueTheme: false,
-            hideBackground: false
+            hideBackground: false,
+            stateContext: nil
         )
         
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
@@ -1950,8 +1961,25 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         var updatedGroups: [EmojiPagerContentComponent.ItemGroup] = []
         
         var staticIsFirst = false
-        if let first = itemGroups.first, first.groupId == AnyHashable("static") {
-            staticIsFirst = true
+        let topStaticGroups: [String] = [
+            "static",
+            "recent",
+            "featuredTop"
+        ]
+        for group in itemGroups {
+            var found = false
+            for topStaticGroup in topStaticGroups {
+                if group.groupId == AnyHashable(topStaticGroup) {
+                    if group.groupId == AnyHashable("static") {
+                        staticIsFirst = true
+                    }
+                    found = true
+                    break
+                }
+            }
+            if !found {
+                break
+            }
         }
         
         for group in itemGroups {
@@ -2379,7 +2407,8 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             externalBackground: nil,
             externalExpansionView: nil,
             useOpaqueTheme: false,
-            hideBackground: hideBackground
+            hideBackground: hideBackground,
+            stateContext: nil
         )
         
         let semaphore = DispatchSemaphore(value: 0)
@@ -2411,7 +2440,8 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                 opaqueTopPanelBackground: true,
                 controllerInteraction: nil,
                 interfaceInteraction: nil,
-                chatPeerId: nil
+                chatPeerId: nil,
+                stateContext: nil
             )
             self.inputNode = inputNode
             inputNode.clipContentToTopPanel = true

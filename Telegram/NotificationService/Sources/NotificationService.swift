@@ -918,6 +918,7 @@ private final class NotificationServiceHandler {
                         case logout
                         case poll(peerId: PeerId, content: NotificationContent, messageId: MessageId?)
                         case deleteMessage([MessageId])
+                        case readReactions([MessageId])
                         case readMessage(MessageId)
                         case call(CallData)
                     }
@@ -946,6 +947,20 @@ private final class NotificationServiceHandler {
                                         }
                                     }
                                     action = .deleteMessage(messagesDeleted)
+                                }
+                            }
+                        case "READ_REACTION":
+                            if let peerId {
+                                if let messageId = messageId {
+                                    action = .readReactions([MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId)])
+                                } else if let messageIds = payloadJson["messages"] as? String {
+                                    var messages: [MessageId] = []
+                                    for messageId in messageIds.split(separator: ",") {
+                                        if let messageIdValue = Int32(messageId) {
+                                            messages.append(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageIdValue))
+                                        }
+                                    }
+                                    action = .readReactions(messages)
                                 }
                             }
                         case "READ_HISTORY":
@@ -1055,12 +1070,14 @@ private final class NotificationServiceHandler {
                             }
 
                             if let category = aps["category"] as? String {
+                                if let _ = aps["r"] {
+                                    content.category = "r"
+                                }
                                 if peerId.isGroupOrChannel && ["r", "m"].contains(category) {
                                     content.category = "g\(category)"
                                 } else {
                                     content.category = category
                                 }
-
 
                                 let _ = messageId
 
@@ -1587,6 +1604,45 @@ private final class NotificationServiceHandler {
                                         completeRemoval()
                                     }
                                 })
+                            })
+                        case let .readReactions(ids):
+                            Logger.shared.log("NotificationService \(episode)", "Will read reactions \(ids)")
+                            UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
+                                var removeIdentifiers: [String] = []
+                                for notification in notifications {
+                                    if notification.request.content.categoryIdentifier != "r" {
+                                        continue
+                                    }
+                                    if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerIdValue = Int64(peerIdString), let messageIdString = notification.request.content.userInfo["msg_id"] as? String, let messageIdValue = Int32(messageIdString) {
+                                        for id in ids {
+                                            if PeerId(peerIdValue) == id.peerId && messageIdValue == id.id {
+                                                removeIdentifiers.append(notification.request.identifier)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                let completeRemoval: () -> Void = {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    var content = NotificationContent(isLockedMessage: nil)
+                                    Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
+                                    
+                                    updateCurrentContent(content)
+                                    
+                                    completed()
+                                }
+                                
+                                if !removeIdentifiers.isEmpty {
+                                    Logger.shared.log("NotificationService \(episode)", "Will try to remove \(removeIdentifiers.count) notifications")
+                                    UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: removeIdentifiers)
+                                    queue.after(1.0, {
+                                        completeRemoval()
+                                    })
+                                } else {
+                                    completeRemoval()
+                                }
                             })
                         case let .readMessage(id):
                             Logger.shared.log("NotificationService \(episode)", "Will read message \(id)")

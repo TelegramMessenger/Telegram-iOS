@@ -7541,6 +7541,7 @@ Sorry for the inconvenience.";
 "PeerInfo.AutoDeleteSettingOther" = "Other...";
 "PeerInfo.AutoDeleteDisable" = "Disable";
 "PeerInfo.AutoDeleteInfo" = "Automatically delete messages sent in this chat after a certain period of time.";
+"PeerInfo.ChannelAutoDeleteInfo" = "Automatically delete messages sent in this channel after a certain period of time.";
 
 "PeerInfo.ClearMessages" = "Clear Messages";
 "PeerInfo.ClearConfirmationUser" = "Are you sure you want to delete all messages with %@?";
@@ -9339,3 +9340,5 @@ Sorry for the inconvenience.";
 "ChatList.EmptyListTooltip" = "Send a message or\nstart a group here.";
 
 "Username.BotTitle" = "Public Links";
+
+"Notification.LockScreenReactionPlaceholder" = "Reaction";

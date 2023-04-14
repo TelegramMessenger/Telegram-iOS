@@ -377,7 +377,8 @@ class StickerPickerScreen: ViewController {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 useOpaqueTheme: false,
-                hideBackground: true
+                hideBackground: true,
+                stateContext: nil
             )
             
             content.masks?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -455,7 +456,8 @@ class StickerPickerScreen: ViewController {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 useOpaqueTheme: false,
-                hideBackground: true
+                hideBackground: true,
+                stateContext: nil
             )
             
             var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
@@ -580,7 +582,8 @@ class StickerPickerScreen: ViewController {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 useOpaqueTheme: false,
-                hideBackground: true
+                hideBackground: true,
+                stateContext: nil
             )
             
             if let (layout, navigationHeight) = self.currentLayout {

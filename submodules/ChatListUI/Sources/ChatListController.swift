@@ -3561,17 +3561,29 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 }
             case let .forum(peerId):
-                self.joinForumDisposable.set((self.context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peerId, hash: nil)
-                |> afterDisposed { [weak self] in
-                    Queue.mainQueue().async {
-                        if let strongSelf = self {
-                            let _ = strongSelf
-                            /*strongSelf.activityIndicator.isHidden = true
-                            strongSelf.activityIndicator.stopAnimating()
-                            strongSelf.isJoining = false*/
+                let presentationData = self.presentationData
+                let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                    self?.present(controller, in: .window(.root))
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
                         }
                     }
-                }).start(error: { [weak self] error in
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.8, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                let signal: Signal<Never, JoinChannelError> = self.context.peerChannelMemberCategoriesContextsManager.join(engine: self.context.engine, peerId: peerId, hash: nil)
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                
+                self.joinForumDisposable.set((signal
+                |> deliverOnMainQueue).start(error: { [weak self] error in
                     guard let strongSelf = self else {
                         return
                     }

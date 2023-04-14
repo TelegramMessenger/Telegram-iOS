@@ -401,7 +401,8 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             externalBackground: nil,
             externalExpansionView: nil,
             useOpaqueTheme: true,
-            hideBackground: false
+            hideBackground: false,
+            stateContext: nil
         )
         
         self.dataDisposable = (

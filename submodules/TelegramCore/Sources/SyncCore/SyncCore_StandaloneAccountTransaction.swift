@@ -149,6 +149,19 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 }
             }
             return nil
+        },
+        isPeerUpgradeMessage: { message in
+            for media in message.media {
+                if let action = media as? TelegramMediaAction {
+                    switch action.action {
+                    case .groupMigratedToChannel, .channelMigratedFromGroup:
+                        return true
+                    default:
+                        break
+                    }
+                }
+            }
+            return false
         }
     )
 }()

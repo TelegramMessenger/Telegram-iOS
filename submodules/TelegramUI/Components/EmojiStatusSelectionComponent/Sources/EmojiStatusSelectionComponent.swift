@@ -674,7 +674,8 @@ public final class EmojiStatusSelectionController: ViewController {
                     externalBackground: nil,
                     externalExpansionView: nil,
                     useOpaqueTheme: true,
-                    hideBackground: false
+                    hideBackground: false,
+                    stateContext: nil
                 )
                 
                 strongSelf.refreshLayout(transition: .immediate)

@@ -2399,7 +2399,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
                 if let (peerId, threadId) = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
-                    if response.notification.request.content.categoryIdentifier == "c" {
+                    if response.notification.request.content.categoryIdentifier == "c" || response.notification.request.content.categoryIdentifier == "t" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
                     self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId)
@@ -2492,11 +2492,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return settings.displayNameOnLockscreen
         }
         |> deliverOnMainQueue).start(next: { displayNames in
-            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, includeNames: displayNames, authorize: authorize, completion: completion)
+            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, hiddenReactionContentString: presentationData.strings.Notification_LockScreenReactionPlaceholder, includeNames: displayNames, authorize: authorize, completion: completion)
         })
     }
 
-    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
+    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, hiddenReactionContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         let notificationCenter = UNUserNotificationCenter.current()
         Logger.shared.log("App \(self.episodeId)", "register for notifications: get settings (authorize: \(authorize))")
         notificationCenter.getNotificationSettings(completionHandler: { settings in
@@ -2525,6 +2525,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                 let groupRepliableMessageCategory: UNNotificationCategory
                                 let groupRepliableMediaMessageCategory: UNNotificationCategory
                                 let channelMessageCategory: UNNotificationCategory
+                                let reactionMessageCategory: UNNotificationCategory
                                 
                                 if #available(iOS 11.0, *) {
                                     var options: UNNotificationCategoryOptions = []
@@ -2544,6 +2545,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                     groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                     channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                    reactionMessageCategory = UNNotificationCategory(identifier: "t", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenReactionContentString, options: options)
                                 } else {
                                     let carPlayOptions: UNNotificationCategoryOptions = [.allowInCarPlay]
                                 
@@ -2553,6 +2555,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: [])
                                     groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], options: [])
                                     channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
+                                    reactionMessageCategory = UNNotificationCategory(identifier: "t", actions: [], intentIdentifiers: [], options: [])
                                 }
                                 
                                 UNUserNotificationCenter.current().setNotificationCategories([
@@ -2560,6 +2563,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     repliableMessageCategory,
                                     repliableMediaMessageCategory,
                                     channelMessageCategory,
+                                    reactionMessageCategory,
                                     groupRepliableMessageCategory,
                                     groupRepliableMediaMessageCategory
                                 ])

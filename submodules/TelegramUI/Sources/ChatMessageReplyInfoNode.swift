@@ -168,7 +168,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let messageText: NSAttributedString
             if isText {
-                var text = arguments.message.text
+                var text = foldLineBreaks(arguments.message.text)
                 var messageEntities = arguments.message.textEntitiesAttribute?.entities ?? []
                 
                 if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty {

@@ -1431,8 +1431,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     } else {
                         if isCrosspostFromChannel, let sourceReference = sourceReference, let _ = firstMessage.peers[sourceReference.messageId.peerId] as? TelegramChannel {
                             authorIsChannel = true
+                            authorRank = attributes.rank
+                        } else {
+                            authorRank = attributes.rank
+                            if authorRank == nil && message.author?.id == peer.id {
+                                authorRank = .admin
+                            }
                         }
-                        authorRank = attributes.rank
                     }
                 } else {
                     if isCrosspostFromChannel, let _ = firstMessage.forwardInfo?.source as? TelegramChannel {

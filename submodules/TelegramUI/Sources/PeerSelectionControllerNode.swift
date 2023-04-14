@@ -203,7 +203,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
        
         if hasFilters {
-            self.mainContainerNode = ChatListContainerNode(context: context, location: chatListLocation, chatListMode: chatListMode, previewing: false, controlsHistoryPreload: false, isInlineMode: false, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in
+            self.mainContainerNode = ChatListContainerNode(context: context, controller: nil, location: chatListLocation, chatListMode: chatListMode, previewing: false, controlsHistoryPreload: false, isInlineMode: false, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in
             }, filterEmptyAction: { _ in
             }, secondaryEmptyAction: {
             })

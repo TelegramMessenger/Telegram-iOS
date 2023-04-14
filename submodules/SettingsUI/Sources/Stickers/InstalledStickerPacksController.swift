@@ -519,7 +519,9 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
         if let archived = archived, !archived.isEmpty  {
             entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks, Int32(archived.count), archived))
         }
-        entries.append(.emoji(presentationData.theme, presentationData.strings.StickerPacksSettings_Emoji, emojiCount))
+        if emojiCount != 0 {
+            entries.append(.emoji(presentationData.theme, presentationData.strings.StickerPacksSettings_Emoji, emojiCount))
+        }
         if let quickReaction = quickReaction, let availableReactions = availableReactions {
             entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReaction, availableReactions))
         }
