@@ -310,7 +310,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
                 
                 context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
                 
-                Queue.mainQueue().async {
+                Queue.mainQueue().after(0.05) {
                     completion()
                 }
             }

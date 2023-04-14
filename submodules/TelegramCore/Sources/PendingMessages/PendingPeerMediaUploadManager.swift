@@ -147,6 +147,8 @@ private final class PendingPeerMediaUploadManagerImpl {
     let stateManager: AccountStateManager
     let accountPeerId: EnginePeer.Id
     
+    let sentMessageEventPipe: ValuePipe<EnginePeer.Id>
+    
     private var uploadingPeerMediaValue: [EnginePeer.Id: PeerMediaUploadingItem] = [:] {
         didSet {
             if self.uploadingPeerMediaValue != oldValue {
@@ -167,6 +169,8 @@ private final class PendingPeerMediaUploadManagerImpl {
         self.network = network
         self.stateManager = stateManager
         self.accountPeerId = accountPeerId
+        
+        self.sentMessageEventPipe = ValuePipe()
         
         self.uploadingPeerMediaPromise.set(.single(self.uploadingPeerMediaValue))
     }
@@ -220,6 +224,8 @@ private final class PendingPeerMediaUploadManagerImpl {
                     }
                     context.value = context.value.withMessageId(messageId)
                     strongSelf.updateValues()
+                    
+                    strongSelf.sentMessageEventPipe.putNext(peerId)
                     
                     context.disposable.set((uploadPeerMedia(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, content: content)
                     |> deliverOn(queue)).start(next: { [weak self, weak context] value in
@@ -324,6 +330,17 @@ private final class PendingPeerMediaUploadManagerImpl {
         }
         |> distinctUntilChanged
     }
+    
+    public func sentMessageEvents(peerId: EnginePeer.Id) -> Signal<Void, NoError> {
+        return self.sentMessageEventPipe.signal()
+        |> mapToSignal { eventPeerId -> Signal<Void, NoError> in
+            if eventPeerId == peerId {
+                return .single(Void())
+            } else {
+                return .complete()
+            }
+        }
+    }
 }
 
 public final class PendingPeerMediaUploadManager {
@@ -366,6 +383,18 @@ public final class PendingPeerMediaUploadManager {
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.uploadProgress(messageId: messageId).start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func sentMessageEvents(peerId: EnginePeer.Id) -> Signal<Void, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.sentMessageEvents(peerId: peerId).start(next: { value in
                     subscriber.putNext(value)
                 }))
             }
