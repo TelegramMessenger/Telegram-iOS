@@ -2030,7 +2030,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         return imageView;
     };
     
-    controller.beginTransitionOut = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
+    controller.beginTransitionOut = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView, __unused bool saving)
     {
         __strong TGCameraController *strongSelf = weakSelf;
         if (strongSelf == nil)

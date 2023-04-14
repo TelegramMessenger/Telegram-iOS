@@ -297,19 +297,23 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
             context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
             
+            let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+            
             var intensity: Int32?
             if let brightness {
                 intensity = max(0, min(100, Int32(brightness * 100.0)))
             }
             
-            let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
-            let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
-            
-            Queue.mainQueue().async {
-                completion()
+            Queue.mainQueue().after(0.05) {
+                let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
+                let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
+                
+                context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
+                
+                Queue.mainQueue().after(0.05) {
+                    completion()
+                }
             }
-            
-            context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
         }
         return croppedImage
     }).start()

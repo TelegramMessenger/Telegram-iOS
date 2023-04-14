@@ -499,7 +499,13 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     [TGPhotoEditorAnimation performBlock:^(__unused bool allFinished)
     {
-        [snapshotView removeFromSuperview];
+        if (self.intent == TGPhotoEditorControllerWallpaperIntent) {
+            TGDispatchAfter(0.3, dispatch_get_main_queue(), ^{
+                [snapshotView removeFromSuperview];
+            });
+        } else {
+            [snapshotView removeFromSuperview];
+        }
          
         if (completion != nil)
             completion();

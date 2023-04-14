@@ -274,7 +274,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     }
     
     if (self.beginTransitionOut != nil)
-        referenceView = self.beginTransitionOut(&referenceFrame, &parentView);
+        referenceView = self.beginTransitionOut(&referenceFrame, &parentView, saving);
     
     if (parentView == nil)
         parentView = referenceView.superview.superview;
