@@ -269,6 +269,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         
         super.init()
         
+        self.view.addSubview(self.scroller)
+        self.scroller.isHidden = true
+        
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.clippingNode)
         self.clippingNode.addSubnode(self.scrollNode)

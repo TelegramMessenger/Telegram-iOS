@@ -180,7 +180,7 @@ public final class _UpdatedChildComponent {
     var _opacity: CGFloat?
     var _cornerRadius: CGFloat?
     var _clipsToBounds: Bool?
-
+    
     fileprivate var transitionAppear: Transition.Appear?
     fileprivate var transitionAppearWithGuide: (Transition.AppearWithGuide, _AnyChildComponent.Id)?
     fileprivate var transitionDisappear: Transition.Disappear?
@@ -240,7 +240,7 @@ public final class _UpdatedChildComponent {
         self._position = position
         return self
     }
-
+    
     @discardableResult public func scale(_ scale: CGFloat) -> _UpdatedChildComponent {
         self._scale = scale
         return self
@@ -702,6 +702,7 @@ public extension CombinedComponent {
                         } else {
                             updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
                         }
+                        
                         updatedChild.view.alpha = updatedChild._opacity ?? 1.0
                         updatedChild.view.clipsToBounds = updatedChild._clipsToBounds ?? false
                         updatedChild.view.layer.cornerRadius = updatedChild._cornerRadius ?? 0.0

@@ -677,6 +677,7 @@ final class MutableChatListView {
         switch entry {
         case let .IntermediateMessageEntry(index, messageIndex):
             var renderedMessages: [Message] = []
+            
             if let messageIndex = messageIndex {
                 if let messageGroup = postbox.messageHistoryTable.getMessageGroup(at: messageIndex, limit: 10) {
                     renderedMessages.append(contentsOf: messageGroup.compactMap(postbox.renderIntermediateMessage))

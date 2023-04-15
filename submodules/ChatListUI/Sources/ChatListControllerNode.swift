@@ -329,6 +329,8 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     }
     
     private let context: AccountContext
+    private weak var controller: ChatListControllerImpl?
+    private let location: ChatListControllerLocation
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     private var presentationData: PresentationData
@@ -348,13 +350,18 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     
     private var pollFilterUpdatesDisposable: Disposable?
     private var chatFilterUpdatesDisposable: Disposable?
+    private var peerDataDisposable: Disposable?
     
     private var chatFolderUpdates: ChatFolderUpdates?
     
+    private var canReportPeer: Bool = false
+    
     private(set) var validLayout: (size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat)?
     
-    init(context: AccountContext, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
+    init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
+        self.controller = controller
+        self.location = location
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.presentationData = presentationData
@@ -504,11 +511,33 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 }
             })
         }
+        
+        if case let .forum(peerId) = location {
+            self.peerDataDisposable = (context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.StatusSettings(id: peerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] statusSettings in
+                guard let self else {
+                    return
+                }
+                var canReportPeer = false
+                if let statusSettings, statusSettings.flags.contains(.canReport) {
+                    canReportPeer = true
+                }
+                if self.canReportPeer != canReportPeer {
+                    self.canReportPeer = canReportPeer
+                    if let (size, insets, visualNavigationHeight, originalNavigationHeight, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout {
+                        self.updateLayout(size: size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .animated(duration: 0.4, curve: .spring))
+                    }
+                }
+            })
+        }
     }
     
     deinit {
         self.pollFilterUpdatesDisposable?.dispose()
         self.chatFilterUpdatesDisposable?.dispose()
+        self.peerDataDisposable?.dispose()
     }
     
     private func layoutEmptyShimmerEffectNode(node: ChatListShimmerNode, size: CGSize, insets: UIEdgeInsets, verticalOffset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -580,6 +609,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 component: AnyComponent(ActionPanelComponent(
                     theme: self.presentationData.theme,
                     title: title,
+                    color: .accent,
                     action: { [weak self] in
                         guard let self, let chatFolderUpdates = self.chatFolderUpdates else {
                             return
@@ -592,6 +622,72 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                             return
                         }
                         let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: chatFolderUpdates.folderId).start()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: size.width, height: topPanelHeight)
+            )
+            if let topPanelView = topPanel.view.view {
+                if topPanelView.superview == nil {
+                    self.view.addSubview(topPanelView)
+                }
+            }
+            
+            topPanel.size = CGSize(width: size.width, height: topPanelHeight)
+            listInsets.top += topPanelHeight
+            additionalTopInset += topPanelHeight
+        } else if self.canReportPeer {
+            let topPanel: TopPanelItem
+            var topPanelTransition = Transition(transition)
+            if let current = self.topPanel {
+                topPanel = current
+            } else {
+                topPanelTransition = .immediate
+                topPanel = TopPanelItem()
+                self.topPanel = topPanel
+            }
+            
+            let title: String = self.presentationData.strings.Conversation_ReportSpamAndLeave
+            
+            let topPanelHeight: CGFloat = 44.0
+            
+            let _ = topPanel.view.update(
+                transition: topPanelTransition,
+                component: AnyComponent(ActionPanelComponent(
+                    theme: self.presentationData.theme,
+                    title: title,
+                    color: .destructive,
+                    action: { [weak self] in
+                        guard let self, case let .forum(peerId) = self.location else {
+                            return
+                        }
+                        
+                        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: self.presentationData.strings.Conversation_ReportSpamGroupConfirmation),
+                                ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ReportSpamAndLeave, color: .destructive, action: { [weak self, weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    
+                                    if let self {
+                                        self.controller?.setInlineChatList(location: nil)
+                                        let _ = self.context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: true).start()
+                                    }
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        self.listNode.present?(actionSheet)
+                    },
+                    dismissAction: { [weak self] in
+                        guard let self, case let .forum(peerId) = self.location else {
+                            return
+                        }
+                        let _ = self.context.engine.peers.dismissPeerStatusOptions(peerId: peerId).start()
                     }
                 )),
                 environment: {},
@@ -635,6 +731,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
 
 public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
+    private weak var controller: ChatListControllerImpl?
     let location: ChatListControllerLocation
     private let chatListMode: ChatListNodeMode
     private let previewing: Bool
@@ -847,8 +944,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var didBeginSelectingChats: (() -> Void)?
     public var displayFilterLimit: (() -> Void)?
     
-    public init(context: AccountContext, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
+    public init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
+        self.controller = controller
         self.location = location
         self.chatListMode = chatListMode
         self.previewing = previewing
@@ -872,7 +970,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
-        let itemNode = ChatListContainerItemNode(context: self.context, location: self.location, filter: nil, chatListMode: chatListMode, previewing: self.previewing, isInlineMode: self.isInlineMode, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, becameEmpty: { [weak self] filter in
+        let itemNode = ChatListContainerItemNode(context: self.context, controller: self.controller, location: self.location, filter: nil, chatListMode: chatListMode, previewing: self.previewing, isInlineMode: self.isInlineMode, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, becameEmpty: { [weak self] filter in
             self?.filterBecameEmpty(filter)
         }, emptyAction: { [weak self] filter in
             self?.filterEmptyAction(filter)
@@ -1170,7 +1268,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 itemNode.emptyNode?.restartAnimation()
                 completion?()
             } else if self.pendingItemNode == nil {
-                let itemNode = ChatListContainerItemNode(context: self.context, location: self.location, filter: self.availableFilters[index].filter, chatListMode: self.chatListMode, previewing: self.previewing, isInlineMode: self.isInlineMode, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, becameEmpty: { [weak self] filter in
+                let itemNode = ChatListContainerItemNode(context: self.context, controller: self.controller, location: self.location, filter: self.availableFilters[index].filter, chatListMode: self.chatListMode, previewing: self.previewing, isInlineMode: self.isInlineMode, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, becameEmpty: { [weak self] filter in
                     self?.filterBecameEmpty(filter)
                 }, emptyAction: { [weak self] filter in
                     self?.filterEmptyAction(filter)
@@ -1288,7 +1386,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 validNodeIds.append(id)
                 
                 if self.itemNodes[id] == nil && self.enableAdjacentFilterLoading && !self.disableItemNodeOperationsWhileAnimating {
-                    let itemNode = ChatListContainerItemNode(context: self.context, location: self.location, filter: self.availableFilters[i].filter, chatListMode: self.chatListMode, previewing: self.previewing, isInlineMode: self.isInlineMode, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, becameEmpty: { [weak self] filter in
+                    let itemNode = ChatListContainerItemNode(context: self.context, controller: self.controller, location: self.location, filter: self.availableFilters[i].filter, chatListMode: self.chatListMode, previewing: self.previewing, isInlineMode: self.isInlineMode, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, becameEmpty: { [weak self] filter in
                         self?.filterBecameEmpty(filter)
                     }, emptyAction: { [weak self] filter in
                         self?.filterEmptyAction(filter)
@@ -1421,7 +1519,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         var filterBecameEmpty: ((ChatListFilter?) -> Void)?
         var filterEmptyAction: ((ChatListFilter?) -> Void)?
         var secondaryEmptyAction: (() -> Void)?
-        self.mainContainerNode = ChatListContainerNode(context: context, location: location, previewing: previewing, controlsHistoryPreload: controlsHistoryPreload, isInlineMode: false, presentationData: presentationData, animationCache: animationCache, animationRenderer: animationRenderer, filterBecameEmpty: { filter in
+        self.mainContainerNode = ChatListContainerNode(context: context, controller: controller, location: location, previewing: previewing, controlsHistoryPreload: controlsHistoryPreload, isInlineMode: false, presentationData: presentationData, animationCache: animationCache, animationRenderer: animationRenderer, filterBecameEmpty: { filter in
             filterBecameEmpty?(filter)
         }, filterEmptyAction: { filter in
             filterEmptyAction?(filter)
@@ -1849,7 +1947,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             forumPeerId = peerId
         }
         
-        let inlineStackContainerNode = ChatListContainerNode(context: self.context, location: location, previewing: false, controlsHistoryPreload: false, isInlineMode: true, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in }, filterEmptyAction: { [weak self] _ in self?.emptyListAction?(forumPeerId) }, secondaryEmptyAction: {})
+        let inlineStackContainerNode = ChatListContainerNode(context: self.context, controller: self.controller, location: location, previewing: false, controlsHistoryPreload: false, isInlineMode: true, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in }, filterEmptyAction: { [weak self] _ in self?.emptyListAction?(forumPeerId) }, secondaryEmptyAction: {})
         return inlineStackContainerNode
     }
     

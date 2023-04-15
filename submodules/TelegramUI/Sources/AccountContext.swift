@@ -328,11 +328,13 @@ public final class AccountContextImpl: AccountContext {
         })
         
         self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
-        let currentCountriesConfiguration = self.currentCountriesConfiguration
-        self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
-        |> deliverOnMainQueue).start(next: { value in
-            let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
-        })
+        if !temp {
+            let currentCountriesConfiguration = self.currentCountriesConfiguration
+            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
+                                                     |> deliverOnMainQueue).start(next: { value in
+                let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
+            })
+        }
         
         let queue = Queue()
         self.deviceSpecificContactImportContexts = QueueLocalObject(queue: queue, generate: {

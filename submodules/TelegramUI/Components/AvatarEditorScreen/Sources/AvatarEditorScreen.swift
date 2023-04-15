@@ -686,7 +686,8 @@ final class AvatarEditorScreenComponent: Component {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 useOpaqueTheme: true,
-                hideBackground: true
+                hideBackground: true,
+                stateContext: nil
             )
             
             data.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -813,7 +814,8 @@ final class AvatarEditorScreenComponent: Component {
                 externalBackground: nil,
                 externalExpansionView: nil,
                 useOpaqueTheme: true,
-                hideBackground: true
+                hideBackground: true,
+                stateContext: nil
             )
             
             self.state?.updated(transition: .immediate)

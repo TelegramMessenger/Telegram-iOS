@@ -151,6 +151,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
     private var didInitializeInputMediaNodeDataPromise: Bool = false
     private var inputMediaNodeDataDisposable: Disposable?
+    private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
     
     let navigateButtons: ChatHistoryNavigationButtons
     
@@ -227,7 +228,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var isLoadingValue: Bool = false
     private var isLoadingEarlier: Bool = false
     private func updateIsLoading(isLoading: Bool, earlier: Bool, animated: Bool) {
-        let useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser
+        let useLoadingPlaceholder = "".isEmpty
         
         let updated = isLoading != self.isLoadingValue || (isLoading && earlier && !self.isLoadingEarlier)
         
@@ -2640,7 +2641,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             defaultToEmojiTab: !self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.string.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || self.openStickersBeginWithEmoji,
             controllerInteraction: self.controllerInteraction,
             interfaceInteraction: self.interfaceInteraction,
-            chatPeerId: peerId
+            chatPeerId: peerId,
+            stateContext: self.inputMediaNodeStateContext
         )
         self.openStickersBeginWithEmoji = false
         
