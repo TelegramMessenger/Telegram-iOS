@@ -24,6 +24,7 @@ let package = Package(
         .package(name: "Reachability", path: "../Reachability"),
         .package(name: "DarwinDirStat", path: "../Utils/DarwinDirStat"),
         .package(name: "EncryptionProvider", path: "../EncryptionProvider"),
+        .package(name: "Emoji", path: "../Emoji"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -38,6 +39,7 @@ let package = Package(
                            .product(name: "NetworkLogging", package: "NetworkLogging", condition: nil),
                            .product(name: "DarwinDirStat", package: "DarwinDirStat", condition: nil),
                            .product(name: "Reachability", package: "Reachability", condition: nil),
+                           .product(name: "Emoji", package: "Emoji", condition: nil),
                            .product(name: "EncryptionProvider", package: "EncryptionProvider", condition: nil)],
             path: "Sources"),
     ]
