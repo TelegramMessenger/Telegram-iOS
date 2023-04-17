@@ -636,9 +636,7 @@ private final class FetchImpl {
                     case let .data(data):
                         let actualLength = Int64(data.count)
                         
-                        var isComplete = false
                         if actualLength < requestedLength {
-                            isComplete = true
                             let resultingSize = fetchRange.lowerBound + actualLength
                             if let currentKnownSize = self.knownSize {
                                 Logger.shared.log("FetchV2", "\(self.loggingIdentifier): setting known size to min(\(currentKnownSize), \(resultingSize)) = \(min(currentKnownSize, resultingSize))")
@@ -670,13 +668,13 @@ private final class FetchImpl {
                         }
                         
                         if !actualData.isEmpty {
-                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): emitting data part \(partRange) (aligned as \(fetchRange)): \(actualData.count), isComplete: \(isComplete)")
+                            Logger.shared.log("FetchV2", "\(self.loggingIdentifier): emitting data part \(partRange) (aligned as \(fetchRange)): \(actualData.count)")
                             
                             self.onNext(.dataPart(
                                 resourceOffset: partRange.lowerBound,
                                 data: actualData,
                                 range: 0 ..< Int64(actualData.count),
-                                complete: isComplete
+                                complete: false
                             ))
                         } else {
                             Logger.shared.log("FetchV2", "\(self.loggingIdentifier): not emitting data part \(partRange) (aligned as \(fetchRange))")
