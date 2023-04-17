@@ -3223,7 +3223,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             } else {
                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                             }
-                        } else if let botInfo = peer.botInfo, botInfo.flags.contains(.canEdit), let cachedData = data.cachedData as? CachedUserData {
+                        } else if let botInfo = peer.botInfo, botInfo.flags.contains(.canEdit), let cachedData = data.cachedData as? CachedUserData, let editableBotInfo = cachedData.editableBotInfo {
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
                             let bio = strongSelf.headerNode.editingContentNode.editingTextForKey(.description)
                             if let bio = bio {
@@ -3235,12 +3235,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     return
                                 }
                             }
-                            let peerBio = cachedData.about ?? ""
+                            let peerName = editableBotInfo.name
+                            let peerBio = editableBotInfo.about
                             
-                            if (peer.firstName ?? "") != firstName || (bio ?? "") != peerBio {
+                            if firstName != peerName || (bio ?? "") != peerBio {
                                 var updateNameSignal: Signal<Void, NoError> = .complete()
                                 var hasProgress = false
-                                if peer.firstName != firstName {
+                                if firstName != peerName {
                                     updateNameSignal = context.engine.peers.updateBotName(peerId: peer.id, name: firstName)
                                     |> `catch` { _ -> Signal<Void, NoError> in
                                         return .complete()
@@ -3248,7 +3249,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     hasProgress = true
                                 }
                                 var updateBioSignal: Signal<Void, NoError> = .complete()
-                                if let bio = bio, bio != cachedData.about {
+                                if let bio = bio, bio != peerBio {
                                     updateBioSignal = context.engine.peers.updateBotAbout(peerId: peer.id, about: bio)
                                     |> `catch` { _ -> Signal<Void, NoError> in
                                         return .complete()

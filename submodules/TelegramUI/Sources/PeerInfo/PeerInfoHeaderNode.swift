@@ -2160,7 +2160,13 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
                 var isMultiline = false
                 switch key {
                 case .firstName:
-                    updateText = (peer as? TelegramUser)?.firstName ?? ""
+                    if let peer = peer as? TelegramUser {
+                        if let editableBotInfo = (cachedData as? CachedUserData)?.editableBotInfo {
+                            updateText = editableBotInfo.name
+                        } else {
+                            updateText = peer.firstName ?? ""
+                        }
+                    }
                 case .lastName:
                     updateText = (peer as? TelegramUser)?.lastName ?? ""
                 case .title:
@@ -2172,7 +2178,11 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
                     } else if let cachedData = cachedData as? CachedGroupData {
                         updateText = cachedData.about ?? ""
                     } else if let cachedData = cachedData as? CachedUserData {
-                        updateText = cachedData.about ?? ""
+                        if let editableBotInfo = cachedData.editableBotInfo {
+                            updateText = editableBotInfo.about
+                        } else {
+                            updateText = cachedData.about ?? ""
+                        }
                     } else {
                         updateText = ""
                     }
@@ -2191,7 +2201,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
             var isEnabled = true
             switch key {
             case .firstName:
-                placeholder = presentationData.strings.UserInfo_FirstNamePlaceholder
+                placeholder = isEditableBot ? presentationData.strings.UserInfo_BotNamePlaceholder : presentationData.strings.UserInfo_FirstNamePlaceholder
                 isEnabled = isContact || isSettings || isEditableBot
             case .lastName:
                 placeholder = presentationData.strings.UserInfo_LastNamePlaceholder
