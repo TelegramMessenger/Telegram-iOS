@@ -1,6 +1,6 @@
 import Foundation
 import SwiftSignalKit
-import Postbox
+import TelegramCore
 
 public struct WatchRunningTasks: Equatable {
     public let running: Bool
@@ -18,6 +18,6 @@ public struct WatchRunningTasks: Equatable {
 
 public protocol WatchManager: AnyObject {
     var watchAppInstalled: Signal<Bool, NoError> { get }
-    var navigateToMessageRequested: Signal<MessageId, NoError> { get }
+    var navigateToMessageRequested: Signal<EngineMessage.Id, NoError> { get }
     var runningTasks: Signal<WatchRunningTasks?, NoError> { get }
 }

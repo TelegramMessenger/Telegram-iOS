@@ -70,9 +70,9 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
             } else if let pendingStatus = pendingStatus {
                 mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
             } else {
-                mediaStatus = .fetchStatus(resourceStatus)
+                mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     } else {
         return combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file), playbackStatus)
@@ -92,9 +92,9 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
                         }
                 }
             } else {
-                mediaStatus = .fetchStatus(resourceStatus)
+                mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     }
 }
@@ -107,16 +107,16 @@ public func messageImageMediaResourceStatus(context: AccountContext, image: Tele
             if let pendingStatus = pendingStatus {
                 mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
             } else {
-                mediaStatus = .fetchStatus(resourceStatus)
+                mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
             }
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     } else {
         return messageMediaImageStatus(context: context, messageId: message.id, image: image)
         |> map { resourceStatus -> FileMediaResourceStatus in
             let mediaStatus: FileMediaResourceMediaStatus
-            mediaStatus = .fetchStatus(resourceStatus)
-            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+            mediaStatus = .fetchStatus(EngineMediaResource.FetchStatus(resourceStatus))
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: EngineMediaResource.FetchStatus(resourceStatus))
         }
     }
 }
