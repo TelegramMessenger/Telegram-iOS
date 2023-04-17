@@ -9,7 +9,6 @@ import TelegramAnimatedStickerNode
 import AppBundle
 import TelegramCore
 import TextFormat
-import Postbox
 import UrlEscaping
 import AccountContext
 
@@ -20,7 +19,7 @@ public protocol TooltipCustomContentNode: ASDisplayNode {
 
 public enum TooltipActiveTextItem {
     case url(String, Bool)
-    case mention(PeerId, String)
+    case mention(EnginePeer.Id, String)
     case textMention(String)
     case botCommand(String)
     case hashtag(String)

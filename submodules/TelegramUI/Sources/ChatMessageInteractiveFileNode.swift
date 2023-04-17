@@ -1462,7 +1462,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             if let actualFetchStatus = self.actualFetchStatus, message.forwardInfo != nil {
                 fetchStatus = actualFetchStatus
             } else if case let .fetchStatus(status) = resourceStatus.mediaStatus {
-                fetchStatus = status
+                fetchStatus = status._asStatus()
             }
 
             if let fetchStatus = fetchStatus {

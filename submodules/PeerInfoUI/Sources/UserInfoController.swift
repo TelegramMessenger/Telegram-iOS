@@ -51,7 +51,7 @@ private func getUserPeer(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signa
 public func openAddPersonContactImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (getUserPeer(engine: context.engine, peerId: peerId)
     |> deliverOnMainQueue).start(next: { peer, statusSettings in
-        guard case let .user(user) = peer, let contactData = DeviceContactExtendedData(peer: user) else {
+        guard let peer, case let .user(user) = peer, let contactData = DeviceContactExtendedData(peer: peer) else {
             return
         }
         

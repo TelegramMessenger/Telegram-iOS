@@ -1,6 +1,5 @@
 import Foundation
 import Contacts
-import Postbox
 import TelegramCore
 
 public final class DeviceContactPhoneNumberData: Equatable {
@@ -190,18 +189,18 @@ public let phonebookUsernamePathPrefix = "@id"
 private let phonebookUsernamePrefix = "https://t.me/" + phonebookUsernamePathPrefix
 
 public extension DeviceContactUrlData {
-    convenience init(appProfile: PeerId) {
+    convenience init(appProfile: EnginePeer.Id) {
         self.init(label: "Telegram", value: "\(phonebookUsernamePrefix)\(appProfile.id._internalGetInt64Value())")
     }
 }
 
-public func parseAppSpecificContactReference(_ value: String) -> PeerId? {
+public func parseAppSpecificContactReference(_ value: String) -> EnginePeer.Id? {
     if !value.hasPrefix(phonebookUsernamePrefix) {
         return nil
     }
     let idString = String(value[value.index(value.startIndex, offsetBy: phonebookUsernamePrefix.count)...])
     if let id = Int64(idString) {
-        return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
+        return EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id))
     }
     return nil
 }
@@ -466,8 +465,8 @@ public extension DeviceContactExtendedData {
 }
  
 public extension DeviceContactExtendedData {
-    convenience init?(peer: Peer) {
-        guard let user = peer as? TelegramUser else {
+    convenience init?(peer: EnginePeer) {
+        guard case let .user(user) = peer else {
             return nil
         }
         var phoneNumbers: [DeviceContactPhoneNumberData] = []

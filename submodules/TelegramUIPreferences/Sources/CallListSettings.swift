@@ -1,7 +1,7 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
+import Postbox
 
 public struct CallListSettings: Codable, Equatable {
     public var _showTab: Bool?

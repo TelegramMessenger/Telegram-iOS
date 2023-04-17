@@ -9343,3 +9343,5 @@ Sorry for the inconvenience.";
 "Username.BotTitle" = "Public Links";
 
 "Notification.LockScreenReactionPlaceholder" = "Reaction";
+
+"UserInfo.BotNamePlaceholder" = "Bot Name";

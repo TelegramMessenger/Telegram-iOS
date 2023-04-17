@@ -7,7 +7,6 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
-import Postbox
 
 public final class ChatMessageItemAssociatedData: Equatable {
     public enum ChannelDiscussionGroupStatus: Equatable {
@@ -197,11 +196,11 @@ public struct ChatControllerInitialBotStart {
 }
 
 public struct ChatControllerInitialAttachBotStart {
-    public let botId: PeerId
+    public let botId: EnginePeer.Id
     public let payload: String?
     public let justInstalled: Bool
     
-    public init(botId: PeerId, payload: String?, justInstalled: Bool) {
+    public init(botId: EnginePeer.Id, payload: String?, justInstalled: Bool) {
         self.botId = botId
         self.payload = payload
         self.justInstalled = justInstalled
@@ -472,7 +471,7 @@ public struct ChatTextInputStateText: Codable, Equatable {
 
 public enum ChatControllerSubject: Equatable {
     public enum MessageSubject: Equatable {
-        case id(MessageId)
+        case id(EngineMessage.Id)
         case timestamp(Int32)
     }
 
@@ -652,16 +651,16 @@ public enum FileMediaResourcePlaybackStatus: Equatable {
 
 public struct FileMediaResourceStatus: Equatable {
     public var mediaStatus: FileMediaResourceMediaStatus
-    public var fetchStatus: MediaResourceStatus
+    public var fetchStatus: EngineMediaResource.FetchStatus
     
-    public init(mediaStatus: FileMediaResourceMediaStatus, fetchStatus: MediaResourceStatus) {
+    public init(mediaStatus: FileMediaResourceMediaStatus, fetchStatus: EngineMediaResource.FetchStatus) {
         self.mediaStatus = mediaStatus
         self.fetchStatus = fetchStatus
     }
 }
 
 public enum FileMediaResourceMediaStatus: Equatable {
-    case fetchStatus(MediaResourceStatus)
+    case fetchStatus(EngineMediaResource.FetchStatus)
     case playbackStatus(FileMediaResourcePlaybackStatus)
 }
 

@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 
 public struct MessageMediaEditingOptions: OptionSet {

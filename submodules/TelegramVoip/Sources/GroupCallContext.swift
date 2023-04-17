@@ -2,7 +2,6 @@ import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
 import TelegramCore
-import Postbox
 
 final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
@@ -47,7 +46,7 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
     private var dataSource: AudioBroadcastDataSource?
     
     #if DEBUG
-    private let debugDumpDirectory = TempBox.shared.tempDirectory()
+    private let debugDumpDirectory = EngineTempBox.shared.tempDirectory()
     #endif
     
     init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64, isExternalStream: Bool) {

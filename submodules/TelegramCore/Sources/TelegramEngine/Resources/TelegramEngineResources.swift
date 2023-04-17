@@ -3,9 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-public typealias EngineTempBox = TempBox
-public typealias EngineTempBoxFile = TempBoxFile
-
 public extension MediaResourceUserContentType {
     init(file: TelegramMediaFile) {
         if file.isInstantVideo || file.isVoice {

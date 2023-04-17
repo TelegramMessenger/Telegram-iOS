@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 
@@ -41,7 +40,7 @@ public enum ContactMultiselectionControllerMode {
     public struct ChatSelection {
         public var title: String
         public var searchPlaceholder: String
-        public var selectedChats: Set<PeerId>
+        public var selectedChats: Set<EnginePeer.Id>
         public var additionalCategories: ContactMultiselectionControllerAdditionalCategories?
         public var chatListFilters: [ChatListFilter]?
         public var displayAutoremoveTimeout: Bool
@@ -49,7 +48,7 @@ public enum ContactMultiselectionControllerMode {
         public init(
             title: String,
             searchPlaceholder: String,
-            selectedChats: Set<PeerId>,
+            selectedChats: Set<EnginePeer.Id>,
             additionalCategories: ContactMultiselectionControllerAdditionalCategories?,
             chatListFilters: [ChatListFilter]?,
             displayAutoremoveTimeout: Bool = false
@@ -71,8 +70,8 @@ public enum ContactMultiselectionControllerMode {
 
 public enum ContactListFilter {
     case excludeSelf
-    case exclude([PeerId])
-    case disable([PeerId])
+    case exclude([EnginePeer.Id])
+    case disable([EnginePeer.Id])
 }
 
 public final class ContactMultiselectionControllerParams {

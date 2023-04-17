@@ -1,12 +1,11 @@
 import Foundation
 import UIKit
-import Postbox
 import Display
 import TelegramCore
 
 public enum ChatListControllerLocation: Equatable {
     case chatList(groupId: EngineChatList.Group)
-    case forum(peerId: PeerId)
+    case forum(peerId: EnginePeer.Id)
 }
 
 public protocol ChatListController: ViewController {

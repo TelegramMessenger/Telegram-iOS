@@ -1,10 +1,8 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import Display
-
 import CoreSpotlight
 import MobileCoreServices
 
@@ -31,7 +29,7 @@ private struct SpotlightIndexStorageItem: Codable, Equatable {
 private final class SpotlightIndexStorage {
     private let appBasePath: String
     private let basePath: String
-    private var items: [PeerId: SpotlightIndexStorageItem] = [:]
+    private var items: [EnginePeer.Id: SpotlightIndexStorageItem] = [:]
     
     init(appBasePath: String, basePath: String) {
         self.appBasePath = appBasePath
@@ -46,7 +44,7 @@ private final class SpotlightIndexStorage {
         }
     }
     
-    private func path(peerId: PeerId) -> String {
+    private func path(peerId: EnginePeer.Id) -> String {
         return self.basePath + "/p:\(UInt64(bitPattern: peerId.toInt64()))"
     }
     
@@ -70,7 +68,7 @@ private final class SpotlightIndexStorage {
             if let path = url.path, let directoryName = url.lastPathComponent, directoryName.hasPrefix("p:") {
                 let peerIdString = directoryName[directoryName.index(directoryName.startIndex, offsetBy: 2)...]
                 if let peerIdValue = UInt64(peerIdString) {
-                    let peerId = PeerId(Int64(bitPattern: peerIdValue))
+                    let peerId = EnginePeer.Id(Int64(bitPattern: peerIdValue))
                     
                     let item: SpotlightIndexStorageItem
                     if let itemData = try? Data(contentsOf: URL(fileURLWithPath: path + "/data.json")), let decodedItem = try? JSONDecoder().decode(SpotlightIndexStorageItem.self, from: itemData) {
@@ -87,9 +85,9 @@ private final class SpotlightIndexStorage {
         }
     }
     
-    func update(items: [PeerId: SpotlightIndexStorageItem]) {
+    func update(items: [EnginePeer.Id: SpotlightIndexStorageItem]) {
         let validPeerIds = Set(items.keys)
-        var removePeerIds: [PeerId] = []
+        var removePeerIds: [EnginePeer.Id] = []
         for (peerId, _) in self.items {
             if !validPeerIds.contains(peerId) {
                 removePeerIds.append(peerId)
@@ -112,7 +110,7 @@ private final class SpotlightIndexStorage {
             let previousItem = self.items[peerId]
             if previousItem != item {
                 var updatedAvatarSourcePath: String?
-                if let avatarSourcePath = item.avatarSourcePath, let _ = fileSize(self.appBasePath + "/" + avatarSourcePath) {
+                if let avatarSourcePath = item.avatarSourcePath, FileManager.default.fileExists(atPath: self.appBasePath + "/" + avatarSourcePath) {
                     updatedAvatarSourcePath = avatarSourcePath
                 }
                 
@@ -183,11 +181,11 @@ private final class SpotlightIndexStorage {
     }
 }
 
-private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[Account], NoError>) -> Signal<[PeerId: SpotlightIndexStorageItem], NoError> {
+private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[Account], NoError>) -> Signal<[EnginePeer.Id: SpotlightIndexStorageItem], NoError> {
     let queue = Queue()
     return accounts
-    |> mapToSignal { accounts -> Signal<[[PeerId: SpotlightIndexStorageItem]], NoError> in
-        return combineLatest(queue: queue, accounts.map { account -> Signal<[PeerId: SpotlightIndexStorageItem], NoError> in
+    |> mapToSignal { accounts -> Signal<[[EnginePeer.Id: SpotlightIndexStorageItem]], NoError> in
+        return combineLatest(queue: queue, accounts.map { account -> Signal<[EnginePeer.Id: SpotlightIndexStorageItem], NoError> in
             return TelegramEngine(account: account).data.subscribe(
                 TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
             )
@@ -261,7 +259,7 @@ private final class SpotlightDataContextImpl {
         })
     }
     
-    private func updateContacts(items: [PeerId: SpotlightIndexStorageItem]) {
+    private func updateContacts(items: [EnginePeer.Id: SpotlightIndexStorageItem]) {
         self.indexStorage.update(items: items)
     }
 }

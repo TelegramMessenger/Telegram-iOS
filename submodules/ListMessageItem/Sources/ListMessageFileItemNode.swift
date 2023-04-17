@@ -1231,7 +1231,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         strongSelf.statusDisposable.set((updatedStatusSignal
                         |> deliverOnMainQueue).start(next: { [weak strongSelf] fileStatus in
                             if let strongSelf = strongSelf {
-                                strongSelf.fetchStatus = fileStatus.fetchStatus
+                                strongSelf.fetchStatus = fileStatus.fetchStatus._asStatus()
                                 strongSelf.resourceStatus = fileStatus.mediaStatus
                                 strongSelf.updateStatus(transition: .immediate)
                             }
@@ -1436,7 +1436,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 case .playbackStatus:
                     break
                 case let .fetchStatus(fetchStatus):
-                    maybeFetchStatus = fetchStatus
+                    maybeFetchStatus = fetchStatus._asStatus()
             }
             
             if item.isDownloadList, let fetchStatus = self.fetchStatus {
