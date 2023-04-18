@@ -337,11 +337,10 @@ final class ManagedAudioRecorderContext {
         self.toneTimer?.invalidate()
     }
     
-    func start() {
-        assert(self.queue.isCurrent())
-        
-        self.paused = false
-        
+    private func setupAudioUnit() {
+        guard self.audioUnit.with({ $0 }) == nil else {
+            return
+        }
         var desc = AudioComponentDescription()
         desc.componentType = kAudioUnitType_Output
         desc.componentSubType = kAudioUnitSubType_RemoteIO
@@ -395,6 +394,12 @@ final class ManagedAudioRecorderContext {
         }
         
         let _ = self.audioUnit.swap(audioUnit)
+    }
+    
+    func start() {
+        assert(self.queue.isCurrent())
+        
+        self.paused = false
     
         if self.audioSessionDisposable == nil {
             let queue = self.queue
@@ -402,6 +407,7 @@ final class ManagedAudioRecorderContext {
                 queue.async {
                     if let strongSelf = self, !strongSelf.paused {
                         strongSelf.hasAudioSession = true
+                        strongSelf.setupAudioUnit()
                         strongSelf.audioSessionAcquired(headset: state.isHeadsetConnected)
                     }
                 }
