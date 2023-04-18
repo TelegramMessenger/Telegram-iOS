@@ -498,7 +498,7 @@
             }] map:^UIImage *(UIImage *image)
             {
                 if (avatar) {
-                    CGFloat maxSide = [GPUImageContext maximumTextureSizeForThisDevice];
+                    CGFloat maxSide = MIN(TGPhotoEditorResultImageAvatarMaxSize.width, [GPUImageContext maximumTextureSizeForThisDevice]);
                     if (MAX(image.size.width, image.size.height) > maxSide) {
                         CGSize fittedSize = TGScaleToFit(image.size, CGSizeMake(maxSide, maxSide));
                         return TGScaleImageToPixelSize(image, fittedSize);

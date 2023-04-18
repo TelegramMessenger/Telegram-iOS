@@ -349,7 +349,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         if case .group = peer.info {
             isGroup = true
         }
-        entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
+        //entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         
         if isGroup && peer.hasPermission(.deleteAllMessages) && (antiSpamAvailable || antiSpamEnabled) {
             entries.append(.antiSpam(presentationData.theme, presentationData.strings.Group_Management_AntiSpam, antiSpamEnabled))
