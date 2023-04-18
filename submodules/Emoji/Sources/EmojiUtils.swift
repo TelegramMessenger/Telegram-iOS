@@ -104,7 +104,7 @@ public extension String {
     var emojis: [String] {
         var emojis: [String] = []
         self.enumerateSubstrings(in: self.startIndex ..< self.endIndex, options: .byComposedCharacterSequences) { substring, _, _, _ in
-            if let substring = substring {
+            if let substring = substring, substring.isSingleEmoji {
                 emojis.append(substring)
             }
         }
