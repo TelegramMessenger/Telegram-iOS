@@ -92,7 +92,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case inlineForums(Bool)
     case localTranscription(Bool)
     case enableReactionOverrides(Bool)
-    case playerEmbedding(Bool)
+    case storiesExperiment(Bool)
     case playlistPlayback(Bool)
     case enableQuickReactionSwitch(Bool)
     case voiceConference
@@ -118,7 +118,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -213,7 +213,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 41
         case .resetTranslationStates:
             return 42
-        case .playerEmbedding:
+        case .storiesExperiment:
             return 43
         case .playlistPlayback:
             return 44
@@ -1220,12 +1220,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .playerEmbedding(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .storiesExperiment(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Gallery X", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.playerEmbedding = value
+                        settings.storiesExperiment = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1384,7 +1384,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)
         
-        entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
+        entries.append(.storiesExperiment(experimentalSettings.storiesExperiment))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
     }

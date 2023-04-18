@@ -14,6 +14,8 @@ import PeerAvatarGalleryUI
 import GalleryUI
 import MediaResources
 import WebsiteType
+import StoryContainerScreen
+import StoryContentComponent
 
 public enum ChatMessageGalleryControllerData {
     case url(String)
@@ -28,6 +30,7 @@ public enum ChatMessageGalleryControllerData {
     case chatAvatars(AvatarGalleryController, Media)
     case theme(TelegramMediaFile)
     case other(Media)
+    case story(Signal<StoryContainerScreen, NoError>)
 }
 
 private func instantPageBlockMedia(pageId: MediaId, block: InstantPageBlock, media: [MediaId: Media], counter: inout Int) -> [InstantPageGalleryEntry] {
@@ -265,6 +268,21 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                 if chatLocation?.peerId != message.id.peerId {
                     openChatLocation = .peer(id: message.id.peerId)
                     openChatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+                }
+                
+                if context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                    return .story(StoryChatContent.messages(
+                        context: context,
+                        messageId: message.id
+                    )
+                    |> take(1)
+                    |> deliverOnMainQueue
+                    |> map { initialContent in
+                        return StoryContainerScreen(
+                            context: context,
+                            initialContent: initialContent
+                        )
+                    })
                 }
                 
                 return .gallery(startState
