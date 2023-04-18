@@ -4,7 +4,6 @@ import Display
 import ComponentFlow
 import LegacyComponents
 import TelegramCore
-import Postbox
 import LottieAnimationComponent
 
 enum DrawingTextStyle: Equatable {

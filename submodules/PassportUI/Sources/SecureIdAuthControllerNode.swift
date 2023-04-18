@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences

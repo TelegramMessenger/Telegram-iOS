@@ -2,7 +2,6 @@ import Foundation
 import NaturalLanguage
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 import AccountContext
 import TelegramUIPreferences
 
@@ -69,7 +68,7 @@ public struct ChatTranslationState: Codable {
 }
 
 private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
     
     return engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key))
@@ -79,7 +78,7 @@ private func cachedChatTranslationState(engine: TelegramEngine, peerId: EnginePe
 }
 
 private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePeer.Id, state: ChatTranslationState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
     
     if let state {
@@ -90,7 +89,7 @@ private func updateChatTranslationState(engine: TelegramEngine, peerId: EnginePe
 }
 
 public func updateChatTranslationStateInteractively(engine: TelegramEngine, peerId: EnginePeer.Id, _ f: @escaping (ChatTranslationState?) -> ChatTranslationState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: peerId.id._internalGetInt64Value())
     
     return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.translationState, id: key))
@@ -151,7 +150,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
 }
 
 public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id) -> Signal<ChatTranslationState?, NoError> {
-    if peerId.id == PeerId.Id._internalFromInt64Value(777000) {
+    if peerId.id == EnginePeer.Id.Id._internalFromInt64Value(777000) {
         return .single(nil)
     }
     

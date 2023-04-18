@@ -692,10 +692,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         self.mainContextSourceNode.isExtractedToContextPreviewUpdated = { [weak self] isExtractedToContextPreview in
-            guard let strongSelf = self, let item = strongSelf.item else {
+            guard let strongSelf = self else {
                 return
             }
-            strongSelf.backgroundWallpaperNode.setMaskMode(strongSelf.backgroundMaskMode, mediaBox: item.context.account.postbox.mediaBox)
+            strongSelf.backgroundWallpaperNode.setMaskMode(strongSelf.backgroundMaskMode)
             strongSelf.backgroundNode.setMaskMode(strongSelf.backgroundMaskMode)
             if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
@@ -836,9 +836,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     }
 
     func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: CombinedTransition) {
-        guard let item = self.item else {
-            return
-        }
         let widthDifference = self.backgroundNode.frame.width - textInput.backgroundView.frame.width
         let heightDifference = self.backgroundNode.frame.height - textInput.backgroundView.frame.height
 
@@ -857,7 +854,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
 
         transition.vertical.animateOffsetAdditive(layer: self.clippingNode.layer, offset: textInput.backgroundView.frame.minY - self.clippingNode.frame.minY)
 
-        self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, mediaBox: item.context.account.postbox.mediaBox, transition: transition)
+        self.backgroundWallpaperNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
         self.backgroundNode.animateFrom(sourceView: textInput.backgroundView, transition: transition)
 
         for contentNode in self.contentNodes {

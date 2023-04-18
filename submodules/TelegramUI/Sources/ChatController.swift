@@ -3897,7 +3897,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if inputMode == .none {
                                     inputMode = .text
                                 }
-                                return (chatTextInputAddMentionAttribute(current, peer: peer._asPeer()), inputMode)
+                                return (chatTextInputAddMentionAttribute(current, peer: peer), inputMode)
                             }
                         }, delay: true)
                     })))
@@ -4425,10 +4425,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     controller?.dismiss()
                 } else {
                     var isChannel = false
-                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    if case let .channel(channel) = peer, case .broadcast = channel.info {
                         isChannel = true
                     }
-                    let peerName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                    let peerName = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
                     presentConfirmation(peerName, isChannel, {
                         let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).start()
                         controller?.dismiss()
@@ -13249,7 +13249,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         let hasLiveLocation = peer.id.namespace != Namespaces.Peer.SecretChat && peer.id != strongSelf.context.account.peerId && strongSelf.presentationInterfaceState.subject != .scheduledMessages
-                        let controller = LocationPickerController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: .share(peer: peer, selfPeer: selfPeer._asPeer(), hasLiveLocation: hasLiveLocation), completion: { [weak self] location, _ in
+                        let controller = LocationPickerController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: .share(peer: EnginePeer(peer), selfPeer: selfPeer, hasLiveLocation: hasLiveLocation), completion: { [weak self] location, _ in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -14239,7 +14239,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let hasLiveLocation = peer.id.namespace != Namespaces.Peer.SecretChat && peer.id != strongSelf.context.account.peerId && strongSelf.presentationInterfaceState.subject != .scheduledMessages
-            let controller = LocationPickerController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: .share(peer: peer, selfPeer: selfPeer._asPeer(), hasLiveLocation: hasLiveLocation), completion: { [weak self] location, _ in
+            let controller = LocationPickerController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mode: .share(peer: EnginePeer(peer), selfPeer: selfPeer, hasLiveLocation: hasLiveLocation), completion: { [weak self] location, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -16489,7 +16489,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-            var attemptSelectionImpl: ((Peer) -> Void)?
+            var attemptSelectionImpl: ((EnginePeer) -> Void)?
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, filter: filter, hasFilters: true, attemptSelection: { peer, _ in
                 attemptSelectionImpl?(peer)
             }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }, selectForumThreads: true))
@@ -16500,7 +16500,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 if hasPublicPolls {
-                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    if case let .channel(channel) = peer, case .broadcast = channel.info {
                         controller.present(textAlertController(context: context, title: nil, text: hasPublicQuiz ? presentationData.strings.Forward_ErrorPublicQuizDisabledInChannels : presentationData.strings.Forward_ErrorPublicPollDisabledInChannels, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         return
                     }
@@ -16538,7 +16538,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let commit: ([EnqueueMessage]) -> Void = { result in
                     strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }).updatedSearch(nil) })
                     
-                    var displayPeers: [Peer] = []
+                    var displayPeers: [EnginePeer] = []
                     for peer in peers {
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: result)
                         |> deliverOnMainQueue).start(next: { messageIds in
@@ -16565,7 +16565,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         })
                         
-                        if let secretPeer = peer as? TelegramSecretChat {
+                        if case let .secretChat(secretPeer) = peer {
                             if let peer = peerMap[secretPeer.regularPeerId] {
                                 displayPeers.append(peer)
                             }
@@ -16582,17 +16582,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         savedMessages = true
                     } else {
                         if displayPeers.count == 1, let peer = displayPeers.first {
-                            var peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            var peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             peerName = peerName.replacingOccurrences(of: "**", with: "")
                             text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string : presentationData.strings.Conversation_ForwardTooltip_Chat_Many(peerName).string
                         } else if displayPeers.count == 2, let firstPeer = displayPeers.first, let secondPeer = displayPeers.last {
-                            var firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            var firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             firstPeerName = firstPeerName.replacingOccurrences(of: "**", with: "")
-                            var secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            var secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             secondPeerName = secondPeerName.replacingOccurrences(of: "**", with: "")
                             text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.Conversation_ForwardTooltip_TwoChats_Many(firstPeerName, secondPeerName).string
                         } else if let peer = displayPeers.first {
-                            var peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            var peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             peerName = peerName.replacingOccurrences(of: "**", with: "")
                             text = messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(displayPeers.count - 1)").string : presentationData.strings.Conversation_ForwardTooltip_ManyChats_Many(peerName, "\(displayPeers.count - 1)").string
                         } else {
@@ -17223,7 +17223,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func addPeerContact() {
-        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser, let peerStatusSettings = self.presentationInterfaceState.contactStatus?.peerStatusSettings, let contactData = DeviceContactExtendedData(peer: peer) {
+        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser, let peerStatusSettings = self.presentationInterfaceState.contactStatus?.peerStatusSettings, let contactData = DeviceContactExtendedData(peer: EnginePeer(peer)) {
             self.present(context.sharedContext.makeDeviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: true, shareViaException: peerStatusSettings.contains(.addExceptionWhenAddingContact), completion: { [weak self] peer, stableId, contactData in
                 guard let strongSelf = self else {
                     return

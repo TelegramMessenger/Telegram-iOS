@@ -5,7 +5,6 @@ import SwiftSignalKit
 import ComponentFlow
 import LegacyComponents
 import TelegramCore
-import Postbox
 import AccountContext
 import TelegramPresentationData
 import SheetComponent

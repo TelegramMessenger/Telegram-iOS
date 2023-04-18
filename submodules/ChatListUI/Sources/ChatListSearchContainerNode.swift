@@ -1364,12 +1364,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             |> deliverOnMainQueue).start())
                         }
                     })
-                    if let secretPeer = peer as? TelegramSecretChat {
+                    if case let .secretChat(secretPeer) = peer {
                         if let peer = peerMap[secretPeer.regularPeerId] {
-                            displayPeers.append(EnginePeer(peer))
+                            displayPeers.append(peer)
                         }
                     } else {
-                        displayPeers.append(EnginePeer(peer))
+                        displayPeers.append(peer)
                     }
                 }
                     

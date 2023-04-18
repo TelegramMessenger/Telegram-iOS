@@ -3,7 +3,6 @@ import UIKit
 import MapKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import AvatarNode
 import AppBundle
@@ -39,8 +38,8 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         }
     }
     let location: TelegramMediaMap?
-    let peer: Peer?
-    let message: Message?
+    let peer: EnginePeer?
+    let message: EngineMessage?
     let forcedSelection: Bool
     @objc dynamic var heading: NSNumber? {
         willSet {
@@ -52,11 +51,11 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     }
     
     var isSelf = false
-    var selfPeer: Peer?
+    var selfPeer: EnginePeer?
     var title: String? = ""
     var subtitle: String? = ""
     
-    init(context: AccountContext, theme: PresentationTheme, peer: Peer) {
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
         self.context = context
         self.theme = theme
         self.location = nil
@@ -78,7 +77,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         super.init()
     }
     
-    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, isSelf: Bool, heading: Int32?) {
+    init(context: AccountContext, theme: PresentationTheme, message: EngineMessage, selfPeer: EnginePeer?, isSelf: Bool, heading: Int32?) {
         self.context = context
         self.theme = theme
         self.location = nil
@@ -538,8 +537,8 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
     }
     
-    var previousPeerId: PeerId?
-    func setPeer(context: AccountContext, theme: PresentationTheme, peer: Peer) {
+    var previousPeerId: EnginePeer.Id?
+    func setPeer(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
         let avatarNode: AvatarNode
         if let currentAvatarNode = self.avatarNode {
             avatarNode = currentAvatarNode
@@ -554,7 +553,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         if self.previousPeerId != peer.id {
             self.previousPeerId = peer.id
-            avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer))
+            avatarNode.setPeer(context: context, theme: theme, peer: peer)
         }
     }
     

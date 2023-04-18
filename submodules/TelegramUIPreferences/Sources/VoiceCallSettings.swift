@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -76,7 +75,7 @@ public func updateVoiceCallSettingsSettingsInteractively(accountManager: Account
             } else {
                 currentSettings = VoiceCallSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -44,7 +43,7 @@ public func updateMediaDisplaySettingsInteractively(accountManager: AccountManag
             } else {
                 currentSettings = MediaDisplaySettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

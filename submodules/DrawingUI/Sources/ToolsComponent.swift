@@ -5,7 +5,6 @@ import ComponentFlow
 import SwiftSignalKit
 import LegacyComponents
 import TelegramCore
-import Postbox
 
 private let toolSize = CGSize(width: 40.0, height: 176.0)
 

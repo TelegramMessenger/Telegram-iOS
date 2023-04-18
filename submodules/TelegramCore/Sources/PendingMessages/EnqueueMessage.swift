@@ -302,7 +302,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                         }
                     }
 
-                    if let forwardSource {
+                    if let forwardSource = forwardSource {
                         messages.append(.forward(source: forwardSource, threadId: nil, grouping: .auto, attributes: filteredAttributes, correlationId: nil))
                     } else {
                         messages.append(.message(text: message.text, attributes: filteredAttributes, inlineStickers: [:], mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))

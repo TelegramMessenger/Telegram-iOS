@@ -111,7 +111,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                 case let .Audio(isVoice, duration, title, performer, _):
                     let displayData: SharedMediaPlaybackDisplayData
                     if isVoice {
-                        displayData = SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId])
+                        displayData = SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor.flatMap(EnginePeer.init), peer: self.message.peers[self.message.id.peerId].flatMap(EnginePeer.init))
                     } else {
                         var updatedTitle = title
                         let updatedPerformer = performer
@@ -131,7 +131,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                     return displayData
                 case let .Video(_, _, flags):
                     if flags.contains(.instantRoundVideo) {
-                        return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId], timestamp: self.message.timestamp)
+                        return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor.flatMap(EnginePeer.init), peer: self.message.peers[self.message.id.peerId].flatMap(EnginePeer.init), timestamp: self.message.timestamp)
                     } else {
                         return nil
                     }

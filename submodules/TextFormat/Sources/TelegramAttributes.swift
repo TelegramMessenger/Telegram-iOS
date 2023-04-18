@@ -1,5 +1,5 @@
 import Foundation
-import Postbox
+import TelegramCore
 
 public final class TelegramHashtag {
     public let peerName: String?
@@ -12,10 +12,10 @@ public final class TelegramHashtag {
 }
 
 public final class TelegramPeerMention {
-    public let peerId: PeerId
+    public let peerId: EnginePeer.Id
     public let mention: String
     
-    public init(peerId: PeerId, mention: String) {
+    public init(peerId: EnginePeer.Id, mention: String) {
         self.peerId = peerId
         self.mention = mention
     }

@@ -2,7 +2,6 @@ import Foundation
 import CoreLocation
 import SwiftSignalKit
 import StoreKit
-import Postbox
 import TelegramCore
 import TelegramStringFormatting
 import TelegramUIPreferences
@@ -155,10 +154,10 @@ public final class InAppPurchaseManager: NSObject {
     private final class PaymentTransactionContext {
         var state: SKPaymentTransactionState?
         var isUpgrade: Bool
-        var targetPeerId: PeerId?
+        var targetPeerId: EnginePeer.Id?
         let subscriber: (TransactionState) -> Void
         
-        init(isUpgrade: Bool, targetPeerId: PeerId?, subscriber: @escaping (TransactionState) -> Void) {
+        init(isUpgrade: Bool, targetPeerId: EnginePeer.Id?, subscriber: @escaping (TransactionState) -> Void) {
             self.isUpgrade = isUpgrade
             self.targetPeerId = targetPeerId
             self.subscriber = subscriber
@@ -238,7 +237,7 @@ public final class InAppPurchaseManager: NSObject {
         }
     }
     
-    public func buyProduct(_ product: Product, isUpgrade: Bool = false, targetPeerId: PeerId? = nil) -> Signal<PurchaseState, PurchaseError> {
+    public func buyProduct(_ product: Product, isUpgrade: Bool = false, targetPeerId: EnginePeer.Id? = nil) -> Signal<PurchaseState, PurchaseError> {
         if !self.canMakePayments {
             return .fail(.cantMakePayments)
         }
@@ -415,12 +414,12 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 
                 let purpose: Signal<AppStoreTransactionPurpose, NoError>
                 if !isSubscriptionProductId(productIdentifier) {
-                    let peerId: Signal<PeerId, NoError>
+                    let peerId: Signal<EnginePeer.Id, NoError>
                     if let targetPeerId = paymentContexts[productIdentifier]?.targetPeerId {
                         peerId = .single(targetPeerId)
                     } else {
                         peerId = pendingInAppPurchaseState(engine: self.engine, productId: productIdentifier)
-                        |> mapToSignal { state -> Signal<PeerId, NoError> in
+                        |> mapToSignal { state -> Signal<EnginePeer.Id, NoError> in
                             if let state = state, let peerId = state.targetPeerId {
                                 return .single(peerId)
                             } else {
@@ -540,9 +539,9 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
 private final class PendingInAppPurchaseState: Codable {
     public let productId: String
     public let isUpgrade: Bool
-    public let targetPeerId: PeerId?
+    public let targetPeerId: EnginePeer.Id?
         
-    public init(productId: String, isUpgrade: Bool, targetPeerId: PeerId?) {
+    public init(productId: String, isUpgrade: Bool, targetPeerId: EnginePeer.Id?) {
         self.productId = productId
         self.isUpgrade = isUpgrade
         self.targetPeerId = targetPeerId
@@ -553,7 +552,7 @@ private final class PendingInAppPurchaseState: Codable {
 
         self.productId = try container.decode(String.self, forKey: "productId")
         self.isUpgrade = try container.decodeIfPresent(Bool.self, forKey: "isUpgrade") ?? false
-        self.targetPeerId = (try container.decodeIfPresent(Int64.self, forKey: "targetPeerId")).flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
+        self.targetPeerId = (try container.decodeIfPresent(Int64.self, forKey: "targetPeerId")).flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -568,7 +567,7 @@ private final class PendingInAppPurchaseState: Codable {
 }
 
 private func pendingInAppPurchaseState(engine: TelegramEngine, productId: String) -> Signal<PendingInAppPurchaseState?, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: Int64(bitPattern: productId.persistentHashValue))
     
     return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.pendingInAppPurchaseState, id: key))
@@ -578,7 +577,7 @@ private func pendingInAppPurchaseState(engine: TelegramEngine, productId: String
 }
 
 private func updatePendingInAppPurchaseState(engine: TelegramEngine, productId: String, content: PendingInAppPurchaseState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: Int64(bitPattern: productId.persistentHashValue))
     
     if let content = content {

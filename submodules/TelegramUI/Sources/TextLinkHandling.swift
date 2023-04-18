@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramUIPreferences
@@ -17,7 +16,7 @@ import PresentationDataUtils
 import UrlWhitelist
 import UndoUI
 
-func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
+func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let presentImpl: (ViewController, Any?) -> Void = { controllerToPresent, _ in
         controller.present(controllerToPresent, in: .window(.root))
     }
@@ -33,11 +32,13 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: subject, keepStack: .always, peekData: peekData))
                     }
                 case .info:
-                    let peerSignal: Signal<Peer?, NoError>
-                    peerSignal = context.account.postbox.loadedPeerWithId(peer.id) |> map(Optional.init)
+                    let peerSignal: Signal<EnginePeer?, NoError>
+                    peerSignal = context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)
+                    )
                     navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
                         if let controller = controller, let peer = peer {
-                            if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                            if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                 (controller.navigationController as? NavigationController)?.pushViewController(infoController)
                             }
                         }

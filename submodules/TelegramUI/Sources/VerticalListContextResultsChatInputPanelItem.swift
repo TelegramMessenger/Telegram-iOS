@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import RadialStatusNode
 import PhotoResources
@@ -91,7 +90,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private var statusDisposable = MetaDisposable()
     private let statusNode: RadialStatusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
-    private var resourceStatus: MediaResourceStatus?
+    private var resourceStatus: EngineMediaResource.FetchStatus?
 
     private var currentIconImageResource: TelegramMediaResource?
     
@@ -167,7 +166,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             var iconText: NSAttributedString?
             
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
+            var updatedStatusSignal: Signal<EngineMediaResource.FetchStatus, NoError>?
 
             if let title = item.result.title {
                 titleString = NSAttributedString(string: title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
@@ -233,7 +232,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                 iconImageApply = iconImageLayout(arguments)
                 
                 updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
-
+                |> map(EngineMediaResource.FetchStatus.init)
             }
             
             var updatedIconImageResource = false
@@ -251,7 +250,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                         updateIconImageSignal = chatMessageSticker(account: item.account, userLocation: .other, file: stickerFile, small: false, fetched: true)
                     } else {
                         let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 55, height: 55), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
-                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+                        let tmpImage = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                         updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, userLocation: .other, photoReference: .standalone(media: tmpImage))
                     }
                 } else {
