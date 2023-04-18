@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import ItemListUI
@@ -97,7 +96,7 @@ final class SearchNavigationContentNode: NavigationBarContentNode, ItemListContr
 
 final class InviteRequestsSearchItem: ItemListControllerSearch {
     let context: AccountContext
-    let peerId: PeerId
+    let peerId: EnginePeer.Id
     let cancel: () -> Void
     let openPeer: (EnginePeer) -> Void
     let approveRequest: (EnginePeer) -> Void
@@ -111,7 +110,7 @@ final class InviteRequestsSearchItem: ItemListControllerSearch {
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, cancel: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, peerId: EnginePeer.Id, cancel: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
         self.context = context
         self.peerId = peerId
         self.cancel = cancel
@@ -175,7 +174,7 @@ final class InviteRequestsSearchItem: ItemListControllerSearch {
 private final class InviteRequestsSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: InviteRequestsSearchContainerNode
     
-    init(context: AccountContext, peerId: PeerId, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, peerId: EnginePeer.Id, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
         self.containerNode = InviteRequestsSearchContainerNode(context: context, forceTheme: nil, peerId: peerId, openPeer: { peer in
             openPeer(peer)
         }, approveRequest: { peer in
@@ -340,14 +339,14 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
         return _hasDim
     }
     
-    private var processedPeerIdsPromise = ValuePromise<Set<PeerId>>(Set())
-    private var processedPeerIds = Set<PeerId>() {
+    private var processedPeerIdsPromise = ValuePromise<Set<EnginePeer.Id>>(Set())
+    private var processedPeerIds = Set<EnginePeer.Id>() {
         didSet {
             self.processedPeerIdsPromise.set(self.processedPeerIds)
         }
     }
     
-    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: PeerId, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: EnginePeer.Id, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         

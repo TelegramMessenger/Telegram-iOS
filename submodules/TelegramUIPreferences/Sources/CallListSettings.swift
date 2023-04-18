@@ -1,7 +1,6 @@
 import Foundation
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 
 public struct CallListSettings: Codable, Equatable {
     public var _showTab: Bool?
@@ -78,7 +77,7 @@ public func updateCallListSettingsInteractively(accountManager: AccountManager<T
             } else {
                 currentSettings = CallListSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

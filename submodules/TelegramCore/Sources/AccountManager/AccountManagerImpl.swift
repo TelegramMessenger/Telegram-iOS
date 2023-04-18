@@ -6,6 +6,8 @@ public protocol AccountManagerTypes {
     associatedtype Attribute: AccountRecordAttribute
 }
 
+public typealias SharedPreferencesEntry = PreferencesEntry
+
 public struct AccountManagerModifier<Types: AccountManagerTypes> {
     public let getRecords: () -> [AccountRecord<Types.Attribute>]
     public let updateRecord: (AccountRecordId, (AccountRecord<Types.Attribute>?) -> (AccountRecord<Types.Attribute>?)) -> Void

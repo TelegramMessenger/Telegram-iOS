@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramStringFormatting
@@ -19,12 +18,12 @@ import MapKit
 
 public class LocationViewParams {
     let sendLiveLocation: (TelegramMediaMap) -> Void
-    let stopLiveLocation: (MessageId?) -> Void
+    let stopLiveLocation: (EngineMessage.Id?) -> Void
     let openUrl: (String) -> Void
-    let openPeer: (Peer) -> Void
+    let openPeer: (EnginePeer) -> Void
     let showAll: Bool
         
-    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping (MessageId?) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer) -> Void, showAll: Bool = false) {
+    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping (EngineMessage.Id?) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, showAll: Bool = false) {
         self.sendLiveLocation = sendLiveLocation
         self.stopLiveLocation = stopLiveLocation
         self.openUrl = openUrl
@@ -46,14 +45,14 @@ class LocationViewInteraction {
     let goToCoordinate: (CLLocationCoordinate2D) -> Void
     let requestDirections: (TelegramMediaMap, String?, OpenInLocationDirections) -> Void
     let share: () -> Void
-    let setupProximityNotification: (Bool, MessageId?) -> Void
+    let setupProximityNotification: (Bool, EngineMessage.Id?) -> Void
     let updateSendActionHighlight: (Bool) -> Void
     let sendLiveLocation: (Int32?) -> Void
     let stopLiveLocation: () -> Void
     let updateRightBarButton: (LocationViewRightBarButton) -> Void
     let present: (ViewController) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping (TelegramMediaMap, String?, OpenInLocationDirections) -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping (TelegramMediaMap, String?, OpenInLocationDirections) -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, EngineMessage.Id?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.toggleTrackingMode = toggleTrackingMode
@@ -74,7 +73,7 @@ public final class LocationViewController: ViewController {
         return self.displayNode as! LocationViewControllerNode
     }
     private let context: AccountContext
-    public var subject: Message
+    public var subject: EngineMessage
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var showAll: Bool
@@ -86,7 +85,7 @@ public final class LocationViewController: ViewController {
     
     private var rightBarButtonAction: LocationViewRightBarButton = .none
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: Message, params: LocationViewParams) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: EngineMessage, params: LocationViewParams) {
         self.context = context
         self.subject = subject
         self.showAll = params.showAll
