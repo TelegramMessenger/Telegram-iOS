@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -7,10 +6,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public struct AccountReactionOverrides: Equatable, Codable {
         public struct Item: Equatable, Codable {
             public var key: MessageReaction.Reaction
-            public var messageId: MessageId
-            public var mediaId: MediaId
+            public var messageId: EngineMessage.Id
+            public var mediaId: EngineMedia.Id
             
-            public init(key: MessageReaction.Reaction, messageId: MessageId, mediaId: MediaId) {
+            public init(key: MessageReaction.Reaction, messageId: EngineMessage.Id, mediaId: EngineMedia.Id) {
                 self.key = key
                 self.messageId = messageId
                 self.mediaId = mediaId
@@ -206,7 +205,7 @@ public func updateExperimentalUISettingsInteractively(accountManager: AccountMan
             } else {
                 currentSettings = .defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

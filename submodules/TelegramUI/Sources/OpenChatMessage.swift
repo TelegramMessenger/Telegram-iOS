@@ -71,9 +71,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }, stopLiveLocation: { messageId in
                     params.context.liveLocationManager?.cancelLiveLocation(peerId: messageId?.peerId ?? params.message.id.peerId)
                 }, openUrl: params.openUrl, openPeer: { peer in
-                    params.openPeer(peer, .info)
+                    params.openPeer(peer._asPeer(), .info)
                 }, showAll: params.modal)
-                let controller = LocationViewController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: params.message, params: controllerParams)
+                let controller = LocationViewController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: EngineMessage(params.message), params: controllerParams)
                 controller.navigationPresentation = .modal
                 params.navigationController?.pushViewController(controller)
                 return true

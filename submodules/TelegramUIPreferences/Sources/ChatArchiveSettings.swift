@@ -1,7 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 
 public struct ChatArchiveSettings: Equatable, Codable {
     public var isHiddenByDefault: Bool
@@ -43,6 +42,6 @@ public func updateChatArchiveSettings(engine: TelegramEngine, _ f: @escaping (Ch
         } else {
             currentSettings = .default
         }
-        return PreferencesEntry(f(currentSettings))
+        return SharedPreferencesEntry(f(currentSettings))
     })
 }

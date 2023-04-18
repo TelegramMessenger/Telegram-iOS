@@ -1360,7 +1360,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 guard let message = message else {
                     return
                 }
-                let controller = LocationViewController(context: context, subject: message._asMessage(), params: controllerParams)
+                let controller = LocationViewController(context: context, subject: message, params: controllerParams)
                 controller.navigationPresentation = .modal
                 navigationController.pushViewController(controller)
             })
