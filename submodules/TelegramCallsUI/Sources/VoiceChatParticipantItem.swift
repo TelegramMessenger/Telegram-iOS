@@ -512,7 +512,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             let avatarListNode = PeerInfoAvatarListContainerNode(context: item.context)
                             avatarListWrapperNode.contentNode.clipsToBounds = true
                             avatarListNode.backgroundColor = .clear
-                            avatarListNode.peer = item.peer
+                            avatarListNode.peer = EnginePeer(item.peer)
                             avatarListNode.firstFullSizeOnly = true
                             avatarListNode.offsetLocation = true
                             avatarListNode.customCenterTapAction = { [weak self] in
@@ -528,7 +528,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             avatarListContainerNode.addSubnode(avatarListNode.controlsClippingOffsetNode)
                             avatarListWrapperNode.contentNode.addSubnode(avatarListContainerNode)
                             
-                            avatarListNode.update(size: targetRect.size, peer: item.peer, customNode: nil, additionalEntry: item.getUpdatingAvatar(), isExpanded: true, transition: .immediate)
+                            avatarListNode.update(size: targetRect.size, peer: EnginePeer(item.peer), customNode: nil, additionalEntry: item.getUpdatingAvatar(), isExpanded: true, transition: .immediate)
                             strongSelf.offsetContainerNode.supernode?.addSubnode(avatarListWrapperNode)
 
                             strongSelf.audioLevelView?.alpha = 0.0

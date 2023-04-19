@@ -1349,7 +1349,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
         }
     }
     openAvatarImpl = { [weak controller] peer in
-        let avatarController = AvatarGalleryController(context: context, peer: peer, replaceRootController: { _, _ in
+        let avatarController = AvatarGalleryController(context: context, peer: EnginePeer(peer), replaceRootController: { _, _ in
         })
         hiddenAvatarPromise.set(
             avatarController.hiddenMedia

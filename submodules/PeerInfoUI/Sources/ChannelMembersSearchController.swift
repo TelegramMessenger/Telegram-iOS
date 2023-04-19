@@ -120,7 +120,7 @@ public final class ChannelMembersSearchController: ViewController {
             self?.deactivateSearch(animated: true)
         }
         self.controllerNode.requestOpenPeerFromSearch = { [weak self] peer, participant in
-            self?.openPeer(peer, participant)
+            self?.openPeer(peer._asPeer(), participant)
         }
         self.controllerNode.requestCopyInviteLink = { [weak self] in
             self?.copyInviteLink?()

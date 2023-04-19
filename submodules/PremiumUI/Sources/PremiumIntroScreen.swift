@@ -3,8 +3,8 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import Postbox
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import PresentationDataUtils
 import ViewControllerComponent
@@ -204,9 +204,9 @@ public enum PremiumSource: Equatable {
     case appIcons
     case animatedEmoji
     case deeplink(String?)
-    case profile(PeerId)
-    case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
-    case gift(from: PeerId, to: PeerId, duration: Int32)
+    case profile(EnginePeer.Id)
+    case emojiStatus(EnginePeer.Id, Int64, TelegramMediaFile?, LoadedStickerPack?)
+    case gift(from: EnginePeer.Id, to: EnginePeer.Id, duration: Int32)
     case giftTerms
     case voiceToText
     case fasterDownload

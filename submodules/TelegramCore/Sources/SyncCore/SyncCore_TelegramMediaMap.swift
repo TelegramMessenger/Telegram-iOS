@@ -130,7 +130,7 @@ public final class MapVenue: PostboxCoding, Equatable {
     }
 }
 
-public final class TelegramMediaMap: Media {
+public final class TelegramMediaMap: Media, Equatable {
     public let latitude: Double
     public let longitude: Double
     public let heading: Int32?
@@ -198,6 +198,10 @@ public final class TelegramMediaMap: Media {
         } else {
             encoder.encodeNil(forKey: "pnr")
         }
+    }
+    
+    public static func ==(lhs: TelegramMediaMap, rhs: TelegramMediaMap) -> Bool {
+        return lhs.isEqual(to: rhs)
     }
     
     public func isEqual(to other: Media) -> Bool {

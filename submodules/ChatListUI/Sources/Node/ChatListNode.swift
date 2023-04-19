@@ -665,13 +665,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount:
                             nodeInteraction?.openPremiumIntro()
-                        case .chatFolderUpdates:
-                            nodeInteraction?.openChatFolderUpdates()
                         }
                     case .hide:
                         switch notice {
-                        case .chatFolderUpdates:
-                            nodeInteraction?.hideChatFolderUpdates()
                         default:
                             break
                         }
@@ -966,13 +962,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount:
                             nodeInteraction?.openPremiumIntro()
-                        case .chatFolderUpdates:
-                            nodeInteraction?.openChatFolderUpdates()
                         }
                     case .hide:
                         switch notice {
-                        case .chatFolderUpdates:
-                            nodeInteraction?.hideChatFolderUpdates()
                         default:
                             break
                         }

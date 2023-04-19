@@ -4,7 +4,6 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
-import Postbox
 import TelegramPresentationData
 import TelegramStringFormatting
 import SelectablePeerNode
@@ -14,7 +13,7 @@ import ShimmerEffect
 
 final class ShareControllerInteraction {
     var foundPeers: [EngineRenderedPeer] = []
-    var selectedPeerIds = Set<PeerId>()
+    var selectedPeerIds = Set<EnginePeer.Id>()
     var selectedPeers: [EngineRenderedPeer] = []
     
     var selectedTopics: [EnginePeer.Id: (Int64, MessageHistoryThreadData)] = [:]

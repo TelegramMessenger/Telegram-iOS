@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SafariServices
 import TelegramPresentationData
@@ -197,9 +196,9 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         if self.contentNode == nil || self.contentNode?.frame.width != width {
             self.contentNode?.removeFromSupernode()
             
-            var media: [MediaId: Media] = [:]
+            var media: [EngineMedia.Id: EngineMedia] = [:]
             if case let .Loaded(content) = self.webPage.content, let instantPage = content.instantPage  {
-                media = instantPage.media
+                media = instantPage.media.mapValues(EngineMedia.init)
             }
             
             let sideInset: CGFloat = 16.0

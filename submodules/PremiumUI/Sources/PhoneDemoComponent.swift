@@ -4,7 +4,6 @@ import SceneKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import ComponentFlow
 import AccountContext
@@ -221,7 +220,7 @@ private final class PhoneView: UIView {
         self.contentContainerView.backgroundColor = .clear
                 
         let videoContent = NativeVideoContent(
-            id: .message(1, MediaId(namespace: 0, id: Int64.random(in: 0..<Int64.max))),
+            id: .message(1, EngineMedia.Id(namespace: 0, id: Int64.random(in: 0..<Int64.max))),
             userLocation: .other,
             fileReference: .standalone(media: file),
             streamVideo: .conservative,

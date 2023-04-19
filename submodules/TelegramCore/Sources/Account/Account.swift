@@ -1282,7 +1282,7 @@ public class Account {
         return _internal_reindexCacheInBackground(account: self, lowImpact: lowImpact)
         |> then(
             Signal { subscriber in
-                return postbox.mediaBox.updateResourceIndex(lowImpact: lowImpact, completion: {
+                return postbox.mediaBox.updateResourceIndex(otherResourceContentType: MediaResourceUserContentType.other.rawValue, lowImpact: lowImpact, completion: {
                     subscriber.putCompletion()
                 })
             }

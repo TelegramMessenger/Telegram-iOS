@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -20,14 +19,14 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     private var imageNode: TransformImageNode?
     
     let url: String
-    let webpageId: MediaId
+    let webpageId: EngineMedia.Id
     let cover: TelegramMediaImage?
     
     private let openUrl: (InstantPageUrlItem) -> Void
     
     private var fetchedDisposable = MetaDisposable()
     
-    init(context: AccountContext, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, item: InstantPageArticleItem, webPage: TelegramMediaWebpage, strings: PresentationStrings, theme: InstantPageTheme, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: EngineMedia.Id, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.item = item
         self.url = url
         self.webpageId = webpageId

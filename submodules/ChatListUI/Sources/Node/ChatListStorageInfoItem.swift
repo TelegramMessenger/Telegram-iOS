@@ -210,8 +210,6 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.contentContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     
                     switch item.notice {
-                    case .chatFolderUpdates:
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.ChatList_HideAction, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
                     default:
                         strongSelf.setRevealOptions((left: [], right: []))
                     }

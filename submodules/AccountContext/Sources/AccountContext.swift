@@ -10,7 +10,6 @@ import AsyncDisplayKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
-import MeshAnimationCache
 import InAppPurchaseManager
 import AnimationCache
 import MultiAnimationRenderer
@@ -935,7 +934,6 @@ public protocol AccountContext: AnyObject {
     var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
-    var meshAnimationCache: MeshAnimationCache { get }
     
     var animationCache: AnimationCache { get }
     var animationRenderer: MultiAnimationRenderer { get }

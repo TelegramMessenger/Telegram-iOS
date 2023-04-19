@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
@@ -87,23 +86,23 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
                         return
                     }
                     
-                    var signals: [Signal<(UUID, StickerVerificationStatus, MediaResource?), NoError>] = []
+                    var signals: [Signal<(UUID, StickerVerificationStatus, EngineMediaResource?), NoError>] = []
                     for sticker in strongSelf.stickerPack.stickers {
                         if let resource = strongSelf.controllerNode.stickerResources[sticker.uuid] {
-                            signals.append(strongSelf.context.engine.stickers.uploadSticker(peer: peer, resource: resource, alt: sticker.emojis.first ?? "", dimensions: PixelDimensions(width: 512, height: 512), mimeType: sticker.mimeType)
-                            |> map { result -> (UUID, StickerVerificationStatus, MediaResource?) in
+                            signals.append(strongSelf.context.engine.stickers.uploadSticker(peer: peer, resource: resource._asResource(), alt: sticker.emojis.first ?? "", dimensions: PixelDimensions(width: 512, height: 512), mimeType: sticker.mimeType)
+                            |> map { result -> (UUID, StickerVerificationStatus, EngineMediaResource?) in
                                 switch result {
                                     case .progress:
                                         return (sticker.uuid, .loading, nil)
                                     case let .complete(resource, mimeType):
                                         if ["application/x-tgsticker", "video/webm"].contains(mimeType) {
-                                            return (sticker.uuid, .verified, resource)
+                                            return (sticker.uuid, .verified, EngineMediaResource(resource))
                                         } else {
                                             return (sticker.uuid, .declined, nil)
                                         }
                                 }
                             }
-                            |> `catch` { _ -> Signal<(UUID, StickerVerificationStatus, MediaResource?), NoError> in
+                            |> `catch` { _ -> Signal<(UUID, StickerVerificationStatus, EngineMediaResource?), NoError> in
                                 return .single((sticker.uuid, .declined, nil))
                             })
                         }
@@ -115,7 +114,7 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
                         }
                         var verifiedStickers = Set<UUID>()
                         var declinedStickers = Set<UUID>()
-                        var uploadedStickerResources: [UUID: MediaResource] = [:]
+                        var uploadedStickerResources: [UUID: EngineMediaResource] = [:]
                         for (uuid, result, resource) in results {
                             switch result {
                                 case .verified:

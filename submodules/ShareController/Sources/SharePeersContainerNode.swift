@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
@@ -140,7 +139,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     var openShare: ((ASDisplayNode, ContextGesture?) -> Void)?
     var segmentedSelectedIndexUpdated: ((Int) -> Void)?
     
-    private var ensurePeerVisibleOnLayout: PeerId?
+    private var ensurePeerVisibleOnLayout: EnginePeer.Id?
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
@@ -175,7 +174,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             var entries: [SharePeerEntry] = []
             var index: Int32 = 0
             
-            var existingPeerIds: Set<PeerId> = Set()
+            var existingPeerIds: Set<EnginePeer.Id> = Set()
             entries.append(SharePeerEntry(index: index, peer: EngineRenderedPeer(peer: accountPeer), presence: nil, threadId: nil, threadData: nil, theme: theme, strings: strings))
             existingPeerIds.insert(accountPeer.id)
             index += 1
@@ -338,7 +337,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
     }
     
-    func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
         self.ensurePeerVisibleOnLayout = peerId
     }
     

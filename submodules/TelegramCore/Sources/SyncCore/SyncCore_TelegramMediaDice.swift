@@ -1,6 +1,6 @@
 import Postbox
 
-public final class TelegramMediaDice: Media {
+public final class TelegramMediaDice: Media, Equatable {
     public let emoji: String
     public let value: Int32?
     
@@ -24,6 +24,10 @@ public final class TelegramMediaDice: Media {
         } else {
             encoder.encodeNil(forKey: "v")
         }
+    }
+    
+    public static func ==(lhs: TelegramMediaDice, rhs: TelegramMediaDice) -> Bool {
+        return lhs.isEqual(to: rhs)
     }
     
     public func isEqual(to other: Media) -> Bool {

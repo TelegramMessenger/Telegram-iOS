@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -20,7 +19,7 @@ private let backgroundCornerRadius: CGFloat = 14.0
 final class VoiceChatPeerProfileNode: ASDisplayNode {
     private let context: AccountContext
     private let size: CGSize
-    private var peer: Peer
+    private var peer: EnginePeer
     private var text: VoiceChatParticipantItem.ParticipantText
     private let customNode: ASDisplayNode?
     private let additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError>
@@ -36,7 +35,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
     
     private var appeared = false
     
-    init(context: AccountContext, size: CGSize, sourceSize: CGSize, peer: Peer, text: VoiceChatParticipantItem.ParticipantText, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError>, requestDismiss: (() -> Void)?) {
+    init(context: AccountContext, size: CGSize, sourceSize: CGSize, peer: EnginePeer, text: VoiceChatParticipantItem.ParticipantText, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError>, requestDismiss: (() -> Void)?) {
         self.context = context
         self.size = size
         self.peer = peer
@@ -129,7 +128,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         let titleFont = Font.regular(17.0)
         let titleColor = UIColor.white
         var titleAttributedString: NSAttributedString?
-        if let user = self.peer as? TelegramUser {
+        if case let .user(user) = self.peer {
             if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                 let string = NSMutableAttributedString()
                 switch presentationData.nameDisplayOrder {
@@ -150,9 +149,9 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             } else {
                 titleAttributedString = NSAttributedString(string: presentationData.strings.User_DeletedAccount, font: titleFont, textColor: titleColor)
             }
-        } else if let group = peer as? TelegramGroup {
+        } else if case let .legacyGroup(group) = peer {
             titleAttributedString = NSAttributedString(string: group.title, font: titleFont, textColor: titleColor)
-        } else if let channel = peer as? TelegramChannel {
+        } else if case let .channel(channel) = peer {
             titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: titleColor)
         }
         self.titleNode.attributedText = titleAttributedString

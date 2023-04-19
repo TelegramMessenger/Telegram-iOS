@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramUIPreferences
 
@@ -58,7 +57,7 @@ public final class InstantPageStoredState: Codable {
 }
 
 public func instantPageStoredState(engine: TelegramEngine, webPage: TelegramMediaWebpage) -> Signal<InstantPageStoredState?, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: webPage.webpageId.id)
     
     return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, id: key))
@@ -68,7 +67,7 @@ public func instantPageStoredState(engine: TelegramEngine, webPage: TelegramMedi
 }
 
 public func updateInstantPageStoredStateInteractively(engine: TelegramEngine, webPage: TelegramMediaWebpage, state: InstantPageStoredState?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: webPage.webpageId.id)
     
     if let state = state {

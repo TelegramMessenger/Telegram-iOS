@@ -335,7 +335,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                 }
             case .playbackStatus:
-                if let context = self.context, let message = self.message, let type = peerMessageMediaPlayerType(message) {
+                if let context = self.context, let message = self.message, let type = peerMessageMediaPlayerType(EngineMessage(message)) {
                     context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: type)
                 }
             }
@@ -543,19 +543,19 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if statusUpdated {
                     if arguments.message.flags.isSending {
-                        updatedStatusSignal = combineLatest(messageFileMediaResourceStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions), messageMediaFileStatus(context: arguments.context, messageId: arguments.message.id, file: arguments.file))
+                        updatedStatusSignal = combineLatest(messageFileMediaResourceStatus(context: arguments.context, file: arguments.file, message: EngineMessage(arguments.message), isRecentActions: arguments.isRecentActions), messageMediaFileStatus(context: arguments.context, messageId: arguments.message.id, file: arguments.file))
                         |> map { resourceStatus, actualFetchStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, actualFetchStatus)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: EngineMessage(arguments.message), isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                     } else {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: arguments.context, file: arguments.file, message: EngineMessage(arguments.message), isRecentActions: arguments.isRecentActions)
                         |> map { resourceStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, nil)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: EngineMessage(arguments.message), isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                     }
-                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
+                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: arguments.context, file: arguments.file, message: EngineMessage(arguments.message), isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                 }
                                 
                 var isAudio = false
@@ -1196,7 +1196,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         peak: audioWaveform?.peak ?? 0,
                                         status: strongSelf.playbackStatus.get(),
                                         seek: { timestamp in
-                                            if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
+                                            if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(EngineMessage(message)) {
                                                 context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
                                             }
                                         }

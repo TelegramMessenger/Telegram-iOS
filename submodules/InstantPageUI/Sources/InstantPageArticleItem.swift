@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import AsyncDisplayKit
 import TelegramPresentationData
@@ -20,11 +19,11 @@ public final class InstantPageArticleItem: InstantPageItem {
     let contentSize: CGSize
     let cover: TelegramMediaImage?
     let url: String
-    let webpageId: MediaId
+    let webpageId: EngineMedia.Id
     let rtl: Bool
     let hasRTL: Bool
     
-    init(frame: CGRect, userLocation: MediaResourceUserLocation, webPage: TelegramMediaWebpage, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: MediaId, rtl: Bool, hasRTL: Bool) {
+    init(frame: CGRect, userLocation: MediaResourceUserLocation, webPage: TelegramMediaWebpage, contentItems: [InstantPageItem], contentSize: CGSize, cover: TelegramMediaImage?, url: String, webpageId: EngineMedia.Id, rtl: Bool, hasRTL: Bool) {
         self.frame = frame
         self.userLocation = userLocation
         self.webPage = webPage
@@ -73,7 +72,7 @@ public final class InstantPageArticleItem: InstantPageItem {
     }
 }
 
-func layoutArticleItem(theme: InstantPageTheme, userLocation: MediaResourceUserLocation, webPage: TelegramMediaWebpage, title: NSAttributedString, description: NSAttributedString, cover: TelegramMediaImage?, url: String, webpageId: MediaId, boundingWidth: CGFloat, rtl: Bool) -> InstantPageArticleItem {
+func layoutArticleItem(theme: InstantPageTheme, userLocation: MediaResourceUserLocation, webPage: TelegramMediaWebpage, title: NSAttributedString, description: NSAttributedString, cover: TelegramMediaImage?, url: String, webpageId: EngineMedia.Id, boundingWidth: CGFloat, rtl: Bool) -> InstantPageArticleItem {
     let inset: CGFloat = 17.0
     let imageSpacing: CGFloat = 10.0
     var sideInset = inset

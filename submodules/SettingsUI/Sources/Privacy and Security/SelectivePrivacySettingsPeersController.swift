@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -15,13 +14,13 @@ import ItemListPeerActionItem
 private final class SelectivePrivacyPeersControllerArguments {
     let context: AccountContext
     
-    let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
-    let removePeer: (PeerId) -> Void
+    let setPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
+    let removePeer: (EnginePeer.Id) -> Void
     let addPeer: () -> Void
     let openPeer: (EnginePeer) -> Void
     let deleteAll: () -> Void
     
-    init(context: AccountContext, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, addPeer: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, deleteAll: @escaping () -> Void) {
+    init(context: AccountContext, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, addPeer: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, deleteAll: @escaping () -> Void) {
         self.context = context
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
@@ -39,7 +38,7 @@ private enum SelectivePrivacyPeersSection: Int32 {
 private enum SelectivePrivacyPeersEntryStableId: Hashable {
     case header
     case add
-    case peer(PeerId)
+    case peer(EnginePeer.Id)
     case delete
 }
 
@@ -193,14 +192,14 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
 
 private struct SelectivePrivacyPeersControllerState: Equatable {
     let editing: Bool
-    let peerIdWithRevealedOptions: PeerId?
+    let peerIdWithRevealedOptions: EnginePeer.Id?
     
     init() {
         self.editing = false
         self.peerIdWithRevealedOptions = nil
     }
     
-    init(editing: Bool, peerIdWithRevealedOptions: PeerId?) {
+    init(editing: Bool, peerIdWithRevealedOptions: EnginePeer.Id?) {
         self.editing = editing
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
     }
@@ -219,7 +218,7 @@ private struct SelectivePrivacyPeersControllerState: Equatable {
         return SelectivePrivacyPeersControllerState(editing: editing, peerIdWithRevealedOptions: self.peerIdWithRevealedOptions)
     }
     
-    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> SelectivePrivacyPeersControllerState {
+    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: EnginePeer.Id?) -> SelectivePrivacyPeersControllerState {
         return SelectivePrivacyPeersControllerState(editing: self.editing, peerIdWithRevealedOptions: peerIdWithRevealedOptions)
     }
 }
@@ -249,7 +248,7 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [PeerId: SelectivePrivacyPeer], updated: @escaping ([PeerId: SelectivePrivacyPeer]) -> Void) -> ViewController {
+public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer]) -> Void) -> ViewController {
     let statePromise = ValuePromise(SelectivePrivacyPeersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: SelectivePrivacyPeersControllerState())
     let updateState: ((SelectivePrivacyPeersControllerState) -> SelectivePrivacyPeersControllerState) -> Void = { f in
@@ -293,7 +292,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             }
             peersPromise.set(.single(updatedPeers))
             
-            var updatedPeerDict: [PeerId: SelectivePrivacyPeer] = [:]
+            var updatedPeerDict: [EnginePeer.Id: SelectivePrivacyPeer] = [:]
             for peer in updatedPeers {
                 updatedPeerDict[peer.peer.id] = peer
             }
@@ -357,7 +356,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             |> mapToSignal { updatedPeers -> Signal<Void, NoError> in
                 peersPromise.set(.single(updatedPeers))
                 
-                var updatedPeerDict: [PeerId: SelectivePrivacyPeer] = [:]
+                var updatedPeerDict: [EnginePeer.Id: SelectivePrivacyPeer] = [:]
                 for peer in updatedPeers {
                     updatedPeerDict[peer.peer.id] = peer
                 }

@@ -96,9 +96,9 @@ public struct InstantPageGalleryEntry: Equatable {
             }
         }
         
-        if let image = self.media.media as? TelegramMediaImage {
+        if case let .image(image) = self.media.media {
             return InstantImageGalleryItem(context: context, presentationData: presentationData, itemId: self.index, userLocation: userLocation, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
-        } else if let file = self.media.media as? TelegramMediaFile {
+        } else if case let .file(file) = self.media.media {
             if file.isVideo {
                 var indexData: GalleryItemIndexData?
                 if let location = self.location {
@@ -122,7 +122,7 @@ public struct InstantPageGalleryEntry: Equatable {
                 let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 return InstantImageGalleryItem(context: context, presentationData: presentationData, itemId: self.index, userLocation: userLocation, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
             }
-        } else if let embedWebpage = self.media.media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = embedWebpage.content {
+        } else if case let .webpage(embedWebpage) = self.media.media, case let .Loaded(webpageContent) = embedWebpage.content {
             if webpageContent.url.hasSuffix(".m3u8") {
                 let content = PlatformVideoContent(id: .instantPage(embedWebpage.webpageId, embedWebpage.webpageId), userLocation: userLocation, content: .url(webpageContent.url), streamVideo: true, loopVideo: false)
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage, { makeArguments, navigationController, present in

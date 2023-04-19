@@ -16,7 +16,6 @@ import TelegramCallsUI
 import TelegramBaseController
 import AsyncDisplayKit
 import PresentationDataUtils
-import MeshAnimationCache
 import FetchManagerImpl
 import InAppPurchaseManager
 import AnimationCache
@@ -168,7 +167,6 @@ public final class AccountContextImpl: AccountContext {
     private var experimentalUISettingsDisposable: Disposable?
     
     public let cachedGroupCallContexts: AccountGroupCallContextCache
-    public let meshAnimationCache: MeshAnimationCache
     
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
@@ -281,7 +279,6 @@ public final class AccountContextImpl: AccountContext {
         }
         
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
-        self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
         
         let cacheStorageBox = self.account.postbox.mediaBox.cacheStorageBox
         self.animationCache = AnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {

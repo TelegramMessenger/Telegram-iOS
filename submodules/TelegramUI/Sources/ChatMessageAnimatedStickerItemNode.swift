@@ -25,7 +25,6 @@ import ShimmerEffect
 import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
-import LottieMeshSwift
 import ChatPresentationInterfaceState
 import TextNodeWithEntities
 import ChatControllerInteraction
@@ -2009,38 +2008,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
 
-        if #available(iOS 13.0, *), !"".isEmpty, item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: resource) {
-            var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
-            if let current = self.overlayMeshAnimationNode {
-                overlayMeshAnimationNode = current
-            } else {
-                if let animationView = MeshRenderer() {
-                    let animationFrame = animationNodeFrame.insetBy(dx: -animationNodeFrame.width, dy: -animationNodeFrame.height)
-                        .offsetBy(dx: incomingMessage ? animationNodeFrame.width - 10.0 : -animationNodeFrame.width + 10.0, dy: 0.0)
-                    animationView.frame = animationFrame
-
-                    animationView.allAnimationsCompleted = { [weak transitionNode, weak animationView, weak self] in
-                        guard let strongSelf = self, let animationView = animationView else {
-                            return
-                        }
-                        guard let overlayMeshAnimationNode = strongSelf.overlayMeshAnimationNode else {
-                            return
-                        }
-                        if overlayMeshAnimationNode.contentView !== animationView {
-                            return
-                        }
-                        strongSelf.overlayMeshAnimationNode = nil
-                        transitionNode?.remove(decorationNode: overlayMeshAnimationNode)
-                    }
-
-                    overlayMeshAnimationNode = transitionNode.add(decorationView: animationView, itemNode: self)
-                    self.overlayMeshAnimationNode = overlayMeshAnimationNode
-                }
-            }
-            if let meshRenderer = overlayMeshAnimationNode?.contentView as? MeshRenderer {
-                meshRenderer.add(mesh: meshAnimation, offset: CGPoint(x: CGFloat.random(in: -30.0 ... 30.0), y: CGFloat.random(in: -30.0 ... 30.0)))
-            }
-        } else {
+        do {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 1.6), height: Int(animationSize.height * 1.6), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))

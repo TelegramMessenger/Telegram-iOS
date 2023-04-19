@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Vision
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
@@ -27,8 +26,8 @@ private final class CachedImageRecognizedContent: Codable {
     }
 }
 
-private func cachedImageRecognizedContent(engine: TelegramEngine, messageId: MessageId) -> Signal<CachedImageRecognizedContent?, NoError> {
-    let key = ValueBoxKey(length: 20)
+private func cachedImageRecognizedContent(engine: TelegramEngine, messageId: EngineMessage.Id) -> Signal<CachedImageRecognizedContent?, NoError> {
+    let key = EngineDataBuffer(length: 20)
     key.setInt32(0, value: messageId.namespace)
     key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
     key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
@@ -40,8 +39,8 @@ private func cachedImageRecognizedContent(engine: TelegramEngine, messageId: Mes
     }
 }
 
-private func updateCachedImageRecognizedContent(engine: TelegramEngine, messageId: MessageId, content: CachedImageRecognizedContent?) -> Signal<Never, NoError> {
-    let key = ValueBoxKey(length: 20)
+private func updateCachedImageRecognizedContent(engine: TelegramEngine, messageId: EngineMessage.Id, content: CachedImageRecognizedContent?) -> Signal<Never, NoError> {
+    let key = EngineDataBuffer(length: 20)
     key.setInt32(0, value: messageId.namespace)
     key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
     key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
@@ -333,7 +332,7 @@ private func recognizeContent(in image: UIImage?) -> Signal<[RecognizedContent],
     }
 }
 
-public func recognizedContent(context: AccountContext, image: @escaping () -> UIImage?, messageId: MessageId) -> Signal<[RecognizedContent], NoError> {
+public func recognizedContent(context: AccountContext, image: @escaping () -> UIImage?, messageId: EngineMessage.Id) -> Signal<[RecognizedContent], NoError> {
     if context.sharedContext.immediateExperimentalUISettings.disableImageContentAnalysis {
         return .single([])
     }

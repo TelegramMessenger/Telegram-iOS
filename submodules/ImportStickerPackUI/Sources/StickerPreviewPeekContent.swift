@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import StickerResources
@@ -87,7 +86,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
                     if case .video = item.content {
                         isVideo = true
                     }
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: resource._asResource(), isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 }
                 self.animationNode?.visibility = true
         }

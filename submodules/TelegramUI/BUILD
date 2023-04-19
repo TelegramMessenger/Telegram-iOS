@@ -294,8 +294,6 @@ swift_library(
         "//submodules/AdUI:AdUI",
         "//submodules/SparseItemGrid:SparseItemGrid",
         "//submodules/CalendarMessageScreen:CalendarMessageScreen",
-        "//submodules/LottieMeshSwift:LottieMeshSwift",
-        "//submodules/MeshAnimationCache:MeshAnimationCache",
         "//submodules/DirectMediaImageCache:DirectMediaImageCache",
         "//submodules/CodeInputView:CodeInputView",
         "//submodules/Components/ReactionButtonListComponent:ReactionButtonListComponent",

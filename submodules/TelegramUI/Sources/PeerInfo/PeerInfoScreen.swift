@@ -3027,7 +3027,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             
             let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
-            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: .round, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
+            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: EnginePeer(peer), sourceCorners: .round, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
                 self?.openAvatarForEditing(fromGallery: true, completion: { _ in
@@ -3728,7 +3728,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }))
                 ]
                 
-                let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
+                let galleryController = AvatarGalleryController(context: strongSelf.context, peer: EnginePeer(peer), remoteEntries: nil, replaceRootController: { controller, ready in
                 }, synchronousLoad: true)
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
                 

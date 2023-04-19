@@ -2586,7 +2586,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.state = state
         self.peer = peer
         self.threadData = threadData
-        self.avatarListNode.listContainerNode.peer = peer
+        self.avatarListNode.listContainerNode.peer = peer.flatMap(EnginePeer.init)
         
         let isFirstTime = self.validLayout == nil
         self.validLayout = (width, deviceMetrics)
@@ -3382,7 +3382,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.avatarListNode.containerNode.view.mask = nil
         }
         
-        self.avatarListNode.listContainerNode.update(size: expandedAvatarListSize, peer: peer, isExpanded: self.isAvatarExpanded, transition: transition)
+        self.avatarListNode.listContainerNode.update(size: expandedAvatarListSize, peer: peer.flatMap(EnginePeer.init), isExpanded: self.isAvatarExpanded, transition: transition)
         if self.avatarListNode.listContainerNode.isCollapsing && !self.ignoreCollapse {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }

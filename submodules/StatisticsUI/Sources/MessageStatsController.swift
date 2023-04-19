@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -18,9 +17,9 @@ import GraphUI
 private final class MessageStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
-    let openMessage: (MessageId) -> Void
+    let openMessage: (EngineMessage.Id) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (EngineMessage.Id) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessage = openMessage
@@ -41,7 +40,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case publicForwardsTitle(PresentationTheme, String)
-    case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Message)
+    case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EngineMessage)
     
     var section: ItemListSectionId {
         switch self {
@@ -176,7 +175,7 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
             entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
             var index: Int32 = 0
             for message in messages.messages {
-                entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, message))
+                entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, EngineMessage(message)))
                 index += 1
             }
         }
@@ -185,8 +184,8 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
     return entries
 }
 
-public func messageStatsController(context: AccountContext, messageId: MessageId, statsDatacenterId: Int32?) -> ViewController {
-    var navigateToMessageImpl: ((MessageId) -> Void)?
+public func messageStatsController(context: AccountContext, messageId: EngineMessage.Id, statsDatacenterId: Int32?) -> ViewController {
+    var navigateToMessageImpl: ((EngineMessage.Id) -> Void)?
     
     let actionsDisposable = DisposableSet()
     let dataPromise = Promise<MessageStats?>(nil)

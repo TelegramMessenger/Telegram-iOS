@@ -4,7 +4,6 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import AsyncDisplayKit
-import Postbox
 import StickerResources
 import AccountContext
 import AnimatedStickerNode
@@ -142,7 +141,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                                 if case .video = stickerItem.content {
                                     isVideo = true
                                 }
-                                animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                                animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource._asResource(), isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
                             }
                             animationNode.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                         } else {
