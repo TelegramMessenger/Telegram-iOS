@@ -172,15 +172,6 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumAnnualDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
-            case let .chatFolderUpdates(count):
-                let rawTitleString = item.strings.ChatList_ChatFolderUpdateHintTitle(item.strings.ChatList_ChatFolderUpdateCount(Int32(count)))
-                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
-                if let range = rawTitleString.ranges.first {
-                    titleStringValue.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
-                }
-                titleString = titleStringValue
-                
-                textString = NSAttributedString(string: item.strings.ChatList_ChatFolderUpdateHintText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))

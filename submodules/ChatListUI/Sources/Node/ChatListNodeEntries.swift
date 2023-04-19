@@ -84,7 +84,6 @@ enum ChatListNotice: Equatable {
     case setupPassword
     case premiumUpgrade(discount: Int32)
     case premiumAnnualDiscount(discount: Int32)
-    case chatFolderUpdates(count: Int)
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {

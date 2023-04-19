@@ -9112,11 +9112,6 @@ Sorry for the inconvenience.";
 "Wallpaper.ApplyForAll" = "Apply For All Chats";
 "Wallpaper.ApplyForChat" = "Apply For This Chat";
 
-"ChatList.ChatFolderUpdateCount_1" = "1 new chat";
-"ChatList.ChatFolderUpdateCount_any" = "%d new chats";
-"ChatList.ChatFolderUpdateHintTitle" = "You can join %@";
-"ChatList.ChatFolderUpdateHintText" = "Tap here to view them";
-
 "Premium.MaxSharedFolderMembershipText" = "You can only add **%1$@** shareable folders. Upgrade to **Telegram Premium** to increase this limit up to **%2$@**.";
 "Premium.MaxSharedFolderMembershipNoPremiumText" = "You can only add **%1$@** shareable folders. We are working to let you increase this limit in the future.";
 "Premium.MaxSharedFolderMembershipFinalText" = "Sorry, you can only add **%1$@** shareable folders.";
