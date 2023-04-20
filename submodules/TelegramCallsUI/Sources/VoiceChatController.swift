@@ -717,7 +717,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             expandedText = .text(about, textIcon, .generic)
                         }
                                                                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, text: text, expandedText: expandedText, icon: icon, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, action: { node in
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: EnginePeer(peer), text: text, expandedText: expandedText, icon: icon, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, action: { node in
                             if let node = node {
                                 interaction.peerContextAction(peerEntry, node, nil, false)
                             }

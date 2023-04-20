@@ -231,7 +231,7 @@ public extension TelegramEngine {
             self.account = account
         }
 
-        public func preUpload(id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete: (()->Void)? = nil) {
+        public func preUpload(id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<EngineMediaResource.ResourceData, NoError>, onComplete: (()->Void)? = nil) {
             return self.account.messageMediaPreuploadManager.add(network: self.account.network, postbox: self.account.postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }
 

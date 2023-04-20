@@ -7,7 +7,6 @@ import MultiAnimationRenderer
 import ComponentFlow
 import AccountContext
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import EmojiTextAttachmentView
 import TextFormat
@@ -52,7 +51,7 @@ public final class EmojiSuggestionsComponent: Component {
             
             let normalizedQuery = query.basicEmoji.0
             
-            var existingIds = Set<MediaId>()
+            var existingIds = Set<EngineMedia.Id>()
             for entry in view.entries {
                 guard let item = entry.item as? StickerPackItem else {
                     continue
@@ -179,7 +178,7 @@ public final class EmojiSuggestionsComponent: Component {
         private var itemLayout: ItemLayout?
         private var ignoreScrolling: Bool = false
         
-        private var visibleLayers: [MediaId: InlineStickerItemLayer] = [:]
+        private var visibleLayers: [EngineMedia.Id: InlineStickerItemLayer] = [:]
         
         override init(frame: CGRect) {
             self.blurView = BlurredBackgroundView(color: .clear, enableBlur: true)
@@ -296,7 +295,7 @@ public final class EmojiSuggestionsComponent: Component {
 
             let visibleBounds = self.scrollView.bounds
             
-            var visibleIds = Set<MediaId>()
+            var visibleIds = Set<EngineMedia.Id>()
             for i in 0 ..< component.files.count {
                 let itemFrame = itemLayout.frame(at: i)
                 if visibleBounds.intersects(itemFrame) {
@@ -330,7 +329,7 @@ public final class EmojiSuggestionsComponent: Component {
                 }
             }
             
-            var removedIds: [MediaId] = []
+            var removedIds: [EngineMedia.Id] = []
             for (id, itemLayer) in self.visibleLayers {
                 if !visibleIds.contains(id) {
                     itemLayer.removeFromSuperlayer()
