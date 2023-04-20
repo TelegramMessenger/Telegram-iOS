@@ -909,7 +909,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
             }
             
             transferOwnershipDisposable.set((context.engine.peers.checkOwnershipTranfserAvailability(memberId: adminId) |> deliverOnMainQueue).start(error: { error in
-                let controller = channelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer._asPeer(), member: member, initialError: error, present: { c, a in
+                let controller = channelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, member: member, initialError: error, present: { c, a in
                     presentControllerImpl?(c, a)
                 }, completion: { upgradedPeerId in
                     if let upgradedPeerId = upgradedPeerId {

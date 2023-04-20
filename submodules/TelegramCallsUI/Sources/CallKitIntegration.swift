@@ -3,7 +3,6 @@ import UIKit
 import CallKit
 import Intents
 import AVFoundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AppBundle
@@ -70,7 +69,7 @@ public final class CallKitIntegration {
         }
     }
     
-    func startCall(context: AccountContext, peerId: PeerId, phoneNumber: String?, localContactId: String?, isVideo: Bool, displayTitle: String) {
+    func startCall(context: AccountContext, peerId: EnginePeer.Id, phoneNumber: String?, localContactId: String?, isVideo: Bool, displayTitle: String) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle)
             self.donateIntent(peerId: peerId, displayTitle: displayTitle, localContactId: localContactId)
@@ -101,7 +100,7 @@ public final class CallKitIntegration {
         }
     }
     
-    private func donateIntent(peerId: PeerId, displayTitle: String, localContactId: String?) {
+    private func donateIntent(peerId: EnginePeer.Id, displayTitle: String, localContactId: String?) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             let handle = INPersonHandle(value: "tg\(peerId.id._internalGetInt64Value())", type: .unknown)
             let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: localContactId, customIdentifier: "tg\(peerId.id._internalGetInt64Value())")
@@ -218,7 +217,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.requestTransaction(transaction)
     }
     
-    func startCall(context: AccountContext, peerId: PeerId, phoneNumber: String?, isVideo: Bool, displayTitle: String) {
+    func startCall(context: AccountContext, peerId: EnginePeer.Id, phoneNumber: String?, isVideo: Bool, displayTitle: String) {
         let uuid = UUID()
         self.currentStartCallAccount = (uuid, context)
         let handle: CXHandle

@@ -1239,8 +1239,6 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             return
                         }
                         
-                        let peer = EnginePeer(peer)
-                        
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         if peer.id == strongSelf.callState?.myPeerId {
                             return

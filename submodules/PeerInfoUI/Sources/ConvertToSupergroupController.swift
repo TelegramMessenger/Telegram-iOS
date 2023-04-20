@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
@@ -120,7 +119,7 @@ private func convertToSupergroupEntries(presentationData: PresentationData) -> [
     return entries
 }
 
-public func convertToSupergroupController(context: AccountContext, peerId: PeerId) -> ViewController {
+public func convertToSupergroupController(context: AccountContext, peerId: EnginePeer.Id) -> ViewController {
     var replaceControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     

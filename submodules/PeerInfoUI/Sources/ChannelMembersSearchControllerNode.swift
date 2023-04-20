@@ -676,7 +676,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         }
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChannelMembersSearchContainerNode(context: self.context, forceTheme: self.forceTheme, peerId: self.peerId, mode: .banAndPromoteActions, filters: self.filters, searchContext: nil, openPeer: { [weak self] peer, participant in
-            self?.requestOpenPeerFromSearch?(EnginePeer(peer), participant)
+            self?.requestOpenPeerFromSearch?(peer, participant)
         }, updateActivity: { value in
             
         }, pushController: { [weak self] c in

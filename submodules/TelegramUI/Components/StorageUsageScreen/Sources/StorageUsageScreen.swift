@@ -9,9 +9,9 @@ import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
 import TelegramCore
+import Postbox
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import Markdown
 import ContextUI
 import AnimatedAvatarSetNode
@@ -571,7 +571,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if deselectedPhotos.contains(item.message.id) {
                                 selectedSize -= item.size
-                                clearExcludeMessages.append(item.message)
+                                clearExcludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -581,7 +581,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if selectedPhotos.contains(item.message.id) {
                                 selectedSize += item.size
-                                clearIncludeMessages.append(item.message)
+                                clearIncludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -593,7 +593,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if deselectedVideos.contains(item.message.id) {
                                 selectedSize -= item.size
-                                clearExcludeMessages.append(item.message)
+                                clearExcludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -603,7 +603,7 @@ final class StorageUsageScreenComponent: Component {
                         for item in imageItems.items {
                             if selectedVideos.contains(item.message.id) {
                                 selectedSize += item.size
-                                clearIncludeMessages.append(item.message)
+                                clearIncludeMessages.append(item.message._asMessage())
                             }
                         }
                     }
@@ -2356,7 +2356,7 @@ final class StorageUsageScreenComponent: Component {
                                 
                                 if matches {
                                     result.imageItems.append(StorageMediaGridPanelComponent.Item(
-                                        message: message,
+                                        message: EngineMessage(message),
                                         size: messageSize
                                     ))
                                 }
@@ -2728,7 +2728,7 @@ final class StorageUsageScreenComponent: Component {
                     
                     if let panelContainerView = self.panelContainer.view as? StorageUsagePanelContainerComponent.View {
                         if let currentPanelView = panelContainerView.currentPanelView as? StorageMediaGridPanelComponent.View {
-                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: media)
+                            return currentPanelView.transitionNodeForGallery(messageId: messageId, media: EngineMedia(media))
                         }
                     }
                     

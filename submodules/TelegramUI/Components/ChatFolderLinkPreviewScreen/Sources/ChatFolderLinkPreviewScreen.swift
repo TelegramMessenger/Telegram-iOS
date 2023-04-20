@@ -10,7 +10,6 @@ import TelegramPresentationData
 import AccountContext
 import TelegramCore
 import MultilineTextComponent
-import Postbox
 import SolidRoundedButtonComponent
 import PresentationDataUtils
 import Markdown

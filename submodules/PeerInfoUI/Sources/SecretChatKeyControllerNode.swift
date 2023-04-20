@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import TextFormat
 import AccountContext
@@ -30,7 +29,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
     private let fingerprint: SecretChatKeyFingerprint
-    private let peer: Peer
+    private let peer: EnginePeer
     private let getNavigationController: () -> NavigationController?
     
     private let scrollNode: ASScrollNode
@@ -40,7 +39,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
     
     private var validImageSize: CGSize?
     
-    init(context: AccountContext, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: Peer, getNavigationController: @escaping () -> NavigationController?) {
+    init(context: AccountContext, presentationData: PresentationData, fingerprint: SecretChatKeyFingerprint, peer: EnginePeer, getNavigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.presentationData = presentationData
         self.fingerprint = fingerprint
@@ -118,7 +117,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         
         let (keyTextLayout, keyTextApply) = makeKeyTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.semiboldMonospace(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
-        let infoString = self.presentationData.strings.EncryptionKey_Description(EnginePeer(self.peer).compactDisplayTitle, EnginePeer(self.peer).compactDisplayTitle)
+        let infoString = self.presentationData.strings.EncryptionKey_Description(self.peer.compactDisplayTitle, self.peer.compactDisplayTitle)
         let infoText = NSMutableAttributedString(string: infoString.string, attributes: [.font: Font.regular(14.0), .foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor])
         
         for range in infoString.ranges {
