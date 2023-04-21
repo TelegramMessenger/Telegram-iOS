@@ -7,19 +7,40 @@ import AccountContext
 import SwiftSignalKit
 import AppBundle
 import MessageInputPanelComponent
+import ShareController
+import TelegramCore
+import UndoUI
+
+private func hasFirstResponder(_ view: UIView) -> Bool {
+    if view.isFirstResponder {
+        return true
+    }
+    for subview in view.subviews {
+        if hasFirstResponder(subview) {
+            return true
+        }
+    }
+    return false
+}
 
 private final class StoryContainerScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    let context: AccountContext
     let initialContent: StoryContentItemSlice
     
     init(
+        context: AccountContext,
         initialContent: StoryContentItemSlice
     ) {
+        self.context = context
         self.initialContent = initialContent
     }
     
     static func ==(lhs: StoryContainerScreenComponent, rhs: StoryContainerScreenComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
         if lhs.initialContent !== rhs.initialContent {
             return false
         }
@@ -65,16 +86,20 @@ private final class StoryContainerScreenComponent: Component {
         
         private let contentContainerView: UIView
         private let topContentGradientLayer: SimpleGradientLayer
+        private let bottomContentGradientLayer: SimpleGradientLayer
+        private let contentDimLayer: SimpleLayer
         
         private let closeButton: HighlightableButton
         private let closeButtonIconView: UIImageView
         
         private let navigationStrip = ComponentView<Empty>()
+        private let inlineActions = ComponentView<Empty>()
         
         private var centerInfoItem: InfoItem?
         private var rightInfoItem: InfoItem?
         
         private let inputPanel = ComponentView<Empty>()
+        private let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
         
         private var component: StoryContainerScreenComponent?
         private weak var state: EmptyComponentState?
@@ -89,6 +114,8 @@ private final class StoryContainerScreenComponent: Component {
         
         private var visibleItems: [AnyHashable: VisibleItem] = [:]
         
+        private var preloadContexts: [AnyHashable: Disposable] = [:]
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
             
@@ -97,6 +124,8 @@ private final class StoryContainerScreenComponent: Component {
             self.contentContainerView.isUserInteractionEnabled = false
             
             self.topContentGradientLayer = SimpleGradientLayer()
+            self.bottomContentGradientLayer = SimpleGradientLayer()
+            self.contentDimLayer = SimpleLayer()
             
             self.closeButton = HighlightableButton()
             self.closeButtonIconView = UIImageView()
@@ -123,7 +152,9 @@ private final class StoryContainerScreenComponent: Component {
             self.scrollView.clipsToBounds = true
             
             self.addSubview(self.contentContainerView)
+            self.layer.addSublayer(self.contentDimLayer)
             self.layer.addSublayer(self.topContentGradientLayer)
+            self.layer.addSublayer(self.bottomContentGradientLayer)
             
             self.closeButton.addSubview(self.closeButtonIconView)
             self.addSubview(self.closeButton)
@@ -142,32 +173,36 @@ private final class StoryContainerScreenComponent: Component {
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state, let currentSlice = self.currentSlice, let focusedItemId = self.focusedItemId, let currentIndex = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }), let itemLayout = self.itemLayout {
-                let point = recognizer.location(in: self)
-                
-                var nextIndex: Int
-                if point.x < itemLayout.size.width * 0.5 {
-                    nextIndex = currentIndex + 1
+                if hasFirstResponder(self) {
+                    self.endEditing(true)
                 } else {
-                    nextIndex = currentIndex - 1
-                }
-                nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
-                if nextIndex != currentIndex {
-                    let focusedItemId = currentSlice.items[nextIndex].id
-                    self.focusedItemId = focusedItemId
-                    self.state?.updated(transition: .immediate)
+                    let point = recognizer.location(in: self)
                     
-                    self.currentSliceDisposable?.dispose()
-                    self.currentSliceDisposable = (currentSlice.update(
-                        currentSlice,
-                        focusedItemId
-                    )
-                    |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
-                        guard let self else {
-                            return
-                        }
-                        self.currentSlice = contentSlice
+                    var nextIndex: Int
+                    if point.x < itemLayout.size.width * 0.5 {
+                        nextIndex = currentIndex + 1
+                    } else {
+                        nextIndex = currentIndex - 1
+                    }
+                    nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
+                    if nextIndex != currentIndex {
+                        let focusedItemId = currentSlice.items[nextIndex].id
+                        self.focusedItemId = focusedItemId
                         self.state?.updated(transition: .immediate)
-                    })
+                        
+                        self.currentSliceDisposable?.dispose()
+                        self.currentSliceDisposable = (currentSlice.update(
+                            currentSlice,
+                            focusedItemId
+                        )
+                        |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
+                            guard let self else {
+                                return
+                            }
+                            self.currentSlice = contentSlice
+                            self.state?.updated(transition: .immediate)
+                        })
+                    }
                 }
             }
         }
@@ -256,6 +291,123 @@ private final class StoryContainerScreenComponent: Component {
             })
         }
         
+        private func performSendMessageAction() {
+            guard let component = self.component else {
+                return
+            }
+            guard let focusedItemId = self.focusedItemId, let focusedItem = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) else {
+                return
+            }
+            guard let targetMessageId = focusedItem.targetMessageId else {
+                return
+            }
+            guard let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View else {
+                return
+            }
+            
+            switch inputPanelView.getSendMessageInput() {
+            case let .text(text):
+                if !text.isEmpty {
+                    component.context.engine.messages.enqueueOutgoingMessage(
+                        to: targetMessageId.peerId,
+                        replyTo: targetMessageId,
+                        content: .text(text)
+                    )
+                    inputPanelView.clearSendMessageInput()
+                    
+                    if let controller = self.environment?.controller() {
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        controller.present(UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .succeed(text: "Message Sent"),
+                            elevatedLayout: false,
+                            animateInAsReplacement: false,
+                            action: { _ in return false }
+                        ), in: .current)
+                    }
+                }
+            }
+        }
+        
+        private func performInlineAction(item: StoryActionsComponent.Item) {
+            guard let component = self.component else {
+                return
+            }
+            guard let focusedItemId = self.focusedItemId, let focusedItem = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) else {
+                return
+            }
+            guard let targetMessageId = focusedItem.targetMessageId else {
+                return
+            }
+            
+            switch item.kind {
+            case .like:
+                if item.isActivated {
+                    component.context.engine.messages.setMessageReactions(
+                        id: targetMessageId,
+                        reactions: [
+                        ]
+                    )
+                } else {
+                    component.context.engine.messages.setMessageReactions(
+                        id: targetMessageId,
+                        reactions: [
+                            .builtin("❤")
+                        ]
+                    )
+                }
+            case .share:
+                let _ = (component.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Messages.Message(id: targetMessageId)
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] message in
+                    guard let self, let message, let component = self.component, let controller = self.environment?.controller() else {
+                        return
+                    }
+                    let shareController = ShareController(
+                        context: component.context,
+                        subject: .messages([message._asMessage()]),
+                        externalShare: false,
+                        immediateExternalShare: false,
+                        updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
+                        component.context.sharedContext.presentationData)
+                    )
+                    controller.present(shareController, in: .window(.root))
+                })
+            }
+        }
+        
+        private func updatePreloads() {
+            var validIds: [AnyHashable] = []
+            if let currentSlice = self.currentSlice, let focusedItemId = self.focusedItemId, let currentIndex = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
+                for i in 0 ..< 2 {
+                    var nextIndex: Int = currentIndex - 1 - i
+                    nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
+                    if nextIndex != currentIndex {
+                        let nextItem = currentSlice.items[nextIndex]
+                        
+                        validIds.append(nextItem.id)
+                        if self.preloadContexts[nextItem.id] == nil {
+                            if let signal = nextItem.preload {
+                                self.preloadContexts[nextItem.id] = signal.start()
+                            }
+                        }
+                    }
+                }
+            }
+            
+            var removeIds: [AnyHashable] = []
+            for (id, disposable) in self.preloadContexts {
+                if !validIds.contains(id) {
+                    removeIds.append(id)
+                    disposable.dispose()
+                }
+            }
+            for id in removeIds {
+                self.preloadContexts.removeValue(forKey: id)
+            }
+        }
+        
         func update(component: StoryContainerScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
             
@@ -298,6 +450,27 @@ private final class StoryContainerScreenComponent: Component {
                 self.topContentGradientLayer.colors = colors
                 self.topContentGradientLayer.type = .axial
             }
+            if self.bottomContentGradientLayer.colors == nil {
+                var locations: [NSNumber] = []
+                var colors: [CGColor] = []
+                let numStops = 10
+                let baseAlpha: CGFloat = 0.7
+                for i in 0 ..< numStops {
+                    let step = 1.0 - CGFloat(i) / CGFloat(numStops - 1)
+                    locations.append((1.0 - step) as NSNumber)
+                    let alphaStep: CGFloat = pow(step, 1.5)
+                    colors.append(UIColor.black.withAlphaComponent(alphaStep * baseAlpha).cgColor)
+                }
+                
+                self.bottomContentGradientLayer.startPoint = CGPoint(x: 0.0, y: 1.0)
+                self.bottomContentGradientLayer.endPoint = CGPoint(x: 0.0, y: 0.0)
+                
+                self.bottomContentGradientLayer.locations = locations
+                self.bottomContentGradientLayer.colors = colors
+                self.bottomContentGradientLayer.type = .axial
+                
+                self.contentDimLayer.backgroundColor = UIColor(white: 0.0, alpha: 0.3).cgColor
+            }
             
             if let focusedItemId = self.focusedItemId {
                 if let currentSlice = self.currentSlice {
@@ -309,15 +482,47 @@ private final class StoryContainerScreenComponent: Component {
                 }
             }
             
+            self.updatePreloads()
+            
             self.component = component
             self.state = state
             self.environment = environment
             
-            let bottomContentInset: CGFloat
+            var bottomContentInset: CGFloat
             if !environment.safeInsets.bottom.isZero {
-                bottomContentInset = environment.safeInsets.bottom + 5.0 + 44.0
+                bottomContentInset = environment.safeInsets.bottom + 5.0
             } else {
-                bottomContentInset = 44.0
+                bottomContentInset = 0.0
+            }
+            
+            self.inputPanel.parentState = state
+            let inputPanelSize = self.inputPanel.update(
+                transition: transition,
+                component: AnyComponent(MessageInputPanelComponent(
+                    externalState: self.inputPanelExternalState,
+                    sendMessageAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.performSendMessageAction()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 200.0)
+            )
+            
+            let bottomContentInsetWithoutInput = bottomContentInset
+            
+            let inputPanelBottomInset: CGFloat
+            let inputPanelIsOverlay: Bool
+            if environment.inputHeight < bottomContentInset + inputPanelSize.height {
+                inputPanelBottomInset = bottomContentInset
+                bottomContentInset += inputPanelSize.height
+                inputPanelIsOverlay = false
+            } else {
+                bottomContentInset += 44.0
+                inputPanelBottomInset = environment.inputHeight
+                inputPanelIsOverlay = true
             }
             
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: environment.statusBarHeight), size: CGSize(width: availableSize.width, height: availableSize.height - environment.statusBarHeight - bottomContentInset))
@@ -348,7 +553,7 @@ private final class StoryContainerScreenComponent: Component {
             if let rightInfoItem = self.rightInfoItem, currentRightInfoItem?.component != rightInfoItem.component {
                 self.rightInfoItem = nil
                 if let view = rightInfoItem.view.view {
-                    view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    view.layer.animateScale(from: 1.0, to: 0.5, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
                         view?.removeFromSuperview()
                     })
@@ -395,7 +600,7 @@ private final class StoryContainerScreenComponent: Component {
                     
                     if animateIn, !isFirstTime {
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        view.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                 }
             }
@@ -445,27 +650,76 @@ private final class StoryContainerScreenComponent: Component {
                     }
                     transition.setFrame(view: navigationStripView, frame: CGRect(origin: CGPoint(x: contentFrame.minX + navigationStripSideInset, y: contentFrame.minY + navigationStripTopInset), size: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: 2.0)))
                 }
+                
+                if let focusedItemId = self.focusedItemId, let focusedItem = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) {
+                    let inlineActionsSize = self.inlineActions.update(
+                        transition: transition,
+                        component: AnyComponent(StoryActionsComponent(
+                            items: [
+                                StoryActionsComponent.Item(
+                                    kind: .like,
+                                    isActivated: focusedItem.hasLike
+                                ),
+                                StoryActionsComponent.Item(
+                                    kind: .share,
+                                    isActivated: false
+                                )
+                            ],
+                            action: { [weak self] item in
+                                guard let self else {
+                                    return
+                                }
+                                self.performInlineAction(item: item)
+                            }
+                        )),
+                        environment: {},
+                        containerSize: contentFrame.size
+                    )
+                    if let inlineActionsView = self.inlineActions.view {
+                        if inlineActionsView.superview == nil {
+                            self.addSubview(inlineActionsView)
+                        }
+                        transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 10.0 - inlineActionsSize.width, y: contentFrame.maxY - 20.0 - inlineActionsSize.height), size: inlineActionsSize))
+                        transition.setAlpha(view: inlineActionsView, alpha: inputPanelIsOverlay ? 0.0 : 1.0)
+                    }
+                }
             }
             
             let gradientHeight: CGFloat = 74.0
             transition.setFrame(layer: self.topContentGradientLayer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: gradientHeight)))
             
-            let itemLayout = ItemLayout(size: contentFrame.size)
+            let itemLayout = ItemLayout(size: CGSize(width: contentFrame.width, height: availableSize.height - environment.statusBarHeight - 44.0 - bottomContentInsetWithoutInput))
             self.itemLayout = itemLayout
             
-            let inputPanelSize = self.inputPanel.update(
-                transition: transition,
-                component: AnyComponent(MessageInputPanelComponent(
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 44.0)
-            )
+            let inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
             if let inputPanelView = self.inputPanel.view {
                 if inputPanelView.superview == nil {
                     self.addSubview(inputPanelView)
                 }
-                transition.setFrame(view: inputPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentFrame.maxY), size: inputPanelSize))
+                transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
             }
+            let bottomGradientHeight = inputPanelSize.height + 32.0
+            transition.setFrame(layer: self.bottomContentGradientLayer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: availableSize.height - environment.inputHeight - bottomGradientHeight), size: CGSize(width: contentFrame.width, height: bottomGradientHeight)))
+            transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
+            
+            if let controller = environment.controller() {
+                let subLayout = ContainerViewLayout(
+                    size: availableSize,
+                    metrics: environment.metrics,
+                    deviceMetrics: environment.deviceMetrics,
+                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: availableSize.height - min(inputPanelFrame.minY, contentFrame.maxY), right: 0.0),
+                    safeInsets: UIEdgeInsets(),
+                    additionalInsets: UIEdgeInsets(),
+                    statusBarHeight: nil,
+                    inputHeight: nil,
+                    inputHeightIsInteractivellyChanging: false,
+                    inVoiceOver: false
+                )
+                controller.presentationContext.containerLayoutUpdated(subLayout, transition: transition.containedViewLayoutTransition)
+            }
+            
+            transition.setFrame(layer: self.contentDimLayer, frame: contentFrame)
+            transition.setAlpha(layer: self.contentDimLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
             
             self.ignoreScrolling = true
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
@@ -490,20 +744,26 @@ private final class StoryContainerScreenComponent: Component {
 }
 
 public class StoryContainerScreen: ViewControllerComponentContainer {
+    private let context: AccountContext
     private var isDismissed: Bool = false
     
     public init(
         context: AccountContext,
         initialContent: StoryContentItemSlice
     ) {
+        self.context = context
+        
         super.init(context: context, component: StoryContainerScreenComponent(
+            context: context,
             initialContent: initialContent
         ), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .White
         self.navigationPresentation = .flatModal
         self.blocksBackgroundWhenInOverlay = true
-        //self.automaticallyControlPresentationContextLayout = false
+        self.automaticallyControlPresentationContextLayout = false
+        
+        self.context.sharedContext.hasPreloadBlockingContent.set(.single(true))
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -511,6 +771,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     }
     
     deinit {
+        self.context.sharedContext.hasPreloadBlockingContent.set(.single(false))
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -531,7 +792,11 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         if !self.isDismissed {
             self.isDismissed = true
             
+            self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
+            
             if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
+                componentView.endEditing(true)
+                
                 componentView.animateOut(completion: { [weak self] in
                     completion?()
                     self?.dismiss(animated: false)

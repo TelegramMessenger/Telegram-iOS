@@ -347,12 +347,16 @@ public extension Message {
     var hasReactions: Bool {
         for attribute in self.attributes {
             if let attribute = attribute as? ReactionsMessageAttribute {
-                return !attribute.reactions.isEmpty
+                if !attribute.reactions.isEmpty {
+                    return true
+                }
             }
         }
         for attribute in self.attributes {
             if let attribute = attribute as? PendingReactionsMessageAttribute {
-                return !attribute.reactions.isEmpty
+                if !attribute.reactions.isEmpty {
+                    return true
+                }
             }
         }
         return false

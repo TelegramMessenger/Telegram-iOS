@@ -842,6 +842,9 @@ public protocol SharedAccountContext: AnyObject {
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
     
+    var enablePreloads: Promise<Bool> { get }
+    var hasPreloadBlockingContent: Promise<Bool> { get }
+    
     var hasGroupCallOnScreen: Signal<Bool, NoError> { get }
     var currentGroupCallController: ViewController? { get }
     

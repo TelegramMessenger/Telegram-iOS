@@ -30,6 +30,22 @@ public enum StoryChatContent {
                 if let location = entry.location {
                     totalCount = location.count
                 }
+                
+                var hasLike = false
+                if let reactions = entry.message.effectiveReactions {
+                    for reaction in reactions {
+                        if !reaction.isSelected {
+                            continue
+                        }
+                        if reaction.value == .builtin("❤") {
+                            hasLike = true
+                        }
+                    }
+                }
+                
+                var preload: Signal<Never, NoError>?
+                preload = StoryMessageContentComponent.preload(context: context, message: EngineMessage(entry.message))
+                
                 items.append(StoryContentItem(
                     id: AnyHashable(entry.message.id),
                     position: entry.location?.index ?? 0,
@@ -46,7 +62,10 @@ public enum StoryChatContent {
                             context: context,
                             peer: EnginePeer(author)
                         ))
-                    }
+                    },
+                    targetMessageId: entry.message.id,
+                    preload: preload,
+                    hasLike: hasLike
                 ))
             }
             return StoryContentItemSlice(

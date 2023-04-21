@@ -28,6 +28,56 @@ final class StoryMessageContentComponent: Component {
 		}
 		return true
 	}
+    
+    static func preload(context: AccountContext, message: EngineMessage) -> Signal<Never, NoError> {
+        var messageMedia: EngineMedia?
+        for media in message.media {
+            switch media {
+            case let image as TelegramMediaImage:
+                messageMedia = .image(image)
+            case let file as TelegramMediaFile:
+                messageMedia = .file(file)
+            default:
+                break
+            }
+        }
+        
+        guard let messageMedia else {
+            return .complete()
+        }
+        
+        var fetchSignal: Signal<Never, NoError>?
+        switch messageMedia {
+        case let .image(image):
+            if let representation = image.representations.last {
+                fetchSignal = fetchedMediaResource(
+                    mediaBox: context.account.postbox.mediaBox,
+                    userLocation: .peer(message.id.peerId),
+                    userContentType: .image,
+                    reference: ImageMediaReference.message(message: MessageReference(message._asMessage()), media: image).resourceReference(representation.resource)
+                )
+                |> ignoreValues
+                |> `catch` { _ -> Signal<Never, NoError> in
+                    return .complete()
+                }
+            }
+        case let .file(file):
+            fetchSignal = fetchedMediaResource(
+                mediaBox: context.account.postbox.mediaBox,
+                userLocation: .peer(message.id.peerId),
+                userContentType: .image,
+                reference: FileMediaReference.message(message: MessageReference(message._asMessage()), media: file).resourceReference(file.resource)
+            )
+            |> ignoreValues
+            |> `catch` { _ -> Signal<Never, NoError> in
+                return .complete()
+            }
+        default:
+            break
+        }
+        
+        return fetchSignal ?? .complete()
+    }
 
 	final class View: UIView {
         private let imageNode: TransformImageNode
@@ -85,6 +135,7 @@ final class StoryMessageContentComponent: Component {
                             return
                         }
                         if value {
+                            self.videoNode?.seek(0.0)
                             self.videoNode?.play()
                         }
                     }
@@ -133,8 +184,16 @@ final class StoryMessageContentComponent: Component {
                         highQuality: true
                     )
                     if let representation = image.representations.last {
-                        fetchSignal = messageMediaImageInteractiveFetched(context: component.context, message: component.message._asMessage(), image: image, resource: representation.resource, userInitiated: true, storeToDownloadsPeerId: component.message.id.peerId)
+                        fetchSignal = fetchedMediaResource(
+                            mediaBox: component.context.account.postbox.mediaBox,
+                            userLocation: .peer(component.message.id.peerId),
+                            userContentType: .image,
+                            reference: ImageMediaReference.message(message: MessageReference(component.message._asMessage()), media: image).resourceReference(representation.resource)
+                        )
                         |> ignoreValues
+                        |> `catch` { _ -> Signal<Never, NoError> in
+                            return .complete()
+                        }
                     }
                 case let .file(file):
                     signal = chatMessageVideo(
@@ -143,8 +202,16 @@ final class StoryMessageContentComponent: Component {
                         videoReference: .message(message: MessageReference(component.message._asMessage()), media: file),
                         synchronousLoad: true
                     )
-                    fetchSignal = messageMediaFileInteractiveFetched(context: component.context, message: component.message._asMessage(), file: file, userInitiated: true, storeToDownloadsPeerId: component.message.id.peerId)
+                    fetchSignal = fetchedMediaResource(
+                        mediaBox: component.context.account.postbox.mediaBox,
+                        userLocation: .peer(component.message.id.peerId),
+                        userContentType: .image,
+                        reference: FileMediaReference.message(message: MessageReference(component.message._asMessage()), media: file).resourceReference(file.resource)
+                    )
                     |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, NoError> in
+                        return .complete()
+                    }
                 default:
                     break
                 }

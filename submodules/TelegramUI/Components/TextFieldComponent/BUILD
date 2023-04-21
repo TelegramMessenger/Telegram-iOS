@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "MessageInputPanelComponent",
-    module_name = "MessageInputPanelComponent",
+    name = "TextFieldComponent",
+    module_name = "TextFieldComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -12,8 +12,6 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/ComponentFlow",
-        "//submodules/AppBundle",
-        "//submodules/TelegramUI/Components/TextFieldComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -130,6 +130,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     private var hasOngoingCallDisposable: Disposable?
     
+    public let enablePreloads = Promise<Bool>()
+    public let hasPreloadBlockingContent = Promise<Bool>(false)
+    
     private var accountUserInterfaceInUseContexts: [AccountRecordId: AccountUserInterfaceInUseContext] = [:]
     
     var switchingData: (settingsController: (SettingsController & ViewController)?, chatListController: ChatListController?, chatListBadge: String?) = (nil, nil, nil)
@@ -867,6 +870,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let immediateHasOngoingCallValue = self.immediateHasOngoingCallValue
         self.hasOngoingCallDisposable = self.hasOngoingCall.get().start(next: { value in
             let _ = immediateHasOngoingCallValue.swap(value)
+        })
+        
+        self.enablePreloads.set(combineLatest(
+            self.hasOngoingCall.get(),
+            self.hasPreloadBlockingContent.get()
+        )
+        |> map { hasOngoingCall, hasPreloadBlockingContent -> Bool in
+            if hasOngoingCall {
+                return false
+            }
+            if hasPreloadBlockingContent {
+                return false
+            }
+            return true
         })
         
         let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: makeTelegramAccountAuxiliaryMethods(appDelegate: appDelegate), encryptionParameters: encryptionParameters).start()
