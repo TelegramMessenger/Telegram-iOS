@@ -144,7 +144,7 @@ public final class MessageInputPanelComponent: Component {
                         
                         if case .text("") = self.getSendMessageInput() {
                             self.currentMediaInputIsVoice = !self.currentMediaInputIsVoice
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                             
                             HapticFeedback().impact()
                         } else {
