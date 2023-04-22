@@ -704,10 +704,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     isLocation = true
                 }
-                if let file = media as? TelegramMediaFile, file.isInstantVideo {
-                    if strongSelf.chatDisplayNode.isInputViewFocused {
-                        strongSelf.returnInputViewFocus = true
-                        strongSelf.chatDisplayNode.dismissInput()
+                if let file = media as? TelegramMediaFile {
+                    if file.isInstantVideo {
+                        if strongSelf.chatDisplayNode.isInputViewFocused {
+                            strongSelf.returnInputViewFocus = true
+                            strongSelf.chatDisplayNode.dismissInput()
+                        }
+                    }
+                    if file.isMusic || file.isVoice || file.isInstantVideo {
+                        if !displayVoiceMessageDiscardAlert() {
+                            return false
+                        }
                     }
                 }
                 if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
