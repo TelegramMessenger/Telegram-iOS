@@ -90,7 +90,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
     
-    let navigationController: NavigationController?
+    weak var navigationController: NavigationController?
     
     let passthroughTouches: Bool = true
     

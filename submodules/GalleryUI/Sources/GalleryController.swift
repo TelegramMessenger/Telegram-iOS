@@ -395,7 +395,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
     private let _hiddenMedia = Promise<(MessageId, Media)?>(nil)
     
     private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
-    private let baseNavigationController: NavigationController?
+    private weak var baseNavigationController: NavigationController?
     
     private var hiddenMediaManagerIndex: Int?
     

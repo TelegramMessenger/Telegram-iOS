@@ -27,7 +27,7 @@ public final class OpenChatMessageParams {
     public let standalone: Bool
     public let reverseMessageGalleryOrder: Bool
     public let mode: ChatControllerInteractionOpenMessageMode
-    public let navigationController: NavigationController?
+    public weak var navigationController: NavigationController?
     public let modal: Bool
     public let dismissInput: () -> Void
     public let present: (ViewController, Any?) -> Void

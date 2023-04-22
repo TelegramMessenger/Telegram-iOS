@@ -945,7 +945,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
     private let key: ChatListSearchPaneKey
     private let tagMask: EngineMessage.Tags?
     private let location: ChatListControllerLocation
-    private let navigationController: NavigationController?
+    private weak var navigationController: NavigationController?
     
     private let recentListNode: ListView
     private let shimmerNode: ChatListSearchShimmerNode

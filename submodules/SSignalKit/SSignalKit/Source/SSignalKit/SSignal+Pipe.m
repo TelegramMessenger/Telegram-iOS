@@ -65,9 +65,11 @@
                     }];
                 }
                 
+                __weak __typeof__(subscribers) weakSubscribers = subscribers;
                 return [[SBlockDisposable alloc] initWithBlock:^
                 {
-                    [subscribers with:^id(SBag *bag)
+                    __typeof__(subscribers) strongSubscribers = weakSubscribers;
+                    [strongSubscribers with:^id(SBag *bag)
                     {
                         [bag removeItem:index];
                         return nil;
