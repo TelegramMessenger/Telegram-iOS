@@ -9167,6 +9167,7 @@ Sorry for the inconvenience.";
 
 "WebApp.LaunchMoreInfo" = "More about this bot";
 "WebApp.LaunchConfirmation" = "To launch this web app, you will connect to its website.";
+"WebApp.LaunchOpenApp" = "Open App";
 
 "WallpaperPreview.PreviewInNightMode" = "Preview this wallpaper in night mode.";
 "WallpaperPreview.PreviewInDayMode" = "Preview this wallpaper in day mode.";
@@ -9334,3 +9335,10 @@ Sorry for the inconvenience.";
 "ChatList.EmptyListTooltip" = "Send a message or\nstart a group here.";
 
 "Username.BotTitle" = "Public Links";
+
+"Notification.LockScreenReactionPlaceholder" = "Reaction";
+
+"UserInfo.BotNamePlaceholder" = "Bot Name";
+
+"ChatList.PremiumRestoreDiscountTitle" = "Get Premium back with up to %@ off";
+"ChatList.PremiumRestoreDiscountText" = "Your Telegram Premium has recently expired. Tap here to extend it.";

@@ -8,6 +8,7 @@
 
 const CGSize TGPhotoEditorResultImageMaxSize = { 1280, 1280 };
 const CGSize TGPhotoEditorResultImageWallpaperMaxSize = { 2048, 2048 };
+const CGSize TGPhotoEditorResultImageAvatarMaxSize = { 2048, 2048 };
 const CGSize TGPhotoEditorScreenImageHardLimitSize = { 1280, 1280 };
 const CGSize TGPhotoEditorScreenImageHardLimitLegacySize = { 750, 750 };
 

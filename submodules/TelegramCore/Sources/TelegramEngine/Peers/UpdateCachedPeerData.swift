@@ -294,6 +294,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     
                                         return previous.withUpdatedAbout(userFullAbout)
                                             .withUpdatedBotInfo(botInfo)
+                                            .withUpdatedEditableBotInfo(editableBotInfo)
                                             .withUpdatedCommonGroupCount(userFullCommonChatsCount)
                                             .withUpdatedIsBlocked(isBlocked)
                                             .withUpdatedVoiceCallsAvailable(voiceCallsAvailable)
