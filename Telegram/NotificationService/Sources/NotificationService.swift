@@ -736,8 +736,15 @@ private final class NotificationServiceHandler {
             return nil
         }
 
+        let excludeAccountIds = self.accountManager.transaction { transaction in
+            return PtgSecretPasscodes(transaction)//.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        }
+        |> map { ptgSecretPasscodes in
+            return ptgSecretPasscodes.allHidableAccountIds()
+        }
+        
         let _ = (combineLatest(queue: self.queue,
-            self.accountManager.accountRecords(),
+            self.accountManager.accountRecords(excludeAccountIds: excludeAccountIds),
             self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.ptgSettings, ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
         )
         |> take(1)
@@ -774,18 +781,46 @@ private final class NotificationServiceHandler {
                 voiceCallSettings = VoiceCallSettings.defaultSettings
             }
 
+            let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            
             guard let strongSelf = self, let recordId = recordId else {
                 Logger.shared.log("NotificationService \(episode)", "Couldn't find a matching decryption key")
 
                 let content = NotificationContent(isLockedMessage: nil)
                 updateCurrentContent(content)
-                completed()
+                
+                if let strongSelf = self {
+                    // probably this notification is from hidable account, then notify main app through UserDefaults about this suppressed notification
+                    // this allows to react to a call or new message for non-current account
+                    // this only happens when app is in foreground, because when app is in background all notifications are unregistered for hidable accounts
+                    let _ = (strongSelf.accountManager.accountRecords(excludeAccountIds: .single(ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath).inactiveAccountIds()))
+                    |> take(1)).start(next: { records in
+                        if let keyId = notificationPayloadKeyId(data: payloadData) {
+                            outer: for listRecord in records.records {
+                                for attribute in listRecord.attributes {
+                                    if case let .backupData(backupData) = attribute {
+                                        if let notificationEncryptionKeyId = backupData.data?.notificationEncryptionKeyId {
+                                            if keyId == notificationEncryptionKeyId {
+                                                if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
+                                                    appGroupUserDefaults.set("\(listRecord.id.int64):\(UInt32.random(in: 0 ... UInt32.max))", forKey: "suppressedNotificationForAccounId")
+                                                }
+                                                break outer
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        completed()
+                    })
+                } else {
+                    completed()
+                }
 
                 return
             }
 
-            let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
-            
             let allSecretPasscodeSecretChatPeerIds = ptgSecretPasscodes.allSecretChatPeerIds(accountId: recordId)
             
             let _ = (standaloneStateManager(
@@ -971,7 +1006,13 @@ private final class NotificationServiceHandler {
                             break
                         }
                     } else {
-                        if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId, !allSecretPasscodeSecretChatPeerIds.contains(peerId) {
+                        if let _ = payloadJson["aps"] as? [String: Any], let peerId = peerId, allSecretPasscodeSecretChatPeerIds.contains(peerId) {
+                            // notify main app through UserDefaults about this suppressed notification
+                            // this allows to react to new message for non-current account
+                            if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
+                                appGroupUserDefaults.set("\(recordId.int64):\(UInt32.random(in: 0 ... UInt32.max))", forKey: "suppressedNotificationForAccounId")
+                            }
+                        } else if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
                                 if let topicTitleValue = payloadJson["topic_title"] as? String {
@@ -1127,6 +1168,7 @@ private final class NotificationServiceHandler {
                                         voipPayload["phoneNumber"] = phoneNumber
                                     }
 
+                                    assert(!ptgSecretPasscodes.allHidableAccountIds().contains(recordId))
                                     if #available(iOS 14.5, *), voiceCallSettings.enableSystemIntegration {
                                         Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
                                         let content = NotificationContent(isLockedMessage: nil)
@@ -1145,6 +1187,9 @@ private final class NotificationServiceHandler {
                                         } else {
                                             content.body = "Incoming Call"
                                         }
+                                        
+                                        // needed to show incoming call for non-current account when app is in foreground, or when incoming call notification is tapped
+                                        content.userInfo = voipPayload
                                         
                                         updateCurrentContent(content)
                                         completed()

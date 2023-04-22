@@ -140,6 +140,7 @@ public final class DeviceAccess {
                     |> mapToSignal { inForeground -> Signal<AccessType, NoError> in
                         return status
                     }
+                    |> distinctUntilChanged
                 } else {
                     return status
                 }

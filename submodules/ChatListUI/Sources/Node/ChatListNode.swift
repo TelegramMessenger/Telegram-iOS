@@ -2066,7 +2066,7 @@ public final class ChatListNode: ListView {
             
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
             |> map {
-                if context.sharedContext.animationsTemporarilyDisabledForCoverUp {
+                if _animationsTemporarilyDisabledForCoverUp {
                     return ChatListNodeViewTransition(chatListView: $0.chatListView, deleteItems: $0.deleteItems, insertEntries: $0.insertEntries, updateEntries: $0.updateEntries, options: [.LowLatency, .Synchronous], scrollToItem: $0.scrollToItem, stationaryItemRange: $0.stationaryItemRange, adjustScrollToFirstItem: $0.adjustScrollToFirstItem, animateCrossfade: false)
                 } else {
                     return $0

@@ -148,7 +148,9 @@ public final class UniversalVideoNode: ASDisplayNode {
         return self.contentNode != nil
     }
     
-    public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority, autoplay: Bool = false, snapshotContentWhenGone: Bool = false) {
+    public let sourceAccountId: AccountRecordId
+    
+    public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority, autoplay: Bool = false, snapshotContentWhenGone: Bool = false, sourceAccountId: AccountRecordId) {
         self.postbox = postbox
         self.audioSession = audioSession
         self.manager = manager
@@ -157,6 +159,8 @@ public final class UniversalVideoNode: ASDisplayNode {
         self.decoration = decoration
         self.autoplay = autoplay
         self.snapshotContentWhenGone = snapshotContentWhenGone
+        
+        self.sourceAccountId = sourceAccountId
         
         super.init()
         

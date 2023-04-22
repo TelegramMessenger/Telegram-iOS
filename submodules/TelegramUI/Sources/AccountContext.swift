@@ -251,6 +251,20 @@ public final class AccountContextImpl: AccountContext {
     public let currentInactiveSecretChatPeerIds: Atomic<Set<PeerId>>
     private var inactiveSecretChatPeerIdsDisposable: Disposable?
     
+    public var isHidable: Signal<Bool, NoError> {
+        let accountId = self.account.id
+        return self.sharedContext.allHidableAccountIds
+        |> map { allHidableAccountIds in
+            return allHidableAccountIds.contains(accountId)
+        }
+        |> distinctUntilChanged
+    }
+    
+    public var immediateIsHidable: Bool {
+        let accountId = self.account.id
+        return self.sharedContext.currentPtgSecretPasscodes.with { $0.allHidableAccountIds().contains(accountId) }
+    }
+    
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false, initialInactiveSecretChatPeerIds: Set<PeerId>? = nil)
     {
         self.sharedContextImpl = sharedContext
@@ -259,7 +273,7 @@ public final class AccountContextImpl: AccountContext {
         
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
         
-        self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
+        self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager, mediaStoreAllowed: sharedContext.allHidableAccountIds |> map { !$0.contains(account.id) })
         
         self.inactiveSecretChatPeerIds = sharedContext.ptgSecretPasscodes
         |> map { secretPasscodes in
@@ -274,11 +288,15 @@ public final class AccountContextImpl: AccountContext {
         }
         self.fetchManager = FetchManagerImpl(postbox: account.postbox, storeManager: self.downloadedMediaStoreManager, inactiveSecretChatPeerIds: self.inactiveSecretChatPeerIds)
         if sharedContext.applicationBindings.isMainApp && !temp {
-            self.prefetchManager = PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
+            // PrefetchManagerImpl is used only for preloading greeting stickers (in empty chats)
+            // New sticker was preloaded every time account was switched, which is rather cpu-intensive task
+            // This is undesirable since we may covertly switch accounts
+            // By disabling it, greeting stickers are loaded only on-demand when entering empty chat
+            self.prefetchManager = nil//PrefetchManagerImpl(sharedContext: sharedContext, account: account, engine: self.engine, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
             
-            self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine)
+            self.inAppPurchaseManager = nil//InAppPurchaseManager(engine: self.engine)
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
@@ -359,10 +377,12 @@ public final class AccountContextImpl: AccountContext {
         
         if let contactDataManager = sharedContext.contactDataManager {
             let deviceSpecificContactImportContexts = self.deviceSpecificContactImportContexts
-            self.managedAppSpecificContactsDisposable = (contactDataManager.appSpecificReferences()
-            |> deliverOn(queue)).start(next: { appSpecificReferences in
-                deviceSpecificContactImportContexts.with { context in
-                    context.update(account: account, deviceContactDataManager: contactDataManager, references: appSpecificReferences)
+            self.managedAppSpecificContactsDisposable = (combineLatest(contactDataManager.appSpecificReferences(), sharedContext.allHidableAccountIds |> map { $0.contains(account.id) } |> distinctUntilChanged)
+            |> deliverOn(queue)).start(next: { appSpecificReferences, isHidableAccount in
+                if !isHidableAccount {
+                    deviceSpecificContactImportContexts.with { context in
+                        context.update(account: account, deviceContactDataManager: contactDataManager, references: appSpecificReferences)
+                    }
                 }
             })
         }

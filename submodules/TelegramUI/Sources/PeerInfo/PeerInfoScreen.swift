@@ -655,8 +655,8 @@ private enum SettingsSection: Int, CaseIterable {
     case phone
     case accounts
     case proxy
-    case cloudballon
     case secretPasscodes
+    case cloudballon
     case shortcuts
     case advanced
     case payment
@@ -3234,7 +3234,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                             |> take(1)
                                             |> mapToSignal { records -> Signal<Void, NoError> in
                                                 var signals: [Signal<DeviceContactExtendedData?, NoError>] = []
-                                                if let contactDataManager = context.sharedContext.contactDataManager {
+                                                if let contactDataManager = context.sharedContext.contactDataManager, !context.immediateIsHidable {
                                                     for (id, basicData) in records {
                                                         signals.append(contactDataManager.appendContactData(DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: basicData.phoneNumbers), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: ""), to: id))
                                                     }
@@ -5913,7 +5913,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             return
                         }
                         let deleteContactFromDevice: Signal<Never, NoError>
-                        if let contactDataManager = strongSelf.context.sharedContext.contactDataManager {
+                        if let contactDataManager = strongSelf.context.sharedContext.contactDataManager, !strongSelf.context.immediateIsHidable {
                             deleteContactFromDevice = contactDataManager.deleteContactWithAppSpecificReference(peerId: peer.id)
                         } else {
                             deleteContactFromDevice = .complete()
@@ -7964,10 +7964,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             return
                         }
                         
-                        let _ = updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
-                            let updated = current.secretPasscodes.map { $0.withUpdated(active: false) }
-                            return PtgSecretPasscodes(secretPasscodes: updated)
-                        }).start()
+                        hideAllSecrets(accountManager: strongSelf.context.sharedContext.accountManager)
                         
                         strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.SecretPasscodeStatus_AllHidden), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     })
@@ -8058,7 +8055,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         items.append(ActionSheetButtonItem(title: self.presentationData.strings.Settings_Logout, color: .destructive, action: { [weak self] in
             dismissAction()
             if let strongSelf = self {
-                let _ = logoutFromAccount(id: id, accountManager: strongSelf.context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
+                let _ = logoutFromAccount(id: id, accountManager: strongSelf.context.sharedContext.accountManager, alreadyLoggedOutRemotely: false, getExcludedAccountIds: { transaction in
+                    return PtgSecretPasscodes(transaction).allHidableAccountIds()
+                }).start()
             }
         }))
         controller.setItemGroups([
@@ -9747,11 +9746,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             
             self.tabBarItemDisposable = (tabBarItem |> deliverOnMainQueue).start(next: { [weak self] title, image, selectedImage, badgeValue, isAvatar, reduceMotion in
                 if let strongSelf = self {
+                    // fix to prevent corrupted images; order of operators matters, bc animationName & ringSelection are used in image update handler.
+                    strongSelf.tabBarItem.animationName = isAvatar || reduceMotion ? nil : "TabSettings"
+                    strongSelf.tabBarItem.ringSelection = isAvatar
                     strongSelf.tabBarItem.title = title
                     strongSelf.tabBarItem.image = image
                     strongSelf.tabBarItem.selectedImage = selectedImage
-                    strongSelf.tabBarItem.animationName = isAvatar || reduceMotion ? nil : "TabSettings"
-                    strongSelf.tabBarItem.ringSelection = isAvatar
                     strongSelf.tabBarItem.badgeValue = badgeValue
                 }
             })

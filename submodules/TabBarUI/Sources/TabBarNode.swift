@@ -619,7 +619,11 @@ class TabBarNode: ASDisplayNode {
                 node.contentWidth = max(contentWidth, imageContentWidth)
                 node.isSelected = false
                 
-                ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateTransformScale(node: node.ringImageNode, scale: 0.5)
+                if !_animationsTemporarilyDisabledForCoverUp {
+                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateTransformScale(node: node.ringImageNode, scale: 0.5)
+                } else {
+                    ContainedViewLayoutTransition.immediate.updateTransformScale(node: node.ringImageNode, scale: 0.5)
+                }
             }
             
             let updatedImageSize = node.imageNode.image?.size ?? CGSize()

@@ -1227,6 +1227,21 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
+    func restoreExtractedNodes() {
+        if let contentNode = self.contentNode {
+            contentNode.containingItem.willUpdateIsExtractedToContextPreview?(false, .immediate)
+            contentNode.containingItem.isExtractedToContextPreview = false
+            contentNode.containingItem.isExtractedToContextPreviewUpdated?(false)
+            
+            switch contentNode.containingItem {
+            case let .node(containingNode):
+                containingNode.addSubnode(containingNode.contentNode)
+            case let .view(containingView):
+                containingView.addSubview(containingView.contentView)
+            }
+        }
+    }
+    
     func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, reducedCurve: Bool, completion: @escaping () -> Void) {
         guard let reactionContextNode = self.reactionContextNode else {
             self.requestAnimateOut(.default, completion)

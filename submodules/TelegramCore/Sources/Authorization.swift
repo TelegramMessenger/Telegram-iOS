@@ -15,7 +15,7 @@ public enum AuthorizationCodeRequestError {
 }
 
 func switchToAuthorizedAccount(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, account: UnauthorizedAccount) {
-    let nextSortOrder = (transaction.getRecords().map({ record -> Int32 in
+    let nextSortOrder = (transaction.getRecords([]).map({ record -> Int32 in
         for attribute in record.attributes {
             if case let .sortOrder(sortOrder) = attribute {
                 return sortOrder.order

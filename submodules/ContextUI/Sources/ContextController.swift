@@ -1434,6 +1434,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
+    func restoreExtractedNodes() {
+        if let presentationNode = self.presentationNode as? ContextControllerExtractedPresentationNode {
+            presentationNode.restoreExtractedNodes()
+        }
+    }
+    
     func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
         if let presentationNode = self.presentationNode {
             presentationNode.addRelativeContentOffset(offset, transition: transition)
@@ -2703,6 +2709,16 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public func dismissNow() {
         self.presentingViewController?.dismiss(animated: false, completion: nil)
         self.dismissed?()
+    }
+    
+    public func dismissWithoutAnimation() {
+        if !self.wasDismissed {
+            self.wasDismissed = true
+            
+            self.controllerNode.restoreExtractedNodes()
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
+            self.dismissed?()
+        }
     }
     
     public func dismissWithReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: (() -> Void)?) {

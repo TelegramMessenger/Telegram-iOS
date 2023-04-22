@@ -2736,7 +2736,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }))
                         }
-                        if let phoneNumber = phoneNumber {
+                        if let phoneNumber = phoneNumber, !strongSelf.context.immediateIsHidable {
                             items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_AddContact, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 if let strongSelf = self {
@@ -12611,7 +12611,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         controller.prepareForReuse()
                         return
                     }
-                    strongSelf.presentMediaPicker(saveEditedPhotos: dataSettings.storeEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: { controller, mediaPickerContext in
+                    strongSelf.presentMediaPicker(saveEditedPhotos: dataSettings.storeEditedPhotos && !strongSelf.context.immediateIsHidable, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: { controller, mediaPickerContext in
                         let _ = currentMediaController.swap(controller)
                         if !inputText.string.isEmpty {
                             mediaPickerContext?.setCaption(inputText)
@@ -12997,7 +12997,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 slowModeEnabled = true
             }
             
-            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, chatLocation: strongSelf.chatLocation, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, canSendPolls: canSendPolls, updatedPresentationData: strongSelf.updatedPresentationData, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText, openGallery: {
+            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, chatLocation: strongSelf.chatLocation, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos && !strongSelf.context.immediateIsHidable, allowGrouping: true, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, canSendPolls: canSendPolls, updatedPresentationData: strongSelf.updatedPresentationData, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText, openGallery: {
                 self?.presentOldMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, present: { [weak self] c, _ in
                     self?.effectiveNavigationController?.pushViewController(c)
                 }, completion: { signals, silentPosting, scheduleTime in
@@ -13418,7 +13418,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 slowModeEnabled = true
             }
             
-            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, threadTitle: strongSelf.threadInfo?.title, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).start(next: { generator in
+            let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, threadTitle: strongSelf.threadInfo?.title, saveEditedPhotos: settings.storeEditedPhotos && !strongSelf.context.immediateIsHidable, allowGrouping: true, selectionLimit: selectionLimit).start(next: { generator in
                 if let strongSelf = self {
                     let legacyController = LegacyController(presentation: fileMode ? .navigation : .custom, theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
                     legacyController.navigationPresentation = .modal

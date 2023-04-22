@@ -107,6 +107,9 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
     let arguments = DebugAccountsControllerArguments(context: context, presentController: { controller, arguments in
         presentControllerImpl?(controller, arguments)
     }, switchAccount: { id in
+        if context.sharedContext.currentPtgSecretPasscodes.with({ $0.inactiveAccountIds() }).contains(id) {
+            return
+        }
         let _ = accountManager.transaction({ transaction -> Void in
             transaction.setCurrentId(id)
         }).start()
@@ -135,10 +138,10 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords())
+    let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords(excludeAccountIds: context.sharedContext.inactiveAccountIds))
         |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks, animateChanges: !_animationsTemporarilyDisabledForCoverUp)
             
             return (controllerState, (listState, arguments))
     }

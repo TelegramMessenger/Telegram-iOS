@@ -238,8 +238,8 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
-public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters, initialPeerIdsExcludedFromUnreadCounters: Set<PeerId>) -> Signal<AccountResult?, NoError> {
-    return manager.currentAccountRecord(allocateIfNotExists: allocateIfNotExists)
+public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters, initialPeerIdsExcludedFromUnreadCounters: Set<PeerId>, excludeAccountIds: Set<AccountRecordId>) -> Signal<AccountResult?, NoError> {
+    return manager.currentAccountRecord(allocateIfNotExists: allocateIfNotExists, excludeAccountIds: excludeAccountIds)
     |> distinctUntilChanged(isEqual: { lhs, rhs in
         return lhs?.0 == rhs?.0
     })
@@ -302,7 +302,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
     }
 }
 
-public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager<TelegramAccountManagerTypes>, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
+public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager<TelegramAccountManagerTypes>, alreadyLoggedOutRemotely: Bool, getExcludedAccountIds: @escaping (AccountManagerModifier<TelegramAccountManagerTypes>) -> Set<AccountRecordId>) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
     return accountManager.transaction { transaction -> Void in
         transaction.updateRecord(id, { current in
@@ -325,6 +325,15 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 return nil
             }
         })
+        
+        if transaction.getCurrent([])?.0 == id {
+            let records = transaction.getRecords(getExcludedAccountIds(transaction))
+                .filter { !$0.isLoggedOut }
+                .sorted { $0 < $1 }
+            if !records.isEmpty {
+                transaction.setCurrentId(records.first!.id)
+            }
+        }
     }
 }
 
@@ -333,7 +342,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
         let _ = (accountManager.transaction { transaction -> Void in
-            for record in transaction.getRecords() {
+            for record in transaction.getRecords([]) {
                 if let temporarySessionId = record.temporarySessionId, temporarySessionId != currentTemporarySessionId {
                     transaction.updateRecord(record.id, { _ in
                         return nil
@@ -341,7 +350,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 }
             }
         }).start()
-        let disposable = accountManager.accountRecords().start(next: { view in
+        let disposable = accountManager.accountRecords(excludeAccountIds: .single([])).start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
             var beginList: [(AccountRecordId, [TelegramAccountManagerTypes.Attribute], MetaDisposable)] = []
             let _ = loggedOutAccounts.modify { disposables in

@@ -1,3 +1,5 @@
+import PtgSecretPasscodes
+
 import Foundation
 import UIKit
 import UserNotifications
@@ -376,7 +378,9 @@ public final class SharedNotificationManager {
                 self.clearNotificationsManager?.clearAll()
                 
                 if let accountManager = self.accountManager {
-                    let _ = logoutFromAccount(id: account.id, accountManager: accountManager, alreadyLoggedOutRemotely: true).start()
+                    let _ = logoutFromAccount(id: account.id, accountManager: accountManager, alreadyLoggedOutRemotely: true, getExcludedAccountIds: { transaction in
+                        return PtgSecretPasscodes(transaction).allHidableAccountIds()
+                    }).start()
                 }
                 return
             }
@@ -414,7 +418,7 @@ public final class SharedNotificationManager {
     }
     
     private var currentNotificationCall: (peer: Peer?, internalId: CallSessionInternalId)?
-    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder) {
+    private func updateNotificationCall(call: (peer: Peer?, internalId: CallSessionInternalId)?, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder, mayAddNotification: Bool) {
         if let previousCall = currentNotificationCall {
             if #available(iOS 10.0, *) {
                 let center = UNUserNotificationCenter.current()
@@ -429,6 +433,12 @@ public final class SharedNotificationManager {
                 }
             }
         }
+        
+        if !mayAddNotification {
+            self.currentNotificationCall = nil
+            return
+        }
+        
         self.currentNotificationCall = call
         
         if let notificationCall = call {
@@ -487,7 +497,7 @@ public final class SharedNotificationManager {
                 let peer = notificationCall.peer
                 let internalId = notificationCall.internalId
                 let isIntegratedWithCallKit = notificationCall.isIntegratedWithCallKit
-                self.notificationCallStateDisposable.set((notificationCall.state
+                self.notificationCallStateDisposable.set(combineLatest(notificationCall.state
                     |> map { state -> (Peer?, CallSessionInternalId)? in
                         if isIntegratedWithCallKit {
                             return nil
@@ -498,12 +508,12 @@ public final class SharedNotificationManager {
                             return nil
                         }
                     }
-                    |> distinctUntilChanged(isEqual: { $0?.1 == $1?.1 })).start(next: { [weak self] peerAndInternalId in
-                        self?.updateNotificationCall(call: peerAndInternalId, strings: strings, nameOrder: .firstLast)
+                    |> distinctUntilChanged(isEqual: { $0?.1 == $1?.1 }), notificationCall.context.isHidable).start(next: { [weak self] peerAndInternalId, isHidableAccount in
+                        self?.updateNotificationCall(call: peerAndInternalId, strings: strings, nameOrder: .firstLast, mayAddNotification: !isHidableAccount)
                     }))
             } else {
                 self.notificationCallStateDisposable.set(nil)
-                self.updateNotificationCall(call: nil, strings: strings, nameOrder: .firstLast)
+                self.updateNotificationCall(call: nil, strings: strings, nameOrder: .firstLast, mayAddNotification: true)
             }
         }
     }

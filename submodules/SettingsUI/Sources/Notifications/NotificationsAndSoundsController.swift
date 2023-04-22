@@ -770,7 +770,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     }
     
     let hasMoreThanOneAccount = context.sharedContext.activeAccountContexts
-    |> map { _, contexts, _ -> Bool in
+    |> map { _, contexts, _, _ -> Bool in
         return contexts.count > 1
     }
     |> distinctUntilChanged

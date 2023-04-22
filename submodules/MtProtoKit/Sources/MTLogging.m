@@ -2,7 +2,7 @@
 
 static void (*loggingFunction)(NSString *) = NULL;
 static void (*shortLoggingFunction)(NSString *) = NULL;
-static bool MTLogEnabledValue = true;
+static bool MTLogEnabledValue = false;
 
 bool MTLogEnabled() {
     return loggingFunction != NULL && MTLogEnabledValue;

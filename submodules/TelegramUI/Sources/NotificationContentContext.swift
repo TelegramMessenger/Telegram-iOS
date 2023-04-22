@@ -214,7 +214,7 @@ public final class NotificationViewControllerImpl {
             }
             
             self.applyDisposable.set((sharedAccountContext.activeAccountContexts
-            |> map { _, accounts, _ -> Account? in
+            |> map { _, accounts, _, _ -> Account? in
                 return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1.account
             }
             |> filter { account in
@@ -265,7 +265,7 @@ public final class NotificationViewControllerImpl {
             self.updateImageLayout(boundingSize: view.bounds.size)
             
             self.applyDisposable.set((sharedAccountContext.activeAccountContexts
-            |> map { _, contexts, _ -> AccountContext? in
+            |> map { _, contexts, _, _ -> AccountContext? in
                 return contexts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
             }
             |> filter { context in

@@ -12,7 +12,7 @@ import TelegramAudio
 import AccountContext
 
 final class OverlayInstantVideoNode: OverlayMediaItemNode {
-    private let content: UniversalVideoContent
+    public let content: UniversalVideoContent
     private let videoNode: UniversalVideoNode
     private let decoration: OverlayInstantVideoDecoration
     
@@ -40,15 +40,19 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode {
     
     var playbackEnded: (() -> Void)?
     
-    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, close: @escaping () -> Void) {
+    public let sourceAccountId: AccountRecordId
+    
+    init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, close: @escaping () -> Void, sourceAccountId: AccountRecordId) {
         self.close = close
         self.content = content
         var togglePlayPauseImpl: (() -> Void)?
         let decoration = OverlayInstantVideoDecoration(tapped: {
             togglePlayPauseImpl?()
         })
-        self.videoNode = UniversalVideoNode(postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .secondaryOverlay, snapshotContentWhenGone: true)
+        self.videoNode = UniversalVideoNode(postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .secondaryOverlay, snapshotContentWhenGone: true, sourceAccountId: sourceAccountId)
         self.decoration = decoration
+        
+        self.sourceAccountId = sourceAccountId
         
         super.init()
         

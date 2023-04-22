@@ -1,3 +1,5 @@
+import UndoUI
+
 import Display
 import UIKit
 import AsyncDisplayKit
@@ -71,10 +73,12 @@ final class ContactsControllerNode: ASDisplayNode {
         
         var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
+        var unavailableImpl: (() -> Void)?
         
-        let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: {
+        // these options are shown anyway, so it can not be peeped that account is hidable
+        let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: context.immediateIsHidable ? { unavailableImpl?() } : {
             addNearbyImpl?()
-        }), ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
+        }), ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: context.immediateIsHidable ? { unavailableImpl?() } : {
             inviteImpl?()
         })]
         
@@ -127,6 +131,14 @@ final class ContactsControllerNode: ASDisplayNode {
         inviteImpl = { [weak self] in
             if let strongSelf = self {
                 strongSelf.openInvite?()
+            }
+        }
+        
+        unavailableImpl = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.contactListNode.listNode.clearHighlightAnimated(true)
+                let controller = UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.FunctionalityUnavailableForHidableAccounts), elevatedLayout: false, action: { _ in return false })
+                strongSelf.controller?.present(controller, in: .current)
             }
         }
         

@@ -134,7 +134,7 @@ public enum OverlayStatusControllerStyle {
     case dark
 }
 
-private final class OverlayStatusControllerImpl: ViewController, StandalonePresentableController {
+public final class OverlayStatusControllerImpl: ViewController, StandalonePresentableController {
     private let style: OverlayStatusControllerStyle
     private let type: OverlayStatusControllerType
     

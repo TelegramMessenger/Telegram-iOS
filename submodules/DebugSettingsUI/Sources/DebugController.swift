@@ -1380,7 +1380,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))
         }
-        entries.append(.restorePurchases(presentationData.theme))
+//        entries.append(.restorePurchases(presentationData.theme))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))

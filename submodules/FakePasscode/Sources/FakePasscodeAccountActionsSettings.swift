@@ -4,6 +4,7 @@ import TelegramIntents
 import AccountContext
 import Postbox
 import SwiftSignalKit
+import PtgSecretPasscodes
 
 public enum PeerRemovalType: Int32, Codable {
     case delete
@@ -258,7 +259,9 @@ public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
             let _ = (beforeLogoutTaskCounter.completed()
             |> deliverOnMainQueue).start(next: {
                 context.sharedContext.applicationBindings.clearAllNotifications()
-                let _ = logoutFromAccount(id: context.account.id, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start(completed: {
+                let _ = logoutFromAccount(id: context.account.id, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false, getExcludedAccountIds: { transaction in
+                    return PtgSecretPasscodes(transaction).allHidableAccountIds()
+                }).start(completed: {
                     beforeUnlockTaskCounter.decrement()
                 })
             })
