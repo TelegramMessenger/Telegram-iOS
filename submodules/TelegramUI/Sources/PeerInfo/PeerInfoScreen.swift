@@ -514,6 +514,7 @@ private final class PeerInfoInteraction {
     let editingOpenDiscussionGroupSetup: () -> Void
     let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
+    let openRecentActions: () -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
     let openPermissions: () -> Void
@@ -564,6 +565,7 @@ private final class PeerInfoInteraction {
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
+        openRecentActions: @escaping () -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
         openPermissions: @escaping () -> Void,
@@ -613,6 +615,7 @@ private final class PeerInfoInteraction {
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
         self.openParticipantsSection = openParticipantsSection
+        self.openRecentActions = openRecentActions
         self.editingOpenPreHistorySetup = editingOpenPreHistorySetup
         self.editingOpenAutoremoveMesages = editingOpenAutoremoveMesages
         self.openPermissions = openPermissions
@@ -1486,6 +1489,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 let ItemMembers = 9
                 let ItemMemberRequests = 10
                 let ItemBanned = 11
+                let ItemRecentActions = 12
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -1602,6 +1606,10 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                         items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
                             interaction.openParticipantsSection(.banned)
                         }))
+                        
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
+                            interaction.openRecentActions()
+                        }))
                     }
                 }
                 
@@ -1621,13 +1629,14 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 let ItemAdmins = 108
                 let ItemMemberRequests = 109
                 let ItemRemovedUsers = 110
-                let ItemLocationHeader = 111
-                let ItemLocation = 112
-                let ItemLocationSetup = 113
-                let ItemDeleteGroup = 114
-                let ItemReactions = 115
-                let ItemTopics = 116
-                let ItemTopicsText = 117
+                let ItemRecentActions = 111
+                let ItemLocationHeader = 112
+                let ItemLocation = 113
+                let ItemLocationSetup = 114
+                let ItemDeleteGroup = 115
+                let ItemReactions = 116
+                let ItemTopics = 117
+                let ItemTopicsText = 118
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.addressName != nil
@@ -1831,6 +1840,10 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
 
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
                             interaction.openParticipantsSection(.banned)
+                        }))
+                        
+                        items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
+                            interaction.openRecentActions()
                         }))
                     }
                     
@@ -2206,6 +2219,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             },
             openParticipantsSection: { [weak self] section in
                 self?.openParticipantsSection(section: section)
+            },
+            openRecentActions: { [weak self] in
+                self?.openRecentActions()
             },
             editingOpenPreHistorySetup: { [weak self] in
                 self?.editingOpenPreHistorySetup()
@@ -3223,7 +3239,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             } else {
                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                             }
-                        } else if let botInfo = peer.botInfo, botInfo.flags.contains(.canEdit), let cachedData = data.cachedData as? CachedUserData {
+                        } else if let botInfo = peer.botInfo, botInfo.flags.contains(.canEdit), let cachedData = data.cachedData as? CachedUserData, let editableBotInfo = cachedData.editableBotInfo {
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
                             let bio = strongSelf.headerNode.editingContentNode.editingTextForKey(.description)
                             if let bio = bio {
@@ -3235,12 +3251,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     return
                                 }
                             }
-                            let peerBio = cachedData.about ?? ""
+                            let peerName = editableBotInfo.name
+                            let peerBio = editableBotInfo.about
                             
-                            if (peer.firstName ?? "") != firstName || (bio ?? "") != peerBio {
+                            if firstName != peerName || (bio ?? "") != peerBio {
                                 var updateNameSignal: Signal<Void, NoError> = .complete()
                                 var hasProgress = false
-                                if peer.firstName != firstName {
+                                if firstName != peerName {
                                     updateNameSignal = context.engine.peers.updateBotName(peerId: peer.id, name: firstName)
                                     |> `catch` { _ -> Signal<Void, NoError> in
                                         return .complete()
@@ -3248,7 +3265,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     hasProgress = true
                                 }
                                 var updateBioSignal: Signal<Void, NoError> = .complete()
-                                if let bio = bio, bio != cachedData.about {
+                                if let bio = bio, bio != peerBio {
                                     updateBioSignal = context.engine.peers.updateBotAbout(peerId: peer.id, about: bio)
                                     |> `catch` { _ -> Signal<Void, NoError> in
                                         return .complete()
@@ -6722,6 +6739,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         case .memberRequests:
             self.controller?.push(inviteRequestsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, existingContext: self.data?.requestsContext))
         }
+    }
+    
+    private func openRecentActions() {
+        guard let peer = self.data?.peer else {
+            return
+        }
+        let controller = self.context.sharedContext.makeChatRecentActionsController(context: self.context, peer: peer, adminPeerId: nil)
+        self.controller?.push(controller)
     }
     
     private func editingOpenPreHistorySetup() {

@@ -168,7 +168,7 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         let maxActionWidth: CGFloat = floor(size.width / CGFloat(self.actionNodes.count))
         let actionTitleInsets: CGFloat = 8.0
         
-        var effectiveActionLayout = TextAlertContentActionLayout.horizontal
+        var effectiveActionLayout = TextAlertContentActionLayout.vertical
         for actionNode in self.actionNodes {
             let actionTitleSize = actionNode.titleNode.updateLayout(CGSize(width: maxActionWidth, height: actionButtonHeight))
             if case .horizontal = effectiveActionLayout, actionTitleSize.height > actionButtonHeight * 0.6667 {
@@ -260,11 +260,11 @@ public func webAppLaunchConfirmationController(context: AccountContext, updatedP
     
     var dismissImpl: ((Bool) -> Void)?
     var contentNode: WebAppLaunchConfirmationAlertContentNode?
-    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-        dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_LaunchOpenApp, action: {
         dismissImpl?(true)
         commit()
+    }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+        dismissImpl?(true)
     })]
     
     let title = peer.compactDisplayTitle

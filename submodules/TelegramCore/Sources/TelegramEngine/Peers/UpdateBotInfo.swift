@@ -20,9 +20,18 @@ func _internal_updateBotName(account: Account, peerId: PeerId, name: String) -> 
             |> mapToSignal { result -> Signal<Void, UpdateBotInfoError> in
                 return account.postbox.transaction { transaction -> Void in
                     if case .boolTrue = result {
+                        var previousBotName: String?
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedUserData, let editableBotInfo = current.editableBotInfo {
+                                previousBotName = editableBotInfo.name
+                                return current.withUpdatedEditableBotInfo(editableBotInfo.withUpdatedName(name))
+                            } else {
+                                return current
+                            }
+                        })
                         updatePeers(transaction: transaction, peers: [peer]) { _, peer in
                             var updatedPeer = peer
-                            if let user = peer as? TelegramUser {
+                            if let user = peer as? TelegramUser, user.firstName == previousBotName {
                                 updatedPeer = user.withUpdatedNames(firstName: name, lastName: nil)
                             }
                             return updatedPeer
@@ -52,8 +61,12 @@ func _internal_updateBotAbout(account: Account, peerId: PeerId, about: String) -
                 return account.postbox.transaction { transaction -> Void in
                     if case .boolTrue = result {
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                            if let current = current as? CachedUserData {
-                                return current.withUpdatedAbout(about)
+                            if let current = current as? CachedUserData, let editableBotInfo = current.editableBotInfo {
+                                var updatedAbout = current.about
+                                if (current.about ?? "") == editableBotInfo.about {
+                                    updatedAbout = about
+                                }
+                                return current.withUpdatedEditableBotInfo(editableBotInfo.withUpdatedAbout(about)).withUpdatedAbout(updatedAbout)
                             } else {
                                 return current
                             }
@@ -83,15 +96,21 @@ func _internal_updateBotDescription(account: Account, peerId: PeerId, descriptio
             |> mapToSignal { result -> Signal<Void, UpdateBotInfoError> in
                 return account.postbox.transaction { transaction -> Void in
                     if case .boolTrue = result {
-//                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-//                            if let current = current as? CachedChannelData {
-//                                return current.withUpdatedAbout(description)
-//                            } else if let current = current as? CachedGroupData {
-//                                return current.withUpdatedAbout(description)
-//                            } else {
-//                                return current
-//                            }
-//                        })
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedUserData, let editableBotInfo = current.editableBotInfo {
+                                if let botInfo = current.botInfo {
+                                    var updatedBotInfo = botInfo
+                                    if botInfo.description == editableBotInfo.description {
+                                        updatedBotInfo = BotInfo(description: description, photo: botInfo.photo, video: botInfo.video, commands: botInfo.commands, menuButton: botInfo.menuButton)
+                                    }
+                                    return current.withUpdatedEditableBotInfo(editableBotInfo.withUpdatedDescription(description)).withUpdatedBotInfo(updatedBotInfo)
+                                } else {
+                                    return current.withUpdatedEditableBotInfo(editableBotInfo.withUpdatedDescription(description))
+                                }
+                            } else {
+                                return current
+                            }
+                        })
                     }
                 }
                 |> mapError { _ -> UpdateBotInfoError in }
