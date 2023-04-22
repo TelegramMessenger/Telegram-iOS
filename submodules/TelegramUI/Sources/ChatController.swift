@@ -579,7 +579,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch chatLocation {
         case let .peer(peerId):
-            precondition(context.sharedContext.currentPtgSettings.with({ $0.isOriginallyInstalledViaTestFlightOrForDevelopment == true }) || context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
+            precondition(context.sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) || context.currentInactiveSecretChatPeerIds.with { !$0.contains(peerId) })
             
             locationBroadcastPanelSource = .peer(peerId)
             switch subject {

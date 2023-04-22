@@ -1325,7 +1325,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
     
-    if sharedContext.currentPtgSettings.with({ $0.isOriginallyInstalledViaTestFlightOrForDevelopment == true }) && Bundle.isTestFlightOrDevelopment {
+    if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
         //    entries.append(.testStickerImport(presentationData.theme))
         entries.append(.sendLogs(presentationData.theme))
         //entries.append(.sendOneLog(presentationData.theme))

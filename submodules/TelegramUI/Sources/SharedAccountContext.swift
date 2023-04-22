@@ -435,10 +435,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         })
         
-        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.isOriginallyInstalledViaTestFlightOrForDevelopment == nil {
+        // once installed via App Store, some debugging tools will no longer be available (for security)
+        if applicationBindings.isMainApp, initialPresentationDataAndSettings.ptgSettings.isTestingEnvironment != false {
             let _ = accountManager.transaction({ transaction in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.ptgSettings, { entry in
-                    return PreferencesEntry(PtgSettings(entry).withUpdated(isOriginallyInstalledViaTestFlightOrForDevelopment: Bundle.isTestFlightOrDevelopment))
+                    return PreferencesEntry(PtgSettings(entry).withUpdated(isTestingEnvironment: Bundle.isTestFlightOrDevelopment))
                 })
             }).start()
         }

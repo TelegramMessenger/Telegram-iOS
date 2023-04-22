@@ -227,23 +227,23 @@ private func updateSettings(_ context: AccountContext, _ statePromise: Promise<P
 
 extension PtgSettings {
     public func withUpdated(showPeerId: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+        return PtgSettings(showPeerId: showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isTestingEnvironment: self.isTestingEnvironment)
     }
     
     public func withUpdated(suppressForeignAgentNotice: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isTestingEnvironment: self.isTestingEnvironment)
     }
     
     public func withUpdated(enableForeignAgentNoticeSearchFiltering: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isTestingEnvironment: self.isTestingEnvironment)
     }
     
     public func withUpdated(preferAppleVoiceToText: Bool) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: self.isOriginallyInstalledViaTestFlightOrForDevelopment)
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: preferAppleVoiceToText, isTestingEnvironment: self.isTestingEnvironment)
     }
     
-    public func withUpdated(isOriginallyInstalledViaTestFlightOrForDevelopment: Bool?) -> PtgSettings {
-        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isOriginallyInstalledViaTestFlightOrForDevelopment: isOriginallyInstalledViaTestFlightOrForDevelopment)
+    public func withUpdated(isTestingEnvironment: Bool?) -> PtgSettings {
+        return PtgSettings(showPeerId: self.showPeerId, suppressForeignAgentNotice: self.suppressForeignAgentNotice, enableForeignAgentNoticeSearchFiltering: self.enableForeignAgentNoticeSearchFiltering, preferAppleVoiceToText: self.preferAppleVoiceToText, isTestingEnvironment: isTestingEnvironment)
     }
 }
 
