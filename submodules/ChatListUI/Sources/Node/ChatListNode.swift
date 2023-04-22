@@ -663,7 +663,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openStorageManagement()
                         case .setupPassword:
                             nodeInteraction?.openPasswordSetup()
-                        case .premiumUpgrade, .premiumAnnualDiscount:
+                        case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .chatFolderUpdates:
                             nodeInteraction?.openChatFolderUpdates()
@@ -964,7 +964,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openStorageManagement()
                         case .setupPassword:
                             nodeInteraction?.openPasswordSetup()
-                        case .premiumUpgrade, .premiumAnnualDiscount:
+                        case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .chatFolderUpdates:
                             nodeInteraction?.openChatFolderUpdates()
@@ -1492,6 +1492,7 @@ public final class ChatListNode: ListView {
                 if let self {
                     let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .annualPremium).start()
                     let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .upgradePremium).start()
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .restorePremium).start()
                 }
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads)
@@ -1612,7 +1613,7 @@ public final class ChatListNode: ListView {
                             return .single(.setupPassword)
                         }
                     }
-                    if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
+                    if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
                         return inAppPurchaseManager.availableProducts
                         |> map { products -> ChatListNotice? in
                             if products.count > 1 {
@@ -1627,7 +1628,9 @@ public final class ChatListNode: ListView {
                                         let fraction = Float(product.priceCurrencyAndAmount.amount) / Float(12) / Float(shortestOptionPrice.0)
                                         let discount = Int32(round((1.0 - fraction) * 20.0) * 5.0)
                                         if discount > 0 {
-                                            if suggestions.contains(.annualPremium) {
+                                            if suggestions.contains(.restorePremium) {
+                                                return .premiumRestore(discount: discount)
+                                            } else if suggestions.contains(.annualPremium) {
                                                 return .premiumAnnualDiscount(discount: discount)
                                             } else if suggestions.contains(.upgradePremium) {
                                                 return .premiumUpgrade(discount: discount)

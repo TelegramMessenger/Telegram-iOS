@@ -9345,3 +9345,6 @@ Sorry for the inconvenience.";
 "Notification.LockScreenReactionPlaceholder" = "Reaction";
 
 "UserInfo.BotNamePlaceholder" = "Bot Name";
+
+"ChatList.PremiumRestoreDiscountTitle" = "Get Premium back with up to %@ off";
+"ChatList.PremiumRestoreDiscountText" = "Your Telegram Premium has recently expired. Tap here to extend it.";
