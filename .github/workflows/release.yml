@@ -115,16 +115,49 @@ jobs:
           done
           zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: build-${{ env.BUILD_NUMBER }}
-          name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+          release_name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
           draft: false
           prerelease: false
-          files: |
-            /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
-            /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
+
+      - name: Upload Release IPA
+        id: upload-release-ipa 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
+          asset_name: Telegram.ipa
+          asset_content_type: application/zip
+
+      - name: Upload Release DSYM
+        id: upload-release-dsym 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
+          asset_name: Telegram.DSYMs.zip
+          asset_content_type: application/zip
+
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          tag_name: build-${{ env.BUILD_NUMBER }}
+#          name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+#          draft: false
+#          prerelease: false
+#          files: |
+#            /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
+#            /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
 
       - name: Deploy to App Store Connect
         env:
