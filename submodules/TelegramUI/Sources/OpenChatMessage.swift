@@ -22,6 +22,7 @@ import ShareController
 import UndoUI
 import WebsiteType
 import GalleryData
+import StoryContainerScreen
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     if let mediaData = chatMessageGalleryControllerData(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, message: params.message, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, source: params.gallerySource, synchronousLoad: false, actionInteraction: params.actionInteraction) {
@@ -172,6 +173,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }
                 params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(context: params.context, location: location, chatLocationContextHolder: params.chatLocationContextHolder)), type: playerType, control: control)
                 return true
+            case let .story(storyController):
+                params.dismissInput()
+                let _ = (storyController
+                |> deliverOnMainQueue).start(next: { storyController in
+                    params.navigationController?.pushViewController(storyController)
+                })
             case let .gallery(gallery):
                 params.dismissInput()
                 let _ = (gallery

@@ -496,7 +496,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     text = .text(about, textIcon, .generic)
                 }
                 
-                return VoiceChatTileItem(account: context.account, peer: peerEntry.peer, videoEndpointId: videoEndpointId, videoReady: videoReady, videoTimeouted: videoTimeouted, isVideoLimit: false, videoLimit: 0, isPaused: videoIsPaused, isOwnScreencast: peerEntry.presentationEndpointId == videoEndpointId && peerEntry.isMyPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, secondary: secondary, isTablet: isTablet, icon: showAsPresentation ? .presentation : icon, text: text, additionalText: additionalText, action: {
+                return VoiceChatTileItem(account: context.account, peer: EnginePeer(peerEntry.peer), videoEndpointId: videoEndpointId, videoReady: videoReady, videoTimeouted: videoTimeouted, isVideoLimit: false, videoLimit: 0, isPaused: videoIsPaused, isOwnScreencast: peerEntry.presentationEndpointId == videoEndpointId && peerEntry.isMyPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, speaking: speaking, secondary: secondary, isTablet: isTablet, icon: showAsPresentation ? .presentation : icon, text: text, additionalText: additionalText, action: {
                     interaction.switchToPeer(peer.id, videoEndpointId, !secondary)
                 }, contextAction: { node, gesture in
                     interaction.peerContextAction(peerEntry, node, gesture, false)
@@ -717,7 +717,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             expandedText = .text(about, textIcon, .generic)
                         }
                                                                         
-                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, text: text, expandedText: expandedText, icon: icon, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, action: { node in
+                        return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: EnginePeer(peer), text: text, expandedText: expandedText, icon: icon, getAudioLevel: { return interaction.getAudioLevel(peer.id) }, action: { node in
                             if let node = node {
                                 interaction.peerContextAction(peerEntry, node, nil, false)
                             }
@@ -1238,8 +1238,6 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             dismissController?()
                             return
                         }
-                        
-                        let peer = EnginePeer(peer)
                         
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         if peer.id == strongSelf.callState?.myPeerId {
@@ -2709,7 +2707,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                     return
                                 }
 
-                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, peer: peer, completion: { [weak self] videoOrientation in
+                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, peer: EnginePeer(peer), completion: { [weak self] videoOrientation in
                                     if let strongSelf = self {
                                         let title: String
                                         let text: String
@@ -5282,7 +5280,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 tileItems.removeAll()
                 gridTileItems.removeAll()
                 
-                tileItems.append(VoiceChatTileItem(account: self.context.account, peer: peer, videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, videoLimit: configuration.videoParticipantsMaxCount, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
+                tileItems.append(VoiceChatTileItem(account: self.context.account, peer: EnginePeer(peer), videoEndpointId: "", videoReady: false, videoTimeouted: true, isVideoLimit: true, videoLimit: configuration.videoParticipantsMaxCount, isPaused: false, isOwnScreencast: false, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, speaking: false, secondary: false, isTablet: false, icon: .none, text: .none, additionalText: nil, action: {}, contextAction: nil, getVideo: { _ in return nil }, getAudioLevel: nil))
             } else if let callState = self.callState, !tileItems.isEmpty && callState.isVideoWatchersLimitReached && self.connectedOnce && (callState.canManageCall || callState.adminIds.contains(self.context.account.peerId)) {
                 reachedLimit = true
             }

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -18,14 +17,14 @@ final class VoiceChatRecordingSetupController: ViewController {
     }
     
     private let context: AccountContext
-    private let peer: Peer
+    private let peer: EnginePeer
     private let completion: (Bool?) -> Void
     
     private var animatedIn = false
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, peer: Peer, completion: @escaping (Bool?) -> Void) {
+    init(context: AccountContext, peer: EnginePeer, completion: @escaping (Bool?) -> Void) {
         self.context = context
         self.peer = peer
         self.completion = completion
@@ -149,7 +148,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(controller: VoiceChatRecordingSetupController, context: AccountContext, peer: Peer) {
+    init(controller: VoiceChatRecordingSetupController, context: AccountContext, peer: EnginePeer) {
         self.controller = controller
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -183,7 +182,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
         let isLivestream: Bool
-        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+        if case let .channel(channel) = peer, case .broadcast = channel.info {
             isLivestream = true
         } else {
             isLivestream = false

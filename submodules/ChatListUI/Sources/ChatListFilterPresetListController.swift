@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -39,7 +38,7 @@ private enum ChatListFilterPresetListSection: Int32 {
     case list
 }
 
-private func stringForUserCount(_ peers: [PeerId: SelectivePrivacyPeer], strings: PresentationStrings) -> String {
+private func stringForUserCount(_ peers: [EnginePeer.Id: SelectivePrivacyPeer], strings: PresentationStrings) -> String {
     if peers.isEmpty {
         return strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder
     } else {

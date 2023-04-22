@@ -92,6 +92,28 @@ public struct ImportSticker {
     }
 }
 
+public extension ImportSticker {
+    var stickerPackItem: StickerPackItem? {
+        guard let resource = self.resource as? TelegramMediaResource else {
+            return nil
+        }
+        var fileAttributes: [TelegramMediaFileAttribute] = []
+        if self.mimeType == "video/webm" {
+            fileAttributes.append(.FileName(fileName: "sticker.webm"))
+            fileAttributes.append(.Animated)
+            fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+        } else if self.mimeType == "application/x-tgsticker" {
+            fileAttributes.append(.FileName(fileName: "sticker.tgs"))
+            fileAttributes.append(.Animated)
+            fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+        } else {
+            fileAttributes.append(.FileName(fileName: "sticker.webp"))
+        }
+        fileAttributes.append(.ImageSize(size: self.dimensions))
+        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: self.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
+    }
+}
+
 public enum CreateStickerSetStatus {
     case progress(Float, Int32, Int32)
     case complete(StickerPackCollectionInfo, [StickerPackItem])

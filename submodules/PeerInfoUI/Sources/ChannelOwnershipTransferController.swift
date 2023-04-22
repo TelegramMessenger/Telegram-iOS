@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
@@ -425,7 +424,7 @@ public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
 }
 
-private func commitChannelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+private func commitChannelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (EnginePeer.Id?) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: (() -> Void)?
@@ -464,13 +463,13 @@ private func commitChannelOwnershipTransferController(context: AccountContext, u
         }
         contentNode.updateIsChecking(true)
         
-        let signal: Signal<PeerId?, ChannelOwnershipTransferError>
-        if let peer = peer as? TelegramChannel {
+        let signal: Signal<EnginePeer.Id?, ChannelOwnershipTransferError>
+        if case let .channel(peer) = peer {
             signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(engine: context.engine, peerId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
                 return .complete()
             }
             |> then(.single(nil))
-        } else if let peer = peer as? TelegramGroup {
+        } else if case let .legacyGroup(peer) = peer {
             signal = context.engine.peers.convertGroupToSupergroup(peerId: peer.id)
             |> map(Optional.init)
             |> mapError { error -> ChannelOwnershipTransferError in
@@ -482,7 +481,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, u
                 }
             }
             |> deliverOnMainQueue
-            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ChannelOwnershipTransferError> in
+            |> mapToSignal { upgradedPeerId -> Signal<EnginePeer.Id?, ChannelOwnershipTransferError> in
                 guard let upgradedPeerId = upgradedPeerId else {
                     return .fail(.generic)
                 }
@@ -500,7 +499,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, u
             completion(upgradedPeerId)
         }, error: { [weak contentNode] error in
             var isGroup = true
-            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+            if case let .channel(channel) = peer, case .broadcast = channel.info {
                 isGroup = false
             }
             
@@ -540,12 +539,12 @@ private func commitChannelOwnershipTransferController(context: AccountContext, u
     return controller
 }
 
-private func confirmChannelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+private func confirmChannelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (EnginePeer.Id?) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
     var isGroup = true
-    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+    if case let .channel(channel) = peer, case .broadcast = channel.info {
         isGroup = false
     }
     
@@ -553,10 +552,10 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     var text: String
     if isGroup {
         title = presentationData.strings.Group_OwnershipTransfer_Title
-        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), EnginePeer(member).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), EnginePeer.user(member).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
     } else {
         title = presentationData.strings.Channel_OwnershipTransfer_Title
-        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), EnginePeer(member).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), EnginePeer.user(member).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
     }
     
     let attributedTitle = NSAttributedString(string: title, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: theme.primaryColor, paragraphAlignment: .center)
@@ -571,7 +570,7 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     return controller
 }
 
-func channelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+func channelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (EnginePeer.Id?) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
@@ -581,7 +580,7 @@ func channelOwnershipTransferController(context: AccountContext, updatedPresenta
     let textFontSize = presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0
     
     var isGroup = true
-    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+    if case let .channel(channel) = peer, case .broadcast = channel.info {
         isGroup = false
     }
     

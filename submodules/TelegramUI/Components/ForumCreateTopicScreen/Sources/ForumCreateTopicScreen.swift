@@ -13,9 +13,9 @@ import EntityKeyboard
 import PagerComponent
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import PremiumUI
 import ProgressNavigationButtonNode
+import Postbox
 
 private final class SwitchComponent: Component {
     typealias EnvironmentType = Empty
@@ -654,7 +654,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     areUnicodeEmojiEnabled: false,
                     areCustomEmojiEnabled: true,
                     chatPeerId: self.context.account.peerId,
-                    selectedItems: Set([MediaId(namespace: Namespaces.Media.CloudFile, id: self.fileId)]),
+                    selectedItems: Set([EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: self.fileId)]),
                     topicTitle: self.title,
                     topicColor: self.iconColor
                 )

@@ -294,8 +294,6 @@ swift_library(
         "//submodules/AdUI:AdUI",
         "//submodules/SparseItemGrid:SparseItemGrid",
         "//submodules/CalendarMessageScreen:CalendarMessageScreen",
-        "//submodules/LottieMeshSwift:LottieMeshSwift",
-        "//submodules/MeshAnimationCache:MeshAnimationCache",
         "//submodules/DirectMediaImageCache:DirectMediaImageCache",
         "//submodules/CodeInputView:CodeInputView",
         "//submodules/Components/ReactionButtonListComponent:ReactionButtonListComponent",
@@ -360,6 +358,8 @@ swift_library(
         "//submodules/TelegramUI/Components/SendInviteLinkScreen",
         "//submodules/TelegramUI/Components/ChatFolderLinkPreviewScreen",
         "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
+        "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
+        "//submodules/TelegramUI/Components/Stories/StoryContentComponent",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

@@ -50,6 +50,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var disableImageContentAnalysis: Bool
     public var disableBackgroundAnimation: Bool
     public var logLanguageRecognition: Bool
+    public var storiesExperiment: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -77,7 +78,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             disableLanguageRecognition: false,
             disableImageContentAnalysis: false,
             disableBackgroundAnimation: false,
-            logLanguageRecognition: false
+            logLanguageRecognition: false,
+            storiesExperiment: false
         )
     }
     
@@ -106,7 +108,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         disableLanguageRecognition: Bool,
         disableImageContentAnalysis: Bool,
         disableBackgroundAnimation: Bool,
-        logLanguageRecognition: Bool
+        logLanguageRecognition: Bool,
+        storiesExperiment: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -133,6 +136,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableImageContentAnalysis = disableImageContentAnalysis
         self.disableBackgroundAnimation = disableBackgroundAnimation
         self.logLanguageRecognition = logLanguageRecognition
+        self.storiesExperiment = storiesExperiment
     }
     
     public init(from decoder: Decoder) throws {
@@ -163,6 +167,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableImageContentAnalysis = try container.decodeIfPresent(Bool.self, forKey: "disableImageContentAnalysis") ?? false
         self.disableBackgroundAnimation = try container.decodeIfPresent(Bool.self, forKey: "disableBackgroundAnimation") ?? false
         self.logLanguageRecognition = try container.decodeIfPresent(Bool.self, forKey: "logLanguageRecognition") ?? false
+        self.storiesExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesExperiment") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -193,6 +198,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.disableImageContentAnalysis, forKey: "disableImageContentAnalysis")
         try container.encode(self.disableBackgroundAnimation, forKey: "disableBackgroundAnimation")
         try container.encode(self.logLanguageRecognition, forKey: "logLanguageRecognition")
+        try container.encode(self.storiesExperiment, forKey: "storiesExperiment")
     }
 }
 

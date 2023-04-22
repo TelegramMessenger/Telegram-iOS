@@ -909,12 +909,12 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         
         if self.controlsHistoryPreload, case .chatList(groupId: .root) = self.location {
             self.context.account.viewTracker.chatListPreloadItems.set(combineLatest(queue: .mainQueue(),
-                context.sharedContext.hasOngoingCall.get(),
+                context.sharedContext.enablePreloads.get(),
                 itemNode.listNode.preloadItems.get(),
                 enablePreload
             )
-            |> map { hasOngoingCall, preloadItems, enablePreload -> Set<ChatHistoryPreloadItem> in
-                if hasOngoingCall || !enablePreload {
+            |> map { enablePreloads, preloadItems, enablePreload -> Set<ChatHistoryPreloadItem> in
+                if !enablePreloads || !enablePreload {
                     return Set()
                 } else {
                     return Set(preloadItems)

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -16,9 +15,9 @@ import NotificationSoundSelectionUI
 public struct NotificationExceptionWrapper : Equatable {
     public let settings: TelegramPeerNotificationSettings
     public let date: TimeInterval?
-    public let peer: Peer
+    public let peer: EnginePeer
     
-    public init(settings: TelegramPeerNotificationSettings, peer: Peer, date: TimeInterval? = nil) {
+    public init(settings: TelegramPeerNotificationSettings, peer: EnginePeer, date: TimeInterval? = nil) {
         self.settings = settings
         self.date = date
         self.peer = peer
@@ -90,12 +89,12 @@ public enum NotificationExceptionMode : Equatable {
         }
     }
     
-    case users([PeerId : NotificationExceptionWrapper])
-    case groups([PeerId : NotificationExceptionWrapper])
-    case channels([PeerId : NotificationExceptionWrapper])
+    case users([EnginePeer.Id : NotificationExceptionWrapper])
+    case groups([EnginePeer.Id : NotificationExceptionWrapper])
+    case channels([EnginePeer.Id : NotificationExceptionWrapper])
     
-    public func withUpdatedPeerSound(_ peer: Peer, _ sound: PeerMessageSound) -> NotificationExceptionMode {
-        let apply:([PeerId : NotificationExceptionWrapper], PeerId, PeerMessageSound) -> [PeerId : NotificationExceptionWrapper] = { values, peerId, sound in
+    public func withUpdatedPeerSound(_ peer: EnginePeer, _ sound: PeerMessageSound) -> NotificationExceptionMode {
+        let apply:([EnginePeer.Id : NotificationExceptionWrapper], EnginePeer.Id, PeerMessageSound) -> [EnginePeer.Id : NotificationExceptionWrapper] = { values, peerId, sound in
             var values = values
             if let value = values[peerId] {
                 switch sound {
@@ -130,8 +129,8 @@ public enum NotificationExceptionMode : Equatable {
         }
     }
     
-    public func withUpdatedPeerMuteInterval(_ peer: Peer, _ muteInterval: Int32?) -> NotificationExceptionMode {
-        let apply:([PeerId : NotificationExceptionWrapper], PeerId, PeerMuteState) -> [PeerId : NotificationExceptionWrapper] = { values, peerId, muteState in
+    public func withUpdatedPeerMuteInterval(_ peer: EnginePeer, _ muteInterval: Int32?) -> NotificationExceptionMode {
+        let apply:([EnginePeer.Id : NotificationExceptionWrapper], EnginePeer.Id, PeerMuteState) -> [EnginePeer.Id : NotificationExceptionWrapper] = { values, peerId, muteState in
             var values = values
             if let value = values[peerId] {
                 switch muteState {
@@ -182,8 +181,8 @@ public enum NotificationExceptionMode : Equatable {
         }
     }
     
-    public func withUpdatedPeerDisplayPreviews(_ peer: Peer, _ displayPreviews: PeerNotificationDisplayPreviews) -> NotificationExceptionMode {
-        let apply:([PeerId : NotificationExceptionWrapper], PeerId, PeerNotificationDisplayPreviews) -> [PeerId : NotificationExceptionWrapper] = { values, peerId, displayPreviews in
+    public func withUpdatedPeerDisplayPreviews(_ peer: EnginePeer, _ displayPreviews: PeerNotificationDisplayPreviews) -> NotificationExceptionMode {
+        let apply:([EnginePeer.Id : NotificationExceptionWrapper], EnginePeer.Id, PeerNotificationDisplayPreviews) -> [EnginePeer.Id : NotificationExceptionWrapper] = { values, peerId, displayPreviews in
             var values = values
             if let value = values[peerId] {
                 switch displayPreviews {
@@ -218,14 +217,14 @@ public enum NotificationExceptionMode : Equatable {
         }
     }
     
-    public var peerIds: [PeerId] {
+    public var peerIds: [EnginePeer.Id] {
         switch self {
         case let .users(settings), let .groups(settings), let .channels(settings):
             return settings.map {$0.key}
         }
     }
     
-    public var settings: [PeerId : NotificationExceptionWrapper] {
+    public var settings: [EnginePeer.Id : NotificationExceptionWrapper] {
         switch self {
         case let .users(settings), let .groups(settings), let .channels(settings):
             return settings
@@ -585,7 +584,7 @@ private struct NotificationExceptionPeerState : Equatable {
     }
 }
 
-public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, customTitle: String? = nil, threadId: Int64?, canRemove: Bool, defaultSound: PeerMessageSound, edit: Bool = false, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
+public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, customTitle: String? = nil, threadId: Int64?, canRemove: Bool, defaultSound: PeerMessageSound, edit: Bool = false, updatePeerSound: @escaping(EnginePeer.Id, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(EnginePeer.Id, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(EnginePeer.Id, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState(canRemove: false)
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
@@ -683,7 +682,7 @@ public func notificationPeerExceptionController(context: AccountContext, updated
         if let customTitle = customTitle {
             titleString = customTitle
         } else {
-            titleString = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            titleString = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(titleString), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))

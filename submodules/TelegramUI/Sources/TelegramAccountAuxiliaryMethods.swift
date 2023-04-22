@@ -106,7 +106,7 @@ func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAu
         }
         return .single(nil)
     }, prepareSecretThumbnailData: { data in
-        return prepareSecretThumbnailData(data).flatMap { size, data in
+        return prepareSecretThumbnailData(EngineMediaResource.ResourceData(data)).flatMap { size, data in
             return (PixelDimensions(size), data)
         }
     }, backgroundUpload: { postbox, _, resource in

@@ -712,7 +712,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         })
         presentControllerImpl?(controller, nil)
     }, openWebSession: { session, peer in
-        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), updateAcceptSecretChats: { _ in }, updateAcceptIncomingCalls: { _ in }, remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .website(session, peer.flatMap(EnginePeer.init)), updateAcceptSecretChats: { _ in }, updateAcceptIncomingCalls: { _ in }, remove: { completion in
             removeWebSessionImpl(session.hash)
             completion()
         })

@@ -87,7 +87,7 @@ public enum TelegramExtendedMedia: PostboxCoding, Equatable {
     }
 }
 
-public final class TelegramMediaInvoice: Media {
+public final class TelegramMediaInvoice: Media, Equatable {
     public static let lastVersion: Int32 = 1
 
     public var peerIds: [PeerId] = []
@@ -169,6 +169,10 @@ public final class TelegramMediaInvoice: Media {
         }
         
         encoder.encodeInt32(self.version, forKey: "vrs")
+    }
+    
+    public static func ==(lhs: TelegramMediaInvoice, rhs: TelegramMediaInvoice) -> Bool {
+        return lhs.isEqual(to: rhs)
     }
     
     public func isEqual(to other: Media) -> Bool {

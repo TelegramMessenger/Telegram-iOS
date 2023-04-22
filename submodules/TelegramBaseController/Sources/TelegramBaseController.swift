@@ -965,7 +965,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 }
                             }
                             
-                            items.append(VoiceChatPeerActionSheetItem(context: context, peer: peer.peer, title: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
+                            items.append(VoiceChatPeerActionSheetItem(context: context, peer: EnginePeer(peer.peer), title: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
                                 dismissAction()
                                 completion(peer.peer.id)
                             }))

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -33,14 +32,14 @@ final class OldChannelsSearchItem: ItemListControllerSearch {
     let activated: Bool
     let updateActivated: (Bool) -> Void
     let peers: Signal<[InactiveChannel], NoError>
-    let selectedPeerIds: Signal<Set<PeerId>, NoError>
-    let togglePeer: (PeerId) -> Void
+    let selectedPeerIds: Signal<Set<EnginePeer.Id>, NoError>
+    let togglePeer: (EnginePeer.Id) -> Void
     
     private var updateActivity: ((Bool) -> Void)?
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, peers: Signal<[InactiveChannel], NoError>, selectedPeerIds: Signal<Set<PeerId>, NoError>, togglePeer: @escaping (PeerId) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, peers: Signal<[InactiveChannel], NoError>, selectedPeerIds: Signal<Set<EnginePeer.Id>, NoError>, togglePeer: @escaping (EnginePeer.Id) -> Void) {
         self.context = context
         self.theme = theme
         self.placeholder = placeholder
@@ -101,9 +100,9 @@ final class OldChannelsSearchItem: ItemListControllerSearch {
 }
 
 private final class OldChannelsSearchInteraction {
-    let togglePeer: (PeerId) -> Void
+    let togglePeer: (EnginePeer.Id) -> Void
     
-    init(togglePeer: @escaping (PeerId) -> Void) {
+    init(togglePeer: @escaping (EnginePeer.Id) -> Void) {
         self.togglePeer = togglePeer
     }
 }
@@ -111,7 +110,7 @@ private final class OldChannelsSearchInteraction {
 private enum OldChannelsSearchEntry: Comparable, Identifiable {
     case peer(Int, InactiveChannel, Bool)
     
-    var stableId: PeerId {
+    var stableId: EnginePeer.Id {
         switch self {
         case let .peer(_, peer, _):
             return peer.peer.id
@@ -180,7 +179,7 @@ private final class OldChannelsSearchContainerNode: SearchDisplayControllerConte
     private var presentationDataDisposable: Disposable?
     private let presentationDataPromise: Promise<PresentationData>
     
-    init(context: AccountContext, peers: Signal<[InactiveChannel], NoError>, selectedPeerIds: Signal<Set<PeerId>, NoError>, togglePeer: @escaping (PeerId) -> Void) {
+    init(context: AccountContext, peers: Signal<[InactiveChannel], NoError>, selectedPeerIds: Signal<Set<EnginePeer.Id>, NoError>, togglePeer: @escaping (EnginePeer.Id) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(self.presentationData)
@@ -352,10 +351,10 @@ private final class OldChannelsSearchItemNode: ItemListControllerSearchNode {
     
     var cancel: () -> Void
     private let peers: Signal<[InactiveChannel], NoError>
-    private let selectedPeerIds: Signal<Set<PeerId>, NoError>
-    private let togglePeer: (PeerId) -> Void
+    private let selectedPeerIds: Signal<Set<EnginePeer.Id>, NoError>
+    private let togglePeer: (EnginePeer.Id) -> Void
     
-    init(context: AccountContext, cancel: @escaping () -> Void, peers: Signal<[InactiveChannel], NoError>, selectedPeerIds: Signal<Set<PeerId>, NoError>, togglePeer: @escaping (PeerId) -> Void) {
+    init(context: AccountContext, cancel: @escaping () -> Void, peers: Signal<[InactiveChannel], NoError>, selectedPeerIds: Signal<Set<EnginePeer.Id>, NoError>, togglePeer: @escaping (EnginePeer.Id) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.cancel = cancel

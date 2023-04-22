@@ -66,7 +66,6 @@ import WallpaperBackgroundNode
 import ChatListUI
 import CalendarMessageScreen
 import ReactionSelectionNode
-import LottieMeshSwift
 import ReactionListContextMenuContent
 import AttachmentUI
 import AttachmentTextInputPanelNode
@@ -3859,7 +3858,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
               
-                let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), remoteEntries: nil, replaceRootController: { controller, ready in
+                let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
                 }, synchronousLoad: true)
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
                 
@@ -4521,7 +4520,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.smallProfileImage != nil else {
                     return
                 }
-                let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
+                let galleryController = AvatarGalleryController(context: strongSelf.context, peer: EnginePeer(peer), remoteEntries: nil, replaceRootController: { controller, ready in
                 }, synchronousLoad: true)
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
                 

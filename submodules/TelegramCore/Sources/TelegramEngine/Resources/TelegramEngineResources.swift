@@ -3,6 +3,17 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
+public enum MediaResourceUserContentType: UInt8, Equatable {
+    case other = 0
+    case image = 1
+    case video = 2
+    case audio = 3
+    case file = 4
+    case sticker = 6
+    case avatar = 7
+    case audioVideoMessage = 8
+}
+
 public extension MediaResourceUserContentType {
     init(file: TelegramMediaFile) {
         if file.isInstantVideo || file.isVoice {
@@ -22,6 +33,12 @@ public extension MediaResourceUserContentType {
         } else {
             self = .file
         }
+    }
+}
+
+public extension MediaResourceFetchParameters {
+    init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?, location: MediaResourceStorageLocation?, contentType: MediaResourceUserContentType, isRandomAccessAllowed: Bool) {
+        self.init(tag: tag, info: info, location: location, contentType: contentType.rawValue, isRandomAccessAllowed: isRandomAccessAllowed)
     }
 }
 
@@ -214,7 +231,7 @@ public extension TelegramEngine {
             self.account = account
         }
 
-        public func preUpload(id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete: (()->Void)? = nil) {
+        public func preUpload(id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<EngineMediaResource.ResourceData, NoError>, onComplete: (()->Void)? = nil) {
             return self.account.messageMediaPreuploadManager.add(network: self.account.network, postbox: self.account.postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }
 
@@ -251,7 +268,7 @@ public extension TelegramEngine {
             
             return _internal_reindexCacheInBackground(account: self.account, lowImpact: lowImpact)
             |> then(Signal { subscriber in
-                return mediaBox.updateResourceIndex(lowImpact: lowImpact, completion: {
+                return mediaBox.updateResourceIndex(otherResourceContentType: MediaResourceUserContentType.other.rawValue, lowImpact: lowImpact, completion: {
                     subscriber.putCompletion()
                 })
             })

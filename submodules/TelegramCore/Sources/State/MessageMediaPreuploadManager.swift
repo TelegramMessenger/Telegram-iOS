@@ -32,11 +32,18 @@ private final class MessageMediaPreuploadManagerContext {
         assert(self.queue.isCurrent())
     }
     
-    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete: (()->Void)? = nil) {
+    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<EngineMediaResource.ResourceData, NoError>, onComplete: (()->Void)? = nil) {
         let context = MessageMediaPreuploadManagerUploadContext()
         self.uploadContexts[id] = context
         let queue = self.queue
-        context.disposable.set(multipartUpload(network: network, postbox: postbox, source: .custom(source), encrypt: encrypt, tag: tag, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false).start(next: { [weak self] next in
+        context.disposable.set(multipartUpload(network: network, postbox: postbox, source: .custom(source |> map { data in
+            return MediaResourceData(
+                path: data.path,
+                offset: 0,
+                size: data.availableSize,
+                complete: data.isComplete
+            )
+        }), encrypt: encrypt, tag: tag, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false).start(next: { [weak self] next in
             queue.async {
                 if let strongSelf = self, let context = strongSelf.uploadContexts[id] {
                     switch next {
@@ -112,7 +119,7 @@ final class MessageMediaPreuploadManager {
         })
     }
     
-    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete:(()->Void)? = nil) {
+    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<EngineMediaResource.ResourceData, NoError>, onComplete:(()->Void)? = nil) {
         self.impl.with { context in
             context.add(network: network, postbox: postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }

@@ -665,13 +665,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
-                        case .chatFolderUpdates:
-                            nodeInteraction?.openChatFolderUpdates()
                         }
                     case .hide:
                         switch notice {
-                        case .chatFolderUpdates:
-                            nodeInteraction?.hideChatFolderUpdates()
                         default:
                             break
                         }
@@ -966,13 +962,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
-                        case .chatFolderUpdates:
-                            nodeInteraction?.openChatFolderUpdates()
                         }
                     case .hide:
                         switch notice {
-                        case .chatFolderUpdates:
-                            nodeInteraction?.hideChatFolderUpdates()
                         default:
                             break
                         }
@@ -1844,19 +1836,16 @@ public final class ChatListNode: ListView {
             suggestedChatListNotice,
             savedMessagesPeer,
             chatListViewUpdate,
-            self.chatFolderUpdates.get() |> distinctUntilChanged,
             self.statePromise.get(),
             contacts
         )
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, chatFolderUpdates, state, contacts) -> Signal<ChatListNodeListViewTransition, NoError> in
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, state, contacts) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
             let notice: ChatListNotice?
-            if let chatFolderUpdates, chatFolderUpdates.availableChatsToJoin != 0 {
-                notice = .chatFolderUpdates(count: chatFolderUpdates.availableChatsToJoin)
-            } else if let suggestedChatListNotice {
+            if let suggestedChatListNotice {
                 notice = suggestedChatListNotice
             } else if let storageInfo {
                 notice = .clearStorage(sizeFraction: storageInfo)

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import AccountContext
 import TelegramPresentationData
@@ -94,16 +93,16 @@ public enum PeerInfoAvatarListItem: Equatable {
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?, Bool, TelegramMediaImage.EmojiMarkup?)
     
-    var id: MediaResourceId {
+    var id: EngineMediaResource.Id {
         switch self {
         case .custom:
-            return MediaResourceId(CustomListItemResourceId().uniqueId)
+            return EngineMediaResource.Id(CustomListItemResourceId().uniqueId)
         case let .topImage(representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
-            return representation.resource.id
+            return EngineMediaResource.Id(representation.resource.id)
         case let .image(_, representations, _, _, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
-            return representation.resource.id
+            return EngineMediaResource.Id(representation.resource.id)
         }
     }
     
@@ -205,7 +204,7 @@ public enum PeerInfoAvatarListItem: Equatable {
 
 public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private let context: AccountContext
-    private let peer: Peer
+    private let peer: EnginePeer
     public let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
@@ -266,7 +265,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         }
     }
     
-    init(context: AccountContext, peer: Peer) {
+    init(context: AccountContext, peer: EnginePeer) {
         self.context = context
         self.peer = peer
         self.imageNode = TransformImageNode()
@@ -511,8 +510,8 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 self.didSetReady = true
                 self.isReady.set(.single(true))
             }
-        } else if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
-            let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
+        } else if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer._asPeer()) {
+            let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
             let videoContent = NativeVideoContent(id: .profileVideo(id, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: fullSizeOnly, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, storeAfterDownload: nil)
             
             if videoContent.id != self.videoContent?.id {
@@ -570,7 +569,7 @@ private let fadeWidth: CGFloat = 70.0
 public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let context: AccountContext
     private let isSettings: Bool
-    public var peer: Peer?
+    public var peer: EnginePeer?
     
     public let controlsContainerNode: ASDisplayNode
     public let controlsClippingNode: ASDisplayNode
@@ -590,7 +589,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     
     public private(set) var galleryEntries: [AvatarGalleryEntry] = []
     private var items: [PeerInfoAvatarListItem] = []
-    private var itemNodes: [MediaResourceId: PeerInfoAvatarListItemNode] = [:]
+    private var itemNodes: [EngineMediaResource.Id: PeerInfoAvatarListItemNode] = [:]
     private var stripNodes: [ASImageNode] = []
     private var activeStripNode: ASImageNode
     private var loadingStripNode: PeerInfoAvatarListLoadingStripNode
@@ -1118,16 +1117,20 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             index += 1
         }
         
-        
-        if let peer = self.peer, peer is TelegramGroup || peer is TelegramChannel, deletedIndex == 0 {
-            self.galleryEntries = []
-            self.items = []
-            self.itemsUpdated?([])
-            self.currentIndex = 0
-            if let size = self.validLayout {
-                self.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
+        switch self.peer {
+        case .legacyGroup, .channel:
+            if deletedIndex == 0 {
+                self.galleryEntries = []
+                self.items = []
+                self.itemsUpdated?([])
+                self.currentIndex = 0
+                if let size = self.validLayout {
+                    self.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
+                }
+                return true
             }
-            return true
+        default:
+            break
         }
         
         self.galleryEntries = normalizeEntries(entries)
@@ -1146,7 +1149,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     private var additionalEntryProgress: Signal<Float?, NoError>? = nil
-    public func update(size: CGSize, peer: Peer?, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, peer: EnginePeer?, customNode: ASDisplayNode? = nil, additionalEntry: Signal<(TelegramMediaImageRepresentation, Float)?, NoError> = .single(nil), isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         let previousExpanded = self.isExpanded
         self.isExpanded = isExpanded
@@ -1304,7 +1307,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public var updateCustomItemsOnlySynchronously = false
     
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition, stripTransition: ContainedViewLayoutTransition, synchronous: Bool = false) {
-        var validIds: [MediaResourceId] = []
+        var validIds: [EngineMediaResource.Id] = []
         var addedItemNodesForAdditiveTransition: [PeerInfoAvatarListItemNode] = []
         var additiveTransitionOffset: CGFloat = 0.0
         var itemsAdded = false
@@ -1371,7 +1374,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 photoTitle = representation.hasVideo ? presentationData.strings.UserInfo_PublicVideo : presentationData.strings.UserInfo_PublicPhoto
                 hasLink = true
                 if let peer = self.peer {
-                    fallbackImageSignal = peerAvatarCompleteImage(account: self.context.account, peer: EnginePeer(peer), forceProvidedRepresentation: true, representation: representation, size: CGSize(width: 28.0, height: 28.0))
+                    fallbackImageSignal = peerAvatarCompleteImage(account: self.context.account, peer: peer, forceProvidedRepresentation: true, representation: representation, size: CGSize(width: 28.0, height: 28.0))
                 }
             }
                         
@@ -1398,7 +1401,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         for itemNode in addedItemNodesForAdditiveTransition {
             transition.animatePositionAdditive(node: itemNode, offset: CGPoint(x: additiveTransitionOffset, y: 0.0))
         }
-        var removeIds: [MediaResourceId] = []
+        var removeIds: [EngineMediaResource.Id] = []
         for (id, _) in self.itemNodes {
             if !validIds.contains(id) {
                 removeIds.append(id)

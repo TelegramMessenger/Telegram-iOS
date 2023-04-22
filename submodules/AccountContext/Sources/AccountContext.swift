@@ -10,7 +10,6 @@ import AsyncDisplayKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
-import MeshAnimationCache
 import InAppPurchaseManager
 import AnimationCache
 import MultiAnimationRenderer
@@ -843,6 +842,9 @@ public protocol SharedAccountContext: AnyObject {
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
     
+    var enablePreloads: Promise<Bool> { get }
+    var hasPreloadBlockingContent: Promise<Bool> { get }
+    
     var hasGroupCallOnScreen: Signal<Bool, NoError> { get }
     var currentGroupCallController: ViewController? { get }
     
@@ -935,7 +937,6 @@ public protocol AccountContext: AnyObject {
     var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
-    var meshAnimationCache: MeshAnimationCache { get }
     
     var animationCache: AnimationCache { get }
     var animationRenderer: MultiAnimationRenderer { get }

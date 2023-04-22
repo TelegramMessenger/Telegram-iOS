@@ -2057,8 +2057,8 @@ public func chatWebpageSnippetPhoto(account: Account, userLocation: MediaResourc
     }
 }
 
-public func chatMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, videoReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return mediaGridMessageVideo(postbox: postbox, userLocation: userLocation, videoReference: videoReference)
+public func chatMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, videoReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return mediaGridMessageVideo(postbox: postbox, userLocation: userLocation, videoReference: videoReference, synchronousLoad: synchronousLoad)
 }
 
 private func chatSecretMessageVideoData(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, synchronousLoad: Bool) -> Signal<Data?, NoError> {

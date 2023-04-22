@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -59,7 +58,7 @@ final class VoiceChatParticipantItem: ListViewItem {
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     let context: AccountContext
-    let peer: Peer
+    let peer: EnginePeer
     let text: ParticipantText
     let expandedText: ParticipantText?
     let icon: Icon
@@ -71,7 +70,7 @@ final class VoiceChatParticipantItem: ListViewItem {
     
     public let selectable: Bool = true
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, getAudioLevel: (() -> Signal<Float, NoError>)?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: EnginePeer, text: ParticipantText, expandedText: ParticipantText?, icon: Icon, getAudioLevel: (() -> Signal<Float, NoError>)?, action: ((ASDisplayNode?) -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, getIsExpanded: @escaping () -> Bool, getUpdatingAvatar: @escaping () -> Signal<(TelegramMediaImageRepresentation, Float)?, NoError>) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -785,7 +784,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let rightInset: CGFloat = params.rightInset
             
             var updatedTitle = false
-            if let user = item.peer as? TelegramUser {
+            if case let .user(user) = item.peer {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                         let string = NSMutableAttributedString()
                         switch item.nameDisplayOrder {
@@ -806,9 +805,9 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 } else {
                     titleAttributedString = NSAttributedString(string: item.presentationData.strings.User_DeletedAccount, font: titleFont, textColor: titleColor)
                 }
-            } else if let group = item.peer as? TelegramGroup {
+            } else if case let .legacyGroup(group) = item.peer {
                 titleAttributedString = NSAttributedString(string: group.title, font: titleFont, textColor: titleColor)
-            } else if let channel = item.peer as? TelegramChannel {
+            } else if case let .channel(channel) = item.peer {
                 titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: titleColor)
             }
             if let currentTitle = currentTitle, currentTitle != titleAttributedString?.string {
@@ -840,7 +839,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
             } else if item.peer.isFake {
                 credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
-            } else if let user = item.peer as? TelegramUser, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+            } else if case let .user(user) = item.peer, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
                 credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
             } else if item.peer.isVerified {
                 credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
@@ -1133,7 +1132,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     if item.peer.isDeleted {
                         overrideImage = .deletedIcon
                     }
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
                 
                     strongSelf.highlightContainerNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: -UIScreenPixel), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel + 11.0))
                     

@@ -24,6 +24,8 @@ swift_library(
         "//submodules/PeerAvatarGalleryUI:PeerAvatarGalleryUI",
         "//submodules/MediaResources:MediaResources",
         "//submodules/WebsiteType:WebsiteType",
+        "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
+        "//submodules/TelegramUI/Components/Stories/StoryContentComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -1,6 +1,6 @@
 import Postbox
 
-public final class TelegramMediaGame: Media {
+public final class TelegramMediaGame: Media, Equatable {
     public let gameId: Int64
     public let accessHash: Int64
     public let name: String
@@ -50,6 +50,10 @@ public final class TelegramMediaGame: Media {
         } else {
             encoder.encodeNil(forKey: "f")
         }
+    }
+    
+    public static func ==(lhs: TelegramMediaGame, rhs: TelegramMediaGame) -> Bool {
+        return lhs.isEqual(to: rhs)
     }
     
     public func isEqual(to other: Media) -> Bool {

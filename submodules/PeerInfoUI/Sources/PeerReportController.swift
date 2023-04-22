@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
@@ -17,9 +16,9 @@ import TelegramPermissionsUI
 import Markdown
 
 public enum PeerReportSubject {
-    case peer(PeerId)
-    case messages([MessageId])
-    case profilePhoto(PeerId, Int64)
+    case peer(EnginePeer.Id)
+    case messages([EngineMessage.Id])
+    case profilePhoto(EnginePeer.Id, Int64)
 }
 
 public enum PeerReportOption {

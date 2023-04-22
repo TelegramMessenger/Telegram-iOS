@@ -414,24 +414,24 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
                                 default:
                                     switch key.namespace {
                                         case Namespaces.Peer.CloudUser:
-                                            users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                            users[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                         default:
                                             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                                channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                                channels[key] = NotificationExceptionWrapper(settings: value, peer: .channel(peer))
                                             } else {
-                                                groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                                groups[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                             }
                                     }
                             }
                         default:
                             switch key.namespace {
                                 case Namespaces.Peer.CloudUser:
-                                    users[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                    users[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                 default:
                                     if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                        channels[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                        channels[key] = NotificationExceptionWrapper(settings: value, peer: .channel(peer))
                                     } else {
-                                        groups[key] = NotificationExceptionWrapper(settings: value, peer: peer)
+                                        groups[key] = NotificationExceptionWrapper(settings: value, peer: EnginePeer(peer))
                                     }
                             }
                     }

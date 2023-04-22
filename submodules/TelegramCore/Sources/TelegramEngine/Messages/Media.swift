@@ -1,6 +1,6 @@
 import Postbox
 
-public enum EngineMedia {
+public enum EngineMedia: Equatable {
     public typealias Id = MediaId
 
     case image(TelegramMediaImage)

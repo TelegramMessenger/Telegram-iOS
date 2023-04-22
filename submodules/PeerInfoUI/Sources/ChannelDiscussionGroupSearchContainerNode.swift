@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -14,20 +13,20 @@ import ContactsPeerItem
 import ItemListUI
 
 private enum ChannelDiscussionGroupSearchContent: Equatable {
-    case peer(Peer)
+    case peer(EnginePeer)
     
     static func ==(lhs: ChannelDiscussionGroupSearchContent, rhs: ChannelDiscussionGroupSearchContent) -> Bool {
         switch lhs {
             case let .peer(lhsPeer):
                 if case let .peer(rhsPeer) = rhs {
-                    return lhsPeer.isEqual(rhsPeer)
+                    return lhsPeer == rhsPeer
                 } else {
                     return false
                 }
         }
     }
     
-    var peerId: PeerId {
+    var peerId: EnginePeer.Id {
         switch self {
             case let .peer(peer):
                 return peer.id
@@ -36,15 +35,15 @@ private enum ChannelDiscussionGroupSearchContent: Equatable {
 }
 
 private final class ChannelDiscussionGroupSearchInteraction {
-    let peerSelected: (Peer) -> Void
+    let peerSelected: (EnginePeer) -> Void
     
-    init(peerSelected: @escaping (Peer) -> Void) {
+    init(peerSelected: @escaping (EnginePeer) -> Void) {
         self.peerSelected = peerSelected
     }
 }
 
 private struct ChannelDiscussionGroupSearchEntryId: Hashable {
-    let peerId: PeerId
+    let peerId: EnginePeer.Id
 }
 
 private final class ChannelDiscussionGroupSearchEntry: Comparable, Identifiable {
@@ -71,7 +70,7 @@ private final class ChannelDiscussionGroupSearchEntry: Comparable, Identifiable 
     func item(context: AccountContext, presentationData: PresentationData, interaction: ChannelDiscussionGroupSearchInteraction) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer), chatPeer: EnginePeer(peer)), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: nil, action: { _ in
                     interaction.peerSelected(peer)
                 })
         }
@@ -100,7 +99,7 @@ private struct ChannelDiscussionGroupSearchContainerState: Equatable {
 
 final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
-    private let openPeer: (Peer) -> Void
+    private let openPeer: (EnginePeer) -> Void
     
     private let dimNode: ASDisplayNode
     private let listNode: ListView
@@ -120,7 +119,7 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
         return true
     }
     
-    init(context: AccountContext, peers: [Peer], openPeer: @escaping (Peer) -> Void) {
+    init(context: AccountContext, peers: [EnginePeer], openPeer: @escaping (EnginePeer) -> Void) {
         self.context = context
         self.openPeer = openPeer
         
@@ -153,9 +152,9 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
             openPeer(peer)
         })
         
-        var searchIndex: [ValueBoxKey: [Peer]] = [:]
+        var searchIndex: [EngineDataBuffer: [EnginePeer]] = [:]
         for peer in peers {
-            for token in peer.indexName.indexTokens {
+            for token in peer._asPeer().indexName.indexTokens {
                 if searchIndex[token] == nil {
                     searchIndex[token] = []
                 }
@@ -170,9 +169,9 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
             }
             
             var entries: [ChannelDiscussionGroupSearchEntry] = []
-            let searchQueryTokens = stringIndexTokens(query.lowercased(), transliteration: .none)
-            var filteredPeers: [Peer] = []
-            var existingPeers = Set<PeerId>()
+            let searchQueryTokens = context.engine.peers.tokenizeSearchString(string: query.lowercased(), transliteration: .none)
+            var filteredPeers: [EnginePeer] = []
+            var existingPeers = Set<EnginePeer.Id>()
             for (key, values) in searchIndex {
                 inner: for token in searchQueryTokens {
                     if token.isPrefix(to: key) {

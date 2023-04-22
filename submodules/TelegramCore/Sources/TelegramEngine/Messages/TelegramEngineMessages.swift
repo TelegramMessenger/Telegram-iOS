@@ -3,6 +3,10 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
+public enum EngineOutgoingMessageContent {
+    case text(String)
+}
+
 public extension TelegramEngine {
     final class Messages {
         private let account: Account
@@ -189,6 +193,31 @@ public extension TelegramEngine {
         public func exportMessageLink(peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
             return _internal_exportMessageLink(account: self.account, peerId: peerId, messageId: messageId, isThread: isThread)
         }
+        
+        public func enqueueOutgoingMessage(
+            to peerId: EnginePeer.Id,
+            replyTo replyToMessageId: EngineMessage.Id?,
+            content: EngineOutgoingMessageContent
+        ) {
+            switch content {
+            case let .text(text):
+                let message: EnqueueMessage = .message(
+                    text: text,
+                    attributes: [],
+                    inlineStickers: [:],
+                    mediaReference: nil,
+                    replyToMessageId: replyToMessageId,
+                    localGroupingKey: nil,
+                    correlationId: nil,
+                    bubbleUpEmojiOrStickersets: []
+                )
+                let _ = enqueueMessages(
+                    account: self.account,
+                    peerId: peerId,
+                    messages: [message]
+                ).start()
+            }
+        }
 
         public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {
             return _internal_enqueueOutgoingMessageWithChatContextResult(account: self.account, to: peerId, threadId: threadId, botId: botId, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
@@ -196,6 +225,19 @@ public extension TelegramEngine {
         
         public func outgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId?, hideVia: Bool, silentPosting: Bool, scheduleTime: Int32?, correlationId: Int64?) -> EnqueueMessage? {
             return _internal_outgoingMessageWithChatContextResult(to: peerId, threadId: threadId, botId: botId, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
+        }
+        
+        public func setMessageReactions(
+            id: EngineMessage.Id,
+            reactions: [UpdateMessageReaction]
+        ) {
+            let _ = updateMessageReactionsInteractively(
+                account: self.account,
+                messageId: id,
+                reactions: reactions,
+                isLarge: false,
+                storeAsRecentlyUsed: false
+            ).start()
         }
 
         public func requestChatContextResults(botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {

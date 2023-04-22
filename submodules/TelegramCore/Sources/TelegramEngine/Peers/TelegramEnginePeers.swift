@@ -9,6 +9,8 @@ public enum AddressNameValidationStatus: Equatable {
     case availability(AddressNameAvailability)
 }
 
+public typealias EngineStringIndexTokenTransliteration = StringIndexTokenTransliteration
+
 public final class OpaqueChatInterfaceState {
     public let opaqueData: Data?
     public let historyScrollMessageIndex: MessageIndex?
@@ -64,8 +66,11 @@ public extension TelegramEngine {
             return _internal_checkPublicChannelCreationAvailability(account: self.account, location: location)
         }
 
-        public func adminedPublicChannels(scope: AdminedPublicChannelsScope = .all) -> Signal<[Peer], NoError> {
+        public func adminedPublicChannels(scope: AdminedPublicChannelsScope = .all) -> Signal<[EnginePeer], NoError> {
             return _internal_adminedPublicChannels(account: self.account, scope: scope)
+            |> map { peers -> [EnginePeer] in
+                return peers.map(EnginePeer.init)
+            }
         }
 
         public func channelAddressNameAssignmentAvailability(peerId: PeerId?) -> Signal<ChannelAddressNameAssignmentAvailability, NoError> {
@@ -373,8 +378,11 @@ public extension TelegramEngine {
             return _internal_removePeerMember(account: self.account, peerId: peerId, memberId: memberId)
         }
 
-        public func availableGroupsForChannelDiscussion() -> Signal<[Peer], AvailableChannelDiscussionGroupError> {
+        public func availableGroupsForChannelDiscussion() -> Signal<[EnginePeer], AvailableChannelDiscussionGroupError> {
             return _internal_availableGroupsForChannelDiscussion(postbox: self.account.postbox, network: self.account.network)
+            |> map { peers -> [EnginePeer] in
+                return peers.map(EnginePeer.init)
+            }
         }
 
         public func updateGroupDiscussionForChannel(channelId: PeerId?, groupId: PeerId?) -> Signal<Bool, ChannelDiscussionGroupError> {
@@ -1114,6 +1122,15 @@ public extension TelegramEngine {
         
         public func requestLeaveChatFolderSuggestions(folderId: Int32) -> Signal<[EnginePeer.Id], NoError> {
             return _internal_requestLeaveChatFolderSuggestions(account: self.account, folderId: folderId)
+        }
+        
+        public func keepPeerUpdated(id: EnginePeer.Id, forceUpdate: Bool) -> Signal<Never, NoError> {
+            return self.account.viewTracker.peerView(id, updateData: forceUpdate)
+            |> ignoreValues
+        }
+        
+        public func tokenizeSearchString(string: String, transliteration: EngineStringIndexTokenTransliteration) -> [EngineDataBuffer] {
+            return stringIndexTokens(string, transliteration: transliteration)
         }
     }
 }
