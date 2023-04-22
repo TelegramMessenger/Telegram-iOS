@@ -219,6 +219,11 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let navigationController = navigationController {
                                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
                             }
+                        case let .withBotApp(botAppStart):
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            if let navigationController = navigationController {
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), botAppStart: botAppStart))
+                            }
                         default:
                             break
                     }
@@ -738,7 +743,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
                             if let appName {
-                                result += "\(appName)"
+                                result += "/\(appName)"
                             }
                             if let startApp {
                                 result += "?startapp=\(startApp)"
