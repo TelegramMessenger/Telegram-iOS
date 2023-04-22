@@ -111,7 +111,7 @@ private func mayRemoveWholeText(with media: [Media]) -> Bool {
     return media.contains { $0 is TelegramMediaImage || $0 is TelegramMediaFile }
 }
 
-private let foreignAgentNoticePartialMatchRegExes = foreignAgentNoticePatterns.map { try! NSRegularExpression(pattern: partialMatchPattern(for: #"(?:^|\n)"# + $0), options: .caseInsensitive) }
+private let foreignAgentNoticePartialMatchRegExes = foreignAgentNoticePatterns.map { try! NSRegularExpression(pattern: partialMatchPattern(for: $0), options: .caseInsensitive) }
 
 // Should be called after regular removeForeignAgentNotice() have not found a match.
 public func removeForeignAgentNoticePartialMatchAtEnd(text: String, mayRemoveWholeText: Bool) -> String {
@@ -119,7 +119,7 @@ public func removeForeignAgentNoticePartialMatchAtEnd(text: String, mayRemoveWho
     let nsrange = NSRange(text.startIndex..<text.endIndex, in: text)
     for foreignAgentNoticeRegEx in foreignAgentNoticePartialMatchRegExes {
         for match in foreignAgentNoticeRegEx.matches(in: text, range: nsrange) {
-            if let range = Range(match.range, in: text), range.lowerBound != text.startIndex || mayRemoveWholeText, text[range].trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
+            if let range = Range(match.range, in: text), range.lowerBound != text.startIndex || mayRemoveWholeText, text[range].trimmingCharacters(in: .whitespacesAndNewlines).count >= 20 {
                 return String(text[..<range.lowerBound])
             }
         }
@@ -141,7 +141,10 @@ private func partialMatchPattern(for regex: String) -> String {
         }
         
         func appendOptional(_ len: Int) {
-            let newInd = regex.index(ind, offsetBy: len, limitedBy: regex.endIndex) ?? regex.endIndex
+            var newInd = regex.index(ind, offsetBy: len, limitedBy: regex.endIndex) ?? regex.endIndex
+            while newInd < regex.endIndex && ["*", "+", "?"].contains(regex[newInd]) {
+                newInd = regex.index(after: newInd)
+            }
             result += "(?:\(regex[ind..<newInd])|$)"
             ind = newInd
         }
