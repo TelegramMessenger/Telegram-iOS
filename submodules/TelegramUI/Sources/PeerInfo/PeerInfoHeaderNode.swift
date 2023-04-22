@@ -2607,6 +2607,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
+        let isLandscape = containerInset > 16.0
+        
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         
@@ -2764,7 +2766,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
         
         self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-        
+
         let headerBackgroundColor: UIColor = presentationData.theme.list.blocksBackgroundColor
         var effectiveSeparatorAlpha: CGFloat
         if let navigationTransition = self.navigationTransition {
@@ -2778,7 +2780,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     transitionSourceAvatarFrame = avatarNavigationNode.avatarNode.view.convert(avatarNavigationNode.avatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
                 }
             } else {
-                if deviceMetrics.hasDynamicIsland {
+                if deviceMetrics.hasDynamicIsland && !isLandscape {
                     transitionSourceAvatarFrame = CGRect(origin: CGPoint(x: avatarFrame.minX, y: -20.0), size: avatarFrame.size).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
                 } else {
                     transitionSourceAvatarFrame = avatarFrame.offsetBy(dx: 0.0, dy: -avatarFrame.maxY).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
@@ -3304,7 +3306,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             controlsClippingFrame = apparentAvatarFrame
         }
         
-        let avatarClipOffset: CGFloat = !self.isAvatarExpanded && deviceMetrics.hasDynamicIsland && self.avatarClippingNode.clipsToBounds ? 48.0 : 0.0
+        let avatarClipOffset: CGFloat = !self.isAvatarExpanded && deviceMetrics.hasDynamicIsland && self.avatarClippingNode.clipsToBounds && !isLandscape ? 48.0 : 0.0
         let clippingNodeTransition = ContainedViewLayoutTransition.immediate
         clippingNodeTransition.updateFrame(layer: self.avatarClippingNode.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: avatarClipOffset), size: CGSize(width: width, height: 1000.0)))
         clippingNodeTransition.updateSublayerTransformOffset(layer: self.avatarClippingNode.layer, offset: CGPoint(x: 0.0, y: -avatarClipOffset))
@@ -3351,7 +3353,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateSublayerTransformScale(node: self.avatarListNode.listContainerTransformNode, scale: avatarListContainerScale)
         }
         
-        if deviceMetrics.hasDynamicIsland && self.forumTopicThreadId == nil && self.navigationTransition == nil {
+        if deviceMetrics.hasDynamicIsland && self.forumTopicThreadId == nil && self.navigationTransition == nil && !isLandscape {
             let maskValue = max(0.0, min(1.0, contentOffset / 120.0))
             self.avatarListNode.containerNode.view.mask = self.avatarListNode.maskNode.view
             if maskValue > 0.03 {
@@ -3368,7 +3370,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             self.avatarListNode.listContainerNode.topShadowNode.isHidden = !self.isAvatarExpanded
             
-            self.avatarListNode.maskNode.position = CGPoint(x: 0.0, y: -self.avatarListNode.frame.minY + 48.0 + 85.5)
+            var avatarMaskOffset: CGFloat = 0.0
+            if contentOffset < 0.0 {
+                avatarMaskOffset -= contentOffset
+            }
+            
+            self.avatarListNode.maskNode.position = CGPoint(x: 0.0, y: -self.avatarListNode.frame.minY + 48.0 + 85.5 + avatarMaskOffset)
             self.avatarListNode.maskNode.bounds = CGRect(origin: .zero, size: CGSize(width: 171.0, height: 171.0))
             
             self.avatarListNode.bottomCoverNode.position = self.avatarListNode.maskNode.position
