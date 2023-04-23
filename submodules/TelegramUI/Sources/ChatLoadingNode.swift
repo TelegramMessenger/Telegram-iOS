@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import Display
 import TelegramCore
 import TelegramPresentationData
@@ -207,7 +208,9 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.borderNode.view.mask = self.borderMaskNode.view
         
         if self.context.sharedContext.energyUsageSettings.fullTranslucency {
-            self.backgroundNode?.updateIsLooping(true)
+            Queue.mainQueue().after(0.3) {
+                self.backgroundNode?.updateIsLooping(true)
+            }
         }
     }
     
