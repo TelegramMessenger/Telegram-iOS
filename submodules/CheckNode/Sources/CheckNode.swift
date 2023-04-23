@@ -476,9 +476,19 @@ public class CheckLayer: CALayer {
 
                 context.strokePath()
             case let .counter(number):
-                let text = NSAttributedString(string: "\(number)", font: Font.with(size: 16.0, design: .round, weight: .regular, traits: []), textColor: parameters.theme.strokeColor.withMultipliedAlpha(parameters.animationProgress))
+                let fontSize: CGFloat
+                let string = "\(number)"
+                switch string.count {
+                case 1:
+                    fontSize = 16.0
+                case 2:
+                    fontSize = 15.0
+                default:
+                    fontSize = 13.0
+                }
+                let text = NSAttributedString(string: string, font: Font.with(size: fontSize, design: .round, weight: .medium, traits: []), textColor: parameters.theme.strokeColor.withMultipliedAlpha(parameters.animationProgress))
                 let textRect = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
-                text.draw(at: CGPoint(x: UIScreenPixel + textRect.minX + floor((size.width - textRect.width) * 0.5), y: textRect.minY + floorToScreenPixels((size.height - textRect.height) * 0.5)))
+                text.draw(at: CGPoint(x: textRect.minX + floorToScreenPixels((size.width - textRect.width) * 0.5), y: textRect.minY + floorToScreenPixels((size.height - textRect.height) * 0.5)))
         }
     }
 }
