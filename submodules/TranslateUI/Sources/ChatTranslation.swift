@@ -205,10 +205,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             var fromLangs: [String: Int] = [:]
                             var count = 0
                             for message in messages {
-                                if let _ = URL(string: message.text) {
-                                    continue
-                                }
-                                if message.text.count >= 10 {
+                                if message.effectivelyIncoming(context.account.peerId), message.text.count >= 10 {
                                     var text = String(message.text.prefix(256))
                                     if var entities = message.textEntitiesAttribute?.entities.filter({ [.Pre, .Code, .Url, .Email, .Mention, .Hashtag, .BotCommand].contains($0.type) }) {
                                         entities = entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound })
