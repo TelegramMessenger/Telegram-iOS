@@ -209,7 +209,9 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         if self.context.sharedContext.energyUsageSettings.fullTranslucency {
             Queue.mainQueue().after(0.3) {
-                self.backgroundNode?.updateIsLooping(true)
+                if !self.didAnimateOut {
+                    self.backgroundNode?.updateIsLooping(true)
+                }
             }
         }
     }
@@ -282,11 +284,12 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.borderMaskNode.bounds = self.borderMaskNode.bounds.offsetBy(dx: 0.0, dy: inset)
     }
         
+    private var didAnimateOut = false
     func animateOut(_ historyNode: ChatHistoryNode, completion: @escaping () -> Void = {}) {
         guard let listNode = historyNode as? ListView, let (size, _, _) = self.validLayout else {
             return
         }
-        
+        self.didAnimateOut = true
         self.backgroundNode?.updateIsLooping(false)
         
         let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
