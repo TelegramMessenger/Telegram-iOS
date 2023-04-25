@@ -498,21 +498,6 @@ extension UserDefaults {
             return true
         }
         
-        var isDebugConfiguration = false
-        #if DEBUG
-        isDebugConfiguration = true
-        #endif
-        
-        if Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" {
-            isDebugConfiguration = true
-        }
-        
-        if isDebugConfiguration || buildConfig.isInternalBuild {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
-        } else {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
-        }
-        
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         

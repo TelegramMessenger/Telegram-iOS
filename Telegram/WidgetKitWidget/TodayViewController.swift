@@ -105,16 +105,20 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
     
     var ptgSecretPasscodes: PtgSecretPasscodes!
+    var loggingSettings: LoggingSettings!
     
     let semaphore: DispatchSemaphore = DispatchSemaphore(value: 0)
     let _ = accountManager.transaction({ transaction in
-        return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
-    }).start(next: { result in
-        ptgSecretPasscodes = result
+        ptgSecretPasscodes = PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        loggingSettings = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
+    }).start(completed: {
         semaphore.signal()
     })
-    
     semaphore.wait()
+    
+    Logger.shared.logToFile = loggingSettings.logToFile
+    Logger.shared.logToConsole = loggingSettings.logToConsole
+    Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
     
     let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
     let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)

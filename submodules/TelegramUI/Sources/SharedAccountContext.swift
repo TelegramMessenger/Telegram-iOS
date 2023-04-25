@@ -442,6 +442,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     return PreferencesEntry(PtgSettings(entry).withUpdated(isTestingEnvironment: Bundle.isTestFlightOrDevelopment))
                 })
             }).start()
+            
+            if !Bundle.isTestFlightOrDevelopment {
+                let _ = updateLoggingSettings(accountManager: accountManager, {
+                    $0.withUpdatedLogToFile(false).withUpdatedLogToConsole(false).withUpdatedRedactSensitiveData(true)
+                }).start()
+                
+                Logger.shared.cleanLogFiles(rootPath: rootPath)
+            }
         }
 
         var ptgSecretPasscodesSignal: Signal<PtgSecretPasscodes, NoError> = .single(initialPresentationDataAndSettings.ptgSecretPasscodes)
