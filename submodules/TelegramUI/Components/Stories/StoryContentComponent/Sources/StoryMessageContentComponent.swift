@@ -82,7 +82,7 @@ final class StoryMessageContentComponent: Component {
         return fetchSignal ?? .complete()
     }
 
-	final class View: UIView {
+    final class View: StoryContentItem.View {
         private let imageNode: TransformImageNode
         private var videoNode: UniversalVideoNode?
         
@@ -140,6 +140,10 @@ final class StoryMessageContentComponent: Component {
                         ),
                         priority: .gallery
                     )
+                    
+                    self.videoNode = videoNode
+                    self.addSubnode(videoNode)
+                    
                     videoNode.ownsContentNodeUpdated = { [weak self] value in
                         guard let self else {
                             return
@@ -150,13 +154,14 @@ final class StoryMessageContentComponent: Component {
                         }
                     }
                     videoNode.canAttachContent = true
-                    self.videoNode = videoNode
-                    self.addSubnode(videoNode)
                     if update {
                         self.state?.updated(transition: .immediate)
                     }
                 }
             }
+        }
+        
+        func setIsProgressPaused(_ isProgressPaused: Bool) {
         }
         
         func update(component: StoryMessageContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {

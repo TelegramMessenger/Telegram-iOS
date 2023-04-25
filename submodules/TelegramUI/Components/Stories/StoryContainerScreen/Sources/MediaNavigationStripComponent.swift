@@ -65,6 +65,8 @@ final class MediaNavigationStripComponent: Component {
     final class View: UIView {
         private var visibleItems: [Int: ItemLayer] = [:]
         
+        private var component: MediaNavigationStripComponent?
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
             
@@ -76,7 +78,21 @@ final class MediaNavigationStripComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        func updateCurrentItemProgress(value: CGFloat, transition: Transition) {
+            guard let component = self.component else {
+                return
+            }
+            guard let itemLayer = self.visibleItems[component.index] else {
+                return
+            }
+            
+            let itemFrame = itemLayer.bounds
+            transition.setFrame(layer: itemLayer.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value * itemFrame.width, height: itemFrame.height)))
+        }
+        
         func update(component: MediaNavigationStripComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            self.component = component
+            
             let spacing: CGFloat = 3.0
             let itemHeight: CGFloat = 2.0
             let minItemWidth: CGFloat = 10.0
@@ -103,10 +119,6 @@ final class MediaNavigationStripComponent: Component {
                     globalOffset = 0.0
                 }
                 
-                //itemWidth * itemCount + (itemCount - 1) * spacing = width
-                //itemWidth * itemCount + itemCount * spacing - spacing = width
-                //itemCount * (itemWidth + spacing) = width + spacing
-                //itemCount = (width + spacing) / (itemWidth + spacing)
                 let potentiallyVisibleCount = Int(ceil((availableSize.width + spacing) / (itemWidth + spacing)))
                 for i in (component.index - potentiallyVisibleCount) ... (component.index + potentiallyVisibleCount) {
                     if i < 0 {

@@ -691,7 +691,7 @@ public final class AccountStateManager {
                             }
                         }
                         
-                        let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts))
+                        let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsLimit: nil, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts, qtsLimit: nil))
                         |> map(Optional.init)
                         |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
                             if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
@@ -1204,7 +1204,7 @@ public final class AccountStateManager {
                     let flags: Int32 = 0
                     let ptsTotalLimit: Int32? = nil
                     
-                    let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: Int32.max, qts: authorizedState.qts))
+                    let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsLimit: nil, ptsTotalLimit: ptsTotalLimit, date: Int32.max, qts: authorizedState.qts, qtsLimit: nil))
                     |> map(Optional.init)
                     |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
                         if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
