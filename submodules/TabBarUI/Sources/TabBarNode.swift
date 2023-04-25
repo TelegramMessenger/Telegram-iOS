@@ -478,13 +478,14 @@ class TabBarNode: ASDisplayNode {
                 let (textImage, contentWidth) = tabBarItemImage(item.item.selectedImage, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
                 let (image, imageContentWidth): (UIImage, CGFloat)
                 
-                if let _ = item.item.animationName {
+                if let _ = item.item.animationName, !_animationsTemporarilyDisabledForCoverUp {
                     (image, imageContentWidth) = (UIImage(), 0.0)
                     
+                    let animationNodeWasHidden = node.animationNode.isHidden
                     node.animationNode.isHidden = false
                     let animationSize: Int = Int(51.0 * UIScreen.main.scale)
                     node.animationNode.visibility = true
-                    if !node.isSelected {
+                    if !node.isSelected || animationNodeWasHidden {
                         node.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.item.animationName ?? ""), width: animationSize, height: animationSize, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                     }
                     node.animationNode.setOverlayColor(self.theme.tabBarSelectedIconColor, replace: true, animated: false)
@@ -553,13 +554,14 @@ class TabBarNode: ASDisplayNode {
             if let selectedIndex = self.selectedIndex, selectedIndex == index {
                 let (textImage, contentWidth) = tabBarItemImage(item.item.selectedImage, title: item.item.title ?? "", backgroundColor: .clear, tintColor: self.theme.tabBarSelectedTextColor, horizontal: self.horizontal, imageMode: false, centered: self.centered)
                 let (image, imageContentWidth): (UIImage, CGFloat)
-                if let _ = item.item.animationName {
+                if let _ = item.item.animationName, !_animationsTemporarilyDisabledForCoverUp {
                     (image, imageContentWidth) = (UIImage(), 0.0)
                     
+                    let animationNodeWasHidden = node.animationNode.isHidden
                     node.animationNode.isHidden = false
                     let animationSize: Int = Int(51.0 * UIScreen.main.scale)
                     node.animationNode.visibility = true
-                    if !node.isSelected {
+                    if !node.isSelected || animationNodeWasHidden {
                         node.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.item.animationName ?? ""), width: animationSize, height: animationSize, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                     }
                     node.animationNode.setOverlayColor(self.theme.tabBarSelectedIconColor, replace: true, animated: false)
