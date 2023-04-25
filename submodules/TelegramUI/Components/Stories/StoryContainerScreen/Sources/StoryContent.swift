@@ -11,6 +11,11 @@ public final class StoryContentItem {
         }
     }
     
+    open class View: UIView {
+        func setIsProgressPaused(_ isProgressPaused: Bool) {
+        }
+    }
+    
     public final class Environment: Equatable {
         public let externalState: ExternalState
         public let presentationProgressUpdated: (Double) -> Void

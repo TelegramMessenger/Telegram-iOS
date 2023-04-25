@@ -291,14 +291,9 @@ private final class StoryContainerScreenComponent: Component {
                                 }
                                 visibleItem.currentProgress = progress
                                 
-                                let _ = self.navigationStrip.updateEnvironment(
-                                    transition: .immediate,
-                                    environment: {
-                                        MediaNavigationStripComponent.EnvironmentType(
-                                            currentProgress: progress
-                                        )
-                                    }
-                                )
+                                if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
+                                    navigationStripView.updateCurrentItemProgress(value: progress, transition: .immediate)
+                                }
                                 if progress >= 1.0 && !visibleItem.requestedNext {
                                     visibleItem.requestedNext = true
                                     
