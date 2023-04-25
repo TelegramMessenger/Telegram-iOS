@@ -65,7 +65,8 @@ public enum StoryChatContent {
                     },
                     targetMessageId: entry.message.id,
                     preload: preload,
-                    hasLike: hasLike
+                    hasLike: hasLike,
+                    isMy: false//!entry.message.effectivelyIncoming(context.account.peerId)
                 ))
             }
             return StoryContentItemSlice(

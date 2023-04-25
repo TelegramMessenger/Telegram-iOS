@@ -20,6 +20,7 @@ import ChatPresentationInterfaceState
 import CameraScreen
 import LegacyComponents
 import LegacyMediaPickerUI
+import LegacyCamera
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData

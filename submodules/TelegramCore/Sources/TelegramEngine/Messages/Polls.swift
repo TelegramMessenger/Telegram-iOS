@@ -272,8 +272,13 @@ private final class PollResultsOptionContext {
                             return ([], 0, nil)
                         }
                         switch result {
-                        case let .votesList(_, count, votes, users, nextOffset):
+                        case let .votesList(_, count, votes, chats, users, nextOffset):
                             var peers: [Peer] = []
+                            for apiChat in chats {
+                                if let peer = parseTelegramGroupOrChannel(chat: apiChat) {
+                                    peers.append(peer)
+                                }
+                            }
                             for apiUser in users {
                                 peers.append(TelegramUser(user: apiUser))
                             }
@@ -284,12 +289,12 @@ private final class PollResultsOptionContext {
                             for vote in votes {
                                 let peerId: PeerId
                                 switch vote {
-                                case let .messageUserVote(userId, _, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
-                                case let .messageUserVoteInputOption(userId, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
-                                case let .messageUserVoteMultiple(userId, _, _):
-                                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                case let .messagePeerVote(peerIdValue, _, _):
+                                    peerId = peerIdValue.peerId
+                                case let .messagePeerVoteInputOption(peerIdValue, _):
+                                    peerId = peerIdValue.peerId
+                                case let .messagePeerVoteMultiple(peerIdValue, _, _):
+                                    peerId = peerIdValue.peerId
                                 }
                                 if let peer = transaction.getPeer(peerId) {
                                     resultPeers.append(RenderedPeer(peer: peer))

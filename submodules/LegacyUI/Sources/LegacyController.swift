@@ -438,6 +438,10 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     open var isContainerPanning: () -> Bool = { return false }
     open var isContainerExpanded: () -> Bool = { return false }
     
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
+        return nil
+    }
+    
     public init(presentation: LegacyControllerPresentation, theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
         self.presentation = presentation

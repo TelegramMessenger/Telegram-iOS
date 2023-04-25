@@ -4547,25 +4547,6 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getAllChats(exceptIds: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-2023787330)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(exceptIds.count))
-                    for item in exceptIds {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }
-                    return (FunctionDescription(name: "messages.getAllChats", parameters: [("exceptIds", String(describing: exceptIds))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Chats?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Chats
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.messages {
                 static func getAllDrafts() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1782549861)

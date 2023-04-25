@@ -63,17 +63,17 @@ public class ICloudFileResource: TelegramMediaResource {
     }
 }
 
-struct ICloudFileDescription {
-    struct AudioMetadata {
-        let title: String?
-        let performer: String?
-        let duration: Int
+public struct ICloudFileDescription {
+    public struct AudioMetadata {
+        public let title: String?
+        public let performer: String?
+        public let duration: Int
     }
     
-    let urlData: String
-    let fileName: String
-    let fileSize: Int
-    let audioMetadata: AudioMetadata?
+    public let urlData: String
+    public let fileName: String
+    public let fileSize: Int
+    public let audioMetadata: AudioMetadata?
 }
 
 private func descriptionWithUrl(_ url: URL) -> ICloudFileDescription? {
@@ -115,7 +115,7 @@ private func descriptionWithUrl(_ url: URL) -> ICloudFileDescription? {
     }
 }
 
-func iCloudFileDescription(_ url: URL) -> Signal<ICloudFileDescription?, NoError> {
+public func iCloudFileDescription(_ url: URL) -> Signal<ICloudFileDescription?, NoError> {
     return Signal { subscriber in
         var isRemote = false
         var isCurrent = true
@@ -191,7 +191,7 @@ private final class ICloudFileResourceCopyItem: MediaResourceDataFetchCopyLocalI
     }
 }
 
-func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         subscriber.putNext(.reset)
         

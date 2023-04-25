@@ -4,6 +4,21 @@ import Display
 import ComponentFlow
 
 final class MediaNavigationStripComponent: Component {
+    final class EnvironmentType: Equatable {
+        let currentProgress: Double
+        
+        init(currentProgress: Double) {
+            self.currentProgress = currentProgress
+        }
+        
+        static func ==(lhs: EnvironmentType, rhs: EnvironmentType) -> Bool {
+            if lhs.currentProgress != rhs.currentProgress {
+                return false
+            }
+            return true
+        }
+    }
+    
     let index: Int
     let count: Int
     
@@ -23,10 +38,17 @@ final class MediaNavigationStripComponent: Component {
     }
     
     private final class ItemLayer: SimpleLayer {
+        let foregroundLayer: SimpleLayer
+        
         override init() {
+            self.foregroundLayer = SimpleLayer()
+            
             super.init()
             
             self.cornerRadius = 1.5
+            
+            self.foregroundLayer.cornerRadius = 1.5
+            self.addSublayer(self.foregroundLayer)
         }
         
         required init?(coder: NSCoder) {
@@ -34,6 +56,8 @@ final class MediaNavigationStripComponent: Component {
         }
         
         override init(layer: Any) {
+            self.foregroundLayer = SimpleLayer()
+            
             super.init(layer: layer)
         }
     }
@@ -52,10 +76,10 @@ final class MediaNavigationStripComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: MediaNavigationStripComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MediaNavigationStripComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             let spacing: CGFloat = 3.0
             let itemHeight: CGFloat = 2.0
-            let minItemWidth: CGFloat = 3.0
+            let minItemWidth: CGFloat = 10.0
             
             var validIndices: [Int] = []
             if component.count != 0 {
@@ -110,7 +134,19 @@ final class MediaNavigationStripComponent: Component {
                     
                     transition.setFrame(layer: itemLayer, frame: itemFrame)
                     
-                    itemLayer.backgroundColor = UIColor(white: 1.0, alpha: i == component.index ? 1.0 : 0.5).cgColor
+                    itemLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.5).cgColor
+                    itemLayer.foregroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 1.0).cgColor
+                    
+                    let itemProgress: CGFloat
+                    if i < component.index {
+                        itemProgress = 1.0
+                    } else if i == component.index {
+                        itemProgress = max(0.0, min(1.0, environment[EnvironmentType.self].value.currentProgress))
+                    } else {
+                        itemProgress = 0.0
+                    }
+                    
+                    transition.setFrame(layer: itemLayer.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: itemProgress * itemFrame.width, height: itemFrame.height)))
                 }
             }
             
@@ -133,7 +169,7 @@ final class MediaNavigationStripComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

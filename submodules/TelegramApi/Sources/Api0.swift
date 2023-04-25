@@ -524,13 +524,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[784356159] = { return Api.MessageMedia.parse_messageMediaVenue($0) }
     dict[-1557277184] = { return Api.MessageMedia.parse_messageMediaWebPage($0) }
     dict[-1938180548] = { return Api.MessagePeerReaction.parse_messagePeerReaction($0) }
+    dict[-1228133028] = { return Api.MessagePeerVote.parse_messagePeerVote($0) }
+    dict[1959634180] = { return Api.MessagePeerVote.parse_messagePeerVoteInputOption($0) }
+    dict[1177089766] = { return Api.MessagePeerVote.parse_messagePeerVoteMultiple($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[1328256121] = { return Api.MessageReactions.parse_messageReactions($0) }
     dict[-2083123262] = { return Api.MessageReplies.parse_messageReplies($0) }
     dict[-1495959709] = { return Api.MessageReplyHeader.parse_messageReplyHeader($0) }
-    dict[886196148] = { return Api.MessageUserVote.parse_messageUserVote($0) }
-    dict[1017491692] = { return Api.MessageUserVote.parse_messageUserVoteInputOption($0) }
-    dict[-1973033641] = { return Api.MessageUserVote.parse_messageUserVoteMultiple($0) }
     dict[1163625789] = { return Api.MessageViews.parse_messageViews($0) }
     dict[975236280] = { return Api.MessagesFilter.parse_inputMessagesFilterChatPhotos($0) }
     dict[-530392189] = { return Api.MessagesFilter.parse_inputMessagesFilterContacts($0) }
@@ -635,7 +635,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2032041631] = { return Api.Poll.parse_poll($0) }
     dict[1823064809] = { return Api.PollAnswer.parse_pollAnswer($0) }
     dict[997055186] = { return Api.PollAnswerVoters.parse_pollAnswerVoters($0) }
-    dict[-591909213] = { return Api.PollResults.parse_pollResults($0) }
+    dict[2061444128] = { return Api.PollResults.parse_pollResults($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
     dict[1958953753] = { return Api.PremiumGiftOption.parse_premiumGiftOption($0) }
@@ -856,7 +856,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1517529484] = { return Api.Update.parse_updateMessageExtendedMedia($0) }
     dict[1318109142] = { return Api.Update.parse_updateMessageID($0) }
     dict[-1398708869] = { return Api.Update.parse_updateMessagePoll($0) }
-    dict[274961865] = { return Api.Update.parse_updateMessagePollVote($0) }
+    dict[619974263] = { return Api.Update.parse_updateMessagePollVote($0) }
     dict[1578843320] = { return Api.Update.parse_updateMessageReactions($0) }
     dict[-2030252155] = { return Api.Update.parse_updateMoveStickerSetToTop($0) }
     dict[1656358105] = { return Api.Update.parse_updateNewChannelMessage($0) }
@@ -1108,7 +1108,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
     dict[-1821037486] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
     dict[870003448] = { return Api.messages.TranslatedText.parse_translateResult($0) }
-    dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
+    dict[1218005070] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     dict[-1362048039] = { return Api.payments.ExportedInvoice.parse_exportedInvoice($0) }
     dict[-1610250415] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
@@ -1522,6 +1522,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessagePeerReaction:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.MessagePeerVote:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageRange:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageReactions:
@@ -1529,8 +1531,6 @@ public extension Api {
             case let _1 as Api.MessageReplies:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageReplyHeader:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.MessageUserVote:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageViews:
                 _1.serialize(buffer, boxed)

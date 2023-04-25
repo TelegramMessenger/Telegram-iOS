@@ -90,6 +90,9 @@ import FeaturedStickersScreen
 import ChatEntityKeyboardInputNode
 import StorageUsageScreen
 import AvatarEditorScreen
+import ChatScheduleTimeController
+import ICloudResources
+import LegacyCamera
 
 #if DEBUG
 import os.signpost
@@ -11135,14 +11138,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
                         if let strongSelf = self, strongSelf.traceVisibility() {
                             let loginCodeRegex = try? NSRegularExpression(pattern: "[\\d\\-]{5,7}", options: [])
-                            var leakingLoginCode: String?
+                            var loginCodesToInvalidate: [String] = []
                             strongSelf.chatDisplayNode.historyNode.forEachVisibleMessageItemNode({ itemNode in
                                 if let text = itemNode.item?.message.text, let matches = loginCodeRegex?.matches(in: text, options: [], range: NSMakeRange(0, (text as NSString).length)), let match = matches.first {
-                                    leakingLoginCode = (text as NSString).substring(with: match.range)
+                                    loginCodesToInvalidate.append((text as NSString).substring(with: match.range))
                                 }
                             })
-                            if let _ = leakingLoginCode {
-
+                            if !loginCodesToInvalidate.isEmpty {
+                                let _ = strongSelf.context.engine.auth.invalidateLoginCodes(codes: loginCodesToInvalidate).start()
                             }
                             return true
                         } else {
@@ -12692,105 +12695,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func getCaptionPanelView() -> TGCaptionPanelView {
-        let presentationData = self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
-        var presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: presentationData.chatFontSize, bubbleCorners: presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: self.presentationInterfaceState.chatLocation, subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
-        
-        var updateChatPresentationInterfaceStateImpl: (((ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void)?
-        var ensureFocusedImpl: (() -> Void)?
-        
-        let interfaceInteraction = ChatPanelInterfaceInteraction(updateTextInputStateAndMode: { f in
-            updateChatPresentationInterfaceStateImpl?({
-                let (updatedState, updatedMode) = f($0.interfaceState.effectiveInputState, $0.inputMode)
-                return $0.updatedInterfaceState { interfaceState in
-                    return interfaceState.withUpdatedEffectiveInputState(updatedState)
-                }.updatedInputMode({ _ in updatedMode })
-            })
-        }, updateInputModeAndDismissedButtonKeyboardMessageId: { f in
-            updateChatPresentationInterfaceStateImpl?({
-                let (updatedInputMode, updatedClosedButtonKeyboardMessageId) = f($0)
-                return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({
-                    $0.withUpdatedMessageActionsState({ value in
-                        var value = value
-                        value.closedButtonKeyboardMessageId = updatedClosedButtonKeyboardMessageId
-                        return value
-                    })
-                })
-            })
-        }, openLinkEditing: { [weak self] in
-            if let strongSelf = self {
-                var selectionRange: Range<Int>?
-                var text: NSAttributedString?
-                var inputMode: ChatInputMode?
-                updateChatPresentationInterfaceStateImpl?({ state in
-                    selectionRange = state.interfaceState.effectiveInputState.selectionRange
-                    if let selectionRange = selectionRange {
-                        text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count))
-                    }
-                    inputMode = state.inputMode
-                    return state
-                })
-                
-                var link: String?
-                if let text {
-                    text.enumerateAttributes(in: NSMakeRange(0, text.length)) { attributes, _, _ in
-                        if let linkAttribute = attributes[ChatTextInputAttributes.textUrl] as? ChatTextInputTextUrlAttribute {
-                            link = linkAttribute.url
-                        }
-                    }
-                }
-                
-                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text?.string ?? "", link: link, apply: { link in
-                    if let inputMode = inputMode, let selectionRange = selectionRange {
-                        if let link = link {
-                            updateChatPresentationInterfaceStateImpl?({
-                                return $0.updatedInterfaceState({
-                                    $0.withUpdatedEffectiveInputState(chatTextInputAddLinkAttribute($0.effectiveInputState, selectionRange: selectionRange, url: link))
-                                })
-                            })
-                        }
-                        ensureFocusedImpl?()
-                        updateChatPresentationInterfaceStateImpl?({
-                            return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
-                                $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: $0.effectiveInputState.inputText, selectionRange: selectionRange.endIndex ..< selectionRange.endIndex))
-                            })
-                        })
-                    }
-                })
-                strongSelf.present(controller, in: .window(.root))
+    private func getCaptionPanelView() -> TGCaptionPanelView? {
+        return self.context.sharedContext.makeGalleryCaptionPanelView(context: self.context, chatLocation: self.presentationInterfaceState.chatLocation, customEmojiAvailable: self.presentationInterfaceState.customEmojiAvailable, present: { [weak self] c in
+            self?.present(c, in: .window(.root))
+        }, presentInGlobalOverlay: { [weak self] c in
+            guard let self else {
+                return
             }
-        })
-        
-        let inputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { [weak self] c in
-            self?.presentInGlobalOverlay(c)
-        }, makeEntityInputView: { [weak self] in
-            guard let strongSelf = self else {
-                return nil
-            }
-
-            return EntityInputView(context: strongSelf.context, isDark: true, areCustomEmojiEnabled: strongSelf.presentationInterfaceState.customEmojiAvailable)
-        })
-        inputPanelNode.interfaceInteraction = interfaceInteraction
-        inputPanelNode.effectivePresentationInterfaceState = {
-            return presentationInterfaceState
-        }
-        
-        updateChatPresentationInterfaceStateImpl = { [weak inputPanelNode] f in
-            let updatedPresentationInterfaceState = f(presentationInterfaceState)
-            let updateInputTextState = presentationInterfaceState.interfaceState.effectiveInputState != updatedPresentationInterfaceState.interfaceState.effectiveInputState
-            
-            presentationInterfaceState = updatedPresentationInterfaceState
-            
-            if let inputPanelNode = inputPanelNode, updateInputTextState {
-                inputPanelNode.updateInputTextState(updatedPresentationInterfaceState.interfaceState.effectiveInputState, animated: true)
-            }
-        }
-        
-        ensureFocusedImpl =  { [weak inputPanelNode] in
-            inputPanelNode?.ensureFocused()
-        }
-        
-        return inputPanelNode
+            self.presentInGlobalOverlay(c)
+        }) as? TGCaptionPanelView
     }
     
     private func openCamera(cameraView: TGAttachmentCameraView? = nil) {
@@ -13256,7 +13169,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         controller.prepareForReuse()
                         return
                     }
-                    let controller = attachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
+                    let controller = strongSelf.context.sharedContext.makeAttachmentFileController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
                         attachmentController?.dismiss(animated: true)
                         self?.presentFileGallery()
                     }, presentFiles: { [weak self, weak attachmentController] in
@@ -13274,8 +13187,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         })
                     })
-                    let _ = currentFilesController.swap(controller)
-                    completion(controller, controller.mediaPickerContext)
+                    if let controller = controller as? AttachmentFileControllerImpl {
+                        let _ = currentFilesController.swap(controller)
+                        completion(controller, controller.mediaPickerContext)
+                    }
                 case .location:
                     strongSelf.controllerNavigationDisposable.set(nil)
                     let existingController = currentLocationController.with { $0 }

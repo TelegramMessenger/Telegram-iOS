@@ -9,8 +9,11 @@ import PhotoResources
 import SwiftSignalKit
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
+import StoryContainerScreen
 
 final class StoryMessageContentComponent: Component {
+    typealias EnvironmentType = StoryContentItem.Environment
+    
 	let context: AccountContext
 	let message: EngineMessage
 
@@ -88,6 +91,11 @@ final class StoryMessageContentComponent: Component {
         
         private var component: StoryMessageContentComponent?
         private weak var state: EmptyComponentState?
+        private var environment: StoryContentItem.Environment?
+        
+        private var currentProgressStart: Double?
+        private var currentProgressTimer: SwiftSignalKit.Timer?
+        private var videoProgressDisposable: Disposable?
         
 		override init(frame: CGRect) {
             self.imageNode = TransformImageNode()
@@ -103,6 +111,8 @@ final class StoryMessageContentComponent: Component {
         
         deinit {
             self.fetchDisposable?.dispose()
+            self.currentProgressTimer?.invalidate()
+            self.videoProgressDisposable?.dispose()
         }
         
         private func performActionAfterImageContentLoaded(update: Bool) {
@@ -149,9 +159,10 @@ final class StoryMessageContentComponent: Component {
             }
         }
         
-        func update(component: StoryMessageContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoryMessageContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
+            self.environment = environment[StoryContentItem.Environment.self].value
             
             var messageMedia: EngineMedia?
             for media in component.message.media {
@@ -266,6 +277,36 @@ final class StoryMessageContentComponent: Component {
                 self.imageNode.frame = CGRect(origin: CGPoint(), size: availableSize)
             }
             
+            if let videoNode = self.videoNode {
+                if self.videoProgressDisposable == nil {
+                    self.videoProgressDisposable = (videoNode.status
+                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                        guard let self, let status, status.duration > 0.0 else {
+                            return
+                        }
+                        let currentProgress = Double(status.timestamp / status.duration)
+                        let clippedProgress = max(0.0, min(1.0, currentProgress))
+                        self.environment?.presentationProgressUpdated(clippedProgress)
+                    })
+                }
+            } else {
+                if self.currentProgressTimer == nil {
+                    self.currentProgressStart = CFAbsoluteTimeGetCurrent()
+                    self.currentProgressTimer = SwiftSignalKit.Timer(
+                        timeout: 1.0 / 60.0,
+                        repeat: true,
+                        completion: { [weak self] in
+                            guard let self, let currentProgressStart = self.currentProgressStart else {
+                                return
+                            }
+                            let currentProgress = (CFAbsoluteTimeGetCurrent() - currentProgressStart) / 5.0
+                            let clippedProgress = max(0.0, min(1.0, currentProgress))
+                            self.environment?.presentationProgressUpdated(clippedProgress)
+                        }, queue: .mainQueue())
+                    self.currentProgressTimer?.start()
+                }
+            }
+            
             return availableSize
         }
 	}
@@ -274,7 +315,7 @@ final class StoryMessageContentComponent: Component {
 		return View(frame: CGRect())
 	}
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

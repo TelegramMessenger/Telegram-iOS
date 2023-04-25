@@ -114,10 +114,14 @@ private func mergeReactions(reactions: [MessageReaction], recentPeers: [Reaction
             pendingIndex += 1
         }
         
-        if let index = recentPeers.firstIndex(where: { $0.value == pendingReaction.value && $0.peerId == accountPeerId }) {
+        let pendingReactionSendAsPeerId = pendingReaction.sendAsPeerId ?? accountPeerId
+        
+        if let index = recentPeers.firstIndex(where: {
+            $0.value == pendingReaction.value && $0.peerId == pendingReactionSendAsPeerId
+        }) {
             recentPeers.remove(at: index)
         }
-        recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: pendingReaction.value, isLarge: false, isUnseen: false, peerId: accountPeerId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)))
+        recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: pendingReaction.value, isLarge: false, isUnseen: false, peerId: pendingReactionSendAsPeerId, timestamp: Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)))
     }
     
     for i in (0 ..< result.count).reversed() {

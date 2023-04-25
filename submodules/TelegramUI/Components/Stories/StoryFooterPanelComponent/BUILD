@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "MessageInputPanelComponent",
-    module_name = "MessageInputPanelComponent",
+    name = "StoryFooterPanelComponent",
+    module_name = "StoryFooterPanelComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -13,7 +13,6 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/AppBundle",
-        "//submodules/TelegramUI/Components/TextFieldComponent",
         "//submodules/Components/BundleIconComponent",
     ],
     visibility = [

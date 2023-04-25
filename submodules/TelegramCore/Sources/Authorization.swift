@@ -1136,6 +1136,16 @@ func _internal_performPasswordRecovery(network: Network, code: String, updatedPa
     }
 }
 
+func _internal_invalidateLoginCodes(network: Network, codes: [String]) -> Signal<Never, NoError> {
+    return network.request(Api.functions.account.invalidateLoginCodes(codes: codes))
+    |> `catch` { _ -> Signal<Never, NoError> in
+        return .never()
+    }
+    |> mapToSignal { _ in
+        return .complete()
+    }
+}
+
 public enum AccountResetError {
     case generic
     case limitExceeded

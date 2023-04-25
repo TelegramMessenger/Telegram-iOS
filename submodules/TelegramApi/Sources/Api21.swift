@@ -785,7 +785,7 @@ public extension Api {
         case updateMessageExtendedMedia(peer: Api.Peer, msgId: Int32, extendedMedia: Api.MessageExtendedMedia)
         case updateMessageID(id: Int32, randomId: Int64)
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
-        case updateMessagePollVote(pollId: Int64, userId: Int64, options: [Buffer], qts: Int32)
+        case updateMessagePollVote(pollId: Int64, peer: Api.Peer, options: [Buffer], qts: Int32)
         case updateMessageReactions(flags: Int32, peer: Api.Peer, msgId: Int32, topMsgId: Int32?, reactions: Api.MessageReactions)
         case updateMoveStickerSetToTop(flags: Int32, stickerset: Int64)
         case updateNewChannelMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
@@ -1385,12 +1385,12 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {poll!.serialize(buffer, true)}
                     results.serialize(buffer, true)
                     break
-                case .updateMessagePollVote(let pollId, let userId, let options, let qts):
+                case .updateMessagePollVote(let pollId, let peer, let options, let qts):
                     if boxed {
-                        buffer.appendInt32(274961865)
+                        buffer.appendInt32(619974263)
                     }
                     serializeInt64(pollId, buffer: buffer, boxed: false)
-                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(options.count))
                     for item in options {
@@ -1923,8 +1923,8 @@ public extension Api {
                 return ("updateMessageID", [("id", id as Any), ("randomId", randomId as Any)])
                 case .updateMessagePoll(let flags, let pollId, let poll, let results):
                 return ("updateMessagePoll", [("flags", flags as Any), ("pollId", pollId as Any), ("poll", poll as Any), ("results", results as Any)])
-                case .updateMessagePollVote(let pollId, let userId, let options, let qts):
-                return ("updateMessagePollVote", [("pollId", pollId as Any), ("userId", userId as Any), ("options", options as Any), ("qts", qts as Any)])
+                case .updateMessagePollVote(let pollId, let peer, let options, let qts):
+                return ("updateMessagePollVote", [("pollId", pollId as Any), ("peer", peer as Any), ("options", options as Any), ("qts", qts as Any)])
                 case .updateMessageReactions(let flags, let peer, let msgId, let topMsgId, let reactions):
                 return ("updateMessageReactions", [("flags", flags as Any), ("peer", peer as Any), ("msgId", msgId as Any), ("topMsgId", topMsgId as Any), ("reactions", reactions as Any)])
                 case .updateMoveStickerSetToTop(let flags, let stickerset):
@@ -3171,8 +3171,10 @@ public extension Api {
         public static func parse_updateMessagePollVote(_ reader: BufferReader) -> Update? {
             var _1: Int64?
             _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
             var _3: [Buffer]?
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
@@ -3184,7 +3186,7 @@ public extension Api {
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateMessagePollVote(pollId: _1!, userId: _2!, options: _3!, qts: _4!)
+                return Api.Update.updateMessagePollVote(pollId: _1!, peer: _2!, options: _3!, qts: _4!)
             }
             else {
                 return nil

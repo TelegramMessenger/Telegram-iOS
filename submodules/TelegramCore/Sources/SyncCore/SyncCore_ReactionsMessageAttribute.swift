@@ -241,17 +241,25 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
 public final class PendingReactionsMessageAttribute: MessageAttribute {
     public struct PendingReaction: Equatable, PostboxCoding {
         public var value: MessageReaction.Reaction
+        public var sendAsPeerId: PeerId?
         
-        public init(value: MessageReaction.Reaction) {
+        public init(value: MessageReaction.Reaction, sendAsPeerId: PeerId?) {
             self.value = value
+            self.sendAsPeerId = sendAsPeerId
         }
         
         public init(decoder: PostboxDecoder) {
             self.value = decoder.decodeObjectForKey("val", decoder: { MessageReaction.Reaction(decoder: $0) }) as! MessageReaction.Reaction
+            self.sendAsPeerId = decoder.decodeOptionalInt64ForKey("sa").flatMap(PeerId.init)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeObject(self.value, forKey: "val")
+            if let sendAsPeerId = self.sendAsPeerId {
+                encoder.encodeInt64(sendAsPeerId.toInt64(), forKey: "sa")
+            } else {
+                encoder.encodeNil(forKey: "sa")
+            }
         }
     }
     
@@ -261,11 +269,18 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
     public let storeAsRecentlyUsed: Bool
     
     public var associatedPeerIds: [PeerId] {
+        var peerIds: [PeerId] = []
         if let accountPeerId = self.accountPeerId {
-            return [accountPeerId]
-        } else {
-            return []
+            peerIds.append(accountPeerId)
         }
+        for reaction in self.reactions {
+            if let sendAsPeerId = reaction.sendAsPeerId {
+                if !peerIds.contains(sendAsPeerId) {
+                    peerIds.append(sendAsPeerId)
+                }
+            }
+        }
+        return peerIds
     }
     
     public var associatedMediaIds: [MediaId] {

@@ -8,17 +8,17 @@ import SwiftSignalKit
 import AccountContext
 import TelegramPresentationData
 
-enum ChatScheduleTimeControllerMode {
+public enum ChatScheduleTimeControllerMode {
     case scheduledMessages(sendWhenOnlineAvailable: Bool)
     case reminders
 }
 
-enum ChatScheduleTimeControllerStyle {
+public enum ChatScheduleTimeControllerStyle {
     case `default`
     case media
 }
 
-final class ChatScheduleTimeController: ViewController {
+public final class ChatScheduleTimeController: ViewController {
     private var controllerNode: ChatScheduleTimeControllerNode {
         return self.displayNode as! ChatScheduleTimeControllerNode
     }
@@ -37,7 +37,7 @@ final class ChatScheduleTimeController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
@@ -66,7 +66,7 @@ final class ChatScheduleTimeController: ViewController {
         self.statusBar.statusBarStyle = .Ignore
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     

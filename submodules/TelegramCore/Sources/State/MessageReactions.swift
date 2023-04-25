@@ -20,6 +20,15 @@ public enum UpdateMessageReaction {
 
 public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reactions: [UpdateMessageReaction], isLarge: Bool, storeAsRecentlyUsed: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
+        var sendAsPeerId = account.peerId
+        if let cachedData = transaction.getPeerCachedData(peerId: messageId.peerId) {
+            if let cachedData = cachedData as? CachedChannelData {
+                if let sendAsPeerIdValue = cachedData.sendAsPeerId {
+                    sendAsPeerId = sendAsPeerIdValue
+                }
+            }
+        }
+        
         let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.isPremium ?? false
         let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
         let maxCount: Int
@@ -34,12 +43,12 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
         for reaction in reactions {
             switch reaction {
             case let .custom(fileId, file):
-                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .custom(fileId)))
+                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .custom(fileId), sendAsPeerId: sendAsPeerId))
                 if let file = file {
                     transaction.storeMediaIfNotPresent(media: file)
                 }
             case let .builtin(value):
-                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .builtin(value)))
+                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .builtin(value), sendAsPeerId: sendAsPeerId))
             }
         }
         
@@ -88,7 +97,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
             if updatedOutgoingReactions.count > maxCount {
                 let sortedOutgoingReactions = updatedOutgoingReactions.sorted(by: { $0.chosenOrder! < $1.chosenOrder! })
                 mappedReactions = Array(sortedOutgoingReactions.suffix(maxCount).map { reaction -> PendingReactionsMessageAttribute.PendingReaction in
-                    return PendingReactionsMessageAttribute.PendingReaction(value: reaction.value)
+                    return PendingReactionsMessageAttribute.PendingReaction(value: reaction.value, sendAsPeerId: sendAsPeerId)
                 })
             }
             

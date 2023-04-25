@@ -198,19 +198,24 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum VotesList: TypeConstructorDescription {
-        case votesList(flags: Int32, count: Int32, votes: [Api.MessageUserVote], users: [Api.User], nextOffset: String?)
+        case votesList(flags: Int32, count: Int32, votes: [Api.MessagePeerVote], chats: [Api.Chat], users: [Api.User], nextOffset: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .votesList(let flags, let count, let votes, let users, let nextOffset):
+                case .votesList(let flags, let count, let votes, let chats, let users, let nextOffset):
                     if boxed {
-                        buffer.appendInt32(136574537)
+                        buffer.appendInt32(1218005070)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(votes.count))
                     for item in votes {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -225,8 +230,8 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .votesList(let flags, let count, let votes, let users, let nextOffset):
-                return ("votesList", [("flags", flags as Any), ("count", count as Any), ("votes", votes as Any), ("users", users as Any), ("nextOffset", nextOffset as Any)])
+                case .votesList(let flags, let count, let votes, let chats, let users, let nextOffset):
+                return ("votesList", [("flags", flags as Any), ("count", count as Any), ("votes", votes as Any), ("chats", chats as Any), ("users", users as Any), ("nextOffset", nextOffset as Any)])
     }
     }
     
@@ -235,23 +240,28 @@ public extension Api.messages {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: [Api.MessageUserVote]?
+            var _3: [Api.MessagePeerVote]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserVote.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessagePeerVote.self)
             }
-            var _4: [Api.User]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.VotesList.votesList(flags: _1!, count: _2!, votes: _3!, users: _4!, nextOffset: _5)
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.messages.VotesList.votesList(flags: _1!, count: _2!, votes: _3!, chats: _4!, users: _5!, nextOffset: _6)
             }
             else {
                 return nil

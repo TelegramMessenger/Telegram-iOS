@@ -12,6 +12,7 @@ import WallpaperResources
 import MediaResources
 import LocationUI
 import ChatInterfaceState
+import ICloudResources
 
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(VideoLibraryMediaResource.self, f: { VideoLibraryMediaResource(decoder: $0) })

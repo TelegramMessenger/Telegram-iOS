@@ -84,6 +84,7 @@ public protocol AttachmentContainable: ViewController {
     var cancelPanGesture: () -> Void { get set }
     var isContainerPanning: () -> Bool { get set }
     var isContainerExpanded: () -> Bool { get set }
+    var mediaPickerContext: AttachmentMediaPickerContext? { get }
     
     func isContainerPanningUpdated(_ panning: Bool)
     

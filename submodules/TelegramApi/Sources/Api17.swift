@@ -428,13 +428,13 @@ public extension Api {
 }
 public extension Api {
     enum PollResults: TypeConstructorDescription {
-        case pollResults(flags: Int32, results: [Api.PollAnswerVoters]?, totalVoters: Int32?, recentVoters: [Int64]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
+        case pollResults(flags: Int32, results: [Api.PollAnswerVoters]?, totalVoters: Int32?, recentVoters: [Api.Peer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .pollResults(let flags, let results, let totalVoters, let recentVoters, let solution, let solutionEntities):
                     if boxed {
-                        buffer.appendInt32(-591909213)
+                        buffer.appendInt32(2061444128)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
@@ -446,7 +446,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(recentVoters!.count))
                     for item in recentVoters! {
-                        serializeInt64(item, buffer: buffer, boxed: false)
+                        item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 4) != 0 {serializeString(solution!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
@@ -474,9 +474,9 @@ public extension Api {
             } }
             var _3: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt32() }
-            var _4: [Int64]?
+            var _4: [Api.Peer]?
             if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
             } }
             var _5: String?
             if Int(_1!) & Int(1 << 4) != 0 {_5 = parseString(reader) }
