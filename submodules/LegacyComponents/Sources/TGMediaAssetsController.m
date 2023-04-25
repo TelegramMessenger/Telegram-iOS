@@ -583,6 +583,9 @@
     self.delegate = nil;
     [_selectionChangedDisposable dispose];
     [_tooltipDismissDisposable dispose];
+    [_groupingChangedDisposable dispose];
+    [_timersChangedDisposable dispose];
+    [_adjustmentsChangedDisposable dispose];
 }
 
 - (void)loadView

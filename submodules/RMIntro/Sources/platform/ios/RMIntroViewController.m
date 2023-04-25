@@ -616,6 +616,8 @@ typedef enum {
     [[NSNotificationCenter defaultCenter] removeObserver:_willEnterBackgroundObserver];
     
     [self freeGL];
+    
+    [_localizationsDisposable dispose];
 }
 
 - (void)setupGL
