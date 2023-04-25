@@ -721,6 +721,25 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func invalidateSignInCodes(codes: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-896866118)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(codes.count))
+                    for item in codes {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "account.invalidateSignInCodes", parameters: [("codes", String(describing: codes))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func registerDevice(flags: Int32, tokenType: Int32, token: String, appSandbox: Api.Bool, secret: Buffer, otherUids: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-326762118)
@@ -8403,15 +8422,17 @@ public extension Api.functions.updates {
                 }
 }
 public extension Api.functions.updates {
-                static func getDifference(flags: Int32, pts: Int32, ptsTotalLimit: Int32?, date: Int32, qts: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.updates.Difference>) {
+                static func getDifference(flags: Int32, pts: Int32, ptsLimit: Int32?, ptsTotalLimit: Int32?, date: Int32, qts: Int32, qtsLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.updates.Difference>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(630429265)
+                    buffer.appendInt32(432207715)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(pts, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(ptsLimit!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ptsTotalLimit!, buffer: buffer, boxed: false)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeInt32(qts, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "updates.getDifference", parameters: [("flags", String(describing: flags)), ("pts", String(describing: pts)), ("ptsTotalLimit", String(describing: ptsTotalLimit)), ("date", String(describing: date)), ("qts", String(describing: qts))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.updates.Difference? in
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(qtsLimit!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "updates.getDifference", parameters: [("flags", String(describing: flags)), ("pts", String(describing: pts)), ("ptsLimit", String(describing: ptsLimit)), ("ptsTotalLimit", String(describing: ptsTotalLimit)), ("date", String(describing: date)), ("qts", String(describing: qts)), ("qtsLimit", String(describing: qtsLimit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.updates.Difference? in
                         let reader = BufferReader(buffer)
                         var result: Api.updates.Difference?
                         if let signature = reader.readInt32() {
