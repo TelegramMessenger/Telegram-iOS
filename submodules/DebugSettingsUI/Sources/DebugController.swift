@@ -1384,7 +1384,9 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)
         
-        entries.append(.storiesExperiment(experimentalSettings.storiesExperiment))
+        if case .internal = sharedContext.applicationBindings.appBuildType {
+            entries.append(.storiesExperiment(experimentalSettings.storiesExperiment))
+        }
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
     }

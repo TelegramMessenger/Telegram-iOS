@@ -10,6 +10,7 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import StoryContainerScreen
+import HierarchyTrackingLayer
 
 final class StoryMessageContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
@@ -93,16 +94,31 @@ final class StoryMessageContentComponent: Component {
         private weak var state: EmptyComponentState?
         private var environment: StoryContentItem.Environment?
         
-        private var currentProgressStart: Double?
+        private var isProgressPaused: Bool = false
         private var currentProgressTimer: SwiftSignalKit.Timer?
+        private var currentProgressTimerValue: Double = 0.0
         private var videoProgressDisposable: Disposable?
         
+        private var videoPlaybackStatus: MediaPlayerStatus?
+        
+        private let hierarchyTrackingLayer: HierarchyTrackingLayer
+        
 		override init(frame: CGRect) {
+            self.hierarchyTrackingLayer = HierarchyTrackingLayer()
             self.imageNode = TransformImageNode()
             
 			super.init(frame: frame)
             
+            self.layer.addSublayer(self.hierarchyTrackingLayer)
+            
             self.addSubnode(self.imageNode)
+            
+            self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] value in
+                guard let self else {
+                    return
+                }
+                self.updateIsProgressPaused()
+            }
 		}
         
         required init?(coder: NSCoder) {
@@ -150,7 +166,7 @@ final class StoryMessageContentComponent: Component {
                         }
                         if value {
                             self.videoNode?.seek(0.0)
-                            self.videoNode?.play()
+                            self.videoNode?.playOnceWithSound(playAndRecord: false)
                         }
                     }
                     videoNode.canAttachContent = true
@@ -161,7 +177,100 @@ final class StoryMessageContentComponent: Component {
             }
         }
         
-        func setIsProgressPaused(_ isProgressPaused: Bool) {
+        override func setIsProgressPaused(_ isProgressPaused: Bool) {
+            if self.isProgressPaused != isProgressPaused {
+                self.isProgressPaused = isProgressPaused
+                self.updateIsProgressPaused()
+            }
+        }
+        
+        private func updateIsProgressPaused() {
+            if let videoNode = self.videoNode {
+                if !self.isProgressPaused && self.hierarchyTrackingLayer.isInHierarchy {
+                    videoNode.play()
+                } else {
+                    videoNode.pause()
+                }
+            }
+            
+            self.updateVideoPlaybackProgress()
+            self.updateProgressTimer()
+        }
+        
+        private func updateProgressTimer() {
+            let needsTimer = !self.isProgressPaused && self.hierarchyTrackingLayer.isInHierarchy
+            
+            if needsTimer {
+                if self.currentProgressTimer == nil {
+                    self.currentProgressTimer = SwiftSignalKit.Timer(
+                        timeout: 1.0 / 60.0,
+                        repeat: true,
+                        completion: { [weak self] in
+                            guard let self, !self.isProgressPaused, self.hierarchyTrackingLayer.isInHierarchy else {
+                                return
+                            }
+                            
+                            if self.videoNode != nil {
+                                self.updateVideoPlaybackProgress()
+                            } else {
+                                let currentProgressTimerLimit: Double = 5.0
+                                var currentProgressTimerValue = self.currentProgressTimerValue + 1.0 / 60.0
+                                currentProgressTimerValue = max(0.0, min(currentProgressTimerLimit, currentProgressTimerValue))
+                                self.currentProgressTimerValue = currentProgressTimerValue
+                                
+                                self.environment?.presentationProgressUpdated(currentProgressTimerValue / currentProgressTimerLimit)
+                            }
+                        }, queue: .mainQueue()
+                    )
+                    self.currentProgressTimer?.start()
+                }
+            } else {
+                if let currentProgressTimer = self.currentProgressTimer {
+                    self.currentProgressTimer = nil
+                    currentProgressTimer.invalidate()
+                }
+            }
+        }
+        
+        private func updateVideoPlaybackProgress() {
+            var isPlaying = false
+            var timestampAndDuration: (timestamp: Double?, duration: Double)?
+            if let videoPlaybackStatus = self.videoPlaybackStatus {
+                switch videoPlaybackStatus.status {
+                case .playing:
+                    isPlaying = true
+                default:
+                    break
+                }
+                if case .buffering(true, _, _, _) = videoPlaybackStatus.status {
+                    timestampAndDuration = (nil, videoPlaybackStatus.duration)
+                } else if Double(0.0).isLess(than: videoPlaybackStatus.duration) {
+                    timestampAndDuration = (videoPlaybackStatus.timestamp, videoPlaybackStatus.duration)
+                }
+            }
+            
+            var currentProgress: Double = 0.0
+            
+            if let (maybeTimestamp, duration) = timestampAndDuration, let timestamp = maybeTimestamp, duration > 0.01, let videoPlaybackStatus = self.videoPlaybackStatus {
+                var actualTimestamp: Double
+                if videoPlaybackStatus.generationTimestamp.isZero || !isPlaying {
+                    actualTimestamp = timestamp
+                } else {
+                    let currentTimestamp = CACurrentMediaTime()
+                    actualTimestamp = timestamp + (currentTimestamp - videoPlaybackStatus.generationTimestamp) * videoPlaybackStatus.baseRate
+                }
+                
+                var progress = CGFloat(actualTimestamp / duration)
+                if progress.isNaN || !progress.isFinite {
+                    progress = 0.0
+                }
+                progress = min(1.0, progress)
+                
+                currentProgress = progress
+            }
+            
+            let clippedProgress = max(0.0, min(1.0, currentProgress))
+            self.environment?.presentationProgressUpdated(clippedProgress)
         }
         
         func update(component: StoryMessageContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
@@ -286,31 +395,16 @@ final class StoryMessageContentComponent: Component {
                 if self.videoProgressDisposable == nil {
                     self.videoProgressDisposable = (videoNode.status
                     |> deliverOnMainQueue).start(next: { [weak self] status in
-                        guard let self, let status, status.duration > 0.0 else {
+                        guard let self, let status else {
                             return
                         }
-                        let currentProgress = Double(status.timestamp / status.duration)
-                        let clippedProgress = max(0.0, min(1.0, currentProgress))
-                        self.environment?.presentationProgressUpdated(clippedProgress)
+                        
+                        self.videoPlaybackStatus = status
+                        self.updateVideoPlaybackProgress()
                     })
                 }
-            } else {
-                if self.currentProgressTimer == nil {
-                    self.currentProgressStart = CFAbsoluteTimeGetCurrent()
-                    self.currentProgressTimer = SwiftSignalKit.Timer(
-                        timeout: 1.0 / 60.0,
-                        repeat: true,
-                        completion: { [weak self] in
-                            guard let self, let currentProgressStart = self.currentProgressStart else {
-                                return
-                            }
-                            let currentProgress = (CFAbsoluteTimeGetCurrent() - currentProgressStart) / 5.0
-                            let clippedProgress = max(0.0, min(1.0, currentProgress))
-                            self.environment?.presentationProgressUpdated(clippedProgress)
-                        }, queue: .mainQueue())
-                    self.currentProgressTimer?.start()
-                }
             }
+            self.updateProgressTimer()
             
             return availableSize
         }

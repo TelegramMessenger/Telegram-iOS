@@ -120,7 +120,10 @@ final class MediaNavigationStripComponent: Component {
                 }
                 
                 let potentiallyVisibleCount = Int(ceil((availableSize.width + spacing) / (itemWidth + spacing)))
-                for i in (component.index - potentiallyVisibleCount) ... (component.index + potentiallyVisibleCount) {
+                let overflowDistance: CGFloat = 24.0
+                let potentialOverflowCount = 10
+                let _ = overflowDistance
+                for i in (component.index - potentiallyVisibleCount) ... (component.index + potentiallyVisibleCount + potentialOverflowCount) {
                     if i < 0 {
                         continue
                     }

@@ -41,6 +41,7 @@ swift_library(
         "//submodules/LegacyComponents",
         "//submodules/TelegramUI/Components/LegacyCamera",
         "//submodules/TelegramUI/Components/Stories/StoryFooterPanelComponent",
+        "//submodules/TelegramPresentationData",
     ],
     visibility = [
         "//visibility:public",

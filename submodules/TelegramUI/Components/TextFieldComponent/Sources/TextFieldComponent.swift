@@ -5,6 +5,7 @@ import ComponentFlow
 
 public final class TextFieldComponent: Component {
     public final class ExternalState {
+        public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
         
         public init() {
@@ -14,6 +15,7 @@ public final class TextFieldComponent: Component {
     public final class AnimationHint {
         public enum Kind {
             case textChanged
+            case textFocusChanged
         }
         
         public let kind: Kind
@@ -102,6 +104,14 @@ public final class TextFieldComponent: Component {
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
         }
         
+        public func textViewDidBeginEditing(_ textView: UITextView) {
+            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+        }
+        
+        public func textViewDidEndEditing(_ textView: UITextView) {
+            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+        }
+        
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             //print("didScroll \(scrollView.bounds)")
         }
@@ -128,7 +138,6 @@ public final class TextFieldComponent: Component {
             
             let refreshScrolling = self.textView.bounds.size != size
             self.textView.frame = CGRect(origin: CGPoint(), size: size)
-            //transition.setFrame(view: self.textView, frame: )
             
             if refreshScrolling {
                 self.textView.setContentOffset(CGPoint(x: 0.0, y: max(0.0, self.textView.contentSize.height - self.textView.bounds.height)), animated: false)
@@ -155,6 +164,7 @@ public final class TextFieldComponent: Component {
             }
             
             component.externalState.hasText = self.textStorage.length != 0
+            component.externalState.isEditing = self.textView.isFirstResponder
             
             return size
         }

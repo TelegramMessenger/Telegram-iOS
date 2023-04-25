@@ -59,8 +59,8 @@ public struct ExportedChatFolderLink: Equatable {
 public extension ExportedChatFolderLink {
     var slug: String {
         var slug = self.link
-        if slug.hasPrefix("https://t.me/folder/") {
-            slug = String(slug[slug.index(slug.startIndex, offsetBy: "https://t.me/folder/".count)...])
+        if slug.hasPrefix("https://t.me/addlist/") {
+            slug = String(slug[slug.index(slug.startIndex, offsetBy: "https://t.me/addlist/".count)...])
         }
         return slug
     }

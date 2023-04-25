@@ -8,6 +8,7 @@ import BundleIconComponent
 
 public final class MessageInputPanelComponent: Component {
     public final class ExternalState {
+        public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
         
         public init() {
@@ -195,6 +196,7 @@ public final class MessageInputPanelComponent: Component {
                 transition.setScale(view: self.stickerIconView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
             }
             
+            component.externalState.isEditing = self.textFieldExternalState.isEditing
             component.externalState.hasText = self.textFieldExternalState.hasText
             
             return size

@@ -12,7 +12,7 @@ public final class StoryContentItem {
     }
     
     open class View: UIView {
-        func setIsProgressPaused(_ isProgressPaused: Bool) {
+        open func setIsProgressPaused(_ isProgressPaused: Bool) {
         }
     }
     

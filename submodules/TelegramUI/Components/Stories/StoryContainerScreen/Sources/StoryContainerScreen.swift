@@ -30,6 +30,7 @@ import ICloudResources
 import LegacyComponents
 import LegacyCamera
 import StoryFooterPanelComponent
+import TelegramPresentationData
 
 private func hasFirstResponder(_ view: UIView) -> Bool {
     if view.isFirstResponder {
@@ -149,7 +150,6 @@ private final class StoryContainerScreenComponent: Component {
             
             self.contentContainerView = UIView()
             self.contentContainerView.clipsToBounds = true
-            self.contentContainerView.isUserInteractionEnabled = false
             
             self.topContentGradientLayer = SimpleGradientLayer()
             self.bottomContentGradientLayer = SimpleGradientLayer()
@@ -188,7 +188,8 @@ private final class StoryContainerScreenComponent: Component {
             self.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
-            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            self.contentContainerView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            self.contentContainerView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
         }
         
         required init?(coder: NSCoder) {
@@ -209,7 +210,7 @@ private final class StoryContainerScreenComponent: Component {
                     let point = recognizer.location(in: self)
                     
                     var nextIndex: Int
-                    if point.x < itemLayout.size.width * 0.5 {
+                    if point.x < itemLayout.size.width * 0.25 {
                         nextIndex = currentIndex + 1
                     } else {
                         nextIndex = currentIndex - 1
@@ -234,6 +235,19 @@ private final class StoryContainerScreenComponent: Component {
                         })
                     }
                 }
+            }
+        }
+        
+        @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+            switch recognizer.state {
+            case .began:
+                break
+            case .changed:
+                break
+            case .cancelled, .ended:
+                break
+            default:
+                break
             }
         }
         
@@ -329,9 +343,14 @@ private final class StoryContainerScreenComponent: Component {
                 )
                 if let view = visibleItem.view.view {
                     if view.superview == nil {
+                        view.isUserInteractionEnabled = false
                         self.contentContainerView.addSubview(view)
                     }
                     itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
+                    
+                    if let view = view as? StoryContentItem.View {
+                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || self.attachmentController != nil)
+                    }
                 }
             }
             
@@ -346,6 +365,16 @@ private final class StoryContainerScreenComponent: Component {
             }
             for id in removeIds {
                 self.visibleItems.removeValue(forKey: id)
+            }
+        }
+        
+        private func updateIsProgressPaused() {
+            for (_, visibleItem) in self.visibleItems {
+                if let view = visibleItem.view.view {
+                    if let view = view as? StoryContentItem.View {
+                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || self.attachmentController?.window != nil)
+                    }
+                }
             }
         }
         
@@ -389,6 +418,7 @@ private final class StoryContainerScreenComponent: Component {
                         content: .text(text)
                     )
                     inputPanelView.clearSendMessageInput()
+                    self.endEditing(true)
                     
                     if let controller = self.environment?.controller() {
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
@@ -686,7 +716,7 @@ private final class StoryContainerScreenComponent: Component {
                     
                     let attachmentController = AttachmentController(
                         context: component.context,
-                        updatedPresentationData: nil,
+                        updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }),
                         chatLocation: .peer(id: peer.id),
                         buttons: buttons,
                         initialButton: initialButton,
@@ -706,6 +736,7 @@ private final class StoryContainerScreenComponent: Component {
                             return
                         }
                         self.attachmentController = nil
+                        self.updateIsProgressPaused()
                     }
                     attachmentController.getSourceRect = { [weak self] in
                         guard let self else {
@@ -764,7 +795,7 @@ private final class StoryContainerScreenComponent: Component {
                                 controller.prepareForReuse()
                                 return
                             }
-                            let controller = component.context.sharedContext.makeAttachmentFileController(context: component.context, updatedPresentationData: nil, bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
+                            let controller = component.context.sharedContext.makeAttachmentFileController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), bannedSendMedia: bannedSendFiles, presentGallery: { [weak self, weak attachmentController] in
                                 guard let self else {
                                     return
                                 }
@@ -821,7 +852,7 @@ private final class StoryContainerScreenComponent: Component {
                                     return
                                 }
                                 let hasLiveLocation = peer.id.namespace != Namespaces.Peer.SecretChat && peer.id != component.context.account.peerId
-                                let controller = LocationPickerController(context: component.context, updatedPresentationData: nil, mode: .share(peer: peer, selfPeer: selfPeer, hasLiveLocation: hasLiveLocation), completion: { [weak self] location, _ in
+                                let controller = LocationPickerController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), mode: .share(peer: peer, selfPeer: selfPeer, hasLiveLocation: hasLiveLocation), completion: { [weak self] location, _ in
                                     guard let self else {
                                         return
                                     }
@@ -833,7 +864,7 @@ private final class StoryContainerScreenComponent: Component {
                                 let _ = currentLocationController.swap(controller)
                             })
                         case .contact:
-                            let contactsController = component.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: component.context, updatedPresentationData: nil, title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: true))
+                            let contactsController = component.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: true))
                             contactsController.presentScheduleTimePicker = { [weak self] completion in
                                 guard let self else {
                                     return
@@ -1041,7 +1072,7 @@ private final class StoryContainerScreenComponent: Component {
                             fromAttachMenu = true
                             let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false)
                             let replyMessageId = targetMessageId
-                            let controller = WebAppController(context: component.context, updatedPresentationData: nil, params: params, replyToMessageId: replyMessageId, threadId: nil)
+                            let controller = WebAppController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), params: params, replyToMessageId: replyMessageId, threadId: nil)
                             controller.openUrl = { [weak self] url in
                                 guard let self else {
                                     return
@@ -1080,6 +1111,7 @@ private final class StoryContainerScreenComponent: Component {
                         attachmentController.navigationPresentation = .flatModal
                         controller.push(attachmentController)
                         self.attachmentController = attachmentController
+                        self.updateIsProgressPaused()
                     }
                     
                     if inputIsActive {
@@ -1107,7 +1139,7 @@ private final class StoryContainerScreenComponent: Component {
             guard let component = self.component else {
                 return
             }
-            let controller = MediaPickerScreen(context: component.context, updatedPresentationData: nil, peer: peer, threadTitle: nil, chatLocation: .peer(id: peer.id), bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
+            let controller = MediaPickerScreen(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), peer: peer, threadTitle: nil, chatLocation: .peer(id: peer.id), bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
             let mediaPickerContext = controller.mediaPickerContext
             controller.openCamera = { [weak self] cameraView in
                 guard let self else {
@@ -1220,7 +1252,7 @@ private final class StoryContainerScreenComponent: Component {
                                             
                         configureLegacyAssetPicker(controller, context: component.context, peer: peer._asPeer(), chatLocation: .peer(id: peer.id), initialCaption: inputText, hasSchedule: peer.id.namespace != Namespaces.Peer.SecretChat, presentWebSearch: editingMedia ? nil : { [weak legacyController] in
                             if let strongSelf = self, let component = strongSelf.component {
-                                let controller = WebSearchController(context: component.context, updatedPresentationData: nil, peer: peer, chatLocation: .peer(id: peer.id), configuration: searchBotsConfiguration, mode: .media(attachment: false, completion: { results, selectionState, editingState, silentPosting in
+                                let controller = WebSearchController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), peer: peer, chatLocation: .peer(id: peer.id), configuration: searchBotsConfiguration, mode: .media(attachment: false, completion: { results, selectionState, editingState, silentPosting in
                                     if let legacyController = legacyController {
                                         legacyController.dismiss()
                                     }
@@ -1419,6 +1451,10 @@ private final class StoryContainerScreenComponent: Component {
                     return
                 }
                 if component.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peer.id, threadId: nil, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime) {
+                }
+                
+                if let attachmentController = self.attachmentController {
+                    attachmentController.dismiss(animated: true)
                 }
             }
             
@@ -1689,7 +1725,7 @@ private final class StoryContainerScreenComponent: Component {
                 } else {
                     mode = .scheduledMessages(sendWhenOnlineAvailable: sendWhenOnlineAvailable)
                 }
-                let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: nil, peerId: peer.id, mode: mode, style: style, currentTime: selectedTime, minimalTime: nil, dismissByTapOutside: dismissByTapOutside, completion: { time in
+                let controller = ChatScheduleTimeController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), peerId: peer.id, mode: mode, style: style, currentTime: selectedTime, minimalTime: nil, dismissByTapOutside: dismissByTapOutside, completion: { time in
                     completion(time)
                 })
                 self.endEditing(true)
@@ -1701,7 +1737,7 @@ private final class StoryContainerScreenComponent: Component {
             guard let component = self.component else {
                 return
             }
-            let controller = ChatTimerScreen(context: component.context, updatedPresentationData: nil, style: style, currentTime: selectedTime, dismissByTapOutside: dismissByTapOutside, completion: { time in
+            let controller = ChatTimerScreen(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), style: style, currentTime: selectedTime, dismissByTapOutside: dismissByTapOutside, completion: { time in
                 completion(time)
             })
             self.endEditing(true)
@@ -1712,7 +1748,7 @@ private final class StoryContainerScreenComponent: Component {
             guard let component = self.component else {
                 return nil
             }
-            return createPollController(context: component.context, updatedPresentationData: nil, peer: peer, isQuiz: isQuiz, completion: { [weak self] poll in
+            return createPollController(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: defaultDarkPresentationTheme) }), peer: peer, isQuiz: isQuiz, completion: { [weak self] poll in
                 guard let self else {
                     return
                 }
@@ -1804,6 +1840,10 @@ private final class StoryContainerScreenComponent: Component {
             |> deliverOnMainQueue).start()
             
             donateSendMessageIntent(account: component.context.account, sharedContext: component.context.sharedContext, intentContext: .chat, peerIds: [peer.id])
+            
+            if let attachmentController = self.attachmentController {
+                attachmentController.dismiss(animated: true)
+            }
             
             if let controller = self.environment?.controller() {
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
@@ -2182,6 +2222,7 @@ private final class StoryContainerScreenComponent: Component {
                 )
                 if let navigationStripView = self.navigationStrip.view {
                     if navigationStripView.superview == nil {
+                        navigationStripView.isUserInteractionEnabled = false
                         self.addSubview(navigationStripView)
                     }
                     transition.setFrame(view: navigationStripView, frame: CGRect(origin: CGPoint(x: contentFrame.minX + navigationStripSideInset, y: contentFrame.minY + navigationStripTopInset), size: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: 2.0)))
@@ -2269,7 +2310,7 @@ private final class StoryContainerScreenComponent: Component {
             }
             
             transition.setFrame(layer: self.contentDimLayer, frame: contentFrame)
-            transition.setAlpha(layer: self.contentDimLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
+            transition.setAlpha(layer: self.contentDimLayer, alpha: (inputPanelIsOverlay || self.inputPanelExternalState.isEditing) ? 1.0 : 0.0)
             
             self.ignoreScrolling = true
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))

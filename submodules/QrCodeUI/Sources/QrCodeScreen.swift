@@ -47,7 +47,11 @@ public final class QrCodeScreen: ViewController {
                 case let .invite(invite, _):
                     return invite.link ?? ""
                 case let .chatFolder(slug):
-                    return slug
+                    if slug.hasPrefix("https://") {
+                        return slug
+                    } else {
+                        return "https://t.me/addlist/\(slug)"
+                    }
             }
         }
         
