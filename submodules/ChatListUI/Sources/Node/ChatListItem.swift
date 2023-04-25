@@ -611,6 +611,8 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
     }
 }
 
+private let loginCodeRegex = try? NSRegularExpression(pattern: "[\\d\\-]{5,7}", options: [])
+
 class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {
         let topicTitleNode: TextNode
@@ -1841,7 +1843,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
                         }
                         
-                        let entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
+                        var entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
                             switch entity.type {
                             case .Spoiler, .CustomEmoji:
                                 return true
@@ -1851,6 +1853,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 return false
                             }
                         }
+                        if message.author?.id.id == PeerId.Id._internalFromInt64Value(777000) {
+                            if let loginCodeRegex {
+                                let results = loginCodeRegex.matches(in: message.text, range: NSRange(message.text.startIndex..., in: message.text))
+                                for result in results {
+                                    let spoilerRange: Range<Int> = result.range.location ..< (result.range.location + result.range.length)
+                                    if !entities.contains(where: { $0.range.overlaps(spoilerRange) }) {
+                                        entities.append(MessageTextEntity(range: spoilerRange, type: .Spoiler))
+                                    }
+                                }
+                            }
+                        }
+                        
                         let messageString: NSAttributedString
                         if !message.text.isEmpty && entities.count > 0 {
                             var messageText = message.text

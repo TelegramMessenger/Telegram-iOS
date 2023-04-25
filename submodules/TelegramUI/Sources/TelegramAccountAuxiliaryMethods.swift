@@ -11,6 +11,7 @@ import ChatInterfaceState
 import WallpaperResources
 import AppBundle
 import SwiftSignalKit
+import ICloudResources
 
 func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAuxiliaryMethods {
     return AccountAuxiliaryMethods(fetchResource: { account, resource, ranges, _ in

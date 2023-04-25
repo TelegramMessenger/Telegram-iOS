@@ -51,6 +51,114 @@ public extension Api {
     }
 }
 public extension Api {
+    enum MessagePeerVote: TypeConstructorDescription {
+        case messagePeerVote(peer: Api.Peer, option: Buffer, date: Int32)
+        case messagePeerVoteInputOption(peer: Api.Peer, date: Int32)
+        case messagePeerVoteMultiple(peer: Api.Peer, options: [Buffer], date: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messagePeerVote(let peer, let option, let date):
+                    if boxed {
+                        buffer.appendInt32(-1228133028)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeBytes(option, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+                case .messagePeerVoteInputOption(let peer, let date):
+                    if boxed {
+                        buffer.appendInt32(1959634180)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+                case .messagePeerVoteMultiple(let peer, let options, let date):
+                    if boxed {
+                        buffer.appendInt32(1177089766)
+                    }
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(options.count))
+                    for item in options {
+                        serializeBytes(item, buffer: buffer, boxed: false)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messagePeerVote(let peer, let option, let date):
+                return ("messagePeerVote", [("peer", peer as Any), ("option", option as Any), ("date", date as Any)])
+                case .messagePeerVoteInputOption(let peer, let date):
+                return ("messagePeerVoteInputOption", [("peer", peer as Any), ("date", date as Any)])
+                case .messagePeerVoteMultiple(let peer, let options, let date):
+                return ("messagePeerVoteMultiple", [("peer", peer as Any), ("options", options as Any), ("date", date as Any)])
+    }
+    }
+    
+        public static func parse_messagePeerVote(_ reader: BufferReader) -> MessagePeerVote? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessagePeerVote.messagePeerVote(peer: _1!, option: _2!, date: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messagePeerVoteInputOption(_ reader: BufferReader) -> MessagePeerVote? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessagePeerVote.messagePeerVoteInputOption(peer: _1!, date: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messagePeerVoteMultiple(_ reader: BufferReader) -> MessagePeerVote? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: [Buffer]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessagePeerVote.messagePeerVoteMultiple(peer: _1!, options: _2!, date: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum MessageRange: TypeConstructorDescription {
         case messageRange(minId: Int32, maxId: Int32)
     
@@ -254,108 +362,6 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.MessageReplyHeader.messageReplyHeader(flags: _1!, replyToMsgId: _2!, replyToPeerId: _3, replyToTopId: _4)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum MessageUserVote: TypeConstructorDescription {
-        case messageUserVote(userId: Int64, option: Buffer, date: Int32)
-        case messageUserVoteInputOption(userId: Int64, date: Int32)
-        case messageUserVoteMultiple(userId: Int64, options: [Buffer], date: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .messageUserVote(let userId, let option, let date):
-                    if boxed {
-                        buffer.appendInt32(886196148)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeBytes(option, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    break
-                case .messageUserVoteInputOption(let userId, let date):
-                    if boxed {
-                        buffer.appendInt32(1017491692)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    break
-                case .messageUserVoteMultiple(let userId, let options, let date):
-                    if boxed {
-                        buffer.appendInt32(-1973033641)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(options.count))
-                    for item in options {
-                        serializeBytes(item, buffer: buffer, boxed: false)
-                    }
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .messageUserVote(let userId, let option, let date):
-                return ("messageUserVote", [("userId", userId as Any), ("option", option as Any), ("date", date as Any)])
-                case .messageUserVoteInputOption(let userId, let date):
-                return ("messageUserVoteInputOption", [("userId", userId as Any), ("date", date as Any)])
-                case .messageUserVoteMultiple(let userId, let options, let date):
-                return ("messageUserVoteMultiple", [("userId", userId as Any), ("options", options as Any), ("date", date as Any)])
-    }
-    }
-    
-        public static func parse_messageUserVote(_ reader: BufferReader) -> MessageUserVote? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageUserVote.messageUserVote(userId: _1!, option: _2!, date: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_messageUserVoteInputOption(_ reader: BufferReader) -> MessageUserVote? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageUserVote.messageUserVoteInputOption(userId: _1!, date: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_messageUserVoteMultiple(_ reader: BufferReader) -> MessageUserVote? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Buffer]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageUserVote.messageUserVoteMultiple(userId: _1!, options: _2!, date: _3!)
             }
             else {
                 return nil

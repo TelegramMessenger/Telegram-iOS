@@ -6,24 +6,51 @@ import SwiftSignalKit
 import TelegramCore
 
 public final class StoryContentItem {
+    public final class ExternalState {
+        public init() {
+        }
+    }
+    
+    public final class Environment: Equatable {
+        public let externalState: ExternalState
+        public let presentationProgressUpdated: (Double) -> Void
+        
+        public init(
+            externalState: ExternalState,
+            presentationProgressUpdated: @escaping (Double) -> Void
+        ) {
+            self.externalState = externalState
+            self.presentationProgressUpdated = presentationProgressUpdated
+        }
+        
+        public static func ==(lhs: Environment, rhs: Environment) -> Bool {
+            if lhs.externalState !== rhs.externalState {
+                return false
+            }
+            return true
+        }
+    }
+    
     public let id: AnyHashable
     public let position: Int
-    public let component: AnyComponent<Empty>
+    public let component: AnyComponent<StoryContentItem.Environment>
     public let centerInfoComponent: AnyComponent<Empty>?
     public let rightInfoComponent: AnyComponent<Empty>?
     public let targetMessageId: EngineMessage.Id?
     public let preload: Signal<Never, NoError>?
     public let hasLike: Bool
+    public let isMy: Bool
 
     public init(
         id: AnyHashable,
         position: Int,
-        component: AnyComponent<Empty>,
+        component: AnyComponent<StoryContentItem.Environment>,
         centerInfoComponent: AnyComponent<Empty>?,
         rightInfoComponent: AnyComponent<Empty>?,
         targetMessageId: EngineMessage.Id?,
         preload: Signal<Never, NoError>?,
-        hasLike: Bool
+        hasLike: Bool,
+        isMy: Bool
     ) {
         self.id = id
         self.position = position
@@ -33,6 +60,7 @@ public final class StoryContentItem {
         self.targetMessageId = targetMessageId
         self.preload = preload
         self.hasLike = hasLike
+        self.isMy = isMy
     }
 }
 

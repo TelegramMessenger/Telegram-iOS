@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import AppBundle
 import TextFieldComponent
+import BundleIconComponent
 
 public final class MessageInputPanelComponent: Component {
     public final class ExternalState {
@@ -15,13 +16,16 @@ public final class MessageInputPanelComponent: Component {
     
     public let externalState: ExternalState
     public let sendMessageAction: () -> Void
+    public let attachmentAction: () -> Void
     
     public init(
         externalState: ExternalState,
-        sendMessageAction: @escaping () -> Void
+        sendMessageAction: @escaping () -> Void,
+        attachmentAction: @escaping () -> Void
     ) {
         self.externalState = externalState
         self.sendMessageAction = sendMessageAction
+        self.attachmentAction = attachmentAction
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -41,7 +45,7 @@ public final class MessageInputPanelComponent: Component {
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
         
-        private let attachmentIconView: UIImageView
+        private let attachmentButton = ComponentView<Empty>()
         private let inputActionButton = ComponentView<Empty>()
         private let stickerIconView: UIImageView
         
@@ -52,7 +56,6 @@ public final class MessageInputPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.fieldBackgroundView = UIImageView()
-            self.attachmentIconView = UIImageView()
             self.stickerIconView = UIImageView()
             
             super.init(frame: frame)
@@ -60,7 +63,6 @@ public final class MessageInputPanelComponent: Component {
             self.addSubview(self.fieldBackgroundView)
             
             self.addSubview(self.fieldBackgroundView)
-            self.addSubview(self.attachmentIconView)
             self.addSubview(self.stickerIconView)
         }
         
@@ -74,6 +76,13 @@ public final class MessageInputPanelComponent: Component {
             }
             
             return .text(textFieldView.getText())
+        }
+        
+        public func getAttachmentButtonView() -> UIView? {
+            guard let attachmentButtonView = self.attachmentButton.view else {
+                return nil
+            }
+            return attachmentButtonView
         }
         
         public func clearSendMessageInput() {
@@ -92,10 +101,6 @@ public final class MessageInputPanelComponent: Component {
             
             if self.fieldBackgroundView.image == nil {
                 self.fieldBackgroundView.image = generateStretchableFilledCircleImage(diameter: fieldCornerRadius * 2.0, color: nil, strokeColor: UIColor(white: 1.0, alpha: 0.16), strokeWidth: 1.0, backgroundColor: nil)
-            }
-            if self.attachmentIconView.image == nil {
-                self.attachmentIconView.image = UIImage(bundleImageName: "Chat/Input/Text/IconAttachment")?.withRenderingMode(.alwaysTemplate)
-                self.attachmentIconView.tintColor = .white
             }
             if self.stickerIconView.image == nil {
                 self.stickerIconView.image = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconStickers")?.withRenderingMode(.alwaysTemplate)
@@ -129,8 +134,28 @@ public final class MessageInputPanelComponent: Component {
                 transition.setFrame(view: textFieldView, frame: CGRect(origin: CGPoint(x: fieldFrame.minX, y: fieldFrame.maxY - textFieldSize.height), size: textFieldSize))
             }
             
-            if let image = self.attachmentIconView.image {
-                transition.setFrame(view: self.attachmentIconView, frame: CGRect(origin: CGPoint(x: floor((insets.left - image.size.width) * 0.5), y: size.height - baseHeight + floor((baseHeight - image.size.height) * 0.5)), size: image.size))
+            let attachmentButtonSize = self.attachmentButton.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Text/IconAttachment",
+                        tintColor: .white
+                    )),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.component?.attachmentAction()
+                    }
+                ).minSize(CGSize(width: 41.0, height: baseHeight))),
+                environment: {},
+                containerSize: CGSize(width: 41.0, height: baseHeight)
+            )
+            if let attachmentButtonView = self.attachmentButton.view {
+                if attachmentButtonView.superview == nil {
+                    self.addSubview(attachmentButtonView)
+                }
+                transition.setFrame(view: attachmentButtonView, frame: CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5), y: size.height - baseHeight + floor((baseHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize))
             }
             
             let inputActionButtonSize = self.inputActionButton.update(

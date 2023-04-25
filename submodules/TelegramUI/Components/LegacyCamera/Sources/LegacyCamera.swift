@@ -10,7 +10,7 @@ import ShareController
 import LegacyUI
 import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, attachmentController: ViewController? = nil, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: NSAttributedString, hasSchedule: Bool, enablePhoto: Bool, enableVideo: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, dismissedWithResult: @escaping () -> Void = {}, finishedTransitionIn: @escaping () -> Void = {}) {
+public func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, attachmentController: ViewController? = nil, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: NSAttributedString, hasSchedule: Bool, enablePhoto: Bool, enableVideo: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, dismissedWithResult: @escaping () -> Void = {}, finishedTransitionIn: @escaping () -> Void = {}) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -202,7 +202,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     parentController.present(legacyController, in: .window(.root))
 }
 
-func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: Bool, saveEditedPhotos: Bool, mediaGrouping: Bool, parentController: ViewController) {
+public func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: Bool, saveEditedPhotos: Bool, mediaGrouping: Bool, parentController: ViewController) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)

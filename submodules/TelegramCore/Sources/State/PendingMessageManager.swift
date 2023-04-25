@@ -446,20 +446,77 @@ public final class PendingMessageManager {
                 
                 Logger.shared.log("PendingMessageManager", "beginSendingMessages messagesToForward.count: \(messagesToForward.count)")
                 
-                
-                for (_, messages) in messagesToForward {
-                    for (context, _, _) in messages {
-                        context.state = .sending(groupId: nil)
+                let forwardGroupLimit = 100
+                for (_, ungroupedMessages) in messagesToForward {
+                    var messageGroups: [[(PendingMessageContext, Message, ForwardSourceInfoAttribute)]] = []
+                    
+                    for message in ungroupedMessages {
+                        if messageGroups.isEmpty || messageGroups[messageGroups.count - 1].isEmpty {
+                            messageGroups.append([message])
+                        } else {
+                            if messageGroups[messageGroups.count - 1][0].1.groupingKey == message.1.groupingKey {
+                                messageGroups[messageGroups.count - 1].append(message)
+                            } else {
+                                messageGroups.append([message])
+                            }
+                        }
                     }
-                    let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, accountPeerId: strongSelf.accountPeerId, group: messages.map { data in
-                        let (_, message, forwardInfo) = data
-                        return (message.id, PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil, cacheReferenceKey: nil))
-                    })
-                    |> map { next -> PendingMessageResult in
-                        return .progress(1.0)
+                    
+                    var countedMessageGroups: [[(PendingMessageContext, Message, ForwardSourceInfoAttribute)]] = []
+                    while !messageGroups.isEmpty {
+                        guard let messageGroup = messageGroups.first else {
+                            break
+                        }
+                        
+                        messageGroups.removeFirst()
+                        
+                        if messageGroup.isEmpty {
+                            continue
+                        }
+                        if countedMessageGroups.isEmpty {
+                            countedMessageGroups.append([])
+                        } else if countedMessageGroups[countedMessageGroups.count - 1].count >= forwardGroupLimit {
+                            countedMessageGroups.append([])
+                        }
+                        
+                        if countedMessageGroups[countedMessageGroups.count - 1].isEmpty {
+                            let fittingFreeMessageCount = min(forwardGroupLimit, messageGroup.count)
+                            countedMessageGroups[countedMessageGroups.count - 1].append(contentsOf: messageGroup[0 ..< fittingFreeMessageCount])
+                            if fittingFreeMessageCount < messageGroup.count {
+                                messageGroups.insert(Array(messageGroup[fittingFreeMessageCount ..< messageGroup.count]), at: 0)
+                            }
+                        } else if countedMessageGroups[countedMessageGroups.count - 1].count + messageGroup.count <= forwardGroupLimit {
+                            countedMessageGroups[countedMessageGroups.count - 1].append(contentsOf: messageGroup)
+                        } else {
+                            if countedMessageGroups[countedMessageGroups.count - 1][0].1.groupingKey == nil && messageGroup[0].1.groupingKey == nil {
+                                let fittingFreeMessageCount = forwardGroupLimit - countedMessageGroups[countedMessageGroups.count - 1].count
+                                countedMessageGroups[countedMessageGroups.count - 1].append(contentsOf: messageGroup[0 ..< fittingFreeMessageCount])
+                                messageGroups.insert(Array(messageGroup[fittingFreeMessageCount ..< messageGroup.count]), at: 0)
+                            } else {
+                                countedMessageGroups.append([])
+                            }
+                        }
                     }
-                    messages[0].0.sendDisposable.set((sendMessage
-                    |> deliverOn(strongSelf.queue)).start())
+                    
+                    for messages in countedMessageGroups {
+                        if messages.isEmpty {
+                            continue
+                        }
+                        
+                        for (context, _, _) in messages {
+                            context.state = .sending(groupId: nil)
+                        }
+                        
+                        let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, accountPeerId: strongSelf.accountPeerId, group: messages.map { data in
+                            let (_, message, forwardInfo) = data
+                            return (message.id, PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil, cacheReferenceKey: nil))
+                        })
+                        |> map { next -> PendingMessageResult in
+                            return .progress(1.0)
+                        }
+                        messages[0].0.sendDisposable.set((sendMessage
+                        |> deliverOn(strongSelf.queue)).start())
+                    }
                 }
             }
         }))

@@ -17,6 +17,7 @@ import DebugSettingsUI
 import TabBarUI
 import WallpaperBackgroundNode
 import ChatPresentationInterfaceState
+import LegacyCamera
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData

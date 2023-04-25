@@ -463,6 +463,7 @@ public protocol PresentationGroupCall: AnyObject {
 public protocol PresentationCallManager: AnyObject {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
+    var hasActiveCall: Bool { get }
     
     func requestCall(context: AccountContext, peerId: EnginePeer.Id, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
     func joinGroupCall(context: AccountContext, peerId: EnginePeer.Id, invite: String?, requestJoinAsPeerId: ((@escaping (EnginePeer.Id?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
