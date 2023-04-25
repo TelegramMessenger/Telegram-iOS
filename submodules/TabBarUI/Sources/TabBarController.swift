@@ -130,6 +130,8 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     private var navigationBarPresentationData: NavigationBarPresentationData
     private var theme: TabBarControllerTheme
     
+    public var middleItemAction: () -> Void = {}
+    
     public init(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme) {
         self.navigationBarPresentationData = navigationBarPresentationData
         self.theme = theme
@@ -199,11 +201,20 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(theme: self.theme, navigationBarPresentationData: self.navigationBarPresentationData, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
+                var index = index
+                if strongSelf.tabBarControllerNode.tabBarNode.tabBarItems.count == 5 {
+                    if index == 2 {
+                        strongSelf.middleItemAction()
+                        return
+                    } else if index > 2 {
+                        index -= 1
+                    }
+                }
                 if longTap, let controller = strongSelf.controllers[index] as? TabBarContainedController {
                     controller.presentTabBarPreviewingController(sourceNodes: itemNodes)
                     return
                 }
-                
+
                 let timestamp = CACurrentMediaTime()
                 if strongSelf.debugTapCounter.0 < timestamp - 0.4 {
                     strongSelf.debugTapCounter.0 = timestamp
@@ -297,7 +308,15 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             return
         }
         
-        self.tabBarControllerNode.tabBarNode.selectedIndex = self.selectedIndex
+        if self.tabBarControllerNode.tabBarNode.tabBarItems.count == 5 {
+            var selectedIndex = self.selectedIndex
+            if selectedIndex >= 2 {
+                selectedIndex += 1
+            }
+            self.tabBarControllerNode.tabBarNode.selectedIndex = selectedIndex
+        } else {
+            self.tabBarControllerNode.tabBarNode.selectedIndex = self.selectedIndex
+        }
         
         if let currentController = self.currentController {
             currentController.willMove(toParent: nil)
@@ -394,6 +413,8 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
     }
     
+    public var cameraItem: UITabBarItem?
+    
     public func setControllers(_ controllers: [ViewController], selectedIndex: Int?) {
         var updatedSelectedIndex: Int? = selectedIndex
         if updatedSelectedIndex == nil, let selectedIndex = self._selectedIndex, selectedIndex < self.controllers.count {
@@ -404,7 +425,13 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             }
         }
         self.controllers = controllers
-        self.tabBarControllerNode.tabBarNode.tabBarItems = self.controllers.map({ TabBarNodeItem(item: $0.tabBarItem, contextActionType: $0.tabBarItemContextActionType) })
+        
+        var tabBarItems = self.controllers.map({ TabBarNodeItem(item: $0.tabBarItem, contextActionType: $0.tabBarItemContextActionType) })
+        if tabBarItems.count == 4, let cameraItem = self.cameraItem {
+            tabBarItems.insert(TabBarNodeItem(item: cameraItem, contextActionType: .none), at: 2)
+        }
+        
+        self.tabBarControllerNode.tabBarNode.tabBarItems = tabBarItems
         
         let signals = combineLatest(self.controllers.map({ $0.tabBarItem }).map { tabBarItem -> Signal<Bool, NoError> in
             if let tabBarItem = tabBarItem, tabBarItem.image == nil {

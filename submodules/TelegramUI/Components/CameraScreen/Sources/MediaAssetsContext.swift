@@ -4,7 +4,7 @@ import SwiftSignalKit
 import Photos
 import AVFoundation
 
-class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
+public final class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
     private let assetType: PHAssetMediaType?
     
     private var registeredChangeObserver = false
@@ -12,7 +12,7 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
     private let mediaAccessSink = ValuePipe<PHAuthorizationStatus>()
     private let cameraAccessSink = ValuePipe<AVAuthorizationStatus?>()
     
-    init(assetType: PHAssetMediaType?) {
+    public init(assetType: PHAssetMediaType? = nil) {
         self.assetType = assetType
         
         super.init()
@@ -29,11 +29,11 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
         }
     }
     
-    func photoLibraryDidChange(_ changeInstance: PHChange) {
+    public func photoLibraryDidChange(_ changeInstance: PHChange) {
         self.changeSink.putNext(changeInstance)
     }
     
-    func fetchAssets(_ collection: PHAssetCollection) -> Signal<PHFetchResult<PHAsset>, NoError> {
+    public func fetchAssets(_ collection: PHAssetCollection) -> Signal<PHFetchResult<PHAsset>, NoError> {
         let options = PHFetchOptions()
         if let assetType = self.assetType {
             options.predicate = NSPredicate(format: "mediaType = %d", assetType.rawValue)
@@ -55,7 +55,7 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
         )
     }
     
-    func fetchAssetsCollections(_ type: PHAssetCollectionType) -> Signal<PHFetchResult<PHAssetCollection>, NoError> {
+    public func fetchAssetsCollections(_ type: PHAssetCollectionType) -> Signal<PHFetchResult<PHAssetCollection>, NoError> {
         let initialFetchResult = PHAssetCollection.fetchAssetCollections(with: type, subtype: .any, options: nil)
         let fetchResult = Atomic<PHFetchResult<PHAssetCollection>>(value: initialFetchResult)
         return .single(initialFetchResult)
@@ -72,7 +72,7 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
         )
     }
     
-    func recentAssets() -> Signal<PHFetchResult<PHAsset>?, NoError> {
+    public func recentAssets() -> Signal<PHFetchResult<PHAsset>?, NoError> {
         let collections = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumUserLibrary, options: nil)
         if let collection = collections.firstObject {
             return fetchAssets(collection)
@@ -82,7 +82,7 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
         }
     }
         
-    func mediaAccess() -> Signal<PHAuthorizationStatus, NoError> {
+    public func mediaAccess() -> Signal<PHAuthorizationStatus, NoError> {
         let initialStatus: PHAuthorizationStatus
         if #available(iOS 14.0, *) {
             initialStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -95,13 +95,13 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
         )
     }
     
-    func requestMediaAccess() -> Void {
+    public func requestMediaAccess() -> Void {
         PHPhotoLibrary.requestAuthorization { [weak self] status in
             self?.mediaAccessSink.putNext(status)
         }
     }
     
-    func cameraAccess() -> Signal<AVAuthorizationStatus?, NoError> {
+    public func cameraAccess() -> Signal<AVAuthorizationStatus?, NoError> {
 #if targetEnvironment(simulator)
         return .single(.authorized)
 #else
@@ -116,7 +116,7 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
 #endif
     }
     
-    func requestCameraAccess() -> Void {
+    public func requestCameraAccess() -> Void {
         AVCaptureDevice.requestAccess(for: .video, completionHandler: { [weak self] result in
             if result {
                 self?.cameraAccessSink.putNext(.authorized)

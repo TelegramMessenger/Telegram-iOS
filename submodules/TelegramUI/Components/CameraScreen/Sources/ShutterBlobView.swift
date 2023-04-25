@@ -1,10 +1,8 @@
 import Foundation
 import Metal
 import MetalKit
-import Display
 
-@available(iOS 10.0, *)
-public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView {
+final class ShutterBlobView: MTKView, MTKViewDelegate {
     public func draw(in view: MTKView) {
         
     }
@@ -13,29 +11,19 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
     private let drawPassthroughPipelineState: MTLRenderPipelineState
     
     private var displayLink: CADisplayLink?
-
-    private let symbolTexture: MTLTexture
-    private let randomTexture: MTLTexture
     
     private var viewportDimensions = CGSize(width: 1, height: 1)
     
     private var startTimestamp = CACurrentMediaTime()
     
     public init?(test: Bool) {
-        let mainBundle = Bundle(for: MatrixView.self)
-
-        guard let path = mainBundle.path(forResource: "PremiumUIBundle", ofType: "bundle") else {
-            return nil
-        }
-        guard let bundle = Bundle(path: path) else {
-            return nil
-        }
+        let mainBundle = Bundle(for: ShutterBlobView.self)
         
         guard let device = MTLCreateSystemDefaultDevice() else {
             return nil
         }
 
-        guard let defaultLibrary = try? device.makeDefaultLibrary(bundle: bundle) else {
+        guard let defaultLibrary = try? device.makeDefaultLibrary(bundle: mainBundle) else {
             return nil
         }
 
@@ -44,16 +32,14 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         }
         self.commandQueue = commandQueue
 
-        guard let loadedVertexProgram = defaultLibrary.makeFunction(name: "matrixVertex") else {
+        guard let loadedVertexProgram = defaultLibrary.makeFunction(name: "cameraBlobVertex") else {
             return nil
         }
 
-        guard let loadedFragmentProgram = defaultLibrary.makeFunction(name: "matrixFragment") else {
+        guard let loadedFragmentProgram = defaultLibrary.makeFunction(name: "cameraBlobFragment") else {
             return nil
         }
-        
-        let textureLoader = MTKTextureLoader(device: device)
-        
+                
         let pipelineStateDescriptor = MTLRenderPipelineDescriptor()
         pipelineStateDescriptor.vertexFunction = loadedVertexProgram
         pipelineStateDescriptor.fragmentFunction = loadedFragmentProgram
@@ -68,16 +54,6 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         
         self.drawPassthroughPipelineState = try! device.makeRenderPipelineState(descriptor: pipelineStateDescriptor)
   
-        guard let url = bundle.url(forResource: "chars", withExtension: "png"), let texture = try? textureLoader.newTexture(URL: url, options: nil) else {
-            return nil
-        }
-        self.symbolTexture = texture
-        
-        guard let url = bundle.url(forResource: "random", withExtension: "jpg"), let texture = try? textureLoader.newTexture(URL: url, options: nil) else {
-            return nil
-        }
-        self.randomTexture = texture
-        
         super.init(frame: CGRect(), device: device)
         
         self.delegate = self
@@ -86,10 +62,10 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         self.backgroundColor = .clear
 
         self.framebufferOnly = true
-
+  
         class DisplayLinkProxy: NSObject {
-            weak var target: MatrixView?
-            init(target: MatrixView) {
+            weak var target: ShutterBlobView?
+            init(target: ShutterBlobView) {
                 self.target = target
             }
 
@@ -100,7 +76,8 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
 
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         if #available(iOS 15.0, *) {
-            self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 60.0, preferred: 60.0)
+            let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
+            self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: maxFps, preferred: maxFps)
         }
         self.displayLink?.add(to: .main, forMode: .common)
         self.displayLink?.isPaused = false
@@ -119,23 +96,6 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
     deinit {
         self.displayLink?.invalidate()
     }
-    
-    func setVisible(_ visible: Bool) {
-        if visible {
-            self.displayLink?.isPaused = false
-        }
-
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
-        transition.updateAlpha(layer: self.layer, alpha: visible ? 0.4 : 0.0, completion: { [weak self] finished in
-            if let strongSelf = self, finished && !visible {
-                strongSelf.displayLink?.isPaused = false
-            }
-        })
-    }
-    
-    func resetAnimation() {
-        
-    }
 
     @objc private func displayLinkEvent() {
         self.draw()
@@ -145,7 +105,6 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         self.redraw(drawable: self.currentDrawable!)
     }
 
-    
     private func redraw(drawable: MTLDrawable) {
         guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
             return
@@ -164,23 +123,23 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
         
         renderEncoder.setRenderPipelineState(self.drawPassthroughPipelineState)
 
+        let w = Float(1)
+        let h = Float(1)
+        
         var vertices: [Float] = [
-             1,  -1,
-            -1,  -1,
-            -1,   1,
-             1,  -1,
-            -1,   1,
-             1,   1
+             w,  -h,
+            -w,  -h,
+            -w,   h,
+             w,  -h,
+            -w,   h,
+             w,   h
         ]
         renderEncoder.setVertexBytes(&vertices, length: 4 * vertices.count, index: 0)
-        
-        renderEncoder.setFragmentTexture(self.symbolTexture, index: 0)
-        renderEncoder.setFragmentTexture(self.randomTexture, index: 1)
-        
+                
         var resolution = simd_uint2(UInt32(viewportDimensions.width), UInt32(viewportDimensions.height))
         renderEncoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
         
-        var time = Float(CACurrentMediaTime() - self.startTimestamp) * 0.75
+        var time = Float(CACurrentMediaTime() - self.startTimestamp) * 0.5
         renderEncoder.setFragmentBytes(&time, length: 4, index: 1)
         
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)

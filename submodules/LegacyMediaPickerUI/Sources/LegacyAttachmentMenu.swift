@@ -98,6 +98,48 @@ public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditable
     })
 }
 
+public func legacyFullMediaEditor(context: AccountContext, item: TGMediaEditableItem & TGMediaSelectableItem, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.captionPanelView = {
+        return getCaptionPanelView()
+    }
+    
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
+    legacyController.blocksBackgroundWhenInOverlay = true
+    legacyController.acceptsFocusWhenInOverlay = true
+    legacyController.statusBar.statusBarStyle = .Ignore
+    legacyController.controllerLoaded = { [weak legacyController] in
+        legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
+    }
+
+    let emptyController = LegacyEmptyController(context: legacyController.context)!
+    emptyController.navigationBarShouldBeHidden = true
+    let navigationController = makeLegacyNavigationController(rootController: emptyController)
+    navigationController.setNavigationBarHidden(true, animated: false)
+    legacyController.bind(controller: navigationController)
+
+    legacyController.enableSizeClassSignal = true
+    
+    present(legacyController, nil)
+    
+    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, adjustments: false, recipientName: "Story", stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [] as [Any], immediate: true, appeared: {
+        
+    }, completion: { result, editingContext in
+        let nativeGenerator = legacyAssetPickerItemGenerator()
+        var selectableResult: TGMediaSelectableItem?
+        if let result = result {
+            selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
+        }
+        let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3 in
+            nativeGenerator(_1, _2, _3, nil)
+        })
+        sendMessagesWithSignals(signals, false, 0)
+    }, dismissed: { [weak legacyController] in
+        legacyController?.dismiss()
+    })
+}
+
 public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, mode: LegacyMediaEditorMode, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in

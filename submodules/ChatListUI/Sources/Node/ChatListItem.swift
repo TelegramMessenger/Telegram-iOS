@@ -628,7 +628,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
     }
 }
 
-private let loginCodeRegex = try? NSRegularExpression(pattern: "[0-9]{5,6}", options: [])
+private let loginCodeRegex = try? NSRegularExpression(pattern: "[\\d\\-]{5,7}", options: [])
 
 class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {

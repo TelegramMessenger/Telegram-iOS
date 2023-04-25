@@ -31,6 +31,8 @@ import ChatControllerInteraction
 import ChatPresentationInterfaceState
 import StorageUsageScreen
 import DebugSettingsUI
+import MediaPickerUI
+import Photos
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1719,6 +1721,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
+    }
+    
+    public func makeMediaPickerScreen(context: AccountContext, completion: @escaping (PHAsset) -> Void) -> ViewController {
+        return storyMediaPickerController(context: context, completion: completion)
     }
         
     public func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController {

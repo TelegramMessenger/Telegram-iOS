@@ -5,23 +5,21 @@ import SwiftSignalKit
 private let defaultFPS: Double = 30.0
 
 final class CameraDevice {
-    public private(set) var videoDevice: AVCaptureDevice? = nil
-    public private(set) var audioDevice: AVCaptureDevice? = nil
-    private var videoDevicePromise = Promise<AVCaptureDevice>()
-    
-    init() {
-    }
-    
     var position: Camera.Position = .back
     
+    public private(set) var videoDevice: AVCaptureDevice? = nil {
+        didSet {
+            self.videoDevicePromise.set(.single(self.videoDevice))
+        }
+    }
+    private var videoDevicePromise = Promise<AVCaptureDevice?>()
+    
+    public private(set) var audioDevice: AVCaptureDevice? = nil
+        
     func configure(for session: AVCaptureSession, position: Camera.Position) {
         self.position = position
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            self.videoDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first
-        } else {
-            self.videoDevice = AVCaptureDevice.devices(for: .video).filter { $0.position == position }.first
-        }
-        if let videoDevice = self.videoDevice {
+        if let videoDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first {
+            self.videoDevice = videoDevice
             self.videoDevicePromise.set(.single(videoDevice))
         }
         self.audioDevice = AVCaptureDevice.default(for: .audio)
@@ -43,7 +41,7 @@ final class CameraDevice {
     }
     
     @objc private func subjectAreaChanged() {
-        
+        self.setFocusPoint(CGPoint(x: 0.5, y: 0.5), focusMode: .continuousAutoFocus, exposureMode: .continuousAutoExposure, monitorSubjectAreaChange: false)
     }
     
     var fps: Double = defaultFPS {
@@ -61,26 +59,13 @@ final class CameraDevice {
         }
     }
     
-    /*var isFlashActive: Signal<Bool, NoError> {
+    var isTorchAvailable: Signal<Bool, NoError> {
         return self.videoDevicePromise.get()
         |> mapToSignal { device -> Signal<Bool, NoError> in
             return Signal { subscriber in
-                subscriber.putNext(device.isFlashActive)
-                let observer = device.observe(\.isFlashActive, options: [.new], changeHandler: { device, _ in
-                    subscriber.putNext(device.isFlashActive)
-                })
-                return ActionDisposable {
-                    observer.invalidate()
+                guard let device else {
+                    return EmptyDisposable
                 }
-            }
-            |> distinctUntilChanged
-        }
-    }*/
-    
-    var isFlashAvailable: Signal<Bool, NoError> {
-        return self.videoDevicePromise.get()
-        |> mapToSignal { device -> Signal<Bool, NoError> in
-            return Signal { subscriber in
                 subscriber.putNext(device.isFlashAvailable)
                 let observer = device.observe(\.isFlashAvailable, options: [.new], changeHandler: { device, _ in
                     subscriber.putNext(device.isFlashAvailable)
@@ -97,6 +82,9 @@ final class CameraDevice {
         return self.videoDevicePromise.get()
         |> mapToSignal { device -> Signal<Bool, NoError> in
             return Signal { subscriber in
+                guard let device else {
+                    return EmptyDisposable
+                }
                 subscriber.putNext(device.isAdjustingFocus)
                 let observer = device.observe(\.isAdjustingFocus, options: [.new], changeHandler: { device, _ in
                     subscriber.putNext(device.isAdjustingFocus)
@@ -142,6 +130,15 @@ final class CameraDevice {
         }
         self.transaction(device) { device in
             device.torchMode = active ? .on : .off
+        }
+    }
+    
+    func setZoomLevel(_ zoomLevel: CGFloat) {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            device.videoZoomFactor = max(1.0, min(10.0, zoomLevel))
         }
     }
 }

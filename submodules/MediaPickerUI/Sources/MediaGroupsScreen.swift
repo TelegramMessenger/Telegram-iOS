@@ -13,6 +13,7 @@ import Photos
 import LegacyComponents
 import AttachmentUI
 import ItemListUI
+import CameraScreen
 
 private enum MediaGroupsEntry: Comparable, Identifiable {
     enum StableId: Hashable {

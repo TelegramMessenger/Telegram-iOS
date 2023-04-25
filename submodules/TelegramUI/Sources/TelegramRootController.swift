@@ -17,6 +17,9 @@ import DebugSettingsUI
 import TabBarUI
 import WallpaperBackgroundNode
 import ChatPresentationInterfaceState
+import CameraScreen
+import LegacyComponents
+import LegacyMediaPickerUI
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -181,6 +184,8 @@ public final class TelegramRootController: NavigationController {
         accountSettingsController.parentController = self
         controllers.append(accountSettingsController)
                 
+        tabBarController.cameraItem = UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2)
+        
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
         self.contactsController = contactsController
@@ -189,6 +194,10 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
+                
+        tabBarController.middleItemAction = { [weak self] in
+            self?.openStoryCamera()
+        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {
@@ -234,6 +243,37 @@ public final class TelegramRootController: NavigationController {
         }
         controller.view.endEditing(true)
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
+    }
+    
+    public func openStoryCamera() {
+        guard let controller = self.viewControllers.last as? ViewController else {
+            return
+        }
+        controller.view.endEditing(true)
+        
+        var presentImpl: ((ViewController) -> Void)?
+        let cameraController = CameraScreen(context: self.context, mode: .story, completion: { [weak self] result in
+            if let self {
+                let item: TGMediaEditableItem & TGMediaSelectableItem
+                switch result {
+                case let .image(image):
+                    item = TGCameraCapturedPhoto(existing: image)
+                case let .video(path):
+                    item = TGCameraCapturedVideo(url: URL(fileURLWithPath: path))
+                case let .asset(asset):
+                    item = TGMediaAsset(phAsset: asset)
+                }
+                legacyFullMediaEditor(context: self.context, item: item, getCaptionPanelView: { return nil }, sendMessagesWithSignals: { _, _, _ in
+                    
+                }, present: { c, a in
+                    presentImpl?(c)
+                })
+            }
+        })
+        controller.push(cameraController)
+        presentImpl = { [weak cameraController] c in
+            cameraController?.present(c, in: .window(.root))
+        }
     }
     
     public func openSettings() {

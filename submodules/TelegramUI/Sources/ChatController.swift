@@ -11119,15 +11119,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if !self.checkedPeerChatServiceActions {
             self.checkedPeerChatServiceActions = true
             
-            if case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat, self.screenCaptureManager == nil {
-                self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
-                    if let strongSelf = self, strongSelf.canReadHistoryValue, strongSelf.traceVisibility() {
-                        let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: peerId).start()
-                        return true
-                    } else {
-                        return false
-                    }
-                })
+            if case let .peer(peerId) = self.chatLocation, self.screenCaptureManager == nil {
+                if peerId.namespace == Namespaces.Peer.SecretChat {
+                    self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
+                        if let strongSelf = self, strongSelf.traceVisibility() {
+                            if strongSelf.canReadHistoryValue {
+                                let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: peerId).start()
+                            }
+                            return true
+                        } else {
+                            return false
+                        }
+                    })
+                } else if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 777000 {
+                    self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
+                        if let strongSelf = self, strongSelf.traceVisibility() {
+                            let loginCodeRegex = try? NSRegularExpression(pattern: "[\\d\\-]{5,7}", options: [])
+                            var leakingLoginCode: String?
+                            strongSelf.chatDisplayNode.historyNode.forEachVisibleMessageItemNode({ itemNode in
+                                if let text = itemNode.item?.message.text, let matches = loginCodeRegex?.matches(in: text, options: [], range: NSMakeRange(0, (text as NSString).length)), let match = matches.first {
+                                    leakingLoginCode = (text as NSString).substring(with: match.range)
+                                }
+                            })
+                            if let _ = leakingLoginCode {
+
+                            }
+                            return true
+                        } else {
+                            return false
+                        }
+                    })
+                }
             }
             
             if case let .peer(peerId) = self.chatLocation {

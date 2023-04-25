@@ -4,13 +4,16 @@ import UIKit
 public final class Image: Component {
     public let image: UIImage?
     public let tintColor: UIColor?
+    public let size: CGSize?
 
     public init(
         image: UIImage?,
-        tintColor: UIColor? = nil
+        tintColor: UIColor? = nil,
+        size: CGSize? = nil
     ) {
         self.image = image
         self.tintColor = tintColor
+        self.size = size
     }
 
     public static func ==(lhs: Image, rhs: Image) -> Bool {
@@ -18,6 +21,9 @@ public final class Image: Component {
             return false
         }
         if lhs.tintColor != rhs.tintColor {
+            return false
+        }
+        if lhs.size != rhs.size {
             return false
         }
         return true
@@ -36,7 +42,7 @@ public final class Image: Component {
             self.image = component.image
             self.tintColor = component.tintColor
 
-            return availableSize
+            return component.size ?? availableSize
         }
     }
 

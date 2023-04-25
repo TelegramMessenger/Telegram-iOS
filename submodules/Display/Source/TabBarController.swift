@@ -13,6 +13,8 @@ public protocol TabBarController: ViewController {
     var controllers: [ViewController] { get }
     var selectedIndex: Int { get set }
     
+    var cameraItem: UITabBarItem? { get set }
+    
     func setControllers(_ controllers: [ViewController], selectedIndex: Int?)
     
     func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition)
