@@ -523,6 +523,23 @@ private final class CachedChatListSearchResult {
     }
 }
 
+private final class CachedCustomTextEntities {
+    let text: String
+    let textEntities: [MessageTextEntity]
+    
+    init(text: String, textEntities: [MessageTextEntity]) {
+        self.text = text
+        self.textEntities = textEntities
+    }
+    
+    func matches(text: String) -> Bool {
+        if self.text != text {
+            return false
+        }
+        return true
+    }
+}
+
 private let playIconImage = UIImage(bundleImageName: "Chat List/MiniThumbnailPlay")?.precomposed()
 
 private final class ChatListMediaPreviewNode: ASDisplayNode {
@@ -610,6 +627,8 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
         apply()
     }
 }
+
+private let loginCodeRegex = try? NSRegularExpression(pattern: "[0-9]{5,6}", options: [])
 
 class ChatListItemNode: ItemListRevealOptionsItemNode {
     final class TopicItemNode: ASDisplayNode {
@@ -924,6 +943,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     private var cachedChatListText: (String, String)?
     private var cachedChatListSearchResult: CachedChatListSearchResult?
+    private var cachedCustomTextEntities: CachedCustomTextEntities?
     
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams, countersSize: CGFloat)?
     
@@ -1492,6 +1512,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let currentItem = self.layoutParams?.0
         let currentChatListText = self.cachedChatListText
         let currentChatListSearchResult = self.cachedChatListSearchResult
+        let currentCustomTextEntities = self.cachedCustomTextEntities
         
         return { item, params, first, last, firstWithHeader, nextIsPinned in
             let titleFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
@@ -1769,6 +1790,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var chatListText: (String, String)?
             var chatListSearchResult: CachedChatListSearchResult?
+            var customTextEntities: CachedCustomTextEntities?
             
             let contentImageSide: CGFloat = max(10.0, min(20.0, floor(item.presentationData.fontSize.baseDisplaySize * 18.0 / 17.0)))
             let contentImageSize = CGSize(width: contentImageSide, height: contentImageSide)
@@ -1841,7 +1863,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
                         }
                         
-                        let entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
+                        var entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
                             switch entity.type {
                             case .Spoiler, .CustomEmoji:
                                 return true
@@ -1851,6 +1873,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 return false
                             }
                         }
+                        
+                        if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
+                            if let cached = currentCustomTextEntities, cached.matches(text: message.text) {
+                                customTextEntities = cached
+                            } else if let matches = loginCodeRegex?.matches(in: message.text, options: [], range: NSMakeRange(0, (message.text as NSString).length)) {
+                                var entities: [MessageTextEntity] = []
+                                if let first = matches.first {
+                                    entities.append(MessageTextEntity(range: first.range.location ..< first.range.location + first.range.length, type: .Spoiler))
+                                }
+                                customTextEntities = CachedCustomTextEntities(text: message.text, textEntities: entities)
+                            }
+                        }
+                        
+                        if let customTextEntities, !customTextEntities.textEntities.isEmpty {
+                            entities.append(contentsOf: customTextEntities.textEntities)
+                        }
+                        
                         let messageString: NSAttributedString
                         if !message.text.isEmpty && entities.count > 0 {
                             var messageText = message.text
@@ -2560,6 +2599,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.currentItemHeight = itemHeight
                     strongSelf.cachedChatListText = chatListText
                     strongSelf.cachedChatListSearchResult = chatListSearchResult
+                    strongSelf.cachedCustomTextEntities = customTextEntities
                     strongSelf.onlineIsVoiceChat = onlineIsVoiceChat
                     
                     var animateOnline = animateOnline
