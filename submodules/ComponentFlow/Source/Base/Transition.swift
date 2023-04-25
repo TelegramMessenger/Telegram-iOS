@@ -386,8 +386,15 @@ public struct Transition {
         let t = layer.presentation()?.transform ?? layer.transform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         if currentScale == scale {
-            completion?(true)
-            return
+            if let animation = layer.animation(forKey: "transform.scale") as? CABasicAnimation, let toValue = animation.toValue as? NSNumber {
+                if toValue.doubleValue == scale {
+                    completion?(true)
+                    return
+                }
+            } else {
+                completion?(true)
+                return
+            }
         }
         switch self.animation {
         case .none:
