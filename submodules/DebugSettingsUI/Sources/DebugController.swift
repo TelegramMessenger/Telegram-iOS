@@ -51,6 +51,7 @@ private enum DebugControllerSection: Int32 {
     case videoExperiments
     case videoExperiments2
     case info
+    case ptg
 }
 
 private enum DebugControllerEntry: ItemListNodeEntry {
@@ -104,6 +105,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case restorePurchases(PresentationTheme)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
+    case ptgResetPasscodeAttempts
     
     var section: ItemListSectionId {
         switch self {
@@ -125,6 +127,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.videoExperiments2.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
+        case .ptgResetPasscodeAttempts:
+            return DebugControllerSection.ptg.rawValue
         }
     }
     
@@ -230,6 +234,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 102
         case .versionInfo:
             return 103
+        case .ptgResetPasscodeAttempts:
+            return 1001
         }
     }
     
@@ -1316,6 +1322,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
             let bundleBuild = bundle.infoDictionary?[kCFBundleVersionKey as String] ?? ""
             return ItemListTextItem(presentationData: presentationData, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild))"), sectionId: self.section)
+        case .ptgResetPasscodeAttempts:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Secret Passcode Attempts", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let passcodeAttemptAccounter = arguments.context?.sharedContext.passcodeAttemptAccounter else {
+                    return
+                }
+                passcodeAttemptAccounter.debugResetAllCounters()
+            })
         }
     }
 }
@@ -1407,6 +1420,10 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
     }
     entries.append(.versionInfo(presentationData.theme))
+    
+    if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
+        entries.append(.ptgResetPasscodeAttempts)
+    }
     
     return entries
 }
