@@ -1452,13 +1452,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                 }
                 
-                selectionState.setItem(item, selected: value)
+                let success = selectionState.setItem(item, selected: value)
                 
                 if showUndo {
                     self.showSelectionUndo(item: item)
                 }
                 
-                return true
+                return success
             } else {
                 return false
             }

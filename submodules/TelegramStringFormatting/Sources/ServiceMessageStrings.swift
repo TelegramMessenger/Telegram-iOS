@@ -95,6 +95,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
     for media in message.media {
         if let action = media as? TelegramMediaAction {
             let authorName = message.author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+            let compactAuthorName = message.author?.compactDisplayTitle ?? ""
             
             var isChannel = false
             if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -695,7 +696,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = NSAttributedString(string: strings.Notification_YouDisabledTheme, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let attributePeerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
-                        let resultTitleString = strings.Notification_DisabledTheme(authorName)
+                        let resultTitleString = strings.Notification_DisabledTheme(compactAuthorName)
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 } else {
@@ -704,7 +705,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     } else if message.author?.id == accountPeerId {
                         attributedString = NSAttributedString(string: strings.Notification_YouChangedTheme(emoji).string, font: titleFont, textColor: primaryTextColor)
                     } else {
-                        let resultTitleString = strings.Notification_ChangedTheme(authorName, emoji)
+                        let resultTitleString = strings.Notification_ChangedTheme(compactAuthorName, emoji)
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     }
                 }
@@ -717,7 +718,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                     attributes[1] = boldAttributes
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(compactAuthorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
             case let .topicCreated(title, iconColor, iconFileId):
                 if forForumOverview {
@@ -877,14 +878,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if message.author?.id == accountPeerId {
                     attributedString = NSAttributedString(string: strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    let resultTitleString = strings.Notification_ChangedWallpaper(authorName)
+                    let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 }
             case .setSameChatWallpaper:
                 if message.author?.id == accountPeerId {
                     attributedString = NSAttributedString(string: strings.Notification_YouChangedToSameWallpaper, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    let resultTitleString = strings.Notification_ChangedToSameWallpaper(authorName)
+                    let resultTitleString = strings.Notification_ChangedToSameWallpaper(compactAuthorName)
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 }
             case .unknown:

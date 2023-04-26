@@ -1473,7 +1473,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     transition.animatePosition(layer: self.startButton.layer, from: CGPoint(x: 0.0, y: 80.0), to: CGPoint(), additive: true)
                 }
                 if let context = self.context {
-                    let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil)
+                    let parentFrame = self.view.convert(self.bounds, to: nil)
+                    let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
                     let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
                     
                     if let tooltipController = self.tooltipController {
@@ -1494,7 +1495,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             delay = 0.35
                         }
                         Queue.mainQueue().after(delay, {
-                            let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil)
+                            let parentFrame = self.view.convert(self.bounds, to: nil)
+                            let absoluteFrame = self.startButton.view.convert(self.startButton.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
                             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 1.0), size: CGSize())
                             controller.location = .point(location, .bottom)
                             self.interfaceInteraction?.presentControllerInCurrent(controller, nil)
