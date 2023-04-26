@@ -153,7 +153,6 @@ final class AuthorizedApplicationContext {
                 }
             }
         }
-        |> distinctUntilChanged
     }
     
     private static func totalUnreadCount(context: AccountContext) -> Signal<Int32, NoError> {

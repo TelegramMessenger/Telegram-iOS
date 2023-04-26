@@ -1475,7 +1475,6 @@ extension UserDefaults {
         
         if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
             var suppressedNotificationForAccounIdObserver: NSKeyValueObservation?
-            var isFirstTime = true
             
             let _ = self.isInForegroundPromise.get().start(next: { isInForeground in
                 if isInForeground {
@@ -1487,10 +1486,8 @@ extension UserDefaults {
                         }
                     })
                     
-                    if isFirstTime {
-                        isFirstTime = false
-                    } else {
-                        // handle calls or new messages while app was in background for non-current accounts (both hidable and normal)
+                    Queue.mainQueue().after(0.5) {
+                        // handle calls or new messages while app was not running or in background for non-current accounts (both hidable and normal)
                         // for hidable accounts all notifications are unregistered when app is in background
                         // this also updates badge counter in case of new messages in hidable secret chat in normal non-current account
                         // even for normal non-current accounts if iOS Call Integration is disabled and new call comes, or if new message comes, when app is in background, if we do not tap notification but just open app, this will show incoming call window or update badge counter on Settings tab
@@ -1501,6 +1498,9 @@ extension UserDefaults {
                         let _ = (self.sharedContextPromise.get()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                            guard sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) else {
+                                return
+                            }
                             let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { activeAccounts in
@@ -1518,6 +1518,29 @@ extension UserDefaults {
                 }
             })
         }
+        
+        // handle incoming calls and update unread counter badge right after previously hidden account is revealed
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            var lastInactiveAccountIds = Set<AccountRecordId>()
+            
+            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+            |> deliverOnMainQueue).start(next: { activeAccounts in
+                let inactiveAccountsIds = Set(activeAccounts.inactiveAccounts.map({ $0.0 }))
+                let newlyRevealedAccountIds = lastInactiveAccountIds.subtracting(inactiveAccountsIds)
+                lastInactiveAccountIds = inactiveAccountsIds
+                
+                guard !newlyRevealedAccountIds.isEmpty && sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) else {
+                    return
+                }
+                for (_, context, _) in activeAccounts.accounts {
+                    if context.account.id != activeAccounts.primary?.account.id && newlyRevealedAccountIds.contains(context.account.id) {
+                        sharedApplicationContext.notificationManager.beginPollingState(account: context.account)
+                    }
+                }
+            })
+        })
         
         return true
     }
@@ -2043,40 +2066,61 @@ extension UserDefaults {
             completion()
             return
         }
-        guard let callKitIntegration = CallKitIntegration.shared else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
-            completion()
-            return
+        
+        let useCallKitIntegration: Signal<Bool, NoError>
+        if #available(iOS 13.0, *) {
+            useCallKitIntegration = .single(true)
+        } else {
+            useCallKitIntegration = self.sharedContextPromise.get()
+            |> mapToSignal { sharedApplicationContext in
+                return sharedApplicationContext.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
+            }
+            |> map { sharedData in
+                let voiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) ?? .defaultSettings
+                return voiceCallSettings.enableSystemIntegration
+            }
         }
         
-        let phoneNumber = payloadJson["phoneNumber"] as? String
+        let _ = (combineLatest(self.sharedContextPromise.get(), useCallKitIntegration)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext, useCallKitIntegration in
+            guard useCallKitIntegration else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is disabled")
+                completion()
+                return
+            }
+            
+            guard let callKitIntegration = CallKitIntegration.shared else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
+                completion()
+                return
+            }
+            
+            let phoneNumber = payloadJson["phoneNumber"] as? String
 
-        callKitIntegration.reportIncomingCall(
-            uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
-            stableId: callUpdate.callId,
-            handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
-            phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
-            isVideo: false,
-            displayTitle: callUpdate.peer.debugDisplayTitle,
-            completion: { error in
-                if let error = error {
-                    if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
-                        Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
-                    } else {
-                        Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
-                        /*Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
-                            }
-                        }*/
+            callKitIntegration.reportIncomingCall(
+                uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
+                stableId: callUpdate.callId,
+                handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
+                phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
+                isVideo: false,
+                displayTitle: callUpdate.peer.debugDisplayTitle,
+                completion: { error in
+                    if let error = error {
+                        if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
+                            Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
+                        } else {
+                            Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
+                            /*Queue.mainQueue().async {
+                                if let strongSelf = self {
+                                    strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
+                                }
+                            }*/
+                        }
                     }
                 }
-            }
-        )
-        
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            )
+            
             let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
             |> take(1)
             |> deliverOnMainQueue).start(next: { activeAccounts in
@@ -2117,11 +2161,11 @@ extension UserDefaults {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry payload: \(payload.dictionaryPayload)")
                 sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
             }
+            
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Invoking completion handler")
+            
+            completion()
         })
-        
-        Logger.shared.log("App \(self.episodeId) PushRegistry", "Invoking completion handler")
-        
-        completion()
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
