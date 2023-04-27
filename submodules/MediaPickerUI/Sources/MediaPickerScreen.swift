@@ -88,8 +88,8 @@ struct Month: Equatable {
         var timeinfo: tm = tm()
         gmtime_r(&time, &timeinfo)
 
-        let year = UInt32(timeinfo.tm_year)
-        let month = UInt32(timeinfo.tm_mon)
+        let year = UInt32(max(timeinfo.tm_year, 0))
+        let month = UInt32(max(timeinfo.tm_mon, 0))
 
         self.packedValue = Int32(bitPattern: year | (month << 16))
     }
