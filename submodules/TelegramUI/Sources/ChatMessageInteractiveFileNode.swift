@@ -628,7 +628,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             let descriptionText: String
                             if let performer = performer {
                                 descriptionText = performer
-                            } else if let size = arguments.file.size {
+                            } else if let size = arguments.file.size, size > 0, size != .max {
                                 descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: arguments.presentationData))
                             } else {
                                 descriptionText = ""
@@ -656,7 +656,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     descriptionString = candidateDescriptionString
                 } else if !isVoice {
                     let descriptionText: String
-                    if let size = arguments.file.size {
+                    if let size = arguments.file.size, size > 0, size != .max {
                         descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: arguments.presentationData))
                     } else {
                         descriptionText = ""
