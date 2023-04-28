@@ -461,7 +461,7 @@ private final class StoryContainerScreenComponent: Component {
                     itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
                     
                     if let view = view as? StoryContentItem.View {
-                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || self.attachmentController != nil)
+                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || self.attachmentController != nil || self.audioRecorderValue != nil || self.videoRecorderValue != nil)
                     }
                 }
             }
@@ -484,7 +484,7 @@ private final class StoryContainerScreenComponent: Component {
             for (_, visibleItem) in self.visibleItems {
                 if let view = visibleItem.view.view {
                     if let view = view as? StoryContentItem.View {
-                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || self.attachmentController?.window != nil)
+                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || self.attachmentController?.window != nil || self.audioRecorderValue != nil || self.videoRecorderValue != nil)
                     }
                 }
             }

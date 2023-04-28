@@ -141,6 +141,7 @@ public final class MessageInputActionButtonComponent: Component {
                 let micButton = ChatTextInputMediaRecordingButton(
                     context: component.context,
                     theme: component.theme,
+                    useDarkTheme: true,
                     strings: component.strings,
                     presentController: component.presentController
                 )

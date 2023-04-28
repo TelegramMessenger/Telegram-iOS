@@ -178,6 +178,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
 public final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButton, TGModernConversationInputMicButtonDelegate {
     private let context: AccountContext
     private var theme: PresentationTheme
+    private let useDarkTheme: Bool
     private let strings: PresentationStrings
     
     public var mode: ChatTextInputMediaRecordingButtonMode = .audio
@@ -293,16 +294,17 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         if let current = self.micLockValue {
             return current
         } else {
-            let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, strings: self.strings)
+            let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, useDarkTheme: self.useDarkTheme, strings: self.strings)
             lockView.addTarget(self, action: #selector(handleStopTap), for: .touchUpInside)
             self.micLockValue = lockView
             return lockView
         }
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, useDarkTheme: Bool = false, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.context = context
         self.theme = theme
+        self.useDarkTheme = useDarkTheme
         self.strings = strings
         self.animationView = ComponentView<Empty>()
         self.presentController = presentController
@@ -382,7 +384,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             transition: .immediate,
             component: AnyComponent(LottieComponent(
                 content: LottieComponent.AppBundleContent(name: animationName),
-                color: self.theme.chat.inputPanel.panelControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
+                color: self.useDarkTheme ? .white : self.theme.chat.inputPanel.panelControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
             )),
             environment: {},
             containerSize: animationFrame.size
@@ -407,7 +409,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         self.updateAnimation(previousMode: self.mode)
         
         self.pallete = legacyInputMicPalette(from: theme)
-        self.micDecorationValue?.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        self.micDecorationValue?.setColor( self.theme.chat.inputPanel.actionControlFillColor)
         (self.micLockValue as? LockView)?.updateTheme(theme)
     }
     

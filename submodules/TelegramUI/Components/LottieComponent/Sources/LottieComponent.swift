@@ -55,16 +55,24 @@ public final class LottieComponent: Component {
             return EmptyDisposable
         }
     }
+    
+    public enum StartingPosition {
+        case begin
+        case end
+    }
 
     public let content: Content
     public let color: UIColor
+    public let startingPosition: StartingPosition
     
     public init(
         content: Content,
-        color: UIColor
+        color: UIColor,
+        startingPosition: StartingPosition = .end
     ) {
         self.content = content
         self.color = color
+        self.startingPosition = startingPosition
     }
     
     public static func ==(lhs: LottieComponent, rhs: LottieComponent) -> Bool {
@@ -72,6 +80,9 @@ public final class LottieComponent: Component {
             return false
         }
         if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.startingPosition != rhs.startingPosition {
             return false
         }
         return true
@@ -82,6 +93,7 @@ public final class LottieComponent: Component {
         private var component: LottieComponent?
         
         private var scheduledPlayOnce: Bool = false
+        private var playOnceCompletion: (() -> Void)?
         private var animationInstance: LottieInstance?
         private var currentDisplaySize: CGSize?
         private var currentContentDisposable: Disposable?
@@ -147,7 +159,9 @@ public final class LottieComponent: Component {
             }
         }
         
-        public func playOnce(delay: Double = 0.0) {
+        public func playOnce(delay: Double = 0.0, completion: (() -> Void)? = nil) {
+            self.playOnceCompletion = completion
+            
             guard let _ = self.animationInstance else {
                 self.scheduledPlayOnce = true
                 return
@@ -194,13 +208,18 @@ public final class LottieComponent: Component {
             }
         }
         
-        private func loadAnimation(data: Data, cacheKey: String?) {
+        private func loadAnimation(data: Data, cacheKey: String?, startingPosition: StartingPosition) {
             self.animationInstance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: cacheKey ?? "")
             if self.scheduledPlayOnce {
                 self.scheduledPlayOnce = false
                 self.playOnce()
             } else if let animationInstance = self.animationInstance {
-                self.currentFrame = Int(animationInstance.frameCount - 1)
+                switch startingPosition {
+                case .begin:
+                    self.currentFrame = 0
+                case .end:
+                    self.currentFrame = Int(animationInstance.frameCount - 1)
+                }
                 self.updateImage()
             }
         }
@@ -222,12 +241,21 @@ public final class LottieComponent: Component {
             
             let timestamp = CACurrentMediaTime()
             if currentFrameStartTime + timestamp >= secondsPerFrame * 0.9 {
-                self.currentFrame += 1
+                var advanceFrameCount = 1
+                if animationInstance.frameRate == 360 {
+                    advanceFrameCount = 6
+                }
+                self.currentFrame += advanceFrameCount
                 if self.currentFrame >= Int(animationInstance.frameCount) - 1 {
                     self.currentFrame = Int(animationInstance.frameCount) - 1
                     self.updateImage()
                     self.displayLink?.invalidate()
                     self.displayLink = nil
+                    
+                    if let playOnceCompletion = self.playOnceCompletion {
+                        self.playOnceCompletion = nil
+                        playOnceCompletion()
+                    }
                 } else {
                     self.currentFrameStartTime = timestamp
                     self.updateImage()
@@ -271,10 +299,10 @@ public final class LottieComponent: Component {
                 let content = component.content
                 self.currentContentDisposable = component.content.load { [weak self, weak content] data, cacheKey in
                     Queue.mainQueue().async {
-                        guard let self, self.component?.content == content else {
+                        guard let self, let component = self.component, component.content == content else {
                             return
                         }
-                        self.loadAnimation(data: data, cacheKey: cacheKey)
+                        self.loadAnimation(data: data, cacheKey: cacheKey, startingPosition: component.startingPosition)
                     }
                 }
             } else if redrawImage {

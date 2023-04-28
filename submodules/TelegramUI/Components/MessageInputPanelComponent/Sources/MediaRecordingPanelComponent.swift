@@ -9,6 +9,8 @@ import AccountContext
 import TelegramPresentationData
 import ChatPresentationInterfaceState
 import SwiftSignalKit
+import LottieComponent
+import HierarchyTrackingLayer
 
 public final class MediaRecordingPanelComponent: Component {
     public let audioRecorder: ManagedAudioRecorder?
@@ -42,10 +44,15 @@ public final class MediaRecordingPanelComponent: Component {
         private var component: MediaRecordingPanelComponent?
         private weak var state: EmptyComponentState?
         
-        private let indicatorView: UIImageView
+        private let trackingLayer: HierarchyTrackingLayer
         
+        private let indicator = ComponentView<Empty>()
+        
+        private let cancelContainerView: UIView
         private let cancelIconView: UIImageView
         private let cancelText = ComponentView<Empty>()
+        
+        private let timerFont: UIFont
         private let timerText = ComponentView<Empty>()
         
         private var timerTextDisposable: Disposable?
@@ -53,13 +60,26 @@ public final class MediaRecordingPanelComponent: Component {
         private var timerTextValue: String = "0:00,00"
         
         override init(frame: CGRect) {
-            self.indicatorView = UIImageView()
+            self.trackingLayer = HierarchyTrackingLayer()
             self.cancelIconView = UIImageView()
+            
+            self.timerFont = Font.with(size: 15.0, design: .camera, traits: .monospacedNumbers)
+            
+            self.cancelContainerView = UIView()
             
             super.init(frame: frame)
             
-            self.addSubview(self.indicatorView)
-            self.addSubview(self.cancelIconView)
+            self.layer.addSublayer(self.trackingLayer)
+            
+            self.cancelContainerView.addSubview(self.cancelIconView)
+            self.addSubview(self.cancelContainerView)
+            
+            self.trackingLayer.didEnterHierarchy = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.updateAnimations()
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -68,6 +88,72 @@ public final class MediaRecordingPanelComponent: Component {
         
         deinit {
             self.timerTextDisposable?.dispose()
+        }
+        
+        private func updateAnimations() {
+            if let indicatorView = self.indicator.view {
+                if indicatorView.layer.animation(forKey: "recording") == nil {
+                    let animation = CAKeyframeAnimation(keyPath: "opacity")
+                    animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+                    animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                    animation.duration = 0.5
+                    animation.autoreverses = true
+                    animation.repeatCount = Float.infinity
+                    
+                    indicatorView.layer.add(animation, forKey: "recording")
+                }
+            }
+            if self.cancelContainerView.layer.animation(forKey: "recording") == nil {
+                let animation = CAKeyframeAnimation(keyPath: "position.x")
+                animation.values = [-5.0 as NSNumber, 5.0 as NSNumber, 0.0 as NSNumber]
+                animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                animation.duration = 1.5
+                animation.autoreverses = true
+                animation.isAdditive = true
+                animation.repeatCount = Float.infinity
+                
+                self.cancelContainerView.layer.add(animation, forKey: "recording")
+            }
+        }
+        
+        public func animateIn() {
+            if let indicatorView = self.indicator.view {
+                indicatorView.layer.animatePosition(from: CGPoint(x: -20.0, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            }
+            if let timerTextView = self.timerText.view {
+                timerTextView.layer.animatePosition(from: CGPoint(x: -20.0, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            }
+            self.cancelContainerView.layer.animatePosition(from: CGPoint(x: self.bounds.width, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        }
+        
+        public func animateOut(dismissRecording: Bool, completion: @escaping () -> Void) {
+            if let indicatorView = self.indicator.view as? LottieComponent.View {
+                if let _ = indicatorView.layer.animation(forKey: "recording") {
+                    let fromAlpha = indicatorView.layer.presentation()?.opacity ?? indicatorView.layer.opacity
+                    indicatorView.layer.removeAnimation(forKey: "recording")
+                    indicatorView.layer.animateAlpha(from: CGFloat(fromAlpha), to: 1.0, duration: 0.2)
+                    
+                    indicatorView.playOnce(completion: { [weak indicatorView] in
+                        if let indicatorView {
+                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            transition.setScale(view: indicatorView, scale: 0.001)
+                        }
+                        
+                        completion()
+                    })
+                }
+            } else {
+                completion()
+            }
+            
+            
+            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+            if let timerTextView = self.timerText.view {
+                transition.setAlpha(view: timerTextView, alpha: 0.0)
+                transition.setScale(view: timerTextView, scale: 0.001)
+            }
+            
+            transition.setAlpha(view: self.cancelContainerView, alpha: 0.0)
         }
         
         func update(component: MediaRecordingPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -134,26 +220,36 @@ public final class MediaRecordingPanelComponent: Component {
                 }
             }
             
-            if self.indicatorView.image == nil {
-                self.indicatorView.image = generateFilledCircleImage(diameter: 10.0, color: UIColor(rgb: 0xFF3B30))
-            }
-            if let image = self.indicatorView.image {
-                transition.setFrame(view: self.indicatorView, frame: CGRect(origin: CGPoint(x: 10.0, y: floor((availableSize.height - image.size.height) * 0.5)), size: image.size))
+            let indicatorSize = self.indicator.update(
+                transition: .immediate,
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "BinRed"),
+                    color: UIColor(rgb: 0xFF3B30),
+                    startingPosition: .begin
+                )),
+                environment: {},
+                containerSize: CGSize(width: 40.0, height: 40.0)
+            )
+            if let indicatorView = self.indicator.view {
+                if indicatorView.superview == nil {
+                    self.addSubview(indicatorView)
+                }
+                transition.setFrame(view: indicatorView, frame: CGRect(origin: CGPoint(x: 3.0, y: floor((availableSize.height - indicatorSize.height) * 0.5)), size: indicatorSize))
             }
             
             let timerTextSize = self.timerText.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: self.timerTextValue, font: Font.regular(15.0), color: .white)),
+                component: AnyComponent(Text(text: self.timerTextValue, font: self.timerFont, color: .white)),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             if let timerTextView = self.timerText.view {
                 if timerTextView.superview == nil {
                     self.addSubview(timerTextView)
-                    timerTextView.layer.anchorPoint = CGPoint()
+                    timerTextView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
                 }
-                let timerTextFrame = CGRect(origin: CGPoint(x: 28.0, y: floor((availableSize.height - timerTextSize.height) * 0.5)), size: timerTextSize)
-                transition.setPosition(view: timerTextView, position: timerTextFrame.origin)
+                let timerTextFrame = CGRect(origin: CGPoint(x: 38.0, y: floor((availableSize.height - timerTextSize.height) * 0.5)), size: timerTextSize)
+                transition.setPosition(view: timerTextView, position: CGPoint(x: timerTextFrame.minX, y: timerTextFrame.midY))
                 timerTextView.bounds = CGRect(origin: CGPoint(), size: timerTextFrame.size)
             }
             
@@ -161,11 +257,11 @@ public final class MediaRecordingPanelComponent: Component {
                 self.cancelIconView.image = UIImage(bundleImageName: "Chat/Input/Text/AudioRecordingCancelArrow")?.withRenderingMode(.alwaysTemplate)
             }
             
-            self.cancelIconView.tintColor = UIColor(white: 1.0, alpha: 0.3)
+            self.cancelIconView.tintColor = UIColor(white: 1.0, alpha: 0.4)
             
             let cancelTextSize = self.cancelText.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: "Slide to cancel", font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.3))),
+                component: AnyComponent(Text(text: "Slide to cancel", font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.4))),
                 environment: {},
                 containerSize: CGSize(width: max(30.0, availableSize.width - 100.0), height: 44.0)
             )
@@ -182,13 +278,15 @@ public final class MediaRecordingPanelComponent: Component {
             
             if let cancelTextView = self.cancelText.view {
                 if cancelTextView.superview == nil {
-                    self.addSubview(cancelTextView)
+                    self.cancelContainerView.addSubview(cancelTextView)
                 }
                 transition.setFrame(view: cancelTextView, frame: textFrame)
             }
             if let image = self.cancelIconView.image {
                 transition.setFrame(view: self.cancelIconView, frame: CGRect(origin: CGPoint(x: textFrame.minX - 4.0 - image.size.width, y: textFrame.minY + floor((textFrame.height - image.size.height) * 0.5)), size: image.size))
             }
+            
+            self.updateAnimations()
             
             return availableSize
         }
