@@ -94,7 +94,7 @@ private final class MultiplexedRequestManagerContext {
     private var nextId: Int32 = 0
     
     private var targetContexts: [MultiplexedRequestTargetKey: [RequestTargetContext]] = [:]
-    private var emptyTargetTimers: [MultiplexedRequestTargetTimerKey: SignalKitTimer] = [:]
+    private var emptyTargetDisposables: [MultiplexedRequestTargetTimerKey: Disposable] = [:]
     
     init(queue: Queue, takeWorker: @escaping (MultiplexedRequestTarget, MediaResourceFetchTag?, Bool) -> Download?) {
         self.queue = queue
@@ -109,8 +109,8 @@ private final class MultiplexedRequestManagerContext {
                 }
             }
         }
-        for timer in emptyTargetTimers.values {
-            timer.invalidate()
+        for disposable in emptyTargetDisposables.values {
+            disposable.dispose()
         }
     }
     
@@ -243,12 +243,17 @@ private final class MultiplexedRequestManagerContext {
             for context in contexts {
                 let key = MultiplexedRequestTargetTimerKey(key: targetKey, id: context.id)
                 if context.requests.isEmpty {
-                    if self.emptyTargetTimers[key] == nil {
-                        let timer = SignalKitTimer(timeout: 2.0, repeat: false, completion: { [weak self] in
+                    if self.emptyTargetDisposables[key] == nil {
+                        let disposable = MetaDisposable()
+                        self.emptyTargetDisposables[key] = disposable
+                        
+                        disposable.set((Signal<Never, NoError>.complete()
+                        |> delay(20 * 60, queue: self.queue)
+                        |> deliverOn(self.queue)).start(completed: { [weak self] in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.emptyTargetTimers.removeValue(forKey: key)
+                            strongSelf.emptyTargetDisposables.removeValue(forKey: key)
                             if strongSelf.targetContexts[targetKey] != nil {
                                 for i in 0 ..< strongSelf.targetContexts[targetKey]!.count {
                                     if strongSelf.targetContexts[targetKey]![i].id == key.id {
@@ -257,14 +262,12 @@ private final class MultiplexedRequestManagerContext {
                                     }
                                 }
                             }
-                        }, queue: self.queue)
-                        self.emptyTargetTimers[key] = timer
-                        timer.start()
+                        }))
                     }
                 } else {
-                    if let timer = self.emptyTargetTimers[key] {
-                        timer.invalidate()
-                        self.emptyTargetTimers.removeValue(forKey: key)
+                    if let disposable = self.emptyTargetDisposables[key] {
+                        disposable.dispose()
+                        self.emptyTargetDisposables.removeValue(forKey: key)
                     }
                 }
             }

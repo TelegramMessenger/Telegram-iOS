@@ -15,21 +15,22 @@ import LocalMediaResources
 import AppBundle
 import LegacyMediaPickerUI
 import ChatPresentationInterfaceState
+import ChatSendButtonRadialStatusNode
 
-final class InstantVideoController: LegacyController, StandalonePresentableController {
+public final class InstantVideoController: LegacyController, StandalonePresentableController {
     private var captureController: TGVideoMessageCaptureController?
     
-    var onDismiss: ((Bool) -> Void)?
-    var onStop: (() -> Void)?
+    public var onDismiss: ((Bool) -> Void)?
+    public var onStop: (() -> Void)?
     
     private let micLevelValue = ValuePromise<Float>(0.0)
     private let durationValue = ValuePromise<TimeInterval>(0.0)
-    let audioStatus: InstantVideoControllerRecordingStatus
+    public let audioStatus: InstantVideoControllerRecordingStatus
 
     private var completed = false
     private var dismissed = false
     
-    override init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
+    override public init(presentation: LegacyControllerPresentation, theme: PresentationTheme?, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.audioStatus = InstantVideoControllerRecordingStatus(micLevel: self.micLevelValue.get(), duration: self.durationValue.get())
         
         super.init(presentation: presentation, theme: theme, initialLayout: initialLayout)
@@ -41,7 +42,7 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
         fatalError("init(coder:) has not been implemented")
     }
     
-    func bindCaptureController(_ captureController: TGVideoMessageCaptureController?) {
+    public func bindCaptureController(_ captureController: TGVideoMessageCaptureController?) {
         self.captureController = captureController
         if let captureController = captureController {
             captureController.view.disablesInteractiveKeyboardGestureRecognizer = true
@@ -66,61 +67,61 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
         }
     }
     
-    func dismissVideo() {
+    public func dismissVideo() {
         if let captureController = self.captureController, !self.dismissed {
             self.dismissed = true
             captureController.dismiss(true)
         }
     }
 
-    func extractVideoSnapshot() -> UIView? {
+    public func extractVideoSnapshot() -> UIView? {
         self.captureController?.extractVideoContent()
     }
 
-    func hideVideoSnapshot() {
+    public func hideVideoSnapshot() {
         self.captureController?.hideVideoContent()
     }
     
-    func completeVideo() {
+    public func completeVideo() {
         if let captureController = self.captureController, !self.completed {
             self.completed = true
             captureController.complete()
         }
     }
 
-    func dismissAnimated() {
+    public func dismissAnimated() {
         if let captureController = self.captureController, !self.dismissed {
             self.dismissed = true
             captureController.dismiss(false)
         }
     }
     
-    func stopVideo() -> Bool {
+    public func stopVideo() -> Bool {
         if let captureController = self.captureController {
             return captureController.stop()
         }
         return false
     }
     
-    func lockVideo() {
+    public func lockVideo() {
         if let captureController = self.captureController {
             return captureController.setLocked()
         }
     }
     
-    func updateRecordButtonInteraction(_ value: CGFloat) {
+    public func updateRecordButtonInteraction(_ value: CGFloat) {
         if let captureController = self.captureController {
             captureController.buttonInteractionUpdate(CGPoint(x: value, y: 0.0))
         }
     }
 }
 
-func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversationInputMicPallete {
+public func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversationInputMicPallete {
     let inputPanelTheme = theme.chat.inputPanel
     return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: theme.rootController.navigationBar.opaqueBackgroundColor, borderColor: inputPanelTheme.panelSeparatorColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
 }
 
-func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, hasSchedule: Bool, send: @escaping (InstantVideoController, EnqueueMessage?) -> Void, displaySlowmodeTooltip: @escaping (UIView, CGRect) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) -> InstantVideoController {
+public func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, hasSchedule: Bool, send: @escaping (InstantVideoController, EnqueueMessage?) -> Void, displaySlowmodeTooltip: @escaping (UIView, CGRect) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) -> InstantVideoController {
     let isSecretChat = peerId.namespace == Namespaces.Peer.SecretChat
     
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)

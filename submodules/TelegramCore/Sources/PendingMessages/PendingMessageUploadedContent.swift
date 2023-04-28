@@ -287,6 +287,12 @@ private func maybePredownloadedFileResource(postbox: Postbox, auxiliaryMethods: 
         return .single(.none)
     }
     
+    #if DEBUG
+    if "".isEmpty {
+        return .single(.none)
+    }
+    #endif
+    
     return auxiliaryMethods.fetchResourceMediaReferenceHash(resource)
     |> mapToSignal { hash -> Signal<PredownloadedResource, NoError> in
         if let hash = hash {

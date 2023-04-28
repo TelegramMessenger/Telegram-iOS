@@ -15,6 +15,10 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/TelegramUI/Components/TextFieldComponent",
         "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/ChatTextInputMediaRecordingButton",
+        "//submodules/AccountContext",
+        "//submodules/TelegramPresentationData",
+        "//submodules/SSignalKit/SwiftSignalKit",
     ],
     visibility = [
         "//visibility:public",

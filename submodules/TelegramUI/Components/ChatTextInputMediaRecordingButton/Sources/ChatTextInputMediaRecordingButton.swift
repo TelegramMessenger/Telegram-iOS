@@ -13,7 +13,7 @@ import ChatPresentationInterfaceState
 import ComponentFlow
 import LottieAnimationComponent
 import LottieComponent
-import AccountContext
+import LegacyInstantVideoController
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0
@@ -175,22 +175,22 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     }
 }
 
-final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButton, TGModernConversationInputMicButtonDelegate {
+public final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButton, TGModernConversationInputMicButtonDelegate {
     private let context: AccountContext
     private var theme: PresentationTheme
     private let strings: PresentationStrings
     
-    var mode: ChatTextInputMediaRecordingButtonMode = .audio
-    var statusBarHost: StatusBarHost?
-    let presentController: (ViewController) -> Void
-    var recordingDisabled: () -> Void = { }
-    var beginRecording: () -> Void = { }
-    var endRecording: (Bool) -> Void = { _ in }
-    var stopRecording: () -> Void = { }
-    var offsetRecordingControls: () -> Void = { }
-    var switchMode: () -> Void = { }
-    var updateLocked: (Bool) -> Void = { _ in }
-    var updateCancelTranslation: () -> Void = { }
+    public var mode: ChatTextInputMediaRecordingButtonMode = .audio
+    public var statusBarHost: StatusBarHost?
+    public let presentController: (ViewController) -> Void
+    public var recordingDisabled: () -> Void = { }
+    public var beginRecording: () -> Void = { }
+    public var endRecording: (Bool) -> Void = { _ in }
+    public var stopRecording: () -> Void = { }
+    public var offsetRecordingControls: () -> Void = { }
+    public var switchMode: () -> Void = { }
+    public var updateLocked: (Bool) -> Void = { _ in }
+    public var updateCancelTranslation: () -> Void = { }
     
     private var modeTimeoutTimer: SwiftSignalKit.Timer?
     
@@ -199,13 +199,13 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     private var recordingOverlay: ChatTextInputAudioRecordingOverlay?
     private var startTouchLocation: CGPoint?
     fileprivate var controlsOffset: CGFloat = 0.0
-    private(set) var cancelTranslation: CGFloat = 0.0
+    public private(set) var cancelTranslation: CGFloat = 0.0
     
     private var micLevelDisposable: MetaDisposable?
 
     private weak var currentPresenter: UIView?
 
-    var contentContainer: (UIView, CGRect)? {
+    public var contentContainer: (UIView, CGRect)? {
         if let _ = self.currentPresenter {
             return (self.micDecoration, self.micDecoration.bounds)
         } else {
@@ -213,7 +213,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    var audioRecorder: ManagedAudioRecorder? {
+    public var audioRecorder: ManagedAudioRecorder? {
         didSet {
             if self.audioRecorder !== oldValue {
                 if self.micLevelDisposable == nil {
@@ -235,7 +235,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    var videoRecordingStatus: InstantVideoControllerRecordingStatus? {
+    public var videoRecordingStatus: InstantVideoControllerRecordingStatus? {
         didSet {
             if self.videoRecordingStatus !== oldValue {
                 if self.micLevelDisposable == nil {
@@ -300,7 +300,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -323,7 +323,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.centerOffset = CGPoint(x: 0.0, y: -1.0 + UIScreenPixel)
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -336,7 +336,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    func updateMode(mode: ChatTextInputMediaRecordingButtonMode, animated: Bool) {
+    public func updateMode(mode: ChatTextInputMediaRecordingButtonMode, animated: Bool) {
         self.updateMode(mode: mode, animated: animated, force: false)
     }
         
@@ -401,7 +401,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    func updateTheme(theme: PresentationTheme) {
+    public func updateTheme(theme: PresentationTheme) {
         self.theme = theme
         
         self.updateAnimation(previousMode: self.mode)
@@ -411,12 +411,12 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         (self.micLockValue as? LockView)?.updateTheme(theme)
     }
     
-    func cancelRecording() {
+    public func cancelRecording() {
         self.isEnabled = false
         self.isEnabled = true
     }
     
-    func micButtonInteractionBegan() {
+    public func micButtonInteractionBegan() {
         if self.fadeDisabled {
             self.recordingDisabled()
         } else {
@@ -433,13 +433,13 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    func micButtonInteractionCancelled(_ velocity: CGPoint) {
+    public func micButtonInteractionCancelled(_ velocity: CGPoint) {
         //print("\(CFAbsoluteTimeGetCurrent()) cancelled")
         self.modeTimeoutTimer?.invalidate()
         self.endRecording(false)
     }
     
-    func micButtonInteractionCompleted(_ velocity: CGPoint) {
+    public func micButtonInteractionCompleted(_ velocity: CGPoint) {
         //print("\(CFAbsoluteTimeGetCurrent()) completed")
         if let modeTimeoutTimer = self.modeTimeoutTimer {
             //print("\(CFAbsoluteTimeGetCurrent()) switch")
@@ -450,43 +450,43 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.endRecording(true)
     }
     
-    func micButtonInteractionUpdate(_ offset: CGPoint) {
+    public func micButtonInteractionUpdate(_ offset: CGPoint) {
         self.controlsOffset = offset.x
         self.offsetRecordingControls()
     }
     
-    func micButtonInteractionUpdateCancelTranslation(_ translation: CGFloat) {
+    public func micButtonInteractionUpdateCancelTranslation(_ translation: CGFloat) {
         self.cancelTranslation = translation
         self.updateCancelTranslation()
     }
     
-    func micButtonInteractionLocked() {
+    public func micButtonInteractionLocked() {
         self.updateLocked(true)
     }
     
-    func micButtonInteractionRequestedLockedAction() {
+    public func micButtonInteractionRequestedLockedAction() {
     }
     
-    func micButtonInteractionStopped() {
+    public func micButtonInteractionStopped() {
         self.stopRecording()
     }
     
-    func micButtonShouldLock() -> Bool {
+    public func micButtonShouldLock() -> Bool {
         return true
     }
     
-    func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
+    public func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
         let presenter = ChatTextInputMediaRecordingButtonPresenter(statusBarHost: self.statusBarHost, presentController: self.presentController)
         presenter.button = self
         self.currentPresenter = presenter.view()
         return presenter
     }
     
-    func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
+    public func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
         return micDecoration
     }
     
-    func micButtonLock() -> (UIView & TGModernConversationInputMicButtonLock)! {
+    public func micButtonLock() -> (UIView & TGModernConversationInputMicButtonLock)! {
         return micLock
     }
     
@@ -494,7 +494,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         micButtonInteractionStopped()
     }
     
-    override func animateIn() {
+    override public func animateIn() {
         super.animateIn()
         
         if self.context.sharedContext.energyUsageSettings.fullTranslucency {
@@ -509,7 +509,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
 
-    override func animateOut(_ toSmallSize: Bool) {
+    override public func animateOut(_ toSmallSize: Bool) {
         super.animateOut(toSmallSize)
         
         micDecoration.stopAnimating()
@@ -527,7 +527,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     private var previousSize = CGSize()
-    func layoutItems() {
+    public func layoutItems() {
         let size = self.bounds.size
         if size != self.previousSize {
             self.previousSize = size
