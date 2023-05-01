@@ -935,7 +935,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             } else if let linkContents = component.linkContents {
                 actionButtonBadge = max(0, self.selectedItems.count - (linkContents.peers.count - canAddChatCount))
                 if linkContents.localFilterId != nil {
-                    if self.selectedItems.isEmpty {
+                    if actionButtonBadge == 0 {
                         actionButtonTitle = environment.strings.FolderLinkPreview_ButtonDoNotJoinChats
                     } else {
                         actionButtonTitle = environment.strings.FolderLinkPreview_ButtonJoinChats

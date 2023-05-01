@@ -16,7 +16,7 @@ private final class ChatSendButtonRadialStatusNodeParameters: NSObject {
     }
 }
 
-final class ChatSendButtonRadialStatusNode: ASDisplayNode {
+public final class ChatSendButtonRadialStatusNode: ASDisplayNode {
     private let color: UIColor
     
     private var effectiveProgress: CGFloat = 0.0 {
@@ -25,7 +25,7 @@ final class ChatSendButtonRadialStatusNode: ASDisplayNode {
         }
     }
     
-    var slowmodeState: ChatSlowmodeState? = nil {
+    public var slowmodeState: ChatSlowmodeState? = nil {
         didSet {
             if self.slowmodeState != oldValue {
                 self.updateProgress()
@@ -35,7 +35,7 @@ final class ChatSendButtonRadialStatusNode: ASDisplayNode {
     
     private var updateTimer: SwiftSignalKit.Timer?
     
-    init(color: UIColor) {
+    public init(color: UIColor) {
         self.color = color
         
         super.init()
@@ -48,11 +48,11 @@ final class ChatSendButtonRadialStatusNode: ASDisplayNode {
         self.updateTimer?.invalidate()
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         return ChatSendButtonRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -107,7 +107,7 @@ final class ChatSendButtonRadialStatusNode: ASDisplayNode {
     }
 }
 
-final class ChatSendButtonRadialStatusView: UIView {
+public final class ChatSendButtonRadialStatusView: UIView {
     private let color: UIColor
     
     private var effectiveProgress: CGFloat = 0.0 {
@@ -116,7 +116,7 @@ final class ChatSendButtonRadialStatusView: UIView {
         }
     }
     
-    var slowmodeState: ChatSlowmodeState? = nil {
+    public var slowmodeState: ChatSlowmodeState? = nil {
         didSet {
             if self.slowmodeState != oldValue {
                 self.updateProgress()
@@ -126,7 +126,7 @@ final class ChatSendButtonRadialStatusView: UIView {
     
     private var updateTimer: SwiftSignalKit.Timer?
     
-    init(color: UIColor) {
+    public init(color: UIColor) {
         self.color = color
         
         super.init(frame: CGRect())
@@ -135,7 +135,7 @@ final class ChatSendButtonRadialStatusView: UIView {
         self.isOpaque = false
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -143,7 +143,7 @@ final class ChatSendButtonRadialStatusView: UIView {
         self.updateTimer?.invalidate()
     }
     
-    override func draw(_ rect: CGRect) {
+    override public func draw(_ rect: CGRect) {
         if rect.isEmpty {
             return
         }

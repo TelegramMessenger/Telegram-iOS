@@ -13,6 +13,7 @@ import SettingsUI
 import ChatPresentationInterfaceState
 import AttachmentUI
 import ForumCreateTopicScreen
+import LegacyInstantVideoController
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {

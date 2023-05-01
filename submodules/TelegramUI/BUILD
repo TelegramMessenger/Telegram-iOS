@@ -364,6 +364,9 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/ICloudResources",
         "//submodules/TelegramUI/Components/LegacyCamera",
+        "//submodules/TelegramUI/Components/ChatTextInputMediaRecordingButton",
+        "//submodules/TelegramUI/Components/ChatSendButtonRadialStatusNode",
+        "//submodules/TelegramUI/Components/LegacyInstantVideoController",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

@@ -10,6 +10,8 @@ import ChatPresentationInterfaceState
 import ChatMessageBackground
 import ChatControllerInteraction
 import AccountContext
+import ChatTextInputMediaRecordingButton
+import ChatSendButtonRadialStatusNode
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
     private let presentationContext: ChatPresentationContext?

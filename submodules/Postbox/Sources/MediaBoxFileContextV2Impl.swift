@@ -138,11 +138,17 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
             self.fullPath = fullPath
             self.metaPath = metaPath
             
-            do {
-                self.fileMap = try MediaBoxFileMap.read(manager: self.manager, path: self.metaPath)
-            } catch {
+            if !FileManager.default.fileExists(atPath: self.partialPath) {
                 let _ = try? FileManager.default.removeItem(atPath: self.metaPath)
                 self.fileMap = MediaBoxFileMap()
+                self.fileMap.serialize(manager: self.manager, to: self.metaPath)
+            } else {
+                do {
+                    self.fileMap = try MediaBoxFileMap.read(manager: self.manager, path: self.metaPath)
+                } catch {
+                    let _ = try? FileManager.default.removeItem(atPath: self.metaPath)
+                    self.fileMap = MediaBoxFileMap()
+                }
             }
             
             self.destinationFile = self.manager.open(path: self.partialPath, mode: .readwrite)
@@ -172,6 +178,17 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
                 completed: completed
             )
             if self.updateRangeRequest(request: request) {
+                if !self.isComplete, let truncationSize = self.fileMap.truncationSize, truncationSize == self.fileMap.sum {
+                    self.isComplete = true
+                    
+                    let linkResult = link(self.partialPath, self.fullPath)
+                    if linkResult != 0 {
+                        postboxLog("MediaBoxFileContextV2Impl: error while linking \(self.partialPath): \(linkResult)")
+                    }
+                }
+                
+                self.updateRequests()
+                
                 return EmptyDisposable
             } else {
                 let index = self.rangeRequests.add(request)

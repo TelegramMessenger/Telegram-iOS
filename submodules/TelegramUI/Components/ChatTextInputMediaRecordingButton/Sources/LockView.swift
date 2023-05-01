@@ -5,7 +5,7 @@ import Lottie
 import TelegramPresentationData
 
 final class LockView: UIButton, TGModernConversationInputMicButtonLock {
-    //private var colorCallbacks = [LOTValueDelegate]()
+    private let useDarkTheme: Bool
     
     private let idleView: AnimationView = {
         guard let url = getAppBundle().url(forResource: "LockWait", withExtension: "json"), let animation = Animation.filepath(url.path)
@@ -28,7 +28,9 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
         return view
     }()
     
-    init(frame: CGRect, theme: PresentationTheme, strings: PresentationStrings) {
+    init(frame: CGRect, theme: PresentationTheme, useDarkTheme: Bool = false, strings: PresentationStrings) {
+        self.useDarkTheme = useDarkTheme
+        
         super.init(frame: frame)
         
         accessibilityLabel = strings.VoiceOver_Recording_StopAndPreview
@@ -60,8 +62,6 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
     }
     
     func updateTheme(_ theme: PresentationTheme) {
-        //colorCallbacks.removeAll()
-        
         [
             "Rectangle.Заливка 1": theme.chat.inputPanel.panelBackgroundColor,
             "Rectangle.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
@@ -69,9 +69,6 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
             "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
         ].forEach { key, value in
             idleView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-            /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-            self.colorCallbacks.append(colorCallback)
-            idleView.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
         }
         
         [
@@ -82,9 +79,6 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
             "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
         ].forEach { key, value in
             lockingView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-            /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-            self.colorCallbacks.append(colorCallback)
-            lockingView.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
         }
     }
     

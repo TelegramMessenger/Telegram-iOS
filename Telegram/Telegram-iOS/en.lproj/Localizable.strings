@@ -9343,3 +9343,5 @@ Sorry for the inconvenience.";
 
 "ChatList.PremiumRestoreDiscountTitle" = "Get Premium back with up to %@ off";
 "ChatList.PremiumRestoreDiscountText" = "Your Telegram Premium has recently expired. Tap here to extend it.";
+
+"Login.ErrorAppOutdated" = "Please update Telegram to the latest version to log in.";

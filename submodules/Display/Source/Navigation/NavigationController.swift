@@ -792,6 +792,18 @@ open class NavigationController: UINavigationController, ContainableController, 
                 } else {
                     modalContainer.keyboardViewManager = nil
                     modalContainer.canHaveKeyboardFocus = false
+                    
+                    if modalContainer.isFlat {
+                        let controllerStatusBarStyle = modalContainer.container.statusBarStyle
+                        switch controllerStatusBarStyle {
+                        case .Black, .White, .Hide:
+                            if topVisibleModalContainerWithStatusBar == nil {
+                                topVisibleModalContainerWithStatusBar = modalContainer
+                            }
+                        case .Ignore:
+                            break
+                        }
+                    }
                 }
                 previousModalContainer = modalContainer
                 if isStandaloneModal {

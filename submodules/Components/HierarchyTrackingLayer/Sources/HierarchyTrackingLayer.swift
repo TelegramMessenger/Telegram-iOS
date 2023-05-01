@@ -10,12 +10,23 @@ private let nullAction = NullActionClass()
 open class HierarchyTrackingLayer: CALayer {
     public var didEnterHierarchy: (() -> Void)?
     public var didExitHierarchy: (() -> Void)?
+    public var isInHierarchyUpdated: ((Bool) -> Void)?
+    
+    public private(set) var isInHierarchy: Bool = false {
+        didSet {
+            if self.isInHierarchy != oldValue {
+                self.isInHierarchyUpdated?(self.isInHierarchy)
+            }
+        }
+    }
     
     override open func action(forKey event: String) -> CAAction? {
         if event == kCAOnOrderIn {
             self.didEnterHierarchy?()
+            self.isInHierarchy = true
         } else if event == kCAOnOrderOut {
             self.didExitHierarchy?()
+            self.isInHierarchy = false
         }
         return nullAction
     }

@@ -116,7 +116,10 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
     private var currentKeyboardLeftEdge: CGFloat = 0.0
     private var additionalKeyboardLeftEdgeOffset: CGFloat = 0.0
     
-    var statusBarStyle: StatusBarStyle = .Ignore
+    var statusBarStyle: StatusBarStyle = .Ignore {
+        didSet {
+        }
+    }
     var statusBarStyleUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
     

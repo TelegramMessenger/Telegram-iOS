@@ -2,6 +2,7 @@
 
 #import <CommonCrypto/CommonDigest.h>
 #import <sys/stat.h>
+#import <VideoToolbox/VideoToolbox.h>
 
 #import "GPUImageContext.h"
 
@@ -1319,13 +1320,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     AVVideoPixelAspectRatioVerticalSpacingKey: @3
     };
     
-    NSDictionary *codecSettings = @
-    {
-    AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 1000),
-    AVVideoCleanApertureKey: videoCleanApertureSettings,
-    AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
-    AVVideoExpectedSourceFrameRateKey: @(frameRate)
-    };
+    NSInteger videoBitrate = [self _videoBitrateKbpsForPreset:preset] * 1000;
     
     NSDictionary *hdVideoProperties = @
     {
@@ -1334,23 +1329,59 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
     };
     
-#if TARGET_IPHONE_SIMULATOR
-    return @
-    {
-    AVVideoCodecKey: AVVideoCodecH264,
-    AVVideoCompressionPropertiesKey: codecSettings,
-    AVVideoWidthKey: @((NSInteger)dimensions.width),
-    AVVideoHeightKey: @((NSInteger)dimensions.height)
-    };
+    bool useH265 = false;
+#if DEBUG
+    //videoBitrate = 800 * 1000;
+    useH265 = false;
 #endif
-    return @
-    {
-    AVVideoCodecKey: AVVideoCodecH264,
-    AVVideoCompressionPropertiesKey: codecSettings,
-    AVVideoWidthKey: @((NSInteger)dimensions.width),
-    AVVideoHeightKey: @((NSInteger)dimensions.height),
-    AVVideoColorPropertiesKey: hdVideoProperties
-    };
+    
+    if (useH265) {
+        NSDictionary *codecSettings = @
+        {
+        AVVideoAverageBitRateKey: @(videoBitrate),
+        AVVideoCleanApertureKey: videoCleanApertureSettings,
+        AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
+        AVVideoExpectedSourceFrameRateKey: @(frameRate),
+        AVVideoProfileLevelKey: (__bridge NSString *)kVTProfileLevel_HEVC_Main_AutoLevel
+        };
+        
+        return @
+        {
+        AVVideoCodecKey: AVVideoCodecTypeHEVC,
+        AVVideoCompressionPropertiesKey: codecSettings,
+        AVVideoWidthKey: @((NSInteger)dimensions.width),
+        AVVideoHeightKey: @((NSInteger)dimensions.height),
+        AVVideoColorPropertiesKey: hdVideoProperties
+        };
+    } else {
+        NSDictionary *codecSettings = @
+        {
+        AVVideoAverageBitRateKey: @(videoBitrate),
+        AVVideoCleanApertureKey: videoCleanApertureSettings,
+        AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
+        AVVideoExpectedSourceFrameRateKey: @(frameRate),
+        AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+        AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
+        };
+        
+#if TARGET_IPHONE_SIMULATOR
+        return @
+        {
+        AVVideoCodecKey: AVVideoCodecTypeH264,
+        AVVideoCompressionPropertiesKey: codecSettings,
+        AVVideoWidthKey: @((NSInteger)dimensions.width),
+        AVVideoHeightKey: @((NSInteger)dimensions.height)
+        };
+#endif
+        return @
+        {
+        AVVideoCodecKey: AVVideoCodecTypeH264,
+        AVVideoCompressionPropertiesKey: codecSettings,
+        AVVideoWidthKey: @((NSInteger)dimensions.width),
+        AVVideoHeightKey: @((NSInteger)dimensions.height),
+        AVVideoColorPropertiesKey: hdVideoProperties
+        };
+    }
 }
 
 + (NSInteger)_videoBitrateKbpsForPreset:(TGMediaVideoConversionPreset)preset

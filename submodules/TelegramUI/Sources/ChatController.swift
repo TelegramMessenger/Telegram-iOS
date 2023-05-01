@@ -93,6 +93,7 @@ import AvatarEditorScreen
 import ChatScheduleTimeController
 import ICloudResources
 import LegacyCamera
+import LegacyInstantVideoController
 
 #if DEBUG
 import os.signpost

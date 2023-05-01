@@ -178,7 +178,7 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
         
         func write(data: Data) {
             guard let connection = self.connection else {
-                assertionFailure("Connection not ready")
+                Logger.shared.log("NetworkFrameworkTcpConnectionInterface", "write called while connection == nil")
                 return
             }
             

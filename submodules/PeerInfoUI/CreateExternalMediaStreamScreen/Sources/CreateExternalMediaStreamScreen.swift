@@ -448,7 +448,7 @@ public final class CreateExternalMediaStreamScreen: ViewControllerComponentConta
         self.peerId = peerId
         self.mode = mode
         
-        super.init(context: context, component: CreateExternalMediaStreamScreenComponent(context: context, peerId: peerId, mode: mode, credentialsPromise: credentialsPromise), navigationBarAppearance: .transparent, theme: defaultDarkPresentationTheme)
+        super.init(context: context, component: CreateExternalMediaStreamScreenComponent(context: context, peerId: peerId, mode: mode, credentialsPromise: credentialsPromise), navigationBarAppearance: .transparent, theme: .dark)
         
         self.navigationPresentation = .modal
         
