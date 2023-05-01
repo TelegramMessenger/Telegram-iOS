@@ -130,7 +130,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     private var navigationBarPresentationData: NavigationBarPresentationData
     private var theme: TabBarControllerTheme
     
-    public var middleItemAction: () -> Void = {}
+    public var cameraItemAndAction: (item: UITabBarItem, action: () -> Void)?
     
     public init(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme) {
         self.navigationBarPresentationData = navigationBarPresentationData
@@ -202,12 +202,14 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         self.displayNode = TabBarControllerNode(theme: self.theme, navigationBarPresentationData: self.navigationBarPresentationData, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
                 var index = index
-                if strongSelf.tabBarControllerNode.tabBarNode.tabBarItems.count == 5 {
-                    if index == 2 {
-                        strongSelf.middleItemAction()
-                        return
-                    } else if index > 2 {
-                        index -= 1
+                if let (cameraItem, cameraAction) = strongSelf.cameraItemAndAction {
+                    if let cameraItemIndex = strongSelf.tabBarControllerNode.tabBarNode.tabBarItems.firstIndex(where: { $0.item === cameraItem }) {
+                        if index == cameraItemIndex {
+                            cameraAction()
+                            return
+                        } else if index > cameraItemIndex {
+                            index -= 1
+                        }
                     }
                 }
                 if longTap, let controller = strongSelf.controllers[index] as? TabBarContainedController {
@@ -277,14 +279,34 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             guard let strongSelf = self else {
                 return
             }
-            if index >= 0 && index < strongSelf.controllers.count {
+            if index >= 0 && index < strongSelf.tabBarControllerNode.tabBarNode.tabBarItems.count {
+                var index = index
+                if let (cameraItem, _) = strongSelf.cameraItemAndAction {
+                    if let cameraItemIndex = strongSelf.tabBarControllerNode.tabBarNode.tabBarItems.firstIndex(where: { $0.item === cameraItem }) {
+                        if index == cameraItemIndex {
+                            return
+                        } else if index > cameraItemIndex {
+                            index -= 1
+                        }
+                    }
+                }
                 strongSelf.controllers[index].tabBarItemContextAction(sourceNode: node, gesture: gesture)
             }
         }, swipeAction: { [weak self] index, direction in
             guard let strongSelf = self else {
                 return
             }
-            if index >= 0 && index < strongSelf.controllers.count {
+            if index >= 0 && index < strongSelf.tabBarControllerNode.tabBarNode.tabBarItems.count {
+                var index = index
+                if let (cameraItem, _) = strongSelf.cameraItemAndAction {
+                    if let cameraItemIndex = strongSelf.tabBarControllerNode.tabBarNode.tabBarItems.firstIndex(where: { $0.item === cameraItem }) {
+                        if index == cameraItemIndex {
+                            return
+                        } else if index > cameraItemIndex {
+                            index -= 1
+                        }
+                    }
+                }
                 strongSelf.controllers[index].tabBarItemSwipeAction(direction: direction)
             }
         }, toolbarActionSelected: { [weak self] action in
@@ -308,15 +330,15 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             return
         }
         
-        if self.tabBarControllerNode.tabBarNode.tabBarItems.count == 5 {
-            var selectedIndex = self.selectedIndex
-            if selectedIndex >= 2 {
-                selectedIndex += 1
+        var tabBarSelectedIndex = self.selectedIndex
+        if let (cameraItem, _) = self.cameraItemAndAction {
+            if let cameraItemIndex = self.tabBarControllerNode.tabBarNode.tabBarItems.firstIndex(where: { $0.item === cameraItem }) {
+                if tabBarSelectedIndex >= cameraItemIndex {
+                    tabBarSelectedIndex += 1
+                }
             }
-            self.tabBarControllerNode.tabBarNode.selectedIndex = selectedIndex
-        } else {
-            self.tabBarControllerNode.tabBarNode.selectedIndex = self.selectedIndex
         }
+        self.tabBarControllerNode.tabBarNode.selectedIndex = tabBarSelectedIndex
         
         if let currentController = self.currentController {
             currentController.willMove(toParent: nil)
@@ -412,9 +434,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             currentController.viewDidDisappear(animated)
         }
     }
-    
-    public var cameraItem: UITabBarItem?
-    
+        
     public func setControllers(_ controllers: [ViewController], selectedIndex: Int?) {
         var updatedSelectedIndex: Int? = selectedIndex
         if updatedSelectedIndex == nil, let selectedIndex = self._selectedIndex, selectedIndex < self.controllers.count {
@@ -427,8 +447,8 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         self.controllers = controllers
         
         var tabBarItems = self.controllers.map({ TabBarNodeItem(item: $0.tabBarItem, contextActionType: $0.tabBarItemContextActionType) })
-        if tabBarItems.count == 4, let cameraItem = self.cameraItem {
-            tabBarItems.insert(TabBarNodeItem(item: cameraItem, contextActionType: .none), at: 2)
+        if let (cameraItem, _) = self.cameraItemAndAction {
+            tabBarItems.insert(TabBarNodeItem(item: cameraItem, contextActionType: .none), at: Int(floor(CGFloat(controllers.count) / 2)))
         }
         
         self.tabBarControllerNode.tabBarNode.tabBarItems = tabBarItems

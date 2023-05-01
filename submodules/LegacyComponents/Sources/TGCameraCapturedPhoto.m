@@ -9,7 +9,6 @@
     NSString *_identifier;
     CGSize _dimensions;
     
-    UIImage *_existingImage;
     SVariable *_thumbnail;
     UIImage *_thumbImage;
 }

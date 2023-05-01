@@ -69,19 +69,22 @@ private final class CameraScreenComponent: CombinedComponent {
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: (CameraScreen.Result) -> Void
+    let shootAction: ActionSlot<Void>
     
     init(
         context: AccountContext,
         camera: Camera,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
-        completion: @escaping (CameraScreen.Result) -> Void
+        completion: @escaping (CameraScreen.Result) -> Void,
+        shootAction: ActionSlot<Void>
     ) {
         self.context = context
         self.camera = camera
         self.present = present
         self.push = push
         self.completion = completion
+        self.shootAction = shootAction
     }
     
     static func ==(lhs: CameraScreenComponent, rhs: CameraScreenComponent) -> Bool {
@@ -120,6 +123,7 @@ private final class CameraScreenComponent: CombinedComponent {
         fileprivate let camera: Camera
         private let present: (ViewController) -> Void
         private let completion: (CameraScreen.Result) -> Void
+        private let shootAction: ActionSlot<Void>
         
         private var cameraStateDisposable: Disposable?
         private var resultDisposable = MetaDisposable()
@@ -131,11 +135,12 @@ private final class CameraScreenComponent: CombinedComponent {
         var cameraState = CameraState(mode: .photo, flashMode: .off, recording: .none, duration: 0.0)
         var swipeHint: CaptureControlsComponent.SwipeHint = .none
         
-        init(context: AccountContext, camera: Camera, present: @escaping (ViewController) -> Void, completion: @escaping (CameraScreen.Result) -> Void) {
+        init(context: AccountContext, camera: Camera, present: @escaping (ViewController) -> Void, completion: @escaping (CameraScreen.Result) -> Void, shootAction: ActionSlot<Void>) {
             self.context = context
             self.camera = camera
             self.present = present
             self.completion = completion
+            self.shootAction = shootAction
             
             self.mediaAssetsContext = MediaAssetsContext()
             
@@ -185,11 +190,11 @@ private final class CameraScreenComponent: CombinedComponent {
                 if let self {
                     switch value {
                     case .began:
-                        print("blink")
+                        self.shootAction.invoke(Void())
                     case let .finished(image):
                         self.completion(.image(image))
                     case .failed:
-                        print("failed")
+                        break
                     }
                 }
             }))
@@ -201,7 +206,7 @@ private final class CameraScreenComponent: CombinedComponent {
             |> deliverOnMainQueue).start(next: { [weak self] duration in
                 if let self {
                     self.cameraState = self.cameraState.updatedDuration(duration)
-                    self.updated(transition: .immediate)
+                    self.updated(transition: .easeInOut(duration: 0.1))
                 }
             }))
             self.updated(transition: .spring(duration: 0.4))
@@ -225,7 +230,7 @@ private final class CameraScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion)
+        return State(context: self.context, camera: self.camera, present: self.present, completion: self.completion, shootAction: self.shootAction)
     }
     
     static var body: Body {
@@ -263,7 +268,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             guard let controller = controller() as? CameraScreen else {
                                 return
                             }
-                            controller.dismiss(animated: true)
+                            controller.requestDismiss(animated: true)
                         }
                     ).tagged(cancelButtonTag),
                     availableSize: CGSize(width: 40.0, height: 40.0),
@@ -301,18 +306,25 @@ private final class CameraScreenComponent: CombinedComponent {
                 )
             }
             
-            let zoomControl = zoomControl.update(
-                component: ZoomComponent(
-                    availableValues: state.camera.metrics.zoomLevels,
-                    value: 1.0,
-                    tag: zoomControlTag
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            context.add(zoomControl
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: availableSize.height - zoomControl.size.height / 2.0 - 187.0 - environment.safeInsets.bottom))
-            )
+            if case .holding = state.cameraState.recording {
+                
+            } else {
+                let _ = zoomControl
+//                let zoomControl = zoomControl.update(
+//                    component: ZoomComponent(
+//                        availableValues: state.camera.metrics.zoomLevels,
+//                        value: 1.0,
+//                        tag: zoomControlTag
+//                    ),
+//                    availableSize: context.availableSize,
+//                    transition: context.transition
+//                )
+//                context.add(zoomControl
+//                    .position(CGPoint(x: context.availableSize.width / 2.0, y: availableSize.height - zoomControl.size.height / 2.0 - 187.0 - environment.safeInsets.bottom))
+//                    .appear(.default(alpha: true))
+//                    .disappear(.default(alpha: true))
+//                )
+            }
             
             let shutterState: ShutterButtonState
             switch state.cameraState.recording {
@@ -373,9 +385,14 @@ private final class CameraScreenComponent: CombinedComponent {
                         state.camera.togglePosition()
                     },
                     galleryTapped: {
+                        var dismissGalleryControllerImpl: (() -> Void)?
                         let controller = accountContext.sharedContext.makeMediaPickerScreen(context: accountContext, completion: { asset in
+                            dismissGalleryControllerImpl?()
                             completion(.asset(asset))
                         })
+                        dismissGalleryControllerImpl = { [weak controller] in
+                            controller?.dismiss(animated: false)
+                        }
                         push(controller)
                     },
                     swipeHintUpdated: { hint in
@@ -503,10 +520,12 @@ public class CameraScreen: ViewController {
         private let context: AccountContext
         private let updateState: ActionSlot<CameraState>
 
+        private let backgroundEffectView: UIVisualEffectView
+        private let backgroundDimView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
         private let previewContainerView: UIView
         fileprivate let previewView: CameraPreviewView
-        fileprivate let blurView: UIVisualEffectView
+        fileprivate let previewBlurView: UIVisualEffectView
         fileprivate let camera: Camera
 
         private var presentationData: PresentationData
@@ -515,21 +534,28 @@ public class CameraScreen: ViewController {
         
         private var changingPositionDisposable: Disposable?
 
+        private let shootAction: ActionSlot<Void>
+        
         init(controller: CameraScreen) {
             self.controller = controller
             self.context = controller.context
             self.updateState = ActionSlot<CameraState>()
+            self.shootAction = ActionSlot<Void>()
 
             self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
+            self.backgroundEffectView = UIVisualEffectView(effect: nil)
+            self.backgroundDimView = UIView()
+            self.backgroundDimView.backgroundColor = UIColor(rgb: 0x000000)
+            
             self.componentHost = ComponentView<ViewControllerComponentContainer.Environment>()
             
             self.previewContainerView = UIView()
             self.previewContainerView.clipsToBounds = true
             self.previewContainerView.layer.cornerRadius = 12.0
             
-            self.blurView = UIVisualEffectView(effect: nil)
-            self.blurView.isUserInteractionEnabled = false
+            self.previewBlurView = UIVisualEffectView(effect: nil)
+            self.previewBlurView.isUserInteractionEnabled = false
             
             if let holder = controller.holder {
                 self.previewView = holder.previewView
@@ -543,11 +569,14 @@ public class CameraScreen: ViewController {
 
             super.init()
             
-            self.backgroundColor = .black
+            self.backgroundColor = .clear
+            
+            self.view.addSubview(self.backgroundEffectView)
+            self.view.addSubview(self.backgroundDimView)
             
             self.view.addSubview(self.previewContainerView)
             self.previewContainerView.addSubview(self.previewView)
-            self.previewContainerView.addSubview(self.blurView)
+            self.previewContainerView.addSubview(self.previewBlurView)
             
             self.changingPositionDisposable = (self.camera.changingPosition
             |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -555,14 +584,18 @@ public class CameraScreen: ViewController {
                     UIView.animate(withDuration: 0.5) {
                         if value {
                             if #available(iOS 13.0, *) {
-                                self.blurView.effect = UIBlurEffect(style: .systemThinMaterialDark)
+                                self.previewBlurView.effect = UIBlurEffect(style: .systemThinMaterialDark)
                             }
                         } else {
-                            self.blurView.effect = nil
+                            self.previewBlurView.effect = nil
                         }
                     }
                 }
             })
+            
+            self.shootAction.connect { [weak self] _ in
+                self?.previewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            }
         }
         
         deinit {
@@ -577,6 +610,9 @@ public class CameraScreen: ViewController {
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
             self.previewView.addGestureRecognizer(pinchGestureRecognizer)
+            
+            let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+            self.previewView.addGestureRecognizer(panGestureRecognizer)
         }
         
         @objc private func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
@@ -590,30 +626,68 @@ public class CameraScreen: ViewController {
                 break
             }
         }
+        
+        private var panStartLocation: CGPoint?
+        @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            let location = gestureRecognizer.location(in: self.view)
+            switch gestureRecognizer.state {
+            case .began:
+                self.panStartLocation = location
+            case .changed:
+                guard let _ = self.panStartLocation else {
+                    return
+                }
+               // let translation = location.y - panStartLocation.y
+                
+            default:
+                break
+            }
+        }
 
         func animateIn() {
             guard let layout = self.validLayout else {
                 return
             }
-//            if let view = self.componentHost.findTaggedView(tag: topGradientTag) {
-//                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-//            }
+            self.backgroundDimView.alpha = 0.0
+            UIView.animate(withDuration: 0.4, animations: {
+                self.backgroundEffectView.effect = UIBlurEffect(style: .dark)
+                self.backgroundDimView.alpha = 1.0
+                
+            }, completion: { _ in
+                self.backgroundEffectView.isHidden = true
+            })
+
             self.camera.focus(at: CGPoint(x: 0.5, y: 0.5))
             self.camera.startCapture()
             
-            self.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.previewContainerView.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height / 2.0 - layout.intrinsicInsets.bottom - 22.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.componentHost.view?.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height / 2.0 - layout.intrinsicInsets.bottom - 22.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.previewContainerView.layer.animateScale(from: 0.2, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            self.componentHost.view?.layer.animateScale(from: 0.2, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         }
 
         func animateOut(completion: @escaping () -> Void) {
-//            if let (layout, orientation) = self.validLayout {
-//                self.containerLayoutUpdated(layout: layout, orientation: orientation, animateOut: true, transition: .easeInOut(duration: 0.2))
-//            }
-//
-//            if let view = self.componentHost.findTaggedView(tag: topGradientTag) {
-//                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-//            }
+            guard let layout = self.validLayout else {
+                return
+            }
+            self.backgroundEffectView.isHidden = false
             
-            //self.layer.animatePosition(from: CGPoint(x: 0.0, y: self.frame.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            UIView.animate(withDuration: 0.25, animations: {
+                self.backgroundEffectView.effect = nil
+                self.backgroundDimView.alpha = 0.0
+            })
+            
+            self.previewContainerView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: layout.size.height / 2.0 - layout.intrinsicInsets.bottom - 8.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            self.componentHost.view?.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: layout.size.height / 2.0 - layout.intrinsicInsets.bottom - 8.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
+                completion()
+            })
+            self.previewContainerView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: .zero, size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            transition.updateCornerRadius(layer: self.previewContainerView.layer, cornerRadius: self.previewContainerView.bounds.width / 2.0)
+            self.componentHost.view?.layer.animateScale(from: 1.0, to: 0.2, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            self.componentHost.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+            self.previewContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false)
         }
 
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -674,7 +748,8 @@ public class CameraScreen: ViewController {
                         push: { [weak self] c in
                             self?.controller?.push(c)
                         },
-                        completion: controller.completion
+                        completion: controller.completion,
+                        shootAction: self.shootAction
                     )
                 ),
                 environment: {
@@ -685,7 +760,7 @@ public class CameraScreen: ViewController {
             )
             if let componentView = self.componentHost.view {
                 if componentView.superview == nil {
-                    self.view.insertSubview(componentView, at: 1)
+                    self.view.insertSubview(componentView, at: 3)
                     componentView.clipsToBounds = true
                 }
 
@@ -697,11 +772,14 @@ public class CameraScreen: ViewController {
                 }
             }
             
+            transition.setFrame(view: self.backgroundDimView, frame: CGRect(origin: .zero, size: layout.size))
+            transition.setFrame(view: self.backgroundEffectView, frame: CGRect(origin: .zero, size: layout.size))
+            
             let previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
             let previewFrame = CGRect(origin: CGPoint(x: 0.0, y: 60.0), size: previewSize)
             transition.setFrame(view: self.previewContainerView, frame: previewFrame)
             transition.setFrame(view: self.previewView, frame: CGRect(origin: .zero, size: previewFrame.size))
-            transition.setFrame(view: self.blurView, frame: CGRect(origin: .zero, size: previewFrame.size))
+            transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewFrame.size))
         }
     }
 
@@ -738,6 +816,22 @@ public class CameraScreen: ViewController {
         super.displayNodeDidLoad()
     }
 
+    private var isDismissed = false
+    fileprivate func requestDismiss(animated: Bool) {
+        guard !self.isDismissed else {
+            return
+        }
+        self.statusBar.statusBarStyle = .Ignore
+        self.isDismissed = true
+        if animated {
+            self.node.animateOut(completion: {
+                self.dismiss(animated: false)
+            })
+        } else {
+            self.dismiss(animated: false)
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 

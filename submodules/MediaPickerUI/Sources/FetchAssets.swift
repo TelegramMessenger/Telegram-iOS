@@ -25,6 +25,7 @@ func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool, deliveryMode: P
             options.resizeMode = .exact
         }
         options.isSynchronous = synchronous
+        options.isNetworkAccessAllowed = true
         let token = imageManager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options) { (image, info) in
             var degraded = false
             

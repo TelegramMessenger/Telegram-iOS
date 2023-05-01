@@ -1030,6 +1030,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+            guard let controller = self.controller else {
+                return
+            }
             let firstTime = self.validLayout == nil
             self.validLayout = (layout, navigationBarHeight)
             
@@ -1067,7 +1070,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
                 
                 var bannedSendMedia: (Int32, Bool)?
-                if let bannedSendPhotos = self.controller?.bannedSendPhotos, let bannedSendVideos = self.controller?.bannedSendVideos {
+                if let bannedSendPhotos = controller.bannedSendPhotos, let bannedSendVideos = controller.bannedSendVideos {
                     bannedSendMedia = (max(bannedSendPhotos.0, bannedSendVideos.0), bannedSendPhotos.1 || bannedSendVideos.1)
                 }
                 
@@ -1151,7 +1154,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: bounds.height)))
             
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: itemWidth, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
+            var itemHeight = itemWidth
+            if case let .assets(_, mode) = controller.subject, case .story = mode {
+                itemHeight = 180.0
+            }
+            
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: itemHeight * 3.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }

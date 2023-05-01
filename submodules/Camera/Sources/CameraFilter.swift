@@ -16,11 +16,10 @@ protocol CameraFilter: AnyObject {
     func render(pixelBuffer: CVPixelBuffer) -> CVPixelBuffer?
 }
 
-func allocateOutputBufferPool(with inputFormatDescription: CMFormatDescription, outputRetainedBufferCountHint: Int) ->(
+func allocateOutputBufferPool(with inputFormatDescription: CMFormatDescription, outputRetainedBufferCountHint: Int) -> (
     outputBufferPool: CVPixelBufferPool?,
     outputColorSpace: CGColorSpace?,
     outputFormatDescription: CMFormatDescription?) {
-        
         let inputMediaSubType = CMFormatDescriptionGetMediaSubType(inputFormatDescription)
         if inputMediaSubType != kCVPixelFormatType_32BGRA {
             assertionFailure("Invalid input pixel buffer type \(inputMediaSubType)")
@@ -109,9 +108,7 @@ class CameraTestFilter: CameraFilter {
     private var rosyFilter: CIFilter?
     
     private var outputColorSpace: CGColorSpace?
-    
     private var outputPixelBufferPool: CVPixelBufferPool?
-    
     private(set) var outputFormatDescription: CMFormatDescription?
     
     private(set) var inputFormatDescription: CMFormatDescription?

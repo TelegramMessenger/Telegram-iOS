@@ -1,5 +1,6 @@
 import AVFoundation
 import SwiftSignalKit
+import Vision
 
 public struct CameraCode: Equatable {
     public enum CodeType {
@@ -44,17 +45,21 @@ final class CameraOutput: NSObject {
     private let videoOutput = AVCaptureVideoDataOutput()
     private let audioOutput = AVCaptureAudioDataOutput()
     private let metadataOutput = AVCaptureMetadataOutput()
+    private let faceLandmarksOutput = FaceLandmarksDataOutput()
     
     private let queue = DispatchQueue(label: "")
     private let metadataQueue = DispatchQueue(label: "")
+    private let faceLandmarksQueue = DispatchQueue(label: "")
     
     private var photoCaptureRequests: [Int64: PhotoCaptureContext] = [:]
     private var videoRecorder: VideoRecorder?
     
     var activeFilter: CameraFilter?
+    var faceLandmarks: Bool = false
     
     var processSampleBuffer: ((CVImageBuffer, AVCaptureConnection) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
+    var processFaceLandmarks: (([VNFaceObservation]) -> Void)?
     
     override init() {
         super.init()
@@ -62,6 +67,12 @@ final class CameraOutput: NSObject {
         self.videoOutput.alwaysDiscardsLateVideoFrames = true;
         self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA] as [String : Any]
         //[kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
+        
+        self.faceLandmarksOutput.outputFaceObservations = { [weak self] observations in
+            if let self {
+                self.processFaceLandmarks?(observations)
+            }
+        }
     }
     
     deinit {
@@ -170,7 +181,7 @@ final class CameraOutput: NSObject {
         self.videoRecorder = videoRecorder
         
         return Signal { subscriber in
-            let timer = SwiftSignalKit.Timer(timeout: 0.33, repeat: true, completion: { [weak videoRecorder] in
+            let timer = SwiftSignalKit.Timer(timeout: 0.1, repeat: true, completion: { [weak videoRecorder] in
                 subscriber.putNext(videoRecorder?.duration ?? 0.0)
             }, queue: Queue.mainQueue())
             timer.start()
@@ -197,6 +208,13 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
         guard CMSampleBufferDataIsReady(sampleBuffer) else {
             return
         }
+        
+        if self.faceLandmarks {
+            self.faceLandmarksQueue.async {
+                self.faceLandmarksOutput.process(sampleBuffer: sampleBuffer)
+            }
+        }
+        
         let finalSampleBuffer: CMSampleBuffer = sampleBuffer
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) {
             var finalVideoPixelBuffer = videoPixelBuffer
@@ -210,7 +228,6 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
                 }
                 finalVideoPixelBuffer = filteredBuffer
             }
-            
             self.processSampleBuffer?(finalVideoPixelBuffer, connection)
         }
         

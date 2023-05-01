@@ -185,7 +185,14 @@ public final class TelegramRootController: NavigationController {
         accountSettingsController.parentController = self
         controllers.append(accountSettingsController)
                 
-        tabBarController.cameraItem = UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2)
+        if self.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+            tabBarController.cameraItemAndAction = (
+                UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2),
+                { [weak self] in
+                    self?.openStoryCamera()
+                }
+            )
+        }
         
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
@@ -195,10 +202,6 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-                
-        tabBarController.middleItemAction = { [weak self] in
-            self?.openStoryCamera()
-        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {
@@ -253,6 +256,7 @@ public final class TelegramRootController: NavigationController {
         controller.view.endEditing(true)
         
         var presentImpl: ((ViewController) -> Void)?
+        var dismissCameraImpl: (() -> Void)?
         let cameraController = CameraScreen(context: self.context, mode: .story, completion: { [weak self] result in
             if let self {
                 let item: TGMediaEditableItem & TGMediaSelectableItem
@@ -264,8 +268,16 @@ public final class TelegramRootController: NavigationController {
                 case let .asset(asset):
                     item = TGMediaAsset(phAsset: asset)
                 }
-                legacyFullMediaEditor(context: self.context, item: item, getCaptionPanelView: { return nil }, sendMessagesWithSignals: { _, _, _ in
-                    
+                legacyStoryMediaEditor(context: self.context, item: item, getCaptionPanelView: { return nil }, completion: { result in
+                    dismissCameraImpl?()
+                    switch result {
+                    case let .image(image):
+                        _ = image
+                    case let .video(path):
+                        _ = path
+                    case let .asset(asset):
+                        _ = asset
+                    }
                 }, present: { c, a in
                     presentImpl?(c)
                 })
@@ -274,6 +286,9 @@ public final class TelegramRootController: NavigationController {
         controller.push(cameraController)
         presentImpl = { [weak cameraController] c in
             cameraController?.present(c, in: .window(.root))
+        }
+        dismissCameraImpl = { [weak cameraController] in
+            cameraController?.dismiss(animated: false)
         }
     }
     

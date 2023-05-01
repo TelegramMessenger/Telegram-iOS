@@ -27,18 +27,27 @@ private extension SimpleShapeLayer {
 
 private final class ShutterButtonContentComponent: Component {
     let shutterState: ShutterButtonState
+    let blobState: ShutterBlobView.BlobState
     let highlightedAction: ActionSlot<Bool>
+    let updateOffset: ActionSlot<(CGFloat, Transition)>
     
     init(
         shutterState: ShutterButtonState,
-        highlightedAction: ActionSlot<Bool>
+        blobState: ShutterBlobView.BlobState,
+        highlightedAction: ActionSlot<Bool>,
+        updateOffset: ActionSlot<(CGFloat, Transition)>
     ) {
         self.shutterState = shutterState
+        self.blobState = blobState
         self.highlightedAction = highlightedAction
+        self.updateOffset = updateOffset
     }
     
     static func ==(lhs: ShutterButtonContentComponent, rhs: ShutterButtonContentComponent) -> Bool {
         if lhs.shutterState != rhs.shutterState {
+            return false
+        }
+        if lhs.blobState != rhs.blobState {
             return false
         }
         return true
@@ -48,17 +57,22 @@ private final class ShutterButtonContentComponent: Component {
         private var component: ShutterButtonContentComponent?
         
         private let ringLayer = SimpleShapeLayer()
-        private let innerLayer = SimpleLayer()
+        var blobView: ShutterBlobView!
+        //private let innerLayer = SimpleLayer()
         private let progressLayer = SimpleShapeLayer()
         
         init() {
             super.init(frame: CGRect())
             
+            self.blobView = ShutterBlobView(test: false)
+            
             self.layer.allowsGroupOpacity = true
             
+            self.progressLayer.strokeEnd = 0.0
+            
             self.layer.addSublayer(self.ringLayer)
-            self.layer.addSublayer(self.innerLayer)
             self.layer.addSublayer(self.progressLayer)
+            self.addSubview(self.blobView)
         }
 
         required init?(coder aDecoder: NSCoder) {
@@ -68,7 +82,7 @@ private final class ShutterButtonContentComponent: Component {
         func updateIsHighlighted(_ isHighlighted: Bool) {
             let scale: CGFloat = isHighlighted ? 0.8 : 1.0
             let transition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
-            transition.setTransform(layer: self.innerLayer, transform: CATransform3DMakeScale(scale, scale, 1.0))
+            transition.setTransform(view: self.blobView, transform: CATransform3DMakeScale(scale, scale, 1.0))
         }
         
         func update(component: ShutterButtonContentComponent, availableSize: CGSize, transition: Transition) -> CGSize {
@@ -76,6 +90,27 @@ private final class ShutterButtonContentComponent: Component {
             
             component.highlightedAction.connect { [weak self] highlighted in
                 self?.updateIsHighlighted(highlighted)
+            }
+            
+            component.updateOffset.connect { [weak self] offset, transition in
+                if let self {
+                    self.blobView.updateSecondaryOffset(offset, transition: transition)
+                    if abs(offset) < 60.0 {
+                        func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
+                            let bandedOffset = offset - bandingStart
+                            let range: CGFloat = 60.0
+                            let coefficient: CGFloat = 0.1
+                            return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
+                        }
+                        var bandedOffset = rubberBandingOffset(offset: abs(offset), bandingStart: 0.0)
+                        if offset < 0.0 {
+                            bandedOffset *= -1.0
+                        }
+                        self.blobView.updatePrimaryOffset(bandedOffset, transition: transition)
+                    } else {
+                        self.blobView.updatePrimaryOffset(0.0, transition: .spring(duration: 0.15))
+                    }
+                }
             }
             
             let innerColor: UIColor
@@ -124,10 +159,13 @@ private final class ShutterButtonContentComponent: Component {
             self.ringLayer.bounds = CGRect(origin: .zero, size: maximumShutterSize)
             self.ringLayer.position = CGPoint(x: maximumShutterSize.width / 2.0, y: maximumShutterSize.height / 2.0)
             
-            transition.setBackgroundColor(layer: self.innerLayer, color: innerColor)
-            transition.setCornerRadius(layer: self.innerLayer, cornerRadius: innerCornerRadius)
-            transition.setPosition(layer: self.innerLayer, position: CGPoint(x: maximumShutterSize.width / 2.0, y: maximumShutterSize.height / 2.0))
-            transition.setBounds(layer: self.innerLayer, bounds: CGRect(origin: .zero, size: innerSize))
+            self.blobView.updateState(component.blobState, transition: transition)
+            self.blobView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: maximumShutterSize.height))
+            self.blobView.center = CGPoint(x: maximumShutterSize.width / 2.0, y: maximumShutterSize.height / 2.0)
+            
+            let _ = innerColor
+            let _ = innerSize
+            let _ = innerCornerRadius
             
             self.progressLayer.bounds = CGRect(origin: .zero, size: maximumShutterSize)
             self.progressLayer.position = CGPoint(x: maximumShutterSize.width / 2.0, y: maximumShutterSize.height / 2.0)
@@ -309,6 +347,8 @@ final class CaptureControlsComponent: Component {
 
     final class View: UIView, ComponentTaggedView, UIGestureRecognizerDelegate {
         private var component: CaptureControlsComponent?
+        private var state: State?
+        private var availableSize: CGSize?
         
         private let lockView = ComponentView<Empty>()
         private let galleryButtonView = ComponentView<Empty>()
@@ -318,6 +358,7 @@ final class CaptureControlsComponent: Component {
         private let leftGuide = SimpleLayer()
         private let rightGuide = SimpleLayer()
         
+        private let shutterUpdateOffset = ActionSlot<(CGFloat, Transition)>()
         private let shutterHightlightedAction = ActionSlot<Bool>()
         private let flipAnimationAction = ActionSlot<Void>()
         
@@ -353,34 +394,99 @@ final class CaptureControlsComponent: Component {
             case .began:
                 self.component?.shutterPressed()
                 self.component?.swipeHintUpdated(.zoom)
+                self.shutterUpdateOffset.invoke((0.0, .immediate))
             case .ended, .cancelled:
-                if location.x < 75.0 {
+                if location.x < self.frame.width / 2.0 - 60.0 {
                     self.component?.lockRecording()
+
+                    var blobOffset: CGFloat = 0.0
+                    if let galleryButton = self.galleryButtonView.view {
+                        blobOffset = galleryButton.center.x - self.frame.width / 2.0
+                    }
+                    self.shutterUpdateOffset.invoke((blobOffset, .spring(duration: 0.5)))
                 } else {
                     self.component?.shutterReleased()
+                    self.shutterUpdateOffset.invoke((0.0, .spring(duration: 0.3)))
                 }
             default:
                 break
             }
         }
         
+        private let hapticFeedback = HapticFeedback()
+        
+        private var didFlip = false
+        
+        private var wasBanding: Bool?
+        private var panBlobState: ShutterBlobView.BlobState?
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
+                let bandedOffset = offset - bandingStart
+                let range: CGFloat = 60.0
+                let coefficient: CGFloat = 0.4
+                return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
+            }
+            
+            let previousPanBlobState = self.panBlobState
             let location = gestureRecognizer.location(in: self)
             switch gestureRecognizer.state {
             case .changed:
-                if location.x < self.frame.width / 2.0 - 40.0 {
-                    if location.x < 75.0 {
+                var blobOffset: CGFloat = 0.0
+                if let galleryButton = self.galleryButtonView.view, let flipButton = self.flipButtonView.view {
+                    blobOffset = max(galleryButton.center.x, min(flipButton.center.x, location.x))
+                }
+                blobOffset -= self.frame.width / 2.0
+                var isBanding = false
+                if location.x < self.frame.width / 2.0 - 20.0 {
+                    if location.x < self.frame.width / 2.0 - 60.0 {
                         self.component?.swipeHintUpdated(.releaseLock)
+                        if location.x < 75.0 {
+                            self.panBlobState = .lock
+                        } else {
+                            self.panBlobState = .transientToLock
+                        }
                     } else {
                         self.component?.swipeHintUpdated(.lock)
+                        self.panBlobState = .video
+                        blobOffset = rubberBandingOffset(offset: blobOffset, bandingStart: 0.0)
+                        isBanding = true
                     }
-                } else if location.x > self.frame.width / 2.0 + 40.0 {
+                } else if location.x > self.frame.width / 2.0 + 20.0 {
                     self.component?.swipeHintUpdated(.flip)
+                    if location.x > self.frame.width / 2.0 + 60.0 {
+                        self.panBlobState = .transientToFlip
+                        if !self.didFlip && location.x > self.frame.width - 80.0 {
+                            self.didFlip = true
+                            self.hapticFeedback.impact(.light)
+                            self.flipAnimationAction.invoke(Void())
+                            self.component?.flipTapped()
+                        }
+                    } else {
+                        self.didFlip = false
+                        self.panBlobState = .video
+                        blobOffset = rubberBandingOffset(offset: -blobOffset, bandingStart: 0.0) * -1.0
+                        isBanding = true
+                    }
                 } else {
+                    blobOffset = rubberBandingOffset(offset: blobOffset, bandingStart: 0.0)
                     self.component?.swipeHintUpdated(.zoom)
+                    self.panBlobState = .video
+                    isBanding = true
                 }
+                var transition: Transition = .immediate
+                if let wasBanding = self.wasBanding, wasBanding != isBanding {
+                    self.hapticFeedback.impact(.light)
+                    transition = .spring(duration: 0.3)
+                }
+                self.wasBanding = isBanding
+                self.shutterUpdateOffset.invoke((blobOffset, transition))
             default:
-                break
+                self.panBlobState = nil
+                self.wasBanding = nil
+                self.didFlip = false
+            }
+            if previousPanBlobState != self.panBlobState, let component = self.component, let state = self.state, let availableSize = self.availableSize {
+                let _ = self.update(component: component, state: state, availableSize: availableSize, transition: .spring(duration: 0.5))
             }
         }
         
@@ -401,7 +507,10 @@ final class CaptureControlsComponent: Component {
         }
 
         func update(component: CaptureControlsComponent, state: State, availableSize: CGSize, transition: Transition) -> CGSize {
+            let previousShutterState = self.component?.shutterState ?? .generic
             self.component = component
+            self.state = state
+            self.availableSize = availableSize
             state.lastGalleryAsset = component.lastGalleryAsset
             
             let size = CGSize(width: availableSize.width, height: maximumShutterSize.height)
@@ -472,42 +581,6 @@ final class CaptureControlsComponent: Component {
                 transition.setAlpha(view: lockView, alpha: isHolding ? 1.0 : 0.0)
             }
             
-            let shutterButtonSize = self.shutterButtonView.update(
-                transition: transition,
-                component: AnyComponent(
-                    Button(
-                        content: AnyComponent(
-                            ShutterButtonContentComponent(
-                                shutterState: component.shutterState,
-                                highlightedAction: self.shutterHightlightedAction
-                            )
-                        ),
-                        automaticHighlight: false,
-                        action: {
-                            component.shutterTapped()
-                        },
-                        highlightedAction: self.shutterHightlightedAction
-                    ).minSize(maximumShutterSize)
-                ),
-                environment: {},
-                containerSize: availableSize
-            )
-            let shutterButtonFrame = CGRect(origin: CGPoint(x: (availableSize.width - shutterButtonSize.width) / 2.0, y: (size.height - shutterButtonSize.height) / 2.0), size: shutterButtonSize)
-            if let shutterButtonView = self.shutterButtonView.view {
-                if shutterButtonView.superview == nil {
-                    let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-                    panGestureRecognizer.delegate = self
-                    shutterButtonView.addGestureRecognizer(panGestureRecognizer)
-                    
-                    let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
-                    pressGestureRecognizer.delegate = self
-                    shutterButtonView.addGestureRecognizer(pressGestureRecognizer)
-                    
-                    self.addSubview(shutterButtonView)
-                }
-                transition.setFrame(view: shutterButtonView, frame: shutterButtonFrame)
-            }
-            
             let flipAnimationAction = self.flipAnimationAction
             let flipButtonSize = self.flipButtonView.update(
                 transition: .immediate,
@@ -533,18 +606,77 @@ final class CaptureControlsComponent: Component {
                 transition.setFrame(view: flipButtonView, frame: flipButtonFrame)
             }
             
+            var blobState: ShutterBlobView.BlobState
+            switch component.shutterState {
+            case .generic:
+                blobState = .generic
+            case .video:
+                blobState = .video
+            case .stopRecording:
+                blobState = .stopVideo
+            case .holdRecording:
+                blobState = self.panBlobState ?? .video
+            }
+            
+            let shutterButtonSize = self.shutterButtonView.update(
+                transition: transition,
+                component: AnyComponent(
+                    Button(
+                        content: AnyComponent(
+                            ShutterButtonContentComponent(
+                                shutterState: component.shutterState,
+                                blobState: blobState,
+                                highlightedAction: self.shutterHightlightedAction,
+                                updateOffset: self.shutterUpdateOffset
+                            )
+                        ),
+                        automaticHighlight: false,
+                        action: { [weak self] in
+                            self?.shutterUpdateOffset.invoke((0.0, .immediate))
+                            component.shutterTapped()
+                        },
+                        highlightedAction: self.shutterHightlightedAction
+                    ).minSize(maximumShutterSize)
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            let shutterButtonFrame = CGRect(origin: CGPoint(x: (availableSize.width - shutterButtonSize.width) / 2.0, y: (size.height - shutterButtonSize.height) / 2.0), size: shutterButtonSize)
+            if let shutterButtonView = self.shutterButtonView.view {
+                if shutterButtonView.superview == nil {
+                    let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+                    panGestureRecognizer.delegate = self
+                    shutterButtonView.addGestureRecognizer(panGestureRecognizer)
+                    
+                    let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
+                    pressGestureRecognizer.minimumPressDuration = 0.3
+                    pressGestureRecognizer.delegate = self
+                    shutterButtonView.addGestureRecognizer(pressGestureRecognizer)
+                    
+                    self.addSubview(shutterButtonView)
+                }
+                transition.setFrame(view: shutterButtonView, frame: shutterButtonFrame)
+            }
+            
             let guideSpacing: CGFloat = 9.0
             let guideSize = CGSize(width: isHolding ? 60.0 : 0.0, height: 1.0 + UIScreenPixel)
-            let guideAlpha = isHolding ? 1.0 : 0.0
+            let guideAlpha: CGFloat = isHolding ? 1.0 : 0.0
             
             let leftGuideFrame = CGRect(origin: CGPoint(x: shutterButtonFrame.minX - guideSpacing - guideSize.width, y: (size.height - guideSize.height) / 2.0), size: guideSize)
-            transition.setFrame(layer: self.leftGuide, frame: leftGuideFrame)
-            transition.setAlpha(layer: self.leftGuide, alpha: guideAlpha)
-            self.leftGuide.cornerRadius = guideSize.height / 2.0
-            
             let rightGuideFrame = CGRect(origin: CGPoint(x: shutterButtonFrame.maxX + guideSpacing, y: (size.height - guideSize.height) / 2.0), size: guideSize)
+            
+            transition.setFrame(layer: self.leftGuide, frame: leftGuideFrame)
             transition.setFrame(layer: self.rightGuide, frame: rightGuideFrame)
-            transition.setAlpha(layer: self.rightGuide, alpha: guideAlpha)
+            
+            if previousShutterState == .generic || previousShutterState == .video {
+                self.leftGuide.opacity = Float(guideAlpha)
+                self.rightGuide.opacity = Float(guideAlpha)
+            } else {
+                transition.setAlpha(layer: self.leftGuide, alpha: guideAlpha)
+                transition.setAlpha(layer: self.rightGuide, alpha: guideAlpha)
+            }
+            
+            self.leftGuide.cornerRadius = guideSize.height / 2.0
             self.rightGuide.cornerRadius = guideSize.height / 2.0
             
             if let screenTransition = transition.userData(CameraScreenTransition.self) {

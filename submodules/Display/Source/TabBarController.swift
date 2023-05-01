@@ -13,7 +13,7 @@ public protocol TabBarController: ViewController {
     var controllers: [ViewController] { get }
     var selectedIndex: Int { get set }
     
-    var cameraItem: UITabBarItem? { get set }
+    var cameraItemAndAction: (item: UITabBarItem, action: () -> Void)? { get set }
     
     func setControllers(_ controllers: [ViewController], selectedIndex: Int?)
     

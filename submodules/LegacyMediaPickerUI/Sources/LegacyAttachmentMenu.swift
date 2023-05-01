@@ -98,7 +98,13 @@ public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditable
     })
 }
 
-public func legacyFullMediaEditor(context: AccountContext, item: TGMediaEditableItem & TGMediaSelectableItem, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public enum StoryMediaEditorResult {
+    case image(UIImage)
+    case video(String)
+    case asset(PHAsset)
+}
+
+public func legacyStoryMediaEditor(context: AccountContext, item: TGMediaEditableItem & TGMediaSelectableItem, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, completion: @escaping (StoryMediaEditorResult) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.captionPanelView = {
         return getCaptionPanelView()
@@ -123,18 +129,27 @@ public func legacyFullMediaEditor(context: AccountContext, item: TGMediaEditable
     
     present(legacyController, nil)
     
-    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, adjustments: false, recipientName: "Story", stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [] as [Any], immediate: true, appeared: {
+    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, adjustments: false, recipientName: "", stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [] as [Any], immediate: true, appeared: {
         
     }, completion: { result, editingContext in
-        let nativeGenerator = legacyAssetPickerItemGenerator()
-        var selectableResult: TGMediaSelectableItem?
-        if let result = result {
-            selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
+        var completionResult: Signal<StoryMediaEditorResult, NoError>
+        if let photo = result as? TGCameraCapturedPhoto {
+            if let _ = editingContext?.adjustments(for: result) {
+                completionResult = .single(.image(photo.existingImage))
+            } else {
+                completionResult = .single(.image(photo.existingImage))
+            }
+        } else if let video = result as? TGCameraCapturedVideo {
+            completionResult = .single(.video(video.immediateAVAsset.url.absoluteString))
+        } else if let asset = result as? TGMediaAsset {
+            completionResult = .single(.asset(asset.backingAsset))
+        } else {
+            completionResult = .complete()
         }
-        let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3 in
-            nativeGenerator(_1, _2, _3, nil)
+        let _ = (completionResult
+        |> deliverOnMainQueue).start(next: { value in
+            completion(value)
         })
-        sendMessagesWithSignals(signals, false, 0)
     }, dismissed: { [weak legacyController] in
         legacyController?.dismiss()
     })

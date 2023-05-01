@@ -198,6 +198,10 @@ public extension TelegramEngine {
         public func requestCancelAccountReset(phoneCodeHash: String, phoneCode: String) -> Signal<Never, CancelAccountResetError> {
             return _internal_requestCancelAccountReset(network: self.account.network, phoneCodeHash: phoneCodeHash, phoneCode: phoneCode)
         }
+        
+        public func invalidateLoginCodes(codes: [String]) -> Signal<Never, NoError> {
+            return _internal_invalidateLoginCodes(network: self.account.network, codes: codes)
+        }
     }
 }
 

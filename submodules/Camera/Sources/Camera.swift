@@ -55,11 +55,24 @@ private final class CameraContext {
                 if let rotation = CameraPreviewView.Rotation(with: .portrait, videoOrientation: videoOrientation, cameraPosition: self.device.position) {
                     previewView.rotation = rotation
                 }
-                
+                if #available(iOS 13.0, *), connection.inputPorts.first?.sourceDevicePosition == .front {
+                    let width = CVPixelBufferGetWidth(pixelBuffer)
+                    let height = CVPixelBufferGetHeight(pixelBuffer)
+                    previewView.captureDeviceResolution = CGSize(width: width, height: height)
+                }
                 previewView.pixelBuffer = pixelBuffer
                 Queue.mainQueue().async {
                     self.videoOrientation = videoOrientation
                 }
+            }
+        }
+        
+        self.output.processFaceLandmarks = { [weak self] observations in
+            guard let self else {
+                return
+            }
+            if let previewView = self.previewView {
+                previewView.drawFaceObservations(observations)
             }
         }
         
@@ -158,11 +171,13 @@ private final class CameraContext {
     func setFlashMode(_ mode: Camera.FlashMode) {
         self._flashMode = mode
         
-        if mode == .on {
-            self.output.activeFilter = self.filter
-        } else if mode == .off {
-            self.output.activeFilter = nil
-        }
+//        if mode == .on {
+//            self.output.faceLandmarks = true
+//            //self.output.activeFilter = self.filter
+//        } else if mode == .off {
+//            self.output.faceLandmarks = false
+//            //self.output.activeFilter = nil
+//        }
     }
     
     func setZoomLevel(_ zoomLevel: CGFloat) {
