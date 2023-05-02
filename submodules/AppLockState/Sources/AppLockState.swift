@@ -1,13 +1,28 @@
 import Foundation
 import MonotonicTime
 
+public struct PreciseTime: Codable, Equatable {
+    public let sec: Int64
+    public let usec: Int32
+    
+    public init(sec: Int64, usec: Int32) {
+        self.sec = sec
+        self.usec = usec
+    }
+    
+    public func absDiff(with other: PreciseTime) -> Double {
+        return abs(Double(self.sec - other.sec) + Double(self.usec - other.usec) / 1_000_000.0)
+    }
+}
+
 public struct MonotonicTimestamp: Codable, Equatable {
-    public var bootTimestamp: Int32
+    public var bootTimestamp: PreciseTime
     public var uptime: Int32
 
-    public init(bootTimestamp: Int32, uptime: Int32) {
-        self.bootTimestamp = bootTimestamp
-        self.uptime = uptime
+    public init() {
+        var bootTimestamp = timeval()
+        self.uptime = getDeviceUptimeSeconds(&bootTimestamp)
+        self.bootTimestamp = PreciseTime(sec: Int64(bootTimestamp.tv_sec), usec: bootTimestamp.tv_usec)
     }
 }
 
@@ -22,13 +37,13 @@ public struct UnlockAttempts: Codable, Equatable {
 }
 
 public struct LockState: Codable, Equatable {
-    public var isManuallyLocked: Bool
+    public var isLocked: Bool
     public var autolockTimeout: Int32?
     public var unlockAttempts: UnlockAttempts?
     public var applicationActivityTimestamp: MonotonicTimestamp?
 
-    public init(isManuallyLocked: Bool = false, autolockTimeout: Int32? = nil, unlockAttemts: UnlockAttempts? = nil, applicationActivityTimestamp: MonotonicTimestamp? = nil) {
-        self.isManuallyLocked = isManuallyLocked
+    public init(isLocked: Bool = false, autolockTimeout: Int32? = nil, unlockAttemts: UnlockAttempts? = nil, applicationActivityTimestamp: MonotonicTimestamp? = nil) {
+        self.isLocked = isLocked
         self.autolockTimeout = autolockTimeout
         self.unlockAttempts = unlockAttemts
         self.applicationActivityTimestamp = applicationActivityTimestamp
@@ -40,15 +55,16 @@ public func appLockStatePath(rootPath: String) -> String {
 }
 
 public func isAppLocked(state: LockState) -> Bool {
-    if state.isManuallyLocked {
+    if state.isLocked {
         return true
     } else if let autolockTimeout = state.autolockTimeout {
-        var bootTimestamp: Int32 = 0
-        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-        let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
+        let timestamp = MonotonicTimestamp()
         
         if let applicationActivityTimestamp = state.applicationActivityTimestamp {
-            if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
+            if timestamp.bootTimestamp.absDiff(with: applicationActivityTimestamp.bootTimestamp) > 0.1 {
+                return true
+            }
+            if timestamp.uptime < applicationActivityTimestamp.uptime {
                 return true
             }
             if timestamp.uptime >= applicationActivityTimestamp.uptime + autolockTimeout {

@@ -763,6 +763,7 @@ public protocol SharedAccountContext: AnyObject {
     var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> { get }
     var currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes> { get }
     var animationsTemporarilyDisabledForCoverUp: Bool { get }
+    var passcodeAttemptAccounter: PasscodeAttemptAccounter? { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
     

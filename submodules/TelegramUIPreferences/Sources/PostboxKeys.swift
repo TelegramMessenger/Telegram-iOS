@@ -8,6 +8,8 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case chatListFilterSettings = 18
     case widgetSettings = 19
     case mediaAutoSaveSettings = 20
+    
+    case ptgAccountSettings = 100
 }
 
 public struct ApplicationSpecificPreferencesKeys {
@@ -16,6 +18,8 @@ public struct ApplicationSpecificPreferencesKeys {
     public static let chatListFilterSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatListFilterSettings.rawValue)
     public static let widgetSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.widgetSettings.rawValue)
     public static let mediaAutoSaveSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.mediaAutoSaveSettings.rawValue)
+    
+    public static let ptgAccountSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.ptgAccountSettings.rawValue)
 }
 
 private enum ApplicationSpecificSharedDataKeyValues: Int32 {
@@ -44,6 +48,7 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case badPasscodeAttempts = 101
     case ptgSettings = 102
     case ptgSecretPasscodes = 103
+    case ptgPasscodeAttempts = 104
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -72,6 +77,7 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let badPasscodeAttempts = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.badPasscodeAttempts.rawValue)
     public static let ptgSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgSettings.rawValue)
     public static let ptgSecretPasscodes = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgSecretPasscodes.rawValue)
+    public static let ptgPasscodeAttempts = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgPasscodeAttempts.rawValue)
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {

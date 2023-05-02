@@ -85,17 +85,20 @@ public struct PtgSecretPasscodes: Codable, Equatable {
     }
     
     public func inactiveSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
-        var result = Set<PeerId>()
+        var active = Set<PeerId>()
+        var inactive = Set<PeerId>()
         for secretPasscode in self.secretPasscodes {
-            if !secretPasscode.active {
-                for secretChat in secretPasscode.secretChats {
-                    if secretChat.accountRecordId == accountId {
-                        result.insert(secretChat.peerId)
+            for secretChat in secretPasscode.secretChats {
+                if secretChat.accountRecordId == accountId {
+                    if secretPasscode.active {
+                        active.insert(secretChat.peerId)
+                    } else {
+                        inactive.insert(secretChat.peerId)
                     }
                 }
             }
         }
-        return result
+        return inactive.subtracting(active)
     }
     
     public func allSecretChatPeerIds(accountId: AccountRecordId) -> Set<PeerId> {
@@ -135,13 +138,15 @@ public func updatePtgSecretPasscodes(_ accountManager: AccountManager<TelegramAc
 
 public func isSecretPasscodeTimedout(timeout: Int32, state: LockState) -> Bool {
     if let applicationActivityTimestamp = state.applicationActivityTimestamp {
-        var bootTimestamp: Int32 = 0
-        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+        let timestamp = MonotonicTimestamp()
         
-        if bootTimestamp != applicationActivityTimestamp.bootTimestamp {
+        if timestamp.bootTimestamp.absDiff(with: applicationActivityTimestamp.bootTimestamp) > 0.1 {
             return true
         }
-        if uptime >= applicationActivityTimestamp.uptime + timeout {
+        if timestamp.uptime < applicationActivityTimestamp.uptime {
+            return true
+        }
+        if timestamp.uptime >= applicationActivityTimestamp.uptime + timeout {
             return true
         }
         

@@ -41,14 +41,12 @@ final class LockedWindowCoveringView: WindowCoveringView {
             return
         }
 
-        self.contentView?.removeFromSuperview()
-        self.contentView = nil
-
         let background = PasscodeEntryControllerNode.background(size: size, wallpaper: self.wallpaper, theme: self.theme, accountManager: self.accountManager)
         if let backgroundImage = background.backgroundImage {
             let imageView = UIImageView(image: backgroundImage)
             imageView.frame = CGRect(origin: CGPoint(), size: size)
             self.addSubview(imageView)
+            self.contentView?.removeFromSuperview()
             self.contentView = imageView
         } else if let customBackgroundNode = background.makeBackgroundNode() {
             customBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -62,6 +60,7 @@ final class LockedWindowCoveringView: WindowCoveringView {
             backgroundDimNode.frame = customBackgroundNode.frame
             customBackgroundNode.addSubnode(backgroundDimNode)
             self.addSubview(customBackgroundNode.view)
+            self.contentView?.removeFromSuperview()
             self.contentView = customBackgroundNode.view
         }
     }

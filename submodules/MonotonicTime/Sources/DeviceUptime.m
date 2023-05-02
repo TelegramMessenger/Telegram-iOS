@@ -2,7 +2,7 @@
 
 #include <sys/sysctl.h>
 
-int32_t getDeviceUptimeSeconds(int32_t *bootTime) {
+int32_t getDeviceUptimeSeconds(struct timeval *bootTime) {
     struct timeval boottime;
     int mib[2] = {CTL_KERN, KERN_BOOTTIME};
     size_t size = sizeof(boottime);
@@ -14,7 +14,7 @@ int32_t getDeviceUptimeSeconds(int32_t *bootTime) {
     if (sysctl(mib, 2, &boottime, &size, NULL, 0) != -1 && boottime.tv_sec != 0) {
         uptime = now - boottime.tv_sec;
         if (bootTime != NULL) {
-            *bootTime = boottime.tv_sec;
+            *bootTime = boottime;
         }
     }
 

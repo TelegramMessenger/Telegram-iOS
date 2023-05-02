@@ -248,9 +248,9 @@ typedef enum {
             case MTDatacenterAuthStageReqDH:
             {
 #if DEBUG
-                if (arc4random_uniform(100) < 50) {
-                    [mtProto simulateDisconnection];
-                }
+//                if (arc4random_uniform(100) < 50) {
+//                    [mtProto simulateDisconnection];
+//                }
 #endif
                 
                 MTBuffer *reqDhBuffer = [[MTBuffer alloc] init];

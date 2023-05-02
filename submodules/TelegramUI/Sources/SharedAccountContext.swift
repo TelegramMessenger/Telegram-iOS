@@ -193,6 +193,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var ptgSecretPasscodesDisposable: Disposable?
     private var applicationInForegroundDisposable: Disposable?
     
+    public private(set) var passcodeAttemptAccounter: PasscodeAttemptAccounter?
+    
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     
@@ -451,11 +453,26 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
         
         if applicationBindings.isMainApp {
-            // pause all media in hidable secret chats when app enters background
             self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground
             |> filter { !$0 }
             |> deliverOnMainQueue).start(next: { [weak self] _ in
+                // pause all media in hidable secret chats when app enters background
                 self?.pauseMediaInHidableChats()
+                
+                // make sure passcode attempts counters are cleared periodically for privacy
+                let _ = self?.passcodeAttemptAccounter?.preAttempt()
+            })
+            
+            self.passcodeAttemptAccounter = PasscodeAttemptAccounter(accountManager: accountManager, trustedTimestamp: { [weak self] in
+                assert(Queue.mainQueue().isCurrent())
+                if let accounts = self?.activeAccountsValue?.accounts {
+                    for (_, context, _) in accounts {
+                        if let trustedTimestamp = context.account.network.getTrustedTimestamp() {
+                            return trustedTimestamp
+                        }
+                    }
+                }
+                return nil
             })
         }
 

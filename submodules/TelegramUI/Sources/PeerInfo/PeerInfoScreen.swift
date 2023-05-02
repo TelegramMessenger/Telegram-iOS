@@ -7812,6 +7812,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             return false
                         }
                         
+                        guard let passcodeAttemptAccounter = strongSelf.context.sharedContext.passcodeAttemptAccounter else {
+                            return false
+                        }
+                        
+                        if let waitTime = passcodeAttemptAccounter.preAttempt() {
+                            controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .banned(text: passcodeAttemptWaitString(strings: strongSelf.presentationData.strings, waitTime: waitTime)), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            return false
+                        }
+                        
                         if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == passcode }) {
                             let _ = updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
                                 var updated = current.secretPasscodes
@@ -7827,6 +7836,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             return true
                         }
+                        
+                        passcodeAttemptAccounter.attemptMissed()
                         
                         return false
                     }
@@ -7854,10 +7865,26 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             let controller = PasscodeSetupController(context: strongSelf.context, mode: .secretSetup(.digits6))
                             
-                            controller.validate = { newPasscode in
+                            controller.validate = { [weak self, weak controller] newPasscode in
+                                guard let strongSelf = self else {
+                                    return ""
+                                }
+                                
+                                guard let passcodeAttemptAccounter = strongSelf.context.sharedContext.passcodeAttemptAccounter else {
+                                    return ""
+                                }
+                                
+                                if let waitTime = passcodeAttemptAccounter.preAttempt() {
+                                    controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .banned(text: passcodeAttemptWaitString(strings: strongSelf.presentationData.strings, waitTime: waitTime)), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    return ""
+                                }
+                                
                                 if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == newPasscode }) {
                                     return strongSelf.presentationData.strings.PasscodeSettings_PasscodeInUse
                                 }
+                                
+                                passcodeAttemptAccounter.attemptMissed()
+                                
                                 return nil
                             }
                             
@@ -7905,12 +7932,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     return false
                                 }
                                 
+                                guard let passcodeAttemptAccounter = strongSelf.context.sharedContext.passcodeAttemptAccounter else {
+                                    return false
+                                }
+                                
+                                if let waitTime = passcodeAttemptAccounter.preAttempt() {
+                                    controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .banned(text: passcodeAttemptWaitString(strings: strongSelf.presentationData.strings, waitTime: waitTime)), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    return false
+                                }
+                                
                                 if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == passcode }) {
                                     let nextController = secretPasscodeController(context: strongSelf.context, passcode: passcode)
                                     (controller?.navigationController as? NavigationController)?.replaceTopController(nextController, animated: true)
                                     
                                     return true
                                 }
+                                
+                                passcodeAttemptAccounter.attemptMissed()
                                 
                                 return false
                             }

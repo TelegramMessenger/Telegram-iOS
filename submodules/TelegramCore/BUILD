@@ -37,6 +37,7 @@ swift_library(
     ],
     deps = [
         "//submodules/ImageCompression:ImageCompression",
+        "//submodules/AppLockState:AppLockState",
         
         "//submodules/TelegramApi:TelegramApi",
         "//submodules/MtProtoKit:MtProtoKit",

@@ -347,10 +347,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         case .medium, .full:
                             strongSelf.statusNodeContainer.isHidden = true
                             
-                            if !strongSelf.context.sharedContext.currentPtgSettings.with({ $0.enableLiveText }) {
-                                break
-                            }
-                            
                             Queue.concurrentDefaultQueue().async {
                                 if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {
                                     strongSelf.recognitionDisposable.set((recognizedContent(context: strongSelf.context, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)

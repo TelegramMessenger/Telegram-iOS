@@ -1,3 +1,5 @@
+import AppLockState
+
 import Foundation
 import UIKit
 import Display
@@ -286,14 +288,16 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
     private func shouldWaitBeforeNextAttempt() -> Bool {
         if let attempts = self.invalidAttempts {
             if attempts.count >= 6 {
-                var bootTimestamp: Int32 = 0
-                let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+                let timestamp = MonotonicTimestamp()
                 
-                if attempts.bootTimestamp != bootTimestamp {
+                if attempts.bootTimestamp.absDiff(with: timestamp.bootTimestamp) > 0.1 {
+                    return true
+                }
+                if timestamp.uptime < attempts.uptime {
                     return true
                 }
                 
-                if uptime - attempts.uptime < waitInterval {
+                if timestamp.uptime - attempts.uptime < waitInterval {
                     return true
                 } else {
                     return false

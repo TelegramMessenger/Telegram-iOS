@@ -99,7 +99,9 @@
 "SecretPasscodeSettings.EnterNewPasscode" = "Введите новый секретный код-пароль";
 "SecretPasscodeSettings.RepeatNewPasscode" = "Повторите секретный код-пароль";
 "SecretPasscodeSettings.AutoHide" = "Авто-скрытие";
+"SecretPasscodeSettings.SecretChatsHeader" = "Скрываемые секретные чаты";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Удалить секретный код-пароль";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ Все скрываемые секретные чаты и аккаунты останутся и станут видимы все время.";
 "Settings.EnterSecretPasscode" = "Ввести секретный код-пароль";
 "Settings.ManageSecretPasscodes" = "Управлять секретными код-паролями";
 "SecretPasscodeMenu.Add" = "Добавить секретный код-пароль";
@@ -114,6 +116,8 @@
 "SecretPasscode.SecretChatDeleted" = "Удален";
 "SecretPasscode.AccountListTitle" = "Аккаунты";
 "SecretPasscode.AccountSelectionTitle" = "Выберите аккаунт";
+
+"PasscodeAttempts.TryAgainIn" = "Защита от перебора код-паролей. Попробуйте снова через %@.";
 
 "Share.LockedTitle" = "Разблокируйте Telegram";
 "Share.LockedDescription" = "Откройте и разблокируйте Telegram, чтобы поделиться.";

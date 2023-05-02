@@ -1,12 +1,14 @@
+import AppLockState
+
 import Foundation
 import Postbox
 
 public struct AccessChallengeAttempts: Equatable {
     public let count: Int32
-    public var bootTimestamp: Int32
+    public var bootTimestamp: PreciseTime
     public var uptime: Int32
     
-    public init(count: Int32, bootTimestamp: Int32, uptime: Int32) {
+    public init(count: Int32, bootTimestamp: PreciseTime, uptime: Int32) {
         self.count = count
         self.bootTimestamp = bootTimestamp
         self.uptime = uptime

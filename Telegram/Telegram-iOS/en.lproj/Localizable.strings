@@ -65,7 +65,9 @@
 "SecretPasscodeSettings.EnterNewPasscode" = "Enter new secret passcode";
 "SecretPasscodeSettings.RepeatNewPasscode" = "Re-enter new secret passcode";
 "SecretPasscodeSettings.AutoHide" = "Auto-Hide";
+"SecretPasscodeSettings.SecretChatsHeader" = "Hiding Secret Chats";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Passcode";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ All hiding secret chats and accounts will remain and become visible at all times.";
 "Settings.EnterSecretPasscode" = "Enter Secret Passcode";
 "Settings.ManageSecretPasscodes" = "Manage Secret Passcodes";
 "SecretPasscodeMenu.Add" = "Add Secret Passcode";
@@ -80,6 +82,8 @@
 "SecretPasscode.SecretChatDeleted" = "Deleted";
 "SecretPasscode.AccountListTitle" = "Accounts";
 "SecretPasscode.AccountSelectionTitle" = "Select Account";
+
+"PasscodeAttempts.TryAgainIn" = "Protection against brute force attacks. Try again in %@.";
 
 "Share.LockedTitle" = "Unlock Telegram";
 "Share.LockedDescription" = "Open and unlock Telegram to share.";

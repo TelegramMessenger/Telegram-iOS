@@ -16,6 +16,10 @@ public extension Peer {
     }
     
     func restrictionText(platform: String, contentSettings: ContentSettings) -> String? {
+        if contentSettings.ignoreAllContentRestrictions {
+            return nil
+        }
+        
         var restrictionInfo: PeerAccessRestrictionInfo?
         switch self {
         case let user as TelegramUser:

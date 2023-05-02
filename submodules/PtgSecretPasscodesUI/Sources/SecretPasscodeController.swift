@@ -14,6 +14,7 @@ import ItemListPeerActionItem
 import ItemListPeerItem
 import TelegramStringFormatting
 import AccountUtils
+import UndoUI
 import PtgSecretPasscodes
 
 private final class SecretPasscodeControllerArguments {
@@ -167,7 +168,7 @@ private func secretPasscodeControllerEntries(presentationData: PresentationData,
     
     entries.append(.timeout(presentationData.strings.SecretPasscodeSettings_AutoHide, autolockStringForTimeout(strings: presentationData.strings, timeout: state.settings.timeout)))
     
-    entries.append(.secretChatsHeader(presentationData.strings.Privacy_SecretChatsTitle.uppercased()))
+    entries.append(.secretChatsHeader(presentationData.strings.SecretPasscodeSettings_SecretChatsHeader.uppercased()))
     entries.append(.secretChatsAdd(presentationData.strings.SecretPasscode_AddSecretChats))
     
     for (index, value) in secretChatEntries.enumerated() {
@@ -271,11 +272,26 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
         |> deliverOnMainQueue).start(next: { ptgSecretPasscodes, state in
             let controller = PasscodeSetupController(context: context, mode: .secretSetup(.digits6))
             
-            controller.validate = { newPasscode in
+            controller.validate = { [weak controller] newPasscode in
+                guard let passcodeAttemptAccounter = context.sharedContext.passcodeAttemptAccounter else {
+                    return ""
+                }
+                
+                if let waitTime = passcodeAttemptAccounter.preAttempt() {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    controller?.present(UndoOverlayController(presentationData: presentationData, content: .banned(text: passcodeAttemptWaitString(strings: presentationData.strings, waitTime: waitTime)), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    return ""
+                }
+                
                 if ptgSecretPasscodes.secretPasscodes.contains(where: { $0.passcode == newPasscode }) && newPasscode != state.settings.passcode {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     return presentationData.strings.PasscodeSettings_PasscodeInUse
                 }
+                
+                if newPasscode != state.settings.passcode {
+                    passcodeAttemptAccounter.attemptMissed()
+                }
+                
                 return nil
             }
             
@@ -338,6 +354,7 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
         
         actionSheet.setItemGroups([
             ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.SecretPasscodeSettings_DeleteSecretPasscodeNotice),
                 ActionSheetButtonItem(title: presentationData.strings.SecretPasscodeSettings_DeleteSecretPasscode, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
@@ -536,15 +553,18 @@ extension PtgSecretPasscodes {
     }
     
     public func inactiveSecretChatPeerIdsForAllAccounts() -> Set<PeerId> {
-        var result = Set<PeerId>()
+        var active = Set<PeerId>()
+        var inactive = Set<PeerId>()
         for secretPasscode in self.secretPasscodes {
-            if !secretPasscode.active {
-                for secretChat in secretPasscode.secretChats {
-                    result.insert(secretChat.peerId)
+            for secretChat in secretPasscode.secretChats {
+                if secretPasscode.active {
+                    active.insert(secretChat.peerId)
+                } else {
+                    inactive.insert(secretChat.peerId)
                 }
             }
         }
-        return result
+        return inactive.subtracting(active)
     }
     
     public func allSecretChatPeerIdsForAllAccounts() -> Set<PeerId> {
@@ -556,4 +576,9 @@ extension PtgSecretPasscodes {
         }
         return result
     }
+}
+
+public func passcodeAttemptWaitString(strings: PresentationStrings, waitTime: Int32) -> String {
+    let timeString = timeIntervalString(strings: strings, value: waitTime, usage: .afterTime)
+    return strings.PasscodeAttempts_TryAgainIn(timeString).string.replacingOccurrences(of: #"\.\.$"#, with: ".", options: .regularExpression)
 }
