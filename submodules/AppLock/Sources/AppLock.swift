@@ -566,6 +566,7 @@ public final class AppLockContextImpl: AppLockContext {
                             if let applicationActivityTimestamp = state.applicationActivityTimestamp {
                                 let timestamp = MonotonicTimestamp()
                                 
+                                // since timer does not take into account system sleep time, use just fraction of timeout
                                 let nextTimeout = max(5, (applicationActivityTimestamp.uptime + minActiveTimeout - timestamp.uptime) / 2)
                                 
                                 let secretPasscodesTimeoutCheckTimer = SwiftSignalKit.Timer(timeout: Double(nextTimeout), repeat: false, completion: {
