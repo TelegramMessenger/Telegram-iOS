@@ -1326,7 +1326,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             let _ = (StoryChatContent.stories(
-                context: context,
+                context: self.context,
                 storyList: storyListContext,
                 focusItem: nil
             )
