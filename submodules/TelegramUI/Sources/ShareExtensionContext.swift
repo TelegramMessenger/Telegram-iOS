@@ -235,9 +235,12 @@ public class ShareRootControllerImpl {
             
             initialPresentationDataAndSettings = initialPresentationDataAndSettings!.withUpdatedPtgSecretPasscodes(initialPresentationDataAndSettings!.ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath))
             
+            var extraDelayToCatchUpChanges = false
+            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
                 internalContext.sharedContext.updatePtgSecretPasscodesPromise(.single(initialPresentationDataAndSettings!.ptgSecretPasscodes))
+                extraDelayToCatchUpChanges = true
             } else {
                 let presentationDataPromise = Promise<PresentationData>()
                 
@@ -272,8 +275,8 @@ public class ShareRootControllerImpl {
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
-                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
-                    let accountRecords = Set(transaction.getRecords().map { record in
+                return combineLatest(extraDelayToCatchUpChanges ? sharedContext.activeAccountsWithInfo |> delay(0.2, queue: Queue.mainQueue()) : sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
+                    let accountRecords = Set(transaction.getRecords(initialPresentationDataAndSettings!.ptgSecretPasscodes.inactiveAccountIds()).map { record in
                         return record.id
                     })
                     let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings

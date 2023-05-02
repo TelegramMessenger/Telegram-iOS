@@ -380,6 +380,7 @@
     [_itemAvailabilityDisposable dispose];
     [_selectionChangedDisposable dispose];
     [_timersChangedDisposable dispose];
+    [_adjustmentsChangedDisposable dispose];
 }
 
 - (bool)updateGroupingButtonVisibility

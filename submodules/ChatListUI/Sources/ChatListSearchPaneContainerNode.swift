@@ -152,7 +152,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     private let location: ChatListControllerLocation
     private let searchQuery: Signal<String?, NoError>
     private let searchOptions: Signal<ChatListSearchOptions?, NoError>
-    private let navigationController: NavigationController?
+    private weak var navigationController: NavigationController?
     var interaction: ChatListSearchInteraction?
         
     let isReady = Promise<Bool>()

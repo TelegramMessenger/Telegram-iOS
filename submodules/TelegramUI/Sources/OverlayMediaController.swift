@@ -16,7 +16,7 @@ public final class OverlayMediaControllerImpl: ViewController, OverlayMediaContr
     public var embedPossibleEmbeddingItem: ((OverlayMediaControllerEmbeddingItem) -> Bool)?
 
     private var pictureInPictureContainer: ASDisplayNode?
-    private var pictureInPictureContent: PictureInPictureContent?
+    private(set) var pictureInPictureContent: PictureInPictureContent?
     
     public init() {
         super.init(navigationBarPresentationData: nil)

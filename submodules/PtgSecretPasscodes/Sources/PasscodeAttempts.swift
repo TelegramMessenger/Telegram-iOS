@@ -139,6 +139,12 @@ private class PasscodeAttemptAccounterItem {
             assert(self.data.firstMissUptime != nil)
         }
     }
+    
+    func debugReset() {
+        self.data.counter = 0
+        self.data.firstMissUptime = nil
+        self.data.firstMissTrustedTimestamp = nil
+    }
 }
 
 public class PasscodeAttemptAccounter {
@@ -190,6 +196,12 @@ public class PasscodeAttemptAccounter {
     public func attemptMissed() {
         assert(Queue.mainQueue().isCurrent())
         self.items.forEach { $0.attemptMissed(trustedTimestamp: self.trustedTimestamp) }
+        self.save()
+    }
+    
+    public func debugResetAllCounters() {
+        assert(Queue.mainQueue().isCurrent())
+        self.items.forEach { $0.debugReset() }
         self.save()
     }
 }

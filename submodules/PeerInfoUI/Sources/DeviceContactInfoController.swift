@@ -1119,6 +1119,8 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                         return state
                     }
                     if let contactDataManager = context.sharedContext.contactDataManager {
+                        let createContactOnDevice = context.immediateIsHidable ? .single(nil) : contactDataManager.createContactWithData(composedContactData)
+                        
                         switch subject {
                             case let .create(peer, _, share, shareViaException, _):
                                 if share, filteredPhoneNumbers.count <= 1, let peer = peer {
@@ -1126,7 +1128,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                                     |> deliverOnMainQueue).start(error: { _ in
                                         presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
-                                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                                        let _ = (createContactOnDevice
                                         |> deliverOnMainQueue).start(next: { contactIdAndData in
                                             updateState { state in
                                                 var state = state
@@ -1146,7 +1148,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                                 break
                         }
                         
-                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                        let _ = (createContactOnDevice
                         |> castError(AddContactError.self)
                         |> mapToSignal { contactIdAndData -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                             guard let (id, data) = contactIdAndData else {
@@ -1413,7 +1415,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
                     }), completed: nil, cancelled: nil), in: .window(.root))
                     return
                 }
-                if let contactDataManager = context.sharedContext.contactDataManager {
+                if let contactDataManager = context.sharedContext.contactDataManager, !context.immediateIsHidable {
                     let _ = (contactDataManager.appendContactData(contactData, to: stableId)
                     |> deliverOnMainQueue).start(next: { contactData in
                         guard let contactData = contactData else {

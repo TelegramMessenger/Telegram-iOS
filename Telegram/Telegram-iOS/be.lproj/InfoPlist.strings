@@ -11,4 +11,4 @@
 "NSSiriUsageDescription" = "Вы можаце адпраўляць паведамленні праз Siri.";
 "NSFaceIDUsageDescription" = "Вы можаце карыстацца Face ID для разблакіравання праграмы.";
 
-"NSSpeechRecognitionUsageDescription" = "Гэта патрэбна, каб транскрыбаваць галасавыя паведамленні па вашым запыце.";
+"NSSpeechRecognitionUsageDescription" = "Гэта патрэбна, каб перакладаць ў тэкст галасавыя паведамленні па вашым запыце.";

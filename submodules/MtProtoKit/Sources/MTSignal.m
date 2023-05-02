@@ -902,9 +902,11 @@ static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
                     }];
                 }
                 
+                __weak __typeof__(subscribers) weakSubscribers = subscribers;
                 return [[MTBlockDisposable alloc] initWithBlock:^
                 {
-                    [subscribers with:^id(MTBag *bag)
+                    __typeof__(subscribers) strongSubscribers = weakSubscribers;
+                    [strongSubscribers with:^id(MTBag *bag)
                     {
                         [bag removeItem:index];
                         return nil;

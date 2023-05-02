@@ -4,11 +4,17 @@ final class MutableAccountRecordsView<Types: AccountManagerTypes> {
     fileprivate var records: [AccountRecord<Types.Attribute>]
     fileprivate var currentId: AccountRecordId?
     fileprivate var currentAuth: AuthAccountRecord<Types.Attribute>?
+    fileprivate let excludeAccountIds: Set<AccountRecordId>
     
-    init(getRecords: () -> [AccountRecord<Types.Attribute>], currentId: AccountRecordId?, currentAuth: AuthAccountRecord<Types.Attribute>?) {
-        self.records = getRecords()
-        self.currentId = currentId
+    init(getRecords: () -> [AccountRecord<Types.Attribute>], currentId: AccountRecordId?, currentAuth: AuthAccountRecord<Types.Attribute>?, excludeAccountIds: Set<AccountRecordId>) {
+        self.records = getRecords().filter { !excludeAccountIds.contains($0.id) }
+        if let currentId, excludeAccountIds.contains(currentId) {
+            self.currentId = self.records.sorted(by: { $0 < $1 }).first?.id
+        } else {
+            self.currentId = currentId
+        }
         self.currentAuth = currentAuth
+        self.excludeAccountIds = excludeAccountIds
     }
     
     func replay(operations: [AccountManagerRecordOperation<Types.Attribute>], metadataOperations: [AccountManagerMetadataOperation<Types.Attribute>]) -> Bool {
@@ -18,21 +24,22 @@ final class MutableAccountRecordsView<Types: AccountManagerTypes> {
             switch operation {
                 case let .set(id, record):
                     if let record = record {
-                        updated = true
                         var found = false
                         for i in 0 ..< self.records.count {
                             if self.records[i].id == id {
                                 self.records[i] = record
+                                updated = true
                                 found = true
                                 break
                             }
                         }
                         
-                        if !found {
+                        if !found && !self.excludeAccountIds.contains(id) {
                             self.records.append(record)
                             self.records.sort(by: { lhs, rhs in
                                 return lhs.id < rhs.id
                             })
+                            updated = true
                         }
                     } else {
                         for i in 0 ..< self.records.count {
@@ -49,6 +56,7 @@ final class MutableAccountRecordsView<Types: AccountManagerTypes> {
         for operation in metadataOperations {
             switch operation {
                 case let .updateCurrentAccountId(id):
+                    assert(!self.excludeAccountIds.contains(id))
                     updated = true
                     self.currentId = id
                 case let .updateCurrentAuthAccountRecord(record):

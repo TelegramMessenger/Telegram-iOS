@@ -145,6 +145,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.animateError(text: text)
     }
     
+    public func activateInput() {
+        self.controllerNode.activateInput()
+    }
+    
     func updateNavigationItems() {
         guard let layout = self.validLayout, layout.size.width < 360.0 else {
             return

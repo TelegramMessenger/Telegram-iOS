@@ -1,3 +1,5 @@
+import UndoUI
+
 import Foundation
 import UIKit
 import Display
@@ -231,15 +233,15 @@ public class ContactsController: ViewController {
         })
         
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
-            |> map { noticeView, preferences, sharedData -> (Bool, ContactsSortOrder) in
+            self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.isHidable)
+            |> map { noticeView, preferences, sharedData, isHidableAccount -> (Bool, ContactsSortOrder) in
                 let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                 let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
                 
                 let contactsSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]?.get(ContactSynchronizationSettings.self)
                 
                 let sortOrder: ContactsSortOrder = contactsSettings?.sortOrder ?? .presence
-                if !synchronizeDeviceContacts {
+                if !synchronizeDeviceContacts || isHidableAccount {
                     return (true, sortOrder)
                 }
                 let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })
@@ -613,6 +615,13 @@ public class ContactsController: ViewController {
     }
     
     @objc func addPressed() {
+        if self.context.immediateIsHidable {
+            // the add button is shown anyway, so it can not be peeped that account is hidable
+            let controller = UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.FunctionalityUnavailableForHidableAccounts), elevatedLayout: false, action: { _ in return false })
+            self.present(controller, in: .current)
+            return
+        }
+        
         let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -658,27 +667,35 @@ public class ContactsController: ViewController {
     
     override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
         var items: [ContextMenuItem] = []
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Contacts_AddContact, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] c, f in
-            c.dismiss(completion: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.addPressed()
-            })
-        })))
+        if !self.context.immediateIsHidable {
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Contacts_AddContact, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] c, f in
+                c.dismiss(completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.addPressed()
+                })
+            })))
+        }
         
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Contacts_AddPeopleNearby, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Contact List/Context Menu/PeopleNearby"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] c, f in
-            c.dismiss(completion: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.contactsNode.openPeopleNearby?()
-            })
-        })))
+        if !self.context.immediateIsHidable {
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Contacts_AddPeopleNearby, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Contact List/Context Menu/PeopleNearby"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] c, f in
+                c.dismiss(completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.contactsNode.openPeopleNearby?()
+                })
+            })))
+        }
+        
+        if items.isEmpty {
+            return
+        }
         
         let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ContactsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)

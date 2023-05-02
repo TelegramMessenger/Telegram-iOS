@@ -173,7 +173,8 @@ private final class MediaPlayerContext {
                         }
                     case .paused:
                         if value {
-                            strongSelf.play()
+                            // do not automatically resume playing videos when app returns to foreground since it may be unexpected, especially in secret accounts and chats
+//                            strongSelf.play()
                         }
                     case .playing:
                         if !value {
@@ -183,7 +184,7 @@ private final class MediaPlayerContext {
                         switch action {
                             case .pause:
                                 if value {
-                                    strongSelf.play()
+//                                    strongSelf.play()
                                 }
                             case .play:
                                 if !value {

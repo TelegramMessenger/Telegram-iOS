@@ -374,9 +374,10 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         })
         self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
-            gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            // animation here disabled to avoid flickering
+//            gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring), extendAnimation: false, backwards: false, completion: {})
-            self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+//            self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         if !iconFrame.isEmpty {
             self.iconNode.animateIn(fromScale: 0.416)

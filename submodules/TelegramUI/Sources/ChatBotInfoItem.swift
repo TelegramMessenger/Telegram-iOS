@@ -150,7 +150,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             continuePlayingWithoutSoundOnLostAudioSession: false,
             storeAfterDownload: nil
         )
-        let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
+        let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded, sourceAccountId: context.account.id)
         videoNode.canAttachContent = true
         self.videoNode = videoNode
         

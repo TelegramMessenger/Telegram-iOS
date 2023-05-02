@@ -10,7 +10,7 @@ import ShareController
 import UndoUI
 
 final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayerController {
-    private let context: AccountContext
+    let context: AccountContext
     let chatLocation: ChatLocation
     let type: MediaManagerPlayerType
     let initialMessageId: MessageId

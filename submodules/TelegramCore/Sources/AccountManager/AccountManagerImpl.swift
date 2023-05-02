@@ -7,9 +7,9 @@ public protocol AccountManagerTypes {
 }
 
 public struct AccountManagerModifier<Types: AccountManagerTypes> {
-    public let getRecords: () -> [AccountRecord<Types.Attribute>]
+    public let getRecords: (Set<AccountRecordId>) -> [AccountRecord<Types.Attribute>]
     public let updateRecord: (AccountRecordId, (AccountRecord<Types.Attribute>?) -> (AccountRecord<Types.Attribute>?)) -> Void
-    public let getCurrent: () -> (AccountRecordId, [Types.Attribute])?
+    public let getCurrent: (Set<AccountRecordId>) -> (AccountRecordId, [Types.Attribute])?
     public let setCurrentId: (AccountRecordId) -> Void
     public let getCurrentAuth: () -> AuthAccountRecord<Types.Attribute>?
     public let createAuth: ([Types.Attribute]) -> AuthAccountRecord<Types.Attribute>?
@@ -61,12 +61,21 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
     private var noticeEntryViews = Bag<(MutableNoticeEntryView<Types>, ValuePipe<NoticeEntryView<Types>>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     
-    static func getCurrentRecords(basePath: String) -> (records: [AccountRecord<Types.Attribute>], currentId: AccountRecordId?) {
+    static func getCurrentRecords(basePath: String, excludeAccountIds: Set<AccountRecordId>) -> (records: [AccountRecord<Types.Attribute>], currentId: AccountRecordId?) {
         let atomicStatePath = "\(basePath)/atomic-state"
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: atomicStatePath))
             let atomicState = try JSONDecoder().decode(AccountManagerAtomicState<Types>.self, from: data)
-            return (atomicState.records.sorted(by: { $0.key.int64 < $1.key.int64 }).map({ $1 }), atomicState.currentRecordId)
+            
+            let records = atomicState.records.sorted(by: { $0.key.int64 < $1.key.int64 }).map({ $1 })
+                .filter { !excludeAccountIds.contains($0.id) }
+            
+            var currentRecordId = atomicState.currentRecordId
+            if let id = currentRecordId, excludeAccountIds.contains(id) {
+                currentRecordId = records.sorted(by: { $0 < $1 }).first?.id
+            }
+            
+            return (records, currentRecordId)
         } catch let e {
             postboxLog("decode atomic state error: \(e)")
             preconditionFailure()
@@ -143,8 +152,9 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
     fileprivate func transactionSync<T>(ignoreDisabled: Bool, _ f: (AccountManagerModifier<Types>) -> T) -> T {
         self.valueBox.begin()
 
-        let transaction = AccountManagerModifier<Types>(getRecords: {
+        let transaction = AccountManagerModifier<Types>(getRecords: { excludeAccountIds in
             return self.currentAtomicState.records.map { $0.1 }
+                .filter { !excludeAccountIds.contains($0.id) }
         }, updateRecord: { id, update in
             let current = self.currentAtomicState.records[id]
             let updated = update(current)
@@ -157,9 +167,16 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
                 self.currentAtomicStateUpdated = true
                 self.currentRecordOperations.append(.set(id: id, record: updated))
             }
-        }, getCurrent: {
+        }, getCurrent: { excludeAccountIds in
             if let id = self.currentAtomicState.currentRecordId, let record = self.currentAtomicState.records[id] {
-                return (record.id, record.attributes)
+                if !excludeAccountIds.contains(record.id) {
+                    return (record.id, record.attributes)
+                } else {
+                    let records = self.currentAtomicState.records.map { $0.1 }
+                        .filter { !excludeAccountIds.contains($0.id) }
+                        .sorted { $0 < $1 }
+                    return records.first.flatMap { ($0.id, $0.attributes) }
+                }
             } else {
                 return nil
             }
@@ -317,17 +334,17 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         }
     }
     
-    fileprivate func accountRecords() -> Signal<AccountRecordsView<Types>, NoError> {
+    fileprivate func accountRecords(excludeAccountIds: Signal<Set<AccountRecordId>, NoError>) -> Signal<AccountRecordsView<Types>, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordsView<Types>, NoError> in
-            return self.accountRecordsInternal(transaction: transaction)
+            return self.accountRecordsInternal(transaction: transaction, excludeAccountIds: excludeAccountIds)
         })
         |> switchToLatest
     }
 
-    fileprivate func _internalAccountRecordsSync() -> AccountRecordsView<Types> {
+    fileprivate func _internalAccountRecordsSync(excludeAccountIds: Set<AccountRecordId>) -> AccountRecordsView<Types> {
         let mutableView = MutableAccountRecordsView<Types>(getRecords: {
             return self.currentAtomicState.records.map { $0.1 }
-        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
+        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord, excludeAccountIds: excludeAccountIds)
         return AccountRecordsView<Types>(mutableView)
     }
     
@@ -352,26 +369,54 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         |> switchToLatest
     }
     
-    private func accountRecordsInternal(transaction: AccountManagerModifier<Types>) -> Signal<AccountRecordsView<Types>, NoError> {
-        assert(self.queue.isCurrent())
-        let mutableView = MutableAccountRecordsView<Types>(getRecords: {
-            return self.currentAtomicState.records.map { $0.1 }
-        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
-        let pipe = ValuePipe<AccountRecordsView<Types>>()
-        let index = self.recordsViews.add((mutableView, pipe))
-        
-        let queue = self.queue
-        return (.single(AccountRecordsView<Types>(mutableView))
-        |> then(pipe.signal()))
-        |> `catch` { _ -> Signal<AccountRecordsView<Types>, NoError> in
-        }
-        |> afterDisposed { [weak self] in
-            queue.async {
-                if let strongSelf = self {
-                    strongSelf.recordsViews.remove(index)
+    private func accountRecordsInternal(transaction: AccountManagerModifier<Types>, excludeAccountIds: Signal<Set<AccountRecordId>, NoError>) -> Signal<AccountRecordsView<Types>, NoError> {
+        return excludeAccountIds
+        |> deliverOn(self.queue)
+        |> mapToSignal { excludeAccountIds in
+            assert(self.queue.isCurrent())
+            let mutableView = MutableAccountRecordsView<Types>(getRecords: {
+                return self.currentAtomicState.records.map { $0.1 }
+            }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord, excludeAccountIds: excludeAccountIds)
+            let pipe = ValuePipe<AccountRecordsView<Types>>()
+            let index = self.recordsViews.add((mutableView, pipe))
+            
+            let queue = self.queue
+            return (.single(AccountRecordsView<Types>(mutableView))
+            |> then(pipe.signal()))
+            |> `catch` { _ -> Signal<AccountRecordsView<Types>, NoError> in
+            }
+            |> afterDisposed { [weak self] in
+                queue.async {
+                    if let strongSelf = self {
+                        strongSelf.recordsViews.remove(index)
+                    }
                 }
             }
         }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs.currentRecord != rhs.currentRecord {
+                return false
+            }
+            if lhs.records != rhs.records {
+                return false
+            }
+            if let lhs = lhs.currentAuthAccount, let rhs = rhs.currentAuthAccount {
+                if lhs.id != rhs.id {
+                    return false
+                }
+                if lhs.attributes.count != rhs.attributes.count {
+                    return false
+                }
+                for i in 0 ..< lhs.attributes.count {
+                    if !lhs.attributes[i].isEqual(to: rhs.attributes[i]) {
+                        return false
+                    }
+                }
+            } else if lhs.currentAuthAccount != nil || rhs.currentAuthAccount != nil {
+                return false
+            }
+            return true
+        })
     }
     
     private func sharedDataInternal(transaction: AccountManagerModifier<Types>, keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView<Types>, NoError> {
@@ -431,9 +476,9 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         }
     }
     
-    fileprivate func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> {
+    fileprivate func currentAccountRecord(allocateIfNotExists: Bool, excludeAccountIds: Set<AccountRecordId>) -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> in
-            let current = transaction.getCurrent()
+            let current = transaction.getCurrent(excludeAccountIds)
             if let _ = current {
             } else if allocateIfNotExists {
                 let id = generateAccountRecordId()
@@ -445,7 +490,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
                 return .single(nil)
             }
             
-            let signal = self.accountRecordsInternal(transaction: transaction)
+            let signal = self.accountRecordsInternal(transaction: transaction, excludeAccountIds: .single(excludeAccountIds))
             |> map { view -> (AccountRecordId, [Types.Attribute])? in
                 if let currentRecord = view.currentRecord {
                     return (currentRecord.id, currentRecord.attributes)
@@ -506,8 +551,8 @@ public final class AccountManager<Types: AccountManagerTypes> {
     private let impl: QueueLocalObject<AccountManagerImpl<Types>>
     public let temporarySessionId: Int64
     
-    public static func getCurrentRecords(basePath: String) -> (records: [AccountRecord<Types.Attribute>], currentId: AccountRecordId?) {
-        return AccountManagerImpl<Types>.getCurrentRecords(basePath: basePath)
+    public static func getCurrentRecords(basePath: String, excludeAccountIds: Set<AccountRecordId>) -> (records: [AccountRecord<Types.Attribute>], currentId: AccountRecordId?) {
+        return AccountManagerImpl<Types>.getCurrentRecords(basePath: basePath, excludeAccountIds: excludeAccountIds)
     }
     
     public init(basePath: String, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, removeDatabaseOnError: Bool) {
@@ -541,11 +586,11 @@ public final class AccountManager<Types: AccountManagerTypes> {
         }
     }
     
-    public func accountRecords() -> Signal<AccountRecordsView<Types>, NoError> {
+    public func accountRecords(excludeAccountIds: Signal<Set<AccountRecordId>, NoError>) -> Signal<AccountRecordsView<Types>, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.accountRecords().start(next: { next in
+                disposable.set(impl.accountRecords(excludeAccountIds: excludeAccountIds).start(next: { next in
                     subscriber.putNext(next)
                 }, completed: {
                     subscriber.putCompletion()
@@ -555,10 +600,10 @@ public final class AccountManager<Types: AccountManagerTypes> {
         }
     }
 
-    public func _internalAccountRecordsSync() -> AccountRecordsView<Types> {
+    public func _internalAccountRecordsSync(excludeAccountIds: Set<AccountRecordId>) -> AccountRecordsView<Types> {
         var result: AccountRecordsView<Types>?
         self.impl.syncWith { impl in
-            result = impl._internalAccountRecordsSync()
+            result = impl._internalAccountRecordsSync(excludeAccountIds: excludeAccountIds)
         }
         return result!
     }
@@ -605,11 +650,11 @@ public final class AccountManager<Types: AccountManagerTypes> {
         }
     }
     
-    public func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> {
+    public func currentAccountRecord(allocateIfNotExists: Bool, excludeAccountIds: Set<AccountRecordId>) -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.currentAccountRecord(allocateIfNotExists: allocateIfNotExists).start(next: { next in
+                disposable.set(impl.currentAccountRecord(allocateIfNotExists: allocateIfNotExists, excludeAccountIds: excludeAccountIds).start(next: { next in
                     subscriber.putNext(next)
                 }, completed: {
                     subscriber.putCompletion()

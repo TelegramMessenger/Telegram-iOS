@@ -9,6 +9,7 @@ enum ApplicationShortcutItemType: String {
     case camera
     case savedMessages
     case account
+    case hideAllSecrets
 }
 
 struct ApplicationShortcutItem: Equatable {
@@ -20,7 +21,7 @@ struct ApplicationShortcutItem: Equatable {
 @available(iOS 9.1, *)
 extension ApplicationShortcutItem {
     func shortcutItem() -> UIApplicationShortcutItem {
-        let icon: UIApplicationShortcutIcon
+        let icon: UIApplicationShortcutIcon?
         switch self.type {
             case .search:
                 icon = UIApplicationShortcutIcon(type: .search)
@@ -32,12 +33,19 @@ extension ApplicationShortcutItem {
                 icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/SavedMessages")
             case .account:
                 icon = UIApplicationShortcutIcon(templateImageName: "Shortcuts/Account")
+            case .hideAllSecrets:
+                if #available(iOS 13.0, *) {
+                    icon = UIApplicationShortcutIcon(systemImageName: "lock")
+                } else {
+                    icon = nil
+                }
         }
         return UIApplicationShortcutItem(type: self.type.rawValue, localizedTitle: self.title, localizedSubtitle: self.subtitle, icon: icon, userInfo: nil)
     }
 }
 
 func applicationShortcutItems(strings: PresentationStrings, otherAccountName: String?) -> [ApplicationShortcutItem] {
+/*
     if let otherAccountName = otherAccountName {
         return [
             ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil),
@@ -53,10 +61,12 @@ func applicationShortcutItems(strings: PresentationStrings, otherAccountName: St
             ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil)
         ]
     } else {
+*/
         return [
             ApplicationShortcutItem(type: .search, title: strings.Common_Search, subtitle: nil),
             ApplicationShortcutItem(type: .compose, title: strings.Compose_NewMessage, subtitle: nil),
-            ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil)
+            ApplicationShortcutItem(type: .savedMessages, title: strings.Conversation_SavedMessages, subtitle: nil),
+            ApplicationShortcutItem(type: .hideAllSecrets, title: strings.SecretPasscodeMenu_HideAllSecrets, subtitle: nil)
         ]
-    }
+//    }
 }

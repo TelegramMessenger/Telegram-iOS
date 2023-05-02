@@ -196,7 +196,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
     }
     
     private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
-    private let baseNavigationController: NavigationController?
+    private weak var baseNavigationController: NavigationController?
     
     var openUrl: ((InstantPageUrlItem) -> Void)?
     private var innerOpenUrl: (InstantPageUrlItem) -> Void

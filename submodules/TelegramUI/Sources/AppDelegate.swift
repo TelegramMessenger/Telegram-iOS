@@ -1,3 +1,9 @@
+import ItemListUI
+import MonotonicTime
+import AppLockState
+import PtgSecretPasscodes
+import PtgSecretPasscodesUI
+
 import UIKit
 import SwiftSignalKit
 import Display
@@ -210,6 +216,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return nil
         }
     )
+}
+
+extension UserDefaults {
+    @objc dynamic var suppressedNotificationForAccounId: String? {
+        return string(forKey: "suppressedNotificationForAccounId")
+    }
 }
 
 @objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate, URLSessionDelegate, URLSessionTaskDelegate {
@@ -484,21 +496,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         guard let appGroupUrl = maybeAppGroupUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
             return true
-        }
-        
-        var isDebugConfiguration = false
-        #if DEBUG
-        isDebugConfiguration = true
-        #endif
-        
-        if Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" {
-            isDebugConfiguration = true
-        }
-        
-        if isDebugConfiguration || buildConfig.isInternalBuild {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
-        } else {
-            LoggingSettings.defaultSettings = LoggingSettings(logToFile: false, logToConsole: false, redactSensitiveData: true)
         }
         
         let rootPath = rootPathForBasePath(appGroupUrl.path)
@@ -806,8 +803,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.pushRegistry = pushRegistry
         pushRegistry.delegate = self
 
-        self.accountManagerState = extractAccountManagerState(records: accountManager._internalAccountRecordsSync())
-        let _ = (accountManager.accountRecords()
+        self.accountManagerState = extractAccountManagerState(records: accountManager._internalAccountRecordsSync(excludeAccountIds: []))
+        let _ = (accountManager.accountRecords(excludeAccountIds: .single([]))
         |> deliverOnMainQueue).start(next: { view in
             self.accountManagerState = extractAccountManagerState(records: view)
         })
@@ -819,7 +816,44 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }
         
-        let sharedContextSignal = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
+        let appContextIsReady = self.sharedContextPromise.get()
+        |> take(1)
+        |> mapToSignal { sharedApplicationContext in
+            return combineLatest(self.context.get(), self.authContext.get(), sharedApplicationContext.sharedContext.inactiveAccountIds)
+            |> mapToSignal { context, authContext, inactiveAccountIds -> Signal<Bool, NoError> in
+                if let context {
+                    if inactiveAccountIds.contains(context.context.account.id) {
+                        return .single(false)
+                    }
+                    return context.isReadyAndPresented.get()
+                }
+                if let authContext {
+                    return authContext.isReadyAndPresented.get()
+                }
+                assertionFailure()
+                return .single(true)
+            }
+            |> filter { $0 }
+            |> take(1)
+        }
+        
+        let checkTimeoutInPtgSecretPasscodes: Signal<Void, NoError>
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
+            checkTimeoutInPtgSecretPasscodes = updatePtgSecretPasscodes(accountManager, { current in
+                return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes.map { sp in
+                    return sp.withUpdated(active: sp.active && (sp.timeout == nil || !isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)))
+                })
+            })
+        } else {
+            checkTimeoutInPtgSecretPasscodes = .complete()
+        }
+        
+        let initialPresentationDataAndSettingsPromise = Promise<InitialPresentationDataAndSettings>()
+        let _ = checkTimeoutInPtgSecretPasscodes.start(completed: {
+            initialPresentationDataAndSettingsPromise.set(currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle))
+        })
+        
+        let sharedContextSignal = initialPresentationDataAndSettingsPromise.get()
         |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
             return (accountManager, initialPresentationDataAndSettings)
         }
@@ -832,7 +866,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let presentationDataPromise = Promise<PresentationData>()
             let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
-            })
+            }, appContextIsReady: appContextIsReady)
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
             let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, hasInAppPurchases: buildConfig.isAppStoreBuild && buildConfig.apiId == 1, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), firebaseSecretStream: self.firebaseSecretStream.get(), setNotificationCall: { call in
@@ -884,7 +918,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
             }
             
-            let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccountContexts |> map { primary, accounts, _ in accounts.map({ ($0.1.account, $0.1.account.id == primary?.account.id) }) }, pollLiveLocationOnce: { accountId in
+            let notificationManager = SharedNotificationManager(episodeId: self.episodeId, application: application, clearNotificationsManager: clearNotificationsManager, inForeground: applicationBindings.applicationInForeground, accounts: sharedContext.activeAccountContexts |> map { primary, accounts, _, _ in accounts.map({ ($0.1.account, $0.1.account.id == primary?.account.id) }) }, pollLiveLocationOnce: { accountId in
                 let _ = (self.context.get()
                 |> filter {
                     return $0 != nil
@@ -976,7 +1010,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext?, NoError> in
             return sharedApplicationContext.sharedContext.activeAccountContexts
-            |> map { primary, _, _ -> AccountContext? in
+            |> map { primary, _, _, _ -> AccountContext? in
                 return primary
             }
             |> distinctUntilChanged(isEqual: { lhs, rhs in
@@ -1026,7 +1060,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<UnauthorizedApplicationContext?, NoError> in
             return sharedApplicationContext.sharedContext.activeAccountContexts
-            |> map { primary, accounts, auth -> (AccountContext?, UnauthorizedAccount, [AccountContext])? in
+            |> map { primary, accounts, auth, _ -> (AccountContext?, UnauthorizedAccount, [AccountContext])? in
                 if let auth = auth {
                     return (primary, auth, Array(accounts.map({ $0.1 })))
                 } else {
@@ -1099,7 +1133,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             self.contextValue = context
             if let context = context {
                 setupLegacyComponents(context: context.context)
-                let isReady = context.isReady.get()
+                let isReady = context.context.sharedContext.appLockContext.isScreenCovered ? .single(true) : context.isReady.get()
                 contextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
@@ -1110,8 +1144,20 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     }
                     print("Launch to ready took \((CFAbsoluteTimeGetCurrent() - launchStartTime) * 1000.0) ms")
 
+                    // if current account is added to non-activated secret passcode, it disappears immediately from UI
+                    // to prevent secret passcode controller disappearing, we move it to new current account controllers
+                    if let rootController = self.mainWindow.viewController as? TelegramRootController {
+                        if (rootController.topViewController as? ItemListController)?.tag == "SecretPasscodeController" {
+                            if let secretPasscodeController = rootController.popViewController(animated: false) {
+                                context.rootController.pushViewController(secretPasscodeController, animated: false)
+                            }
+                        }
+                    }
+                    
                     self.mainWindow.debugAction = nil
                     self.mainWindow.viewController = context.rootController
+                    
+                    context.isReadyAndPresented.set(context.isReady.get())
                     
                     if firstTime {
                         let layer = context.rootController.view.layer
@@ -1205,13 +1251,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 |> delay(0.5, queue: Queue.mainQueue())
                 let progressDisposable = progressSignal.start()
                 
-                let isReady: Signal<Bool, NoError> = context.isReady.get()
+                let isReady: Signal<Bool, NoError> = context.sharedContext.appLockContext.isScreenCovered ? .single(true) : context.isReady.get()
                 authContextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     progressDisposable.dispose()
-                    self.mainWindow.present(context.rootController, on: .root)
+                    self.mainWindow.present(context.rootController, on: .root, completion: {
+                        context.isReadyAndPresented.set(context.isReady.get())
+                    })
                 }))
             } else {
                 authContextReadyDisposable.set(nil)
@@ -1223,7 +1271,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> take(1)
         |> mapToSignal { sharedContext -> Signal<(AccountManager<TelegramAccountManagerTypes>, Set<PeerId>), NoError> in
             return sharedContext.sharedContext.activeAccountContexts
-            |> map { _, accounts, _ -> Set<PeerId> in
+            |> map { _, accounts, _, _ -> Set<PeerId> in
                 return Set(accounts.map { $0.1.account.peerId })
             }
             |> reduceLeft(value: Set<PeerId>()) { current, updated, emit in
@@ -1273,10 +1321,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 if let context = context {
                     let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                     
-                    return activeAccountsAndPeers(context: context.context)
-                    |> take(1)
-                    |> map { primaryAndAccounts -> (AccountContext, EnginePeer, Int32)? in
-                        return primaryAndAccounts.1.first
+                    return combineLatest(activeAccountsAndPeers(context: context.context) |> take(1), context.context.sharedContext.allHidableAccountIds, context.context.sharedContext.accountManager.accessChallengeData())
+                    |> map { primaryAndAccounts, allHidableAccountIds, accessChallengeData -> (AccountContext, EnginePeer, Int32)? in
+                        if accessChallengeData.data.isLockable {
+                            return nil
+                        }
+                        return primaryAndAccounts.1.first { !allHidableAccountIds.contains($0.0.account.id) }
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
@@ -1422,6 +1472,75 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         let _ = self.urlSession(identifier: "\(baseAppBundleId).backroundSession")
+        
+        if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
+            var suppressedNotificationForAccounIdObserver: NSKeyValueObservation?
+            
+            let _ = self.isInForegroundPromise.get().start(next: { isInForeground in
+                if isInForeground {
+                    // using UserDefaults KVO to be notified by Notification Service Extension about suppressed notifications in hidable accounts and secret chats
+                    // this allows to react to a call or new message for non-current account
+                    suppressedNotificationForAccounIdObserver = appGroupUserDefaults.observe(\.suppressedNotificationForAccounId, options: [.new], changeHandler: { _, change in
+                        if let accountIdString = (change.newValue as? String)?.components(separatedBy: ":").first, let rawAccountId = Int64(accountIdString) {
+                            processNotificationsInNonCurrentAccounts(onlyForAccountId: AccountRecordId(rawValue: rawAccountId))
+                        }
+                    })
+                    
+                    Queue.mainQueue().after(0.5) {
+                        // handle calls or new messages while app was not running or in background for non-current accounts (both hidable and normal)
+                        // for hidable accounts all notifications are unregistered when app is in background
+                        // this also updates badge counter in case of new messages in hidable secret chat in normal non-current account
+                        // even for normal non-current accounts if iOS Call Integration is disabled and new call comes, or if new message comes, when app is in background, if we do not tap notification but just open app, this will show incoming call window or update badge counter on Settings tab
+                        processNotificationsInNonCurrentAccounts(onlyForAccountId: nil)
+                    }
+                    
+                    func processNotificationsInNonCurrentAccounts(onlyForAccountId: AccountRecordId?) {
+                        let _ = (self.sharedContextPromise.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                            guard sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) else {
+                                return
+                            }
+                            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { activeAccounts in
+                                for (_, context, _) in activeAccounts.accounts {
+                                    if context.account.id != activeAccounts.primary?.account.id && (onlyForAccountId == nil || context.account.id == onlyForAccountId) {
+                                        sharedApplicationContext.notificationManager.beginPollingState(account: context.account)
+                                    }
+                                }
+                            })
+                        })
+                    }
+                } else {
+                    suppressedNotificationForAccounIdObserver?.invalidate()
+                    suppressedNotificationForAccounIdObserver = nil
+                }
+            })
+        }
+        
+        // handle incoming calls and update unread counter badge right after previously hidden account is revealed
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            var lastInactiveAccountIds = Set<AccountRecordId>()
+            
+            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+            |> deliverOnMainQueue).start(next: { activeAccounts in
+                let inactiveAccountsIds = Set(activeAccounts.inactiveAccounts.map({ $0.0 }))
+                let newlyRevealedAccountIds = lastInactiveAccountIds.subtracting(inactiveAccountsIds)
+                lastInactiveAccountIds = inactiveAccountsIds
+                
+                guard !newlyRevealedAccountIds.isEmpty && sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) else {
+                    return
+                }
+                for (_, context, _) in activeAccounts.accounts {
+                    if context.account.id != activeAccounts.primary?.account.id && newlyRevealedAccountIds.contains(context.account.id) {
+                        sharedApplicationContext.notificationManager.beginPollingState(account: context.account)
+                    }
+                }
+            })
+        })
         
         return true
     }
@@ -1582,7 +1701,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> deliverOnMainQueue).start(next: { activeAccounts in
                 var signals: Signal<Never, NoError> = .complete()
                 
-                for (_, context, _) in activeAccounts.accounts {
+                for (_, context, _) in activeAccounts.accounts + activeAccounts.inactiveAccounts {
                     signals = signals |> then(context.account.cleanupTasks(lowImpact: lowImpact))
                 }
                 
@@ -1616,6 +1735,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
 
+    private var lastResignActiveUptime: Int32?
+    
+    private func dismissSensitiveViewControllers() {
+        self.mainWindow.forEachViewController { controller in
+            if let controller = controller as? UIViewController {
+                if controller is ActionSheetController || controller.isSensitiveUI {
+                    controller.dismiss(animated: false)
+                }
+            }
+            return true
+        }
+    }
+    
     func applicationWillResignActive(_ application: UIApplication) {
         self.isActiveValue = false
         self.isActivePromise.set(false)
@@ -1641,6 +1773,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
             return true
         })
+        
+        self.lastResignActiveUptime = getDeviceUptimeSeconds(nil)
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
@@ -1673,14 +1807,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         })
         
-        self.mainWindow.forEachViewController { controller in
-            if let controller = controller as? UIViewController {
-                if controller is ActionSheetController || controller.isSensitiveUI {
-                    controller.dismiss(animated: false)
-                }
-            }
-            return true
-        }
+        self.dismissSensitiveViewControllers()
+        self.lastResignActiveUptime = nil
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
@@ -1716,12 +1844,17 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        if let lastResignActiveUptime = self.lastResignActiveUptime, getDeviceUptimeSeconds(nil) - lastResignActiveUptime >= 10 {
+            self.dismissSensitiveViewControllers()
+        }
+        
         self.isInForegroundValue = true
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
 
-        self.resetBadge()
+        // this is not needed, badge is already updated when needed
+//        self.resetBadge()
         
         #if canImport(AppCenter)
         self.maybeCheckForUpdates()
@@ -1748,6 +1881,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
+            
+            // take a chance to deactivate secret passcodes if app was waken up to process push-notification
+            let _ = sharedApplicationContext.sharedContext.appLockContext.secretPasscodesTimeoutCheck().start()
         })
         
         var redactedPayload = userInfo
@@ -1831,6 +1967,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func pushRegistryImpl(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
         Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry processing push notification")
         
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            // take a chance to deactivate secret passcodes if app was waken up to process push-notification
+            let _ = sharedApplicationContext.sharedContext.appLockContext.secretPasscodesTimeoutCheck().start()
+        })
+        
         let decryptedPayloadAndAccountId: ([AnyHashable: Any], AccountRecordId)?
         
         if let accountIdString = payload.dictionaryPayload["accountId"] as? String, let accountId = Int64(accountIdString) {
@@ -1898,6 +2041,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return
         }
         
+        if !Logger.shared.redactSensitiveData {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "decrypted payload: \(payloadJson)")
+        }
+        
         guard var updateString = payloadJson["updates"] as? String else {
             Logger.shared.log("App \(self.episodeId) PushRegistry", "updates is nil")
             completion()
@@ -1919,40 +2066,61 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             completion()
             return
         }
-        guard let callKitIntegration = CallKitIntegration.shared else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
-            completion()
-            return
+        
+        let useCallKitIntegration: Signal<Bool, NoError>
+        if #available(iOS 13.0, *) {
+            useCallKitIntegration = .single(true)
+        } else {
+            useCallKitIntegration = self.sharedContextPromise.get()
+            |> mapToSignal { sharedApplicationContext in
+                return sharedApplicationContext.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
+            }
+            |> map { sharedData in
+                let voiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) ?? .defaultSettings
+                return voiceCallSettings.enableSystemIntegration
+            }
         }
         
-        let phoneNumber = payloadJson["phoneNumber"] as? String
+        let _ = (combineLatest(self.sharedContextPromise.get(), useCallKitIntegration)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext, useCallKitIntegration in
+            guard useCallKitIntegration else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is disabled")
+                completion()
+                return
+            }
+            
+            guard let callKitIntegration = CallKitIntegration.shared else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
+                completion()
+                return
+            }
+            
+            let phoneNumber = payloadJson["phoneNumber"] as? String
 
-        callKitIntegration.reportIncomingCall(
-            uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
-            stableId: callUpdate.callId,
-            handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
-            phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
-            isVideo: false,
-            displayTitle: callUpdate.peer.debugDisplayTitle,
-            completion: { error in
-                if let error = error {
-                    if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
-                        Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
-                    } else {
-                        Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
-                        /*Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
-                            }
-                        }*/
+            callKitIntegration.reportIncomingCall(
+                uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
+                stableId: callUpdate.callId,
+                handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
+                phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
+                isVideo: false,
+                displayTitle: callUpdate.peer.debugDisplayTitle,
+                completion: { error in
+                    if let error = error {
+                        if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
+                            Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
+                        } else {
+                            Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
+                            /*Queue.mainQueue().async {
+                                if let strongSelf = self {
+                                    strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
+                                }
+                            }*/
+                        }
                     }
                 }
-            }
-        )
-        
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            )
+            
             let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
             |> take(1)
             |> deliverOnMainQueue).start(next: { activeAccounts in
@@ -1993,11 +2161,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry payload: \(payload.dictionaryPayload)")
                 sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
             }
+            
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Invoking completion handler")
+            
+            completion()
         })
-        
-        Logger.shared.log("App \(self.episodeId) PushRegistry", "Invoking completion handler")
-        
-        completion()
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
@@ -2042,6 +2210,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func openUrl(url: URL) {
         let _ = (self.sharedContextPromise.get()
         |> take(1)
+        |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
         |> mapToSignal { sharedApplicationContext -> Signal<(SharedAccountContextImpl, AuthorizedApplicationContext?, UnauthorizedApplicationContext?), NoError> in
             combineLatest(self.context.get(), self.authContext.get())
             |> filter { $0 != nil || $1 != nil }
@@ -2115,6 +2284,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
                 
                 if let contact = startCallContacts.first {
+                    let _ = (self.sharedContextPromise.get()
+                    |> take(1)
+                    |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
+                    |> deliverOnMainQueue).start(next: { _ in
+                    
                     let contactByIdentifier: Signal<EnginePeer?, NoError>
                     if let context = self.contextValue?.context, let contactIdentifier = contact.contactIdentifier {
                         contactByIdentifier = context.engine.contacts.findPeerByLocalContactIdentifier(identifier: contactIdentifier)
@@ -2173,13 +2347,22 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         }
                     })
                     
+                    })
+                    
                     return true
                 }
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
                     if let userId = Int64(string) {
+                        let _ = (self.sharedContextPromise.get()
+                        |> take(1)
+                        |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
+                        |> deliverOnMainQueue).start(next: { _ in
+                        
                         self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), threadId: nil, activateInput: true)
+                        
+                        })
                     }
                 }
             }
@@ -2193,13 +2376,17 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             if let uniqueIdentifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String, uniqueIdentifier.hasPrefix("contact-") {
                 if let peerIdValue = Int64(String(uniqueIdentifier[uniqueIdentifier.index(uniqueIdentifier.startIndex, offsetBy: "contact-".count)...])) {
                     let peerId = PeerId(peerIdValue)
+                    guard peerId.namespace == Namespaces.Peer.CloudUser else {
+                        return true
+                    }
                 
                     let signal = self.sharedContextPromise.get()
                     |> take(1)
+                    |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
                     |> mapToSignal { sharedApplicationContext -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
                         return sharedApplicationContext.sharedContext.activeAccountContexts
                         |> take(1)
-                        |> mapToSignal { primary, contexts, _ -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
+                        |> mapToSignal { primary, contexts, _, _ -> Signal<(AccountRecordId?, [AccountContext?]), NoError> in
                             return combineLatest(contexts.map { _, context, _ -> Signal<AccountContext?, NoError> in
                                 return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                                 |> map { peer -> AccountContext? in
@@ -2246,7 +2433,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedContext in
             let type = ApplicationShortcutItemType(rawValue: shortcutItem.type)
-            let immediately = type == .account
+            let immediately = type == .hideAllSecrets
             let proceed: () -> Void = {
                 let _ = (self.context.get()
                 |> take(1)
@@ -2264,6 +2451,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil)
                                 case .account:
                                     context.switchAccount()
+                                case .hideAllSecrets:
+                                    hideAllSecrets(accountManager: context.context.sharedContext.accountManager)
                             }
                         }
                     }
@@ -2285,6 +2474,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func openNotificationSettingsWhenReady() {
         let _ = (self.authorizedContext()
         |> take(1)
+        |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
         |> deliverOnMainQueue).start(next: { context in
             context.openNotificationSettings()
         })
@@ -2355,7 +2545,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-                if let (peerId, threadId) = peerIdFromNotification(response.notification) {
+                // for incoming call to non-current account when iOS Call Integration is turned off, this will show incoming call window
+                // (the app was in background when a call came in, so notification was shown. here we are handling a tap on this notification.)
+                if response.notification.request.content.userInfo["call_id"] != nil {
+                    self.handleNotification(response.notification.request.content.userInfo)
+                } else if let (peerId, threadId) = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
                     if response.notification.request.content.categoryIdentifier == "watch" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
@@ -2375,7 +2569,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 |> mapToSignal { sharedContext -> Signal<Void, NoError> in
                     sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0, extendNow: true)
                     return sharedContext.sharedContext.activeAccountContexts
-                    |> mapToSignal { _, contexts, _ -> Signal<Account, NoError> in
+                    |> mapToSignal { _, contexts, _, _ -> Signal<Account, NoError> in
                         for context in contexts {
                             if context.1.account.id == accountId {
                                 return .single(context.1.account)
@@ -2572,13 +2766,25 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        // for incoming call to non-current account when iOS Call Integration is turned off, this will show incoming call window
+        // for message notification for non-current account this will update badge counter on Settings
+        self.handleNotification(notification.request.content.userInfo)
+        
+        // if this is a call, no need to show notification
+        if notification.request.content.userInfo["call_id"] != nil {
+            completionHandler([])
+            return
+        }
+        
         let _ = (accountIdFromNotification(notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if let context = self.contextValue {
                 if let accountId = accountId, context.context.account.id != accountId {
                     completionHandler([.alert])
+                    return
                 }
             }
+            completionHandler([])
         })
     }
     
@@ -2590,6 +2796,16 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
         Logger.shared.log("App \(self.episodeId)", "handleEventsForBackgroundURLSession \(identifier)")
         completionHandler()
+    }
+    
+    private func handleNotification(_ dict: [AnyHashable: Any]) {
+        Logger.shared.log("App \(self.episodeId)", "handleNotification: \(dict)")
+        
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            sharedApplicationContext.notificationManager.addNotification(dict)
+        })
     }
     
     private var lastCheckForUpdatesTimestamp: Double?
@@ -2674,7 +2890,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func resetIntentsIfNeeded(context: AccountContextImpl) {
         let _ = (context.sharedContext.accountManager.transaction { transaction in
             let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
-            if !settings.initiallyReset || settings.account == nil {
+            if (!settings.initiallyReset || settings.account == nil) && !context.immediateIsHidable {
                 if #available(iOS 10.0, *) {
                     Queue.mainQueue().async {
                         INInteraction.deleteAll()
@@ -2717,7 +2933,7 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
                 return sharedContext.sharedContext.activeAccountContexts
                 |> take(1)
-                |> mapToSignal { _, contexts, _ -> Signal<AccountRecordId?, NoError> in
+                |> mapToSignal { _, contexts, _, _ -> Signal<AccountRecordId?, NoError> in
                     let keys = contexts.map { _, context, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
                         return masterNotificationsKey(account: context.account, ignoreDisabled: true)
                         |> map { key in
@@ -2741,7 +2957,7 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
                 return sharedContext.sharedContext.activeAccountContexts
                 |> take(1)
-                |> map { _, contexts, _ -> AccountRecordId? in
+                |> map { _, contexts, _, _ -> AccountRecordId? in
                     for (_, context, _) in contexts {
                         if Int(context.account.peerId.id._internalGetInt64Value()) == userId {
                             return context.account.id

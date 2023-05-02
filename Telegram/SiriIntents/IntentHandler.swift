@@ -134,7 +134,17 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         self.encryptionParameters = encryptionParameters
         
-        self.allAccounts.set(accountManager.accountRecords()
+        let ptgSecretPasscodes = accountManager.transaction { transaction in
+            return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        }
+        self.ptgSecretPasscodes.set(ptgSecretPasscodes)
+        
+        let excludeAccountIds = ptgSecretPasscodes
+        |> map { ptgSecretPasscodes in
+            return ptgSecretPasscodes.allHidableAccountIds()
+        }
+        
+        self.allAccounts.set(accountManager.accountRecords(excludeAccountIds: excludeAccountIds)
         |> take(1)
         |> map { view -> [(AccountRecordId, PeerId, Bool)] in
             var result: [(AccountRecordId, Int, PeerId, Bool)] = []
@@ -174,40 +184,43 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             }
         })
         
-        let account: Signal<Account?, NoError>
-        if let accountCache = accountCache {
-            account = .single(accountCache)
-        } else {
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters, initialPeerIdsExcludedFromUnreadCounters: [])
-            |> mapToSignal { account -> Signal<Account?, NoError> in
-                if let account = account {
-                    switch account {
-                        case .upgrading:
-                            return .complete()
-                        case let .authorized(account):
-                            return applicationSettings(accountManager: accountManager)
-                            |> deliverOnMainQueue
-                            |> map { settings -> Account in
-                                accountCache = account
-                                Logger.shared.logToFile = settings.logging.logToFile
-                                Logger.shared.logToConsole = settings.logging.logToConsole
-                                
-                                Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
-                                return account
-                            }
-                        case .unauthorized:
-                            return .complete()
+        self.accountPromise.set(ptgSecretPasscodes
+        |> take(1)
+        |> mapToSignal { ptgSecretPasscodes in
+            let allHidableAccountIds = ptgSecretPasscodes.allHidableAccountIds()
+            
+            let account: Signal<Account?, NoError>
+            if let accountCache = accountCache, !allHidableAccountIds.contains(accountCache.id) {
+                account = .single(accountCache)
+            } else {
+                account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters, initialPeerIdsExcludedFromUnreadCounters: [], excludeAccountIds: allHidableAccountIds)
+                |> mapToSignal { account -> Signal<Account?, NoError> in
+                    if let account = account {
+                        switch account {
+                            case .upgrading:
+                                return .complete()
+                            case let .authorized(account):
+                                return applicationSettings(accountManager: accountManager)
+                                |> deliverOnMainQueue
+                                |> map { settings -> Account in
+                                    accountCache = account
+                                    Logger.shared.logToFile = settings.logging.logToFile
+                                    Logger.shared.logToConsole = settings.logging.logToConsole
+                                    
+                                    Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
+                                    return account
+                                }
+                            case .unauthorized:
+                                return .complete()
+                        }
+                    } else {
+                        return .single(nil)
                     }
-                } else {
-                    return .single(nil)
                 }
+                |> take(1)
             }
-            |> take(1)
-        }
-        self.accountPromise.set(account)
-        
-        self.ptgSecretPasscodes.set(accountManager.transaction { transaction in
-            return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+            
+            return account
         })
     }
     
@@ -906,46 +919,54 @@ private final class WidgetIntentHandler {
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         self.encryptionParameters = encryptionParameters
         
-        let view = AccountManager<TelegramAccountManagerTypes>.getCurrentRecords(basePath: rootPath + "/accounts-metadata")
+        let ptgSecretPasscodes = accountManager.transaction { transaction in
+            return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        }
+        self.ptgSecretPasscodes.set(ptgSecretPasscodes)
         
-        var result: [(AccountRecordId, Int, PeerId, Bool)] = []
-        for record in view.records {
-            let isLoggedOut = record.attributes.contains(where: { attribute in
-                if case .loggedOut = attribute {
-                    return true
+        self.allAccounts.set(ptgSecretPasscodes
+        |> take(1)
+        |> map { ptgSecretPasscodes in
+            let allHidableAccountIds = ptgSecretPasscodes.allHidableAccountIds()
+            
+            let view = AccountManager<TelegramAccountManagerTypes>.getCurrentRecords(basePath: rootPath + "/accounts-metadata", excludeAccountIds: allHidableAccountIds)
+            
+            var result: [(AccountRecordId, Int, PeerId, Bool)] = []
+            for record in view.records {
+                let isLoggedOut = record.attributes.contains(where: { attribute in
+                    if case .loggedOut = attribute {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                if isLoggedOut {
+                    continue
+                }
+                var backupData: AccountBackupData?
+                var sortIndex: Int32 = 0
+                for attribute in record.attributes {
+                    if case let .sortOrder(sortOrder) = attribute {
+                        sortIndex = sortOrder.order
+                    } else if case let .backupData(backupDataValue) = attribute {
+                        backupData = backupDataValue.data
+                    }
+                }
+                if let backupData = backupData {
+                    result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentId == record.id))
+                }
+            }
+            result.sort(by: { lhs, rhs in
+                if lhs.1 != rhs.1 {
+                    return lhs.1 < rhs.1
                 } else {
-                    return false
+                    return lhs.0 < rhs.0
                 }
             })
-            if isLoggedOut {
-                continue
+            
+            return result.map { record -> (AccountRecordId, PeerId, Bool) in
+                return (record.0, record.2, record.3)
             }
-            var backupData: AccountBackupData?
-            var sortIndex: Int32 = 0
-            for attribute in record.attributes {
-                if case let .sortOrder(sortOrder) = attribute {
-                    sortIndex = sortOrder.order
-                } else if case let .backupData(backupDataValue) = attribute {
-                    backupData = backupDataValue.data
-                }
-            }
-            if let backupData = backupData {
-                result.append((record.id, Int(sortIndex), PeerId(backupData.peerId), view.currentId == record.id))
-            }
-        }
-        result.sort(by: { lhs, rhs in
-            if lhs.1 != rhs.1 {
-                return lhs.1 < rhs.1
-            } else {
-                return lhs.0 < rhs.0
-            }
-        })
-        self.allAccounts.set(.single(result.map { record -> (AccountRecordId, PeerId, Bool) in
-            return (record.0, record.2, record.3)
-        }))
-        
-        self.ptgSecretPasscodes.set(accountManager.transaction { transaction in
-            return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
         })
     }
     

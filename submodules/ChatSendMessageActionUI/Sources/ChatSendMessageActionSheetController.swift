@@ -141,4 +141,10 @@ public final class ChatSendMessageActionSheetController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
     }
+    
+    public func dismissWithoutAnimation() {
+        self.statusBar.statusBarStyle = .Ignore
+        self.completion()
+        self.presentingViewController?.dismiss(animated: false, completion: nil)
+    }
 }

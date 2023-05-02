@@ -259,6 +259,12 @@ final class ViewTracker {
                 pipe.putNext(PeerView(mutableView))
             }
         }
+        
+        for (mutableView, pipe) in self.combinedViews.copyItems() {
+            if mutableView.refreshDueToExternalTransaction(postbox: postbox) {
+                pipe.putNext(mutableView.immutableView())
+            }
+        }
     }
     
     func updateViews(postbox: PostboxImpl, currentTransaction: Transaction, transaction: PostboxTransaction) {

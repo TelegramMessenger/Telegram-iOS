@@ -666,6 +666,13 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
 }
 
 public func updatedPresentationData(accountManager: AccountManager<TelegramAccountManagerTypes>, applicationInForeground: Signal<Bool, NoError>, systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>) -> Signal<PresentationData, NoError> {
+    // made adjustments to reduce number of unneeded updates reported by this signal
+    
+    let systemUserInterfaceStyle = combineLatest(systemUserInterfaceStyle, applicationInForeground)
+    |> filter { $0.1 }
+    |> map { $0.0 }
+    |> distinctUntilChanged
+    
     return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.presentationThemeSettings, ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), systemUserInterfaceStyle)
     |> mapToSignal { sharedData, systemUserInterfaceStyle -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
@@ -691,12 +698,13 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
             currentWallpaper = theme.chat.defaultWallpaper
         }
         
-        return (.single(defaultServiceBackgroundColor)
-        |> then(chatServiceBackgroundColor(wallpaper: currentWallpaper, mediaBox: accountManager.mediaBox)))
-        |> mapToSignal { serviceBackgroundColor in
-            return applicationInForeground
-            |> mapToSignal { inForeground -> Signal<PresentationData, NoError> in
-                if inForeground {
+        // hack to use value from 'then' immediately if it is available synchronously
+        return combineLatest(.single(defaultServiceBackgroundColor)
+        |> then(chatServiceBackgroundColor(wallpaper: currentWallpaper, mediaBox: accountManager.mediaBox)), .single(0))
+        |> mapToSignal { serviceBackgroundColor, _ in
+//            return applicationInForeground
+//            |> mapToSignal { inForeground -> Signal<PresentationData, NoError> in
+//                if inForeground {
                     return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, systemUserInterfaceStyle: systemUserInterfaceStyle)
                     |> distinctUntilChanged
                     |> map { autoNightModeTriggered in
@@ -775,10 +783,10 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         
                         return PresentationData(strings: stringsValue, theme: themeValue, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
                     }
-                } else {
-                    return .complete()
-                }
-            }
+//                } else {
+//                    return .complete()
+//                }
+//            }
         }
     }
 }

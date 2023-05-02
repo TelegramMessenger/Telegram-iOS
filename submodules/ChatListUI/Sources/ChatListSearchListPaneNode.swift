@@ -934,7 +934,7 @@ private struct DownloadItem: Equatable {
     }
 }
 
-public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
+final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let context: AccountContext
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
@@ -945,7 +945,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
     private let key: ChatListSearchPaneKey
     private let tagMask: EngineMessage.Tags?
     private let location: ChatListControllerLocation
-    private let navigationController: NavigationController?
+    private weak var navigationController: NavigationController?
     
     private let recentListNode: ListView
     private let shimmerNode: ChatListSearchShimmerNode
@@ -979,11 +979,11 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
     private var mediaStatusDisposable: Disposable?
     private var playlistPreloadDisposable: Disposable?
     
-    public var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
+    private var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
     private var playlistLocation: SharedMediaPlaylistLocation?
     
     private var mediaAccessoryPanelContainer: PassthroughContainerNode
-    public var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
+    private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     private var dismissingPanel: ASDisplayNode?
     
     private let emptyResultsTitleNode: ImmediateTextNode
@@ -2037,7 +2037,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                     }
                 }
                 
-                if case .chats = key, !peersFilter.contains(.excludeRecent), isViablePhoneNumber(finalQuery) {
+                if case .chats = key, !peersFilter.contains(.excludeRecent), isViablePhoneNumber(finalQuery), !context.immediateIsHidable {
                     entries.append(.addContact(finalQuery, presentationData.theme, presentationData.strings))
                 }
                 

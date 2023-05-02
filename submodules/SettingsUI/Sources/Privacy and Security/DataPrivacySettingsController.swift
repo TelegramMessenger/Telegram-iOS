@@ -261,13 +261,17 @@ private struct DataPrivacyControllerState: Equatable {
     var deletingCloudDrafts: Bool = false
 }
 
-private func dataPrivacyControllerEntries(presentationData: PresentationData, state: DataPrivacyControllerState, secretChatLinkPreviews: Bool?, synchronizeDeviceContacts: Bool, frequentContacts: Bool) -> [PrivacyAndSecurityEntry] {
+private func dataPrivacyControllerEntries(presentationData: PresentationData, state: DataPrivacyControllerState, secretChatLinkPreviews: Bool?, synchronizeDeviceContacts: Bool, frequentContacts: Bool, isHidableAccount: Bool) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
     entries.append(.contactsHeader(presentationData.theme, presentationData.strings.Privacy_ContactsTitle))
     entries.append(.deleteContacts(presentationData.theme, presentationData.strings.Privacy_ContactsReset, !state.deletingContacts))
-    entries.append(.syncContacts(presentationData.theme, presentationData.strings.Privacy_ContactsSync, synchronizeDeviceContacts))
-    entries.append(.syncContactsInfo(presentationData.theme, presentationData.strings.Privacy_ContactsSyncHelp))
+    if !isHidableAccount {
+        entries.append(.syncContacts(presentationData.theme, presentationData.strings.Privacy_ContactsSync, synchronizeDeviceContacts))
+        entries.append(.syncContactsInfo(presentationData.theme, presentationData.strings.Privacy_ContactsSyncHelp))
+    } else {
+        entries.append(.syncContactsInfo(presentationData.theme, presentationData.strings.ContactsSyncHelpForHidableAccounts))
+    }
     
     entries.append(.frequentContacts(presentationData.theme, presentationData.strings.Privacy_TopPeers, frequentContacts))
     entries.append(.frequentContactsInfo(presentationData.theme, presentationData.strings.Privacy_TopPeersHelp))
@@ -489,8 +493,8 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     
     actionsDisposable.add(context.engine.peers.managedUpdatedRecentPeers().start())
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.engine.peers.recentPeers())
-    |> map { presentationData, state, noticeView, sharedData, preferences, recentPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.engine.peers.recentPeers(), context.isHidable)
+    |> map { presentationData, state, noticeView, sharedData, preferences, recentPeers, isHidableAccount -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let secretChatLinkPreviews = noticeView.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
         
         let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
@@ -515,7 +519,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
         
         let animateChanges = false
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataPrivacyControllerEntries(presentationData: presentationData, state: state, secretChatLinkPreviews: secretChatLinkPreviews, synchronizeDeviceContacts: synchronizeDeviceContacts, frequentContacts: suggestRecentPeers), style: .blocks, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataPrivacyControllerEntries(presentationData: presentationData, state: state, secretChatLinkPreviews: secretChatLinkPreviews, synchronizeDeviceContacts: synchronizeDeviceContacts, frequentContacts: suggestRecentPeers, isHidableAccount: isHidableAccount), style: .blocks, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
