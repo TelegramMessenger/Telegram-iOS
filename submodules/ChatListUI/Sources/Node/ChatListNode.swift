@@ -18,6 +18,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import Postbox
 import ChatFolderLinkPreviewScreen
+import StoryContainerScreen
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
@@ -98,6 +99,7 @@ public final class ChatListNodeInteraction {
     let openPremiumIntro: () -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
+    let openStories: (EnginePeer.Id) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -144,7 +146,8 @@ public final class ChatListNodeInteraction {
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
         openChatFolderUpdates: @escaping () -> Void,
-        hideChatFolderUpdates: @escaping () -> Void
+        hideChatFolderUpdates: @escaping () -> Void,
+        openStories: @escaping (EnginePeer.Id) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -179,6 +182,7 @@ public final class ChatListNodeInteraction {
         self.openPremiumIntro = openPremiumIntro
         self.openChatFolderUpdates = openChatFolderUpdates
         self.hideChatFolderUpdates = hideChatFolderUpdates
+        self.openStories = openStories
     }
 }
 
@@ -236,6 +240,7 @@ public struct ChatListNodeState: Equatable {
     public var foundPeers: [(EnginePeer, EnginePeer?)]
     public var selectedPeerMap: [EnginePeer.Id: EnginePeer]
     public var selectedThreadIds: Set<Int64>
+    public var peersWithNewStories: Set<EnginePeer.Id>
     
     public init(
         presentationData: ChatListPresentationData,
@@ -250,7 +255,8 @@ public struct ChatListNodeState: Equatable {
         pendingClearHistoryPeerIds: Set<ItemId>,
         hiddenItemShouldBeTemporaryRevealed: Bool,
         hiddenPsaPeerId: EnginePeer.Id?,
-        selectedThreadIds: Set<Int64>
+        selectedThreadIds: Set<Int64>,
+        peersWithNewStories: Set<EnginePeer.Id>
     ) {
         self.presentationData = presentationData
         self.editing = editing
@@ -265,6 +271,7 @@ public struct ChatListNodeState: Equatable {
         self.hiddenItemShouldBeTemporaryRevealed = hiddenItemShouldBeTemporaryRevealed
         self.hiddenPsaPeerId = hiddenPsaPeerId
         self.selectedThreadIds = selectedThreadIds
+        self.peersWithNewStories = peersWithNewStories
     }
     
     public static func ==(lhs: ChatListNodeState, rhs: ChatListNodeState) -> Bool {
@@ -305,6 +312,9 @@ public struct ChatListNodeState: Equatable {
             return false
         }
         if lhs.selectedThreadIds != rhs.selectedThreadIds {
+            return false
+        }
+        if lhs.peersWithNewStories != rhs.peersWithNewStories {
             return false
         }
         return true
@@ -384,7 +394,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 hasFailedMessages: hasFailedMessages,
                                 forumTopicData: forumTopicData,
                                 topForumTopicItems: topForumTopicItems,
-                                autoremoveTimeout: peerEntry.autoremoveTimeout
+                                autoremoveTimeout: peerEntry.autoremoveTimeout,
+                                hasNewStories: peerEntry.hasNewStories
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -727,7 +738,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 hasFailedMessages: hasFailedMessages,
                                 forumTopicData: forumTopicData,
                                 topForumTopicItems: topForumTopicItems,
-                                autoremoveTimeout: peerEntry.autoremoveTimeout
+                                autoremoveTimeout: peerEntry.autoremoveTimeout,
+                                hasNewStories: peerEntry.hasNewStories
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -1069,6 +1081,7 @@ public final class ChatListNode: ListView {
     public var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     public var hidePsa: ((EnginePeer.Id) -> Void)?
     public var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
+    public var openStories: ((EnginePeer.Id) -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1182,7 +1195,7 @@ public final class ChatListNode: ListView {
             isSelecting = true
         }
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set())
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), hiddenItemShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set(), peersWithNewStories: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -1517,6 +1530,11 @@ public final class ChatListNode: ListView {
                     let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: localFilterId).start()
                 }
             })
+        }, openStories: { [weak self] peerId in
+            guard let self else {
+                return
+            }
+            self.openStories?(peerId)
         })
         nodeInteraction.isInlineMode = isInlineMode
         

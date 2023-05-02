@@ -26,6 +26,7 @@ public final class MessageInputPanelComponent: Component {
     public let sendMessageAction: () -> Void
     public let setMediaRecordingActive: (Bool, Bool, Bool) -> Void
     public let attachmentAction: () -> Void
+    public let reactionAction: (UIView) -> Void
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
     
@@ -38,6 +39,7 @@ public final class MessageInputPanelComponent: Component {
         sendMessageAction: @escaping () -> Void,
         setMediaRecordingActive: @escaping (Bool, Bool, Bool) -> Void,
         attachmentAction: @escaping () -> Void,
+        reactionAction: @escaping (UIView) -> Void,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?
     ) {
@@ -49,6 +51,7 @@ public final class MessageInputPanelComponent: Component {
         self.sendMessageAction = sendMessageAction
         self.setMediaRecordingActive = setMediaRecordingActive
         self.attachmentAction = attachmentAction
+        self.reactionAction = reactionAction
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
     }
@@ -87,7 +90,8 @@ public final class MessageInputPanelComponent: Component {
         
         private let attachmentButton = ComponentView<Empty>()
         private let inputActionButton = ComponentView<Empty>()
-        private let stickerIconView: UIImageView
+        private let stickerButton = ComponentView<Empty>()
+        private let reactionButton = ComponentView<Empty>()
         
         private var mediaRecordingPanel: ComponentView<Empty>?
         private weak var dismissingMediaRecordingPanel: UIView?
@@ -100,14 +104,10 @@ public final class MessageInputPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.fieldBackgroundView = UIImageView()
-            self.stickerIconView = UIImageView()
             
             super.init(frame: frame)
             
             self.addSubview(self.fieldBackgroundView)
-            
-            self.addSubview(self.fieldBackgroundView)
-            self.addSubview(self.stickerIconView)
         }
         
         required init?(coder: NSCoder) {
@@ -146,11 +146,6 @@ public final class MessageInputPanelComponent: Component {
             if self.fieldBackgroundView.image == nil {
                 self.fieldBackgroundView.image = generateStretchableFilledCircleImage(diameter: fieldCornerRadius * 2.0, color: nil, strokeColor: UIColor(white: 1.0, alpha: 0.16), strokeWidth: 1.0, backgroundColor: nil)
             }
-            if self.stickerIconView.image == nil {
-                self.stickerIconView.image = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconStickers")?.withRenderingMode(.alwaysTemplate)
-                self.stickerIconView.tintColor = .white
-            }
-            transition.setAlpha(view: self.stickerIconView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
             
             let availableTextFieldSize = CGSize(width: availableSize.width - insets.left - insets.right, height: availableSize.height - insets.top - insets.bottom)
             
@@ -169,7 +164,7 @@ public final class MessageInputPanelComponent: Component {
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldFrame)
             transition.setAlpha(view: self.fieldBackgroundView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
             
-            let rightFieldInset: CGFloat = 34.0
+            //let rightFieldInset: CGFloat = 34.0
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height + insets.top + insets.bottom)
             
@@ -258,14 +253,79 @@ public final class MessageInputPanelComponent: Component {
                 }
                 transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: size.width - insets.right + floorToScreenPixels((insets.right - inputActionButtonSize.width) * 0.5), y: size.height - baseHeight + floorToScreenPixels((baseHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
             }
-            if let image = self.stickerIconView.image {
-                let stickerIconFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - rightFieldInset + floor((rightFieldInset - image.size.width) * 0.5), y: fieldFrame.minY + floor((fieldFrame.height - image.size.height) * 0.5)), size: image.size)
-                transition.setPosition(view: self.stickerIconView, position: stickerIconFrame.center)
-                transition.setBounds(view: self.stickerIconView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
+            var fieldIconNextX = fieldFrame.maxX - 2.0
+            let stickerButtonSize = self.stickerButton.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Text/AccessoryIconStickers",
+                        tintColor: .white
+                    )),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.component?.attachmentAction()
+                    }
+                ).minSize(CGSize(width: 32.0, height: 32.0))),
+                environment: {},
+                containerSize: CGSize(width: 32.0, height: 32.0)
+            )
+            if let stickerButtonView = self.stickerButton.view {
+                if stickerButtonView.superview == nil {
+                    self.addSubview(stickerButtonView)
+                }
+                let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldFrame.minY + floor((fieldFrame.height - stickerButtonSize.height) * 0.5)), size: stickerButtonSize)
+                transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
+                transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
                 
-                transition.setAlpha(view: self.stickerIconView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
-                transition.setScale(view: self.stickerIconView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                transition.setAlpha(view: stickerButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
+                transition.setScale(view: stickerButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                
+                fieldIconNextX -= stickerButtonSize.width + 2.0
             }
+            
+            let reactionButtonSize = self.reactionButton.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Text/AccessoryIconReaction",
+                        tintColor: .white
+                    )),
+                    action: { [weak self] in
+                        guard let self, let reactionButtonView = self.reactionButton.view else {
+                            return
+                        }
+                        self.component?.reactionAction(reactionButtonView)
+                    }
+                ).minSize(CGSize(width: 32.0, height: 32.0))),
+                environment: {},
+                containerSize: CGSize(width: 32.0, height: 32.0)
+            )
+            if let reactionButtonView = self.reactionButton.view {
+                if reactionButtonView.superview == nil {
+                    self.addSubview(reactionButtonView)
+                }
+                let reactionIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - reactionButtonSize.width, y: fieldFrame.minY + 1.0 + floor((fieldFrame.height - reactionButtonSize.height) * 0.5)), size: reactionButtonSize)
+                transition.setPosition(view: reactionButtonView, position: reactionIconFrame.center)
+                transition.setBounds(view: reactionButtonView, bounds: CGRect(origin: CGPoint(), size: reactionIconFrame.size))
+                
+                transition.setAlpha(view: reactionButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
+                transition.setScale(view: reactionButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                
+                fieldIconNextX -= reactionButtonSize.width + 2.0
+            }
+            
+            /*if let image = self.reactionIconView.image {
+                let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - image.size.width, y: fieldFrame.minY + floor((fieldFrame.height - image.size.height) * 0.5)), size: image.size)
+                transition.setPosition(view: self.reactionIconView, position: stickerIconFrame.center)
+                transition.setBounds(view: self.reactionIconView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
+                
+                transition.setAlpha(view: self.reactionIconView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
+                transition.setScale(view: self.reactionIconView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                
+                fieldIconNextX -= image.size.width + 4.0
+            }*/
             
             component.externalState.isEditing = self.textFieldExternalState.isEditing
             component.externalState.hasText = self.textFieldExternalState.hasText

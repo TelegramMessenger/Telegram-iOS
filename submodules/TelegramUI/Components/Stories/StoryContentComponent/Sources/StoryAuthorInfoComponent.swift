@@ -8,20 +8,29 @@ import TelegramStringFormatting
 
 final class StoryAuthorInfoComponent: Component {
 	let context: AccountContext
-	let message: EngineMessage
+	let peer: EnginePeer?
+    let timestamp: Int32
+    
+    init(context: AccountContext, peer: EnginePeer?, timestamp: Int32) {
+        self.context = context
+        self.peer = peer
+        self.timestamp = timestamp
+    }
 
-	init(context: AccountContext, message: EngineMessage) {
-		self.context = context
-		self.message = message
+	convenience init(context: AccountContext, message: EngineMessage) {
+        self.init(context: context, peer: message.author, timestamp: message.timestamp)
 	}
 
 	static func ==(lhs: StoryAuthorInfoComponent, rhs: StoryAuthorInfoComponent) -> Bool {
 		if lhs.context !== rhs.context {
 			return false
 		}
-		if lhs.message != rhs.message {
+		if lhs.peer != rhs.peer {
 			return false
 		}
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
 		return true
 	}
 
@@ -49,8 +58,8 @@ final class StoryAuthorInfoComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
 
-            let title = component.message.author?.debugDisplayTitle ?? ""
-            let subtitle = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: component.message.timestamp).string
+            let title = component.peer?.debugDisplayTitle ?? ""
+            let subtitle = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: component.timestamp).string
             
             let titleSize = self.title.update(
                 transition: .immediate,

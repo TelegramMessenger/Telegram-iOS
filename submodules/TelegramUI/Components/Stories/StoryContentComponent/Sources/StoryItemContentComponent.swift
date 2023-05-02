@@ -12,28 +12,28 @@ import TelegramUniversalVideoContent
 import StoryContainerScreen
 import HierarchyTrackingLayer
 
-final class StoryMessageContentComponent: Component {
+final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
     
 	let context: AccountContext
-	let message: EngineMessage
+    let item: StoryListContext.Item
 
-	init(context: AccountContext, message: EngineMessage) {
+    init(context: AccountContext, item: StoryListContext.Item) {
 		self.context = context
-		self.message = message
+		self.item = item
 	}
 
-	static func ==(lhs: StoryMessageContentComponent, rhs: StoryMessageContentComponent) -> Bool {
+	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
 		if lhs.context !== rhs.context {
 			return false
 		}
-		if lhs.message != rhs.message {
+		if lhs.item != rhs.item {
 			return false
 		}
 		return true
 	}
     
-    static func preload(context: AccountContext, message: EngineMessage) -> Signal<Never, NoError> {
+    /*static func preload(context: AccountContext, message: EngineMessage) -> Signal<Never, NoError> {
         var messageMedia: EngineMedia?
         for media in message.media {
             switch media {
@@ -81,7 +81,7 @@ final class StoryMessageContentComponent: Component {
         }
         
         return fetchSignal ?? .complete()
-    }
+    }*/
 
     final class View: StoryContentItem.View {
         private let imageNode: TransformImageNode
@@ -90,7 +90,7 @@ final class StoryMessageContentComponent: Component {
         private var currentMessageMedia: EngineMedia?
         private var fetchDisposable: Disposable?
         
-        private var component: StoryMessageContentComponent?
+        private var component: StoryItemContentComponent?
         private weak var state: EmptyComponentState?
         private var environment: StoryContentItem.Environment?
         
@@ -144,14 +144,14 @@ final class StoryMessageContentComponent: Component {
                         manager: component.context.sharedContext.mediaManager.universalVideoManager,
                         decoration: StoryVideoDecoration(),
                         content: NativeVideoContent(
-                            id: .message(component.message.stableId, file.fileId),
-                            userLocation: .peer(component.message.id.peerId),
-                            fileReference: .message(message: MessageReference(component.message._asMessage()), media: file),
+                            id: .message(0, file.fileId),
+                            userLocation: .other,
+                            fileReference: .standalone(media: file),
                             imageReference: nil,
                             loopVideo: true,
                             enableSound: true,
                             tempFilePath: nil,
-                            captureProtected: component.message._asMessage().isCopyProtected(),
+                            captureProtected: false,
                             storeAfterDownload: nil
                         ),
                         priority: .gallery
@@ -274,21 +274,19 @@ final class StoryMessageContentComponent: Component {
             self.environment?.presentationProgressUpdated(clippedProgress)
         }
         
-        func update(component: StoryMessageContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
+        func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
             self.environment = environment[StoryContentItem.Environment.self].value
             
             var messageMedia: EngineMedia?
-            for media in component.message.media {
-                switch media {
-                case let image as TelegramMediaImage:
+            switch component.item.media {
+            case let .image(image):
                     messageMedia = .image(image)
-                case let file as TelegramMediaFile:
+            case let .file(file):
                     messageMedia = .file(file)
-                default:
-                    break
-                }
+            default:
+                break
             }
             
             var reloadMedia = false
@@ -304,17 +302,17 @@ final class StoryMessageContentComponent: Component {
                 case let .image(image):
                     signal = chatMessagePhoto(
                         postbox: component.context.account.postbox,
-                        userLocation: .peer(component.message.id.peerId),
-                        photoReference: .message(message: MessageReference(component.message._asMessage()), media: image),
+                        userLocation: .other,
+                        photoReference: .standalone(media: image),
                         synchronousLoad: true,
                         highQuality: true
                     )
                     if let representation = image.representations.last {
                         fetchSignal = fetchedMediaResource(
                             mediaBox: component.context.account.postbox.mediaBox,
-                            userLocation: .peer(component.message.id.peerId),
+                            userLocation: .other,
                             userContentType: .image,
-                            reference: ImageMediaReference.message(message: MessageReference(component.message._asMessage()), media: image).resourceReference(representation.resource)
+                            reference: ImageMediaReference.standalone(media: image).resourceReference(representation.resource)
                         )
                         |> ignoreValues
                         |> `catch` { _ -> Signal<Never, NoError> in
@@ -324,15 +322,15 @@ final class StoryMessageContentComponent: Component {
                 case let .file(file):
                     signal = chatMessageVideo(
                         postbox: component.context.account.postbox,
-                        userLocation: .peer(component.message.id.peerId),
-                        videoReference: .message(message: MessageReference(component.message._asMessage()), media: file),
+                        userLocation: .other,
+                        videoReference: .standalone(media: file),
                         synchronousLoad: true
                     )
                     fetchSignal = fetchedMediaResource(
                         mediaBox: component.context.account.postbox.mediaBox,
-                        userLocation: .peer(component.message.id.peerId),
+                        userLocation: .other,
                         userContentType: .image,
-                        reference: FileMediaReference.message(message: MessageReference(component.message._asMessage()), media: file).resourceReference(file.resource)
+                        reference: FileMediaReference.standalone(media: file).resourceReference(file.resource)
                     )
                     |> ignoreValues
                     |> `catch` { _ -> Signal<Never, NoError> in

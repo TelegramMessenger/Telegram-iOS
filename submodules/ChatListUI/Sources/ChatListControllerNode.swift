@@ -190,7 +190,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
             let interaction = ChatListNodeInteraction(context: context, animationCache: animationCache, animationRenderer: animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
                 gesture?.cancel()
-            }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {})
+            }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {}, openStories: { _ in })
             interaction.isInlineMode = isInlineMode
             
             let items = (0 ..< 2).map { _ -> ChatListItem in
@@ -237,7 +237,8 @@ private final class ChatListShimmerNode: ASDisplayNode {
                     hasFailedMessages: false,
                     forumTopicData: nil,
                     topForumTopicItems: [],
-                    autoremoveTimeout: nil
+                    autoremoveTimeout: nil,
+                    hasNewStories: false
                 )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             }
             
@@ -818,6 +819,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             previousItemNode.listNode.contentOffsetChanged = nil
             previousItemNode.listNode.contentScrollingEnded = nil
             previousItemNode.listNode.activateChatPreview = nil
+            previousItemNode.listNode.openStories = nil
             previousItemNode.listNode.addedVisibleChatsWithPeerIds = nil
             previousItemNode.listNode.didBeginSelectingChats = nil
             
@@ -876,6 +878,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         }
         itemNode.listNode.activateChatPreview = { [weak self] item, threadId, sourceNode, gesture, location in
             self?.activateChatPreview?(item, threadId, sourceNode, gesture, location)
+        }
+        itemNode.listNode.openStories = { [weak self] peerId in
+            self?.openStories?(peerId)
         }
         itemNode.listNode.addedVisibleChatsWithPeerIds = { [weak self] ids in
             self?.addedVisibleChatsWithPeerIds?(ids)
@@ -940,6 +945,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     public var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
+    var openStories: ((EnginePeer.Id) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
     public var displayFilterLimit: (() -> Void)?
@@ -1976,6 +1982,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
                 
                 inlineStackContainerNode.activateChatPreview = self.mainContainerNode.activateChatPreview
+                inlineStackContainerNode.openStories = self.mainContainerNode.openStories
                 inlineStackContainerNode.addedVisibleChatsWithPeerIds = self.mainContainerNode.addedVisibleChatsWithPeerIds
                 inlineStackContainerNode.didBeginSelectingChats = self.mainContainerNode.didBeginSelectingChats
                 inlineStackContainerNode.displayFilterLimit = nil

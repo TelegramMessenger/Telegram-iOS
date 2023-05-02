@@ -268,6 +268,7 @@ public final class TelegramRootController: NavigationController {
                 case let .asset(asset):
                     item = TGMediaAsset(phAsset: asset)
                 }
+                let context = self.context
                 legacyStoryMediaEditor(context: self.context, item: item, getCaptionPanelView: { return nil }, completion: { result in
                     dismissCameraImpl?()
                     switch result {
@@ -276,7 +277,16 @@ public final class TelegramRootController: NavigationController {
                     case let .video(path):
                         _ = path
                     case let .asset(asset):
-                        _ = asset
+                        let options = PHImageRequestOptions()
+                        options.deliveryMode = .highQualityFormat
+                        options.isNetworkAccessAllowed = true
+                        PHImageManager.default().requestImageData(for: asset, options:options, resultHandler: { data, _, _, _ in
+                            if let data, let image = UIImage(data: data) {
+                                Queue.mainQueue().async {
+                                    let _ = context.engine.messages.uploadStory(media: .image(dimensions: PixelDimensions(image.size), data: data)).start()
+                                }
+                            }
+                        })
                     }
                 }, present: { c, a in
                     presentImpl?(c)

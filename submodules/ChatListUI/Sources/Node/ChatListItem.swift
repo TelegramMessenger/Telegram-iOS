@@ -82,6 +82,7 @@ public enum ChatListItemContent {
         public var forumTopicData: EngineChatList.ForumTopicData?
         public var topForumTopicItems: [EngineChatList.ForumTopicData]
         public var autoremoveTimeout: Int32?
+        public var hasNewStories: Bool
         
         public init(
             messages: [EngineMessage],
@@ -100,7 +101,8 @@ public enum ChatListItemContent {
             hasFailedMessages: Bool,
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
-            autoremoveTimeout: Int32?
+            autoremoveTimeout: Int32?,
+            hasNewStories: Bool
         ) {
             self.messages = messages
             self.peer = peer
@@ -119,6 +121,7 @@ public enum ChatListItemContent {
             self.forumTopicData = forumTopicData
             self.topForumTopicItems = topForumTopicItems
             self.autoremoveTimeout = autoremoveTimeout
+            self.hasNewStories = hasNewStories
         }
     }
 
@@ -899,6 +902,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var avatarIconView: ComponentHostView<Empty>?
     var avatarIconComponent: EmojiStatusComponent?
     var avatarVideoNode: AvatarVideoNode?
+    var avatarStoryIndicatorNode: ASImageNode?
     
     private var inlineNavigationMarkLayer: SimpleLayer?
     
@@ -2725,6 +2729,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     
+                    var displayStoryIndicator = false
+                    if case let .peer(peerData) = item.content, peerData.hasNewStories {
+                        displayStoryIndicator = true
+                    }
+                    
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
                     var avatarScaleOffset: CGFloat = 0.0
                     var avatarScale: CGFloat = 1.0
@@ -2735,12 +2744,64 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let targetAvatarScaleOffset: CGFloat = -(avatarFrame.width - avatarFrame.width * avatarScale) * 0.5
                         avatarScaleOffset = targetAvatarScaleOffset * inlineNavigationLocation.progress
                     }
+                    
+                    if displayStoryIndicator {
+                        avatarScale *= (avatarFrame.width - 4.0 * 2.0) / avatarFrame.width
+                    }
+                    
                     transition.updateFrame(node: strongSelf.avatarContainerNode, frame: avatarFrame)
                     transition.updatePosition(node: strongSelf.avatarNode, position: avatarFrame.offsetBy(dx: -avatarFrame.minX, dy: -avatarFrame.minY).center.offsetBy(dx: avatarScaleOffset, dy: 0.0))
                     transition.updateBounds(node: strongSelf.avatarNode, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
                     transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale)
                     strongSelf.avatarNode.updateSize(size: avatarFrame.size)
                     strongSelf.updateVideoVisibility()
+                    
+                    if displayStoryIndicator {
+                        let avatarStoryIndicatorNode: ASImageNode
+                        if let current = strongSelf.avatarStoryIndicatorNode {
+                            avatarStoryIndicatorNode = current
+                        } else {
+                            avatarStoryIndicatorNode = ASImageNode()
+                            strongSelf.avatarStoryIndicatorNode = avatarStoryIndicatorNode
+                            strongSelf.contextContainer.insertSubnode(avatarStoryIndicatorNode, belowSubnode: strongSelf.avatarContainerNode)
+                            
+                            avatarStoryIndicatorNode.isUserInteractionEnabled = true
+                            avatarStoryIndicatorNode.view.addGestureRecognizer(UITapGestureRecognizer(target: strongSelf, action: #selector(strongSelf.avatarStoryTapGesture(_:))))
+                        }
+                        var updateImage = false
+                        if let image = avatarStoryIndicatorNode.image {
+                            if image.size != avatarFrame.size {
+                                updateImage = true
+                            }
+                        } else {
+                            updateImage = true
+                        }
+                        if updateImage {
+                            avatarStoryIndicatorNode.image = generateImage(avatarFrame.size, rotatedContext: { size, context in
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                
+                                let lineWidth: CGFloat = 2.0
+                                context.setLineWidth(lineWidth)
+                                context.addEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+                                context.replacePathWithStrokedPath()
+                                context.clip()
+                                
+                                var locations: [CGFloat] = [1.0, 0.0]
+                                let colors: [CGColor] = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
+                                
+                                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                                
+                                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+                            })
+                        }
+                        transition.updateFrame(node: avatarStoryIndicatorNode, frame: avatarFrame)
+                    } else {
+                        if let avatarStoryIndicatorNode = strongSelf.avatarStoryIndicatorNode {
+                            strongSelf.avatarStoryIndicatorNode = nil
+                            avatarStoryIndicatorNode.removeFromSupernode()
+                        }
+                    }
                     
                     var itemPeerId: EnginePeer.Id?
                     if case let .chatList(index) = item.index {
@@ -3756,6 +3817,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
         }
         
+        if let avatarStoryIndicatorNode = self.avatarStoryIndicatorNode, let result = avatarStoryIndicatorNode.view.hitTest(self.view.convert(point, to: avatarStoryIndicatorNode.view), with: event) {
+            return result
+        }
+        
         return super.hitTest(point, with: event)
+    }
+    
+    @objc private func avatarStoryTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            guard let item = self.item, case let .peer(peerData) = item.content else {
+                return
+            }
+            item.interaction.openStories(peerData.peer.peerId)
+        }
     }
 }

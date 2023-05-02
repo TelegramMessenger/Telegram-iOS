@@ -270,21 +270,6 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                     openChatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
                 }
                 
-                if context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
-                    return .story(StoryChatContent.messages(
-                        context: context,
-                        messageId: message.id
-                    )
-                    |> take(1)
-                    |> deliverOnMainQueue
-                    |> map { initialContent in
-                        return StoryContainerScreen(
-                            context: context,
-                            initialContent: initialContent
-                        )
-                    })
-                }
-                
                 return .gallery(startState
                 |> deliverOnMainQueue
                 |> map { startState in
