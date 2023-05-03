@@ -1733,6 +1733,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     currentCredibilityIcon = .text(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                 } else if let user = effectiveAuthor as? TelegramUser, let emojiStatus = user.emojiStatus {
                     currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: nameColor.withMultipliedAlpha(0.4), loopMode: .count(2))
+                } else if effectiveAuthor.isVerified {
+                    currentCredibilityIcon = .verified(fillColor: item.presentationData.theme.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
                 } else if effectiveAuthor.isPremium {
                     currentCredibilityIcon = .premium(color: nameColor.withMultipliedAlpha(0.4))
                 }
@@ -1897,6 +1899,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var forwardAuthorSignature: String?
         
         if displayHeader {
+            let bubbleWidthInsets: CGFloat = mosaicRange == nil ? layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right : 0.0
             if authorNameString != nil || inlineBotNameString != nil {
                 if headerSize.height.isZero {
                     headerSize.height += 5.0
@@ -1960,7 +1963,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 })
 
                 nameNodeOriginY = headerSize.height
-                headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + credibilityIconWidth)
+                headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + credibilityIconWidth + bubbleWidthInsets)
                 headerSize.height += nameNodeSizeApply.0.height
             }
 
@@ -1993,10 +1996,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 forwardInfoSizeApply = (sizeAndApply.0, { width in sizeAndApply.1(width) })
                 
                 forwardInfoOriginY = headerSize.height
-                headerSize.width = max(headerSize.width, forwardInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
+                headerSize.width = max(headerSize.width, forwardInfoSizeApply.0.width + bubbleWidthInsets)
                 headerSize.height += forwardInfoSizeApply.0.height
             }
-            
+                        
             var hasReply = replyMessage != nil
             if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
@@ -2024,7 +2027,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     threadInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
                     
                     threadInfoOriginY = headerSize.height
-                    headerSize.width = max(headerSize.width, threadInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
+                    headerSize.width = max(headerSize.width, threadInfoSizeApply.0.width + bubbleWidthInsets)
                     headerSize.height += threadInfoSizeApply.0.height + 5.0
                 }
             }
@@ -2050,7 +2053,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 replyInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
                 
                 replyInfoOriginY = headerSize.height
-                headerSize.width = max(headerSize.width, replyInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
+                headerSize.width = max(headerSize.width, replyInfoSizeApply.0.width + bubbleWidthInsets)
                 headerSize.height += replyInfoSizeApply.0.height + 2.0
             }
             

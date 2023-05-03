@@ -451,17 +451,8 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             } else {
                 wasEmpty = true
             }
-            
-            let firstItem = countAndFilterItems.1.first?.0 ?? .allChats
-            let firstItemEntryId: ChatListFilterTabEntryId
-            switch firstItem {
-                case .allChats:
-                    firstItemEntryId = .all
-                case let .filter(id, _, _, _):
-                    firstItemEntryId = .filter(id)
-            }
-            
-            var selectedEntryId = !strongSelf.initializedFilters ? firstItemEntryId : (strongSelf.peerSelectionNode.mainContainerNode?.currentItemFilter ?? .all)
+   
+            var selectedEntryId = !strongSelf.initializedFilters ? .all : (strongSelf.peerSelectionNode.mainContainerNode?.currentItemFilter ?? .all)
             var resetCurrentEntry = false
             if !resolvedItems.contains(where: { $0.id == selectedEntryId }) {
                 resetCurrentEntry = true
