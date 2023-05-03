@@ -134,6 +134,7 @@ public struct WebAppParameters {
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
     let fromMenu: Bool
+    let isInline: Bool
     let isSimple: Bool
     
     public init(
@@ -146,6 +147,7 @@ public struct WebAppParameters {
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
         fromMenu: Bool,
+        isInline: Bool,
         isSimple: Bool
     ) {
         self.peerId = peerId
@@ -157,6 +159,7 @@ public struct WebAppParameters {
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.fromMenu = fromMenu
+        self.isInline = isInline
         self.isSimple = isSimple
     }
 }
@@ -186,7 +189,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
-        
+            
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -622,6 +625,32 @@ public final class WebAppController: ViewController, AttachmentContainable {
             switch eventName {
                 case "web_app_ready":
                     self.animateTransitionIn()
+                case "web_app_switch_inline_query":
+                    if controller.isInline, let json, let query = json["query"] as? String {
+                        if let chatTypes = json["chat_types"] as? [String], !chatTypes.isEmpty {
+                            var requestPeerTypes: [ReplyMarkupButtonRequestPeerType] = []
+                            for type in chatTypes {
+                                switch type {
+                                case "users":
+                                    requestPeerTypes.append(.user(ReplyMarkupButtonRequestPeerType.User(isBot: false, isPremium: nil)))
+                                case "bots":
+                                    requestPeerTypes.append(.user(ReplyMarkupButtonRequestPeerType.User(isBot: true, isPremium: nil)))
+                                case "groups":
+                                    requestPeerTypes.append(.group(ReplyMarkupButtonRequestPeerType.Group(isCreator: false, hasUsername: nil, isForum: nil, botParticipant: false, userAdminRights: nil, botAdminRights: nil)))
+                                case "channels":
+                                    requestPeerTypes.append(.channel(ReplyMarkupButtonRequestPeerType.Channel(isCreator: false, hasUsername: nil, userAdminRights: nil, botAdminRights: nil)))
+                                default:
+                                    break
+                                }
+                            }
+                            controller.requestSwitchInline(query, requestPeerTypes, { [weak controller] in
+                                controller?.dismiss()
+                            })
+                        } else {
+                            controller.dismiss()
+                            controller.requestSwitchInline(query, nil, {})
+                        }
+                    }
                 case "web_app_data_send":
                     if controller.isSimple, let eventData = body["eventData"] as? String {
                         self.handleSendData(data: eventData)
@@ -643,7 +672,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             
                             let isLoading = json["is_progress_visible"] as? Bool
                             let isEnabled = json["is_active"] as? Bool
-                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false, isEnabled: isEnabled ?? true)
+                            let state = AttachmentMainButtonState(text: text, background: .color(backgroundColor), textColor: textColor, isVisible: isVisible, progress: (isLoading ?? false) ? .side : .none, isEnabled: isEnabled ?? true)
                             self.mainButtonState = state
                         }
                     }
@@ -1029,6 +1058,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let payload: String?
     private let buttonText: String?
     private let fromMenu: Bool
+    private let isInline: Bool
     private let isSimple: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
@@ -1041,7 +1071,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var openUrl: (String) -> Void = { _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
-        
+    public var requestSwitchInline: (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, replyToMessageId: MessageId?, threadId: Int64?) {
         self.context = context
         self.peerId = params.peerId
@@ -1052,6 +1083,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.payload = params.payload
         self.buttonText = params.buttonText
         self.fromMenu = params.fromMenu
+        self.isInline = params.isInline
         self.isSimple = params.isSimple
         self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
@@ -1308,7 +1340,7 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString) {
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
     }
     
     func schedule() {
@@ -1334,7 +1366,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, requestSwitchInline: @escaping (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu, hasTextInput: false, makeEntityInputView: {
         return nil
     })
@@ -1344,6 +1376,7 @@ public func standaloneWebAppController(context: AccountContext, updatedPresentat
         webAppController.openUrl = openUrl
         webAppController.completion = completion
         webAppController.getNavigationController = getNavigationController
+        webAppController.requestSwitchInline = requestSwitchInline
         present(webAppController, webAppController.mediaPickerContext)
     }
     controller.willDismiss = willDismiss

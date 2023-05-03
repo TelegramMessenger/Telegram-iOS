@@ -15,7 +15,7 @@ public extension EnginePeer {
             } else if let _ = user.phone {
                 return "" //formatPhoneNumber("+\(phone)")
             } else {
-                return ""
+                return "Deleted Account"
             }
         case let .legacyGroup(group):
             return group.title

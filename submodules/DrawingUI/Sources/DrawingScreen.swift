@@ -15,6 +15,7 @@ import LegacyComponents
 import ComponentDisplayAdapters
 import LottieAnimationComponent
 import ViewControllerComponent
+import BlurredBackgroundComponent
 import ContextUI
 import ChatEntityKeyboardInputNode
 import EntityKeyboard
@@ -360,7 +361,7 @@ private final class ReferenceContentSource: ContextReferenceContentSource {
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: self.customPosition)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: self.customPosition, actionsPosition: .top)
     }
 }
 
@@ -416,7 +417,7 @@ private final class BlurredGradientComponent: Component {
                 self.gradientMask.image = generateGradientImage(
                     size: CGSize(width: 1.0, height: availableSize.height),
                     colors: [UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 0.0)],
-                    locations: component.position == .top ? [0.0, 0.5, 1.0] : [1.0, 0.5, 0.0],
+                    locations: component.position == .top ? [0.0, 0.8, 1.0] : [1.0, 0.5, 0.0],
                     direction: .vertical
                 )
                 
@@ -1062,7 +1063,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     position: .top,
                     tag: topGradientTag
                 ),
-                availableSize: CGSize(width: context.availableSize.width, height: topInset + 10.0),
+                availableSize: CGSize(width: context.availableSize.width, height: topInset + 15.0),
                 transition: .immediate
             )
             context.add(topGradient
@@ -1787,9 +1788,9 @@ private final class DrawingScreenComponent: CombinedComponent {
                         AnyComponentWithIdentity(
                             id: "background",
                             component: AnyComponent(
-                                BlurredRectangle(
+                                BlurredBackgroundComponent(
                                     color:  UIColor(rgb: 0x888888, alpha: 0.3),
-                                    radius: 12.0
+                                    cornerRadius: 12.0
                                 )
                             )
                         ),
@@ -1826,6 +1827,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .position(CGPoint(x: rightEdge - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
+                .cornerRadius(12.0)
             )
             
             let doneButton = doneButton.update(
@@ -1992,6 +1994,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         var drawingView: DrawingView {
             if self._drawingView == nil, let controller = self.controller {
                 self._drawingView = DrawingView(size: controller.size)
+                self._drawingView?.animationsEnabled = self.context.sharedContext.energyUsageSettings.fullTranslucency
                 self._drawingView?.shouldBegin = { [weak self] _ in
                     if let strongSelf = self {
                         if strongSelf._entitiesView?.hasSelection == true {
@@ -2224,9 +2227,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             return self._contentWrapperView!
         }
         
-        init(controller: DrawingScreen, context: AccountContext) {
+        init(controller: DrawingScreen) {
             self.controller = controller
-            self.context = context
+            self.context = controller.context
             self.updateState = ActionSlot<DrawingView.NavigationState>()
             self.updateColor = ActionSlot<DrawingColor>()
             self.performAction = ActionSlot<DrawingView.Action>()
@@ -2362,12 +2365,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 return
             }
             self.hapticFeedback.impact(.medium)
+            var didDismiss = false
             let colorController = ColorPickerScreen(context: self.context, initialColor: initialColor, updated: { [weak self] color in
                 self?.updateColor.invoke(color)
             }, openEyedropper: { [weak self] in
                 self?.presentEyedropper(dismissed: dismissed)
             }, dismissed: {
-                dismissed()
+                if !didDismiss {
+                    didDismiss = true
+                    dismissed()
+                }
             })
             controller.present(colorController, in: .window(.root))
             self.colorPickerScreen = colorController
@@ -2918,6 +2925,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
+    required public init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
     public var drawingView: DrawingView {
         return self.node.drawingView
     }
@@ -2934,12 +2945,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         return self.node.contentWrapperView
     }
     
-    required public init(coder: NSCoder) {
-        preconditionFailure()
-    }
-    
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context)
+        self.displayNode = Node(controller: self)
 
         super.displayNodeDidLoad()
         
@@ -2983,6 +2990,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             self.entitiesView.layer.render(in: context)
         }, opaque: false, scale: 1.0)
         
+        if #available(iOS 16.0, *) {
+            let path = NSTemporaryDirectory() + "img.jpg"
+            try? finalImage?.jpegData(compressionQuality: 0.9)?.write(to: URL(filePath: path))
+        }
+        
         var image = paintingImage
         var stillImage: UIImage?
         if hasAnimatedEntities {
@@ -3024,7 +3036,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, orientation: orientation, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, orientation: self.orientation, transition: Transition(transition))
     }
     
     public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, isRegular: Bool, animated: Bool) {

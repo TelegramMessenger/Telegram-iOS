@@ -951,7 +951,11 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 - (TGPhotoEditorTab)availableTabs
 {
-    return TGPhotoEditorRotateTab | TGPhotoEditorMirrorTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
+    TGPhotoEditorTab tabs = TGPhotoEditorRotateTab | TGPhotoEditorMirrorTab | TGPhotoEditorToolsTab;
+    if (self.intent != TGPhotoEditorControllerSignupAvatarIntent) {
+        tabs |= TGPhotoEditorPaintTab;
+    }
+    return tabs;
 }
 
 - (TGPhotoEditorTab)activeTab

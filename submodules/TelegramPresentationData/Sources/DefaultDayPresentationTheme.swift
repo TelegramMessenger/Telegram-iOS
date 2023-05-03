@@ -24,7 +24,7 @@ public func selectReactionFillStaticColor(theme: PresentationTheme, wallpaper: T
     } else if case .builtin = wallpaper {
         return UIColor(rgb: 0x748391, alpha: 0.45)
     } else {
-        return theme.chat.serviceMessage.components.withCustomWallpaper.dateFillStatic
+        return .clear//theme.chat.serviceMessage.components.withCustomWallpaper.dateFillStatic
     }
 }
 
@@ -168,7 +168,16 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             outgoingBubbleStrokeColor = .clear
         }
         
-        outgoingBubbleHighlightedFill = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.00, saturation: 1.589, brightness: 0.96)
+        if let outgoingBubbleFillColors {
+            let middleBubbleFillColor = outgoingBubbleFillColors[Int(floor(Float(outgoingBubbleFillColors.count - 1) / 2))]
+            if middleBubbleFillColor.lightness < 0.85 {
+                outgoingBubbleHighlightedFill = middleBubbleFillColor.multipliedWith(middleBubbleFillColor).withMultiplied(hue: 1.0, saturation: 0.6, brightness: 1.0)
+            } else if middleBubbleFillColor.lightness > 0.97 {
+                outgoingBubbleHighlightedFill = middleBubbleFillColor.withMultiplied(hue: 1.00, saturation: 2.359, brightness: 0.99)
+            } else {
+                outgoingBubbleHighlightedFill = middleBubbleFillColor.withMultiplied(hue: 1.00, saturation: 1.589, brightness: 0.99)
+            }
+        }
         
         let lightnessColor = UIColor.average(of: bubbleColors.map(UIColor.init(rgb:)))
         if lightnessColor.lightness > 0.705 {
@@ -622,7 +631,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
             bubble: PresentationThemeBubbleColor(
                 withWallpaper: PresentationThemeBubbleColorComponents(
                     fill: [UIColor(rgb: 0xe1ffc7)],
-                    highlightedFill: UIColor(rgb: 0xc8ffa6),
+                    highlightedFill: UIColor(rgb: 0xbaff93),
                     stroke: bubbleStrokeColor,
                     shadow: nil,
                     reactionInactiveBackground: UIColor(rgb: 0x2DA32F).withMultipliedAlpha(0.12),
@@ -634,7 +643,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
                 ),
                 withoutWallpaper: PresentationThemeBubbleColorComponents(
                     fill: [UIColor(rgb: 0xe1ffc7)],
-                    highlightedFill: UIColor(rgb: 0xc8ffa6),
+                    highlightedFill: UIColor(rgb: 0xbaff93),
                     stroke: bubbleStrokeColor,
                     shadow: nil,
                     reactionInactiveBackground: UIColor(rgb: 0x2DA32F).withMultipliedAlpha(0.12),
@@ -877,7 +886,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     
     let inputPanel = PresentationThemeChatInputPanel(
         panelBackgroundColor: rootNavigationBar.blurredBackgroundColor,
-        panelBackgroundColorNoWallpaper: rootNavigationBar.blurredBackgroundColor,
+        panelBackgroundColorNoWallpaper: UIColor(rgb: 0xffffff),
         panelSeparatorColor: UIColor(rgb: 0xb2b2b2),
         panelControlAccentColor: defaultDayAccentColor,
         panelControlColor: UIColor(rgb: 0x858e99),
@@ -1040,6 +1049,10 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
 }
 
+public let legacyBuiltinWallpaperGradientColors: [UIColor] = [
+    UIColor(rgb: 0xd6e2ee)
+]
+
 public let defaultBuiltinWallpaperGradientColors: [UIColor] = [
     UIColor(rgb: 0xdbddbb),
     UIColor(rgb: 0x6ba587),
@@ -1066,6 +1079,15 @@ public extension BuiltinWallpaperData {
         fileAccessHash: 2106033778341319685,
         datacenterId: 4,
         fileSize: 183832
+    )
+    static let legacy = BuiltinWallpaperData(
+        wallpaperId: 5911458201550716931,
+        wallpaperAccessHash: -5164387148619674119,
+        slug: "Ye7DfT2kCVIKAAAAhzXfrkdOjxs",
+        fileId: 5911315028815907420,
+        fileAccessHash: 5205407890340371688,
+        datacenterId: 2,
+        fileSize: 71715
     )
     static let variant1 = BuiltinWallpaperData(
         wallpaperId: 5784984711902265347,
@@ -1197,6 +1219,7 @@ public extension BuiltinWallpaperData {
     static func generate(account: Account) {
         let slugToName: [(String, String)] = [
             ("fqv01SQemVIBAAAApND8LDRUhRU", "`default`"),
+            ("Ye7DfT2kCVIKAAAAhzXfrkdOjxs", "legacy"),
             ("RlZs2PJkSFADAAAAElGaGwgJBgU", "variant1"),
             ("9LW_RcoOSVACAAAAFTk3DTyXN-M", "variant2"),
             ("CJNyxPMgSVAEAAAAvW9sMwc51cw", "variant3"),

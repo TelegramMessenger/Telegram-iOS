@@ -103,7 +103,7 @@ final class TabBarControllerNode: ASDisplayNode {
                 transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
-                let toolbarNode = ToolbarNode(theme: ToolbarTheme(tabBarTheme: self.theme), left: { [weak self] in
+                let toolbarNode = ToolbarNode(theme: ToolbarTheme(tabBarTheme: self.theme), displaySeparator: true, left: { [weak self] in
                     self?.toolbarActionSelected(.left)
                 }, right: { [weak self] in
                     self?.toolbarActionSelected(.right)

@@ -53,8 +53,8 @@ private struct MediaPickerGridEntry: Comparable, Identifiable {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(account: Account, interaction: MediaPickerInteraction, theme: PresentationTheme) -> MediaPickerGridItem {
-        return MediaPickerGridItem(content: self.content, interaction: interaction, theme: theme)
+    func item(context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme) -> MediaPickerGridItem {
+        return MediaPickerGridItem(content: self.content, interaction: interaction, theme: theme, enableAnimations: context.sharedContext.energyUsageSettings.fullTranslucency)
     }
 }
 
@@ -64,12 +64,12 @@ private struct MediaPickerGridTransaction {
     let updates: [GridNodeUpdateItem]
     let scrollToItem: GridNodeScrollToItem?
     
-    init(previousList: [MediaPickerGridEntry], list: [MediaPickerGridEntry], account: Account, interaction: MediaPickerInteraction, theme: PresentationTheme, scrollToItem: GridNodeScrollToItem?) {
+    init(previousList: [MediaPickerGridEntry], list: [MediaPickerGridEntry], context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme, scrollToItem: GridNodeScrollToItem?) {
          let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
         
         self.deletions = deleteIndices
-        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction, theme: theme), previousIndex: $0.2) }
-        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction, theme: theme)) }
+        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme), previousIndex: $0.2) }
+        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, theme: theme)) }
         
         self.scrollToItem = scrollToItem
     }
@@ -192,6 +192,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         private let backgroundNode: NavigationBackgroundNode
         private let gridNode: GridNode
         fileprivate var cameraView: TGAttachmentCameraView?
+        private var cameraActivateAreaNode: AccessibilityAreaNode
         private var placeholderNode: MediaPickerPlaceholderNode?
         private var manageNode: MediaPickerManageNode?
         private var scrollingArea: SparseItemGridScrollingArea
@@ -232,6 +233,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.backgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             self.gridNode = GridNode()
             self.scrollingArea = SparseItemGridScrollingArea()
+            
+            self.cameraActivateAreaNode = AccessibilityAreaNode()
+            self.cameraActivateAreaNode.accessibilityLabel = "Camera"
+            self.cameraActivateAreaNode.accessibilityTraits = [.button]
             
             super.init()
             
@@ -403,19 +408,29 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             if let controller = self.controller, case .assets(nil) = controller.subject {
+                let enableAnimations = self.controller?.context.sharedContext.energyUsageSettings.fullTranslucency ?? true
+  
                 let cameraView = TGAttachmentCameraView(forSelfPortrait: false, videoModeByDefault: controller.bannedSendPhotos != nil && controller.bannedSendVideos == nil)!
                 cameraView.clipsToBounds = true
                 cameraView.removeCorners()
-                cameraView.pressed = { [weak self] in
+                cameraView.pressed = { [weak self, weak cameraView] in
                     if let strongSelf = self, !strongSelf.openingMedia {
                         strongSelf.dismissInput()
                         strongSelf.controller?.openCamera?(strongSelf.cameraView)
+                        
+                        if !enableAnimations {
+                            cameraView?.startPreview()
+                        }
                     }
                 }
                 self.cameraView = cameraView
-                cameraView.startPreview()
+                
+                if enableAnimations {
+                    cameraView.startPreview()
+                }
                 
                 self.gridNode.scrollView.addSubview(cameraView)
+                self.gridNode.addSubnode(self.cameraActivateAreaNode)
             } else {
                 self.containerNode.clipsToBounds = true
             }
@@ -539,7 +554,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 scrollToItem = GridNodeScrollToItem(index: entries.count - 1, position: .bottom(0.0), transition: .immediate, directionHint: .down, adjustForSection: false)
             }
             
-            let transaction = MediaPickerGridTransaction(previousList: previousEntries, list: entries, account: controller.context.account, interaction: interaction, theme: self.presentationData.theme, scrollToItem: scrollToItem)
+            let transaction = MediaPickerGridTransaction(previousList: previousEntries, list: entries, context: controller.context, interaction: interaction, theme: self.presentationData.theme, scrollToItem: scrollToItem)
             self.enqueueTransaction(transaction)
             
             if updateLayout, let (layout, navigationBarHeight) = self.validLayout {
@@ -1067,6 +1082,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             if let cameraView = self.cameraView {
                 if let cameraRect = cameraRect {
                     transition.updateFrame(view: cameraView, frame: cameraRect)
+                    self.cameraActivateAreaNode.frame = cameraRect
                     cameraView.isHidden = false
                 } else {
                     cameraView.isHidden = true
@@ -1751,8 +1767,8 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
-        self.interaction?.sendSelected(nil, silently, nil, true, {})
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+        self.interaction?.sendSelected(nil, mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, true, {})
     }
     
     func schedule() {

@@ -612,7 +612,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 updatedFilterOrder.set(.single(previousOrder))
 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     if case .undo = action {
                         pushControllerImpl?(PremiumIntroScreen(context: context, source: .folders))
                     }

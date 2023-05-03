@@ -51,6 +51,34 @@ public func plainServiceMessageString(strings: PresentationStrings, nameDisplayO
     }
 }
 
+private func peerDisplayTitles(_ peerIds: [PeerId], _ dict: SimpleDictionary<PeerId, Peer>, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
+    var peers: [Peer] = []
+    for id in peerIds {
+        if let peer = dict[id] {
+            peers.append(peer)
+        }
+    }
+    return peerDisplayTitles(peers, strings: strings, nameDisplayOrder: nameDisplayOrder)
+}
+
+private func peerDisplayTitles(_ peers: [Peer], strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
+    if peers.count == 0 {
+        return ""
+    } else {
+        var string = ""
+        var first = true
+        for peer in peers {
+            if first {
+                first = false
+            } else {
+                string.append(", ")
+            }
+            string.append(EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+        }
+        return string
+    }
+}
+
 public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id, forChatList: Bool, forForumOverview: Bool) -> NSAttributedString? {
     var attributedString: NSAttributedString?
     
@@ -96,9 +124,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let resultTitleString: PresentationStrings.FormattedString
                     if peerIds.count == 1 {
                         attributePeerIds.append((1, peerIds.first))
-                        resultTitleString = strings.Notification_Invited(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                        resultTitleString = strings.Notification_Invited(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
                     } else {
-                        resultTitleString = strings.Notification_InvitedMultiple(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                        resultTitleString = strings.Notification_InvitedMultiple(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
                     }
                     
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
@@ -115,7 +143,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     if peerIds.count == 1 {
                         attributePeerIds.append((1, peerIds.first))
                     }
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDebugDisplayTitles(peerIds, message.peers))._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_Kicked(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                 }
             case let .photoUpdated(image):
                 if authorName.isEmpty || isChannel {
@@ -393,10 +421,18 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             string = strings.Conversation_AutoremoveTimerRemovedUser(authorString).string
                         }
                     } else if let _ = messagePeer as? TelegramGroup {
-                        string = strings.Conversation_AutoremoveTimerRemovedGroup
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerRemovedUserYou
+                        } else {
+                            string = strings.Conversation_AutoremoveTimerRemovedGroup
+                        }
                     } else if let channel = messagePeer as? TelegramChannel {
                         if case .group = channel.info {
-                            string = strings.Conversation_AutoremoveTimerRemovedGroup
+                            if message.author?.id == accountPeerId {
+                                string = strings.Conversation_AutoremoveTimerRemovedUserYou
+                            } else {
+                                string = strings.Conversation_AutoremoveTimerRemovedGroup
+                            }
                         } else {
                             string = strings.Conversation_AutoremoveTimerRemovedChannel
                         }
@@ -644,10 +680,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         resultTitleString = strings.Notification_VoiceChatInvitationForYou(authorName)
                     } else {
                         attributePeerIds.append((1, peerIds.first))
-                        resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                        resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
                     }
                 } else {
-                    resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                    resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder))
                 }
                 
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))

@@ -36,7 +36,7 @@ func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTh
         
         let paintStickersContext = LegacyPaintStickersContext(context: context)
         
-        let controller = TGPhotoEditorController(context: legacyController.context, item: item, intent: TGPhotoEditorControllerAvatarIntent, adjustments: nil, caption: nil, screenImage: screenImage ?? UIImage(), availableTabs: TGPhotoEditorController.defaultTabsForAvatarIntent(), selectedTab: .cropTab)!
+        let controller = TGPhotoEditorController(context: legacyController.context, item: item, intent: TGPhotoEditorControllerAvatarIntent, adjustments: nil, caption: nil, screenImage: screenImage ?? UIImage(), availableTabs: TGPhotoEditorController.defaultTabs(forAvatarIntent: true), selectedTab: .cropTab)!
         controller.stickersContext = paintStickersContext
         legacyController.bind(controller: controller)
         

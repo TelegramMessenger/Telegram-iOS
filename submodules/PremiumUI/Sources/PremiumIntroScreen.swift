@@ -14,6 +14,7 @@ import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
+import BlurredBackgroundComponent
 import Markdown
 import InAppPurchaseManager
 import ConfettiEffect
@@ -1915,58 +1916,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     }
 }
 
-class BlurredRectangle: Component {
-    let color: UIColor
-    let radius: CGFloat
-
-    init(color: UIColor, radius: CGFloat = 0.0) {
-        self.color = color
-        self.radius = radius
-    }
-
-    static func ==(lhs: BlurredRectangle, rhs: BlurredRectangle) -> Bool {
-        if !lhs.color.isEqual(rhs.color) {
-            return false
-        }
-        if lhs.radius != rhs.radius {
-            return false
-        }
-        return true
-    }
-
-    final class View: UIView {
-        private let background: NavigationBackgroundNode
-
-        init() {
-            self.background = NavigationBackgroundNode(color: .clear)
-
-            super.init(frame: CGRect())
-
-            self.addSubview(self.background.view)
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-
-        func update(component: BlurredRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
-            transition.setFrame(view: self.background.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            self.background.updateColor(color: component.color, transition: .immediate)
-            self.background.update(size: availableSize, cornerRadius: component.radius, transition: .immediate)
-
-            return availableSize
-        }
-    }
-
-    func makeView() -> View {
-        return View()
-    }
-
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
 private final class PremiumIntroScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -2298,11 +2247,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         let scrollContent = Child(ScrollComponent<EnvironmentType>.self)
         let star = Child(PremiumStarComponent.self)
         let emoji = Child(EmojiHeaderComponent.self)
-        let topPanel = Child(BlurredRectangle.self)
+        let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
         let secondaryTitle = Child(MultilineTextWithEntitiesComponent.self)
-        let bottomPanel = Child(BlurredRectangle.self)
+        let bottomPanel = Child(BlurredBackgroundComponent.self)
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
@@ -2335,7 +2284,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
             } else {
@@ -2345,13 +2294,13 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
                     ),
-                    availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
+                    availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
             }
             
             let topPanel = topPanel.update(
-                component: BlurredRectangle(
+                component: BlurredBackgroundComponent(
                     color: environment.theme.rootController.navigationBar.blurredBackgroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: environment.navigationHeight),
@@ -2608,17 +2557,6 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
                 .opacity(titleAlpha)
-//                .update(Transition.Update { _, view, _ in
-//                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
-//                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-//                        view.superview?.addSubview(snapshot)
-//                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
-//                            snapshot?.removeFromSuperview()
-//                        })
-//                        snapshot.frame = view.frame
-//                        transition.animateAlpha(view: view, from: 0.0, to: titleAlpha)
-//                    }
-//                })
             )
             
             context.add(secondaryTitle
@@ -2670,7 +2608,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     transition: context.transition)
                                
                 let bottomPanel = bottomPanel.update(
-                    component: BlurredRectangle(
+                    component: BlurredBackgroundComponent(
                         color: environment.theme.rootController.tabBar.backgroundColor
                     ),
                     availableSize: CGSize(width: context.availableSize.width, height: bottomPanelPadding + button.size.height + bottomInset),
@@ -2777,7 +2715,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         if modal {
-            let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
             self.navigationItem.setLeftBarButton(cancelItem, animated: false)
             self.navigationPresentation = .modal
         } else {

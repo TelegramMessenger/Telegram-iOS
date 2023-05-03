@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import StickerPackPreviewUI
 import ListSectionHeaderNode
+import AccountContext
 
 final class StickerPaneSearchGlobalSection: GridSection {
     let title: String?
@@ -78,7 +79,7 @@ public final class StickerPaneSearchGlobalItemContext {
 }
 
 public final class StickerPaneSearchGlobalItem: GridItem {
-    public let account: Account
+    public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let listAppearance: Bool
@@ -110,8 +111,8 @@ public final class StickerPaneSearchGlobalItem: GridItem {
         return (128.0 + additionalHeight, self.fillsRow)
     }
     
-    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, fillsRow: Bool = true, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, fillsRow: Bool = true, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.listAppearance = listAppearance
@@ -199,7 +200,7 @@ public class StickerPaneSearchGlobalItemNode: GridItemNode {
             if let item = self.item, self.isVisibleInGrid, !self.preloadedThumbnail {
                 self.preloadedThumbnail = true
                 
-                self.preloadedStickerPackThumbnailDisposable.set(preloadedStickerPackThumbnail(account: item.account, info: item.info, items: item.topItems).start())
+                self.preloadedStickerPackThumbnailDisposable.set(preloadedStickerPackThumbnail(account: item.context.account, info: item.info, items: item.topItems).start())
             }
         }
     }
@@ -320,7 +321,7 @@ public class StickerPaneSearchGlobalItemNode: GridItemNode {
     
     public func setup(item: StickerPaneSearchGlobalItem) {
         if item.topItems.count < Int(item.info.count) && item.topItems.count < 5 && self.item?.info.id != item.info.id {
-            self.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.account.network, postbox: item.account.postbox, id: item.info.id).start())
+            self.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.context.account.network, postbox: item.context.account.postbox, id: item.info.id).start())
         }
         
         self.item = item
@@ -334,7 +335,7 @@ public class StickerPaneSearchGlobalItemNode: GridItemNode {
             return
         }
         
-        self.canPlayMedia = item.itemContext.canPlayMedia
+        self.canPlayMedia = item.itemContext.canPlayMedia && item.context.sharedContext.energyUsageSettings.loopStickers
     }
     
     public func highlight() {
@@ -486,7 +487,7 @@ public class StickerPaneSearchGlobalItemNode: GridItemNode {
                 strongSelf.addSubnode(node)
             }
             if file.fileId != node.file?.fileId {
-                node.setup(account: item.account, item: topItems[i], itemSize: itemSize, synchronousLoads: synchronousLoads)
+                node.setup(account: item.context.account, item: topItems[i], itemSize: itemSize, synchronousLoads: synchronousLoads)
             }
             if item.theme !== node.theme {
                 node.update(theme: item.theme, listAppearance: item.listAppearance)
@@ -508,7 +509,7 @@ public class StickerPaneSearchGlobalItemNode: GridItemNode {
             }
         }
         
-        self.canPlayMedia = item.itemContext.canPlayMedia
+        self.canPlayMedia = item.itemContext.canPlayMedia && item.context.sharedContext.energyUsageSettings.loopStickers
     }
     
     @objc func installPressed() {

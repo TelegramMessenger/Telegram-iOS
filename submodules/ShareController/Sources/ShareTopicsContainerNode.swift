@@ -42,6 +42,9 @@ private struct ShareTopicEntry: Comparable, Identifiable {
         if lhs.threadData != rhs.threadData {
             return false
         }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         
         return true
     }
@@ -157,7 +160,8 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     private let sharedContext: SharedAccountContext
     private let context: AccountContext
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
+    private let themePromise: Promise<PresentationTheme>
     private let strings: PresentationStrings
     private let controllerInteraction: ShareControllerInteraction
             
@@ -184,6 +188,8 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
+        self.themePromise = Promise()
+        self.themePromise.set(.single(theme))
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         
@@ -192,8 +198,8 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
             return $0.items
         })
         
-        let items: Signal<[ShareTopicEntry], NoError> = self.topicsValue.get()
-        |> map { topics -> [ShareTopicEntry] in
+        let items: Signal<[ShareTopicEntry], NoError> = (combineLatest(self.topicsValue.get(), self.themePromise.get()))
+        |> map { topics, theme -> [ShareTopicEntry] in
             var entries: [ShareTopicEntry] = []
             var index: Int32 = 0
             
@@ -269,7 +275,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
             }
         }
     }
-    
+        
     private func dequeueTransition() {
         if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
@@ -366,6 +372,13 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
             itemNode.layer.animatePosition(from: itemNode.position, to: targetFrame.center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
             itemNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         }
+    }
+    
+    public func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        self.themePromise.set(.single(theme))
+        self.contentTitleNode.attributedText = NSAttributedString(string: self.contentTitleNode.attributedText?.string ?? "", font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
+        self.contentSubtitleNode.attributedText = NSAttributedString(string: self.contentSubtitleNode.attributedText?.string ?? "", font: subtitleFont, textColor: self.theme.actionSheet.secondaryTextColor)
     }
     
     func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {

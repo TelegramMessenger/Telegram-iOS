@@ -118,7 +118,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let labelNode: TextNode
     let backgroundNode: NavigationBackgroundNode
     let stickBackgroundNode: ASImageNode
-    let activateArea: AccessibilityAreaNode
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     
@@ -191,16 +190,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         self.text = text
         
-        self.activateArea = AccessibilityAreaNode()
-        self.activateArea.accessibilityTraits = .staticText
-        
         super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
 
-        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+        let fullTranslucency: Bool = controllerInteraction?.enableFullTranslucency ?? true
+        
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         self.stickBackgroundNode.alpha = 0.0
 
@@ -210,16 +208,12 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             self.addSubnode(self.backgroundNode)
         }
         self.addSubnode(self.labelNode)
-        
-        self.addSubnode(self.activateArea)
-        
+                
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let labelLayout = TextNode.asyncLayout(self.labelNode)
-        
-        self.activateArea.accessibilityLabel = text
-        
+                
         let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         let _ = apply()
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
@@ -236,8 +230,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.presentationData = presentationData
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+        
+        let fullTranslucency: Bool = self.controllerInteraction?.enableFullTranslucency ?? true
 
-        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: fullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
@@ -281,9 +277,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.frame = backgroundFrame
         self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: backgroundFrame.size.height / 2.0, transition: .immediate)
         self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
-        
-        self.activateArea.frame = backgroundFrame
-        
+                
         if let backgroundContent = self.backgroundContent {
             backgroundContent.allowsGroupOpacity = true
             self.backgroundNode.isHidden = true
@@ -522,7 +516,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         }
         self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: 38.0, height: 38.0))
         
-        if peer.isPremium {
+        if peer.isPremium && context.sharedContext.energyUsageSettings.autoplayVideo {
             self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] peerView in
                 guard let strongSelf = self else {

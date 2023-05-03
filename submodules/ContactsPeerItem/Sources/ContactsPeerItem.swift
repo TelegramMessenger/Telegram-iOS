@@ -798,10 +798,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     case .none:
                         break
                     case let .presence(presence, dateTimeFormat):
-                        userPresence = presence
-                        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                        let (string, activity) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
-                        statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
+                        if case let .peer(peer, _) = item.peer, let peer, case let .user(user) = peer, user.botInfo != nil {
+                            statusAttributedString = NSAttributedString(string: item.presentationData.strings.Bot_GenericBotStatus, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        } else {
+                            userPresence = presence
+                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                            let (string, activity) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
+                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
+                        }
                     case let .addressName(suffix):
                         if let addressName = peer.addressName {
                             let addressNameString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: item.presentationData.theme.list.itemAccentColor)
@@ -1093,7 +1097,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
 
                                 let avatarIconContent: EmojiStatusComponent.Content
                                 if let fileId = icon, fileId != 0 {
-                                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .forever)
+                                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                                 } else {
                                     avatarIconContent = .topic(title: String(title.prefix(1)), color: color, size: CGSize(width: 32.0, height: 32.0))
                                 }

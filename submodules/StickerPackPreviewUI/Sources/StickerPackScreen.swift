@@ -52,7 +52,7 @@ private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     func item(context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) -> GridItem {
         switch self {
             case let .sticker(_, _, stickerItem, isEmpty, isPremium, isLocked):
-                return StickerPackPreviewGridItem(account: context.account, stickerItem: stickerItem, interaction: interaction, theme: theme, isPremium: isPremium, isLocked: isLocked, isEmpty: isEmpty)
+                return StickerPackPreviewGridItem(context: context, stickerItem: stickerItem, interaction: interaction, theme: theme, isPremium: isPremium, isLocked: isLocked, isEmpty: isEmpty)
             case let .emojis(_, _, info, items, title, isInstalled):
                 return StickerPackEmojisItem(context: context, animationCache: animationCache, animationRenderer: animationRenderer, interaction: interaction, info: info, items: items, theme: theme, strings: strings, title: title, isInstalled: isInstalled, isEmpty: false)
         }
@@ -255,9 +255,11 @@ private final class StickerPackContainer: ASDisplayNode {
             guard let strongSelf = self, !strongSelf.isDismissed else {
                 return
             }
+            if let (layout, _, _, _) = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
+                return
+            }
             let contentOffset = strongSelf.gridNode.scrollView.contentOffset
             let insets = strongSelf.gridNode.scrollView.contentInset
-            
             if contentOffset.y <= -insets.top - 30.0 {
                 strongSelf.isDismissed = true
                 DispatchQueue.main.async {
@@ -390,7 +392,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
         
-        self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.5)
+        self.titleNode.linkHighlightColor = self.presentationData.theme.actionSheet.controlAccentColor.withAlphaComponent(0.2)
         
         addStickerPackImpl = { [weak self] info, items in
             guard let strongSelf = self else {
@@ -1203,7 +1205,9 @@ private final class StickerPackContainer: ASDisplayNode {
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         var insets = layout.insets(options: [.statusBar])
-        if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
+        if case .regular = layout.metrics.widthClass {
+            insets.top = 0.0
+        } else if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
             insets.top = 0.0
         } else {
             insets.top += 10.0
@@ -1271,11 +1275,14 @@ private final class StickerPackContainer: ASDisplayNode {
         
         let initialRevealedRowCount: CGFloat = 4.5
         
-        let topInset = max(0.0, layout.size.height - floor(initialRevealedRowCount * itemWidth) - insets.top - actionAreaHeight - titleAreaInset)
-        
+        let topInset: CGFloat
+        if case .regular = layout.metrics.widthClass {
+            topInset = 0.0
+        } else {
+            topInset = insets.top + max(0.0, layout.size.height - floor(initialRevealedRowCount * itemWidth) - insets.top - actionAreaHeight - titleAreaInset)
+        }
         let additionalGridBottomInset = max(0.0, gridFrame.size.height - actionAreaHeight - contentHeight)
-        
-        let gridInsets = UIEdgeInsets(top: insets.top + topInset, left: gridLeftInset, bottom: actionAreaHeight + additionalGridBottomInset, right: layout.size.width - fillingWidth - gridLeftInset)
+        let gridInsets = UIEdgeInsets(top: topInset, left: gridLeftInset, bottom: actionAreaHeight + additionalGridBottomInset, right: layout.size.width - fillingWidth - gridLeftInset)
         
         let firstTime = self.validLayout == nil
         self.validLayout = (layout, gridFrame, titleAreaInset, gridInsets)
@@ -1354,9 +1361,16 @@ private final class StickerPackContainer: ASDisplayNode {
             self.titleSeparatorNode.layer.removeAllAnimations()
         }
         
-        let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: max(minBackgroundY, unclippedBackgroundY)), size: CGSize(width: layout.size.width, height: layout.size.height))
+        var backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: max(minBackgroundY, unclippedBackgroundY)), size: CGSize(width: layout.size.width, height: layout.size.height))
+        var titleContainerFrame: CGRect
+        if case .regular = layout.metrics.widthClass {
+            backgroundFrame.origin.y = min(0.0, backgroundFrame.origin.y)
+            titleContainerFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: floor((56.0) / 2.0)), size: CGSize())
+        } else {
+            titleContainerFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: backgroundFrame.minY + floor((56.0) / 2.0)), size: CGSize())
+        }
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
-        transition.updateFrame(node: self.titleContainer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: backgroundFrame.minY + floor((56.0) / 2.0)), size: CGSize()))
+        transition.updateFrame(node: self.titleContainer, frame: titleContainerFrame)
         transition.updateFrame(node: self.titleSeparatorNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY + 56.0 - UIScreenPixel), size: CGSize(width: backgroundFrame.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.titleBackgroundnode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width, height: 56.0)))
         self.titleBackgroundnode.update(size: CGSize(width: layout.size.width, height: 56.0), transition: .immediate)
@@ -1427,6 +1441,8 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     private let openMention: (String) -> Void
     
     private let dimNode: ASDisplayNode
+    private let shadowNode: ASImageNode
+    private let arrowNode: ASImageNode
     private let containerContainingNode: ASDisplayNode
     
     private var containers: [Int: StickerPackContainer] = [:]
@@ -1475,12 +1491,23 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
         self.dimNode.alpha = 0.0
         
+        self.shadowNode = ASImageNode()
+        self.shadowNode.displaysAsynchronously = false
+        self.shadowNode.isUserInteractionEnabled = false
+        
+        self.arrowNode = ASImageNode()
+        self.arrowNode.displaysAsynchronously = false
+        self.arrowNode.isUserInteractionEnabled = false
+        self.arrowNode.image = generateArrowImage(color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
+        
         self.containerContainingNode = ASDisplayNode()
+        self.containerContainingNode.clipsToBounds = true
         
         super.init()
         
         self.addSubnode(self.dimNode)
-        
+        self.addSubnode(self.shadowNode)
+        self.addSubnode(self.arrowNode)
         self.addSubnode(self.containerContainingNode)
     }
     
@@ -1494,6 +1521,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         for (_, container) in self.containers {
             container.updatePresentationData(presentationData)
         }
+        self.arrowNode.image = generateArrowImage(color: presentationData.theme.actionSheet.opaqueItemBackgroundColor)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -1502,10 +1530,65 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.validLayout = layout
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.containerContainingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+       
+        let containerContainingFrame: CGRect
+        let containerInsets: UIEdgeInsets
+        if case .regular = layout.metrics.widthClass {
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.01)
+            self.containerContainingNode.cornerRadius = 10.0
+            
+            let size = CGSize(width: 390.0, height: min(560.0, layout.size.height - 60.0))
+            var contentRect: CGRect
+            if let sourceRect = self.controller?.getSourceRect?() {
+                let sideSpacing: CGFloat = 10.0
+                let margin: CGFloat = 64.0
+                contentRect = CGRect(origin: CGPoint(x: sourceRect.maxX + sideSpacing, y: floor(sourceRect.midY - size.height / 2.0)), size: size)
+                contentRect.origin.y = min(layout.size.height - margin - size.height - layout.intrinsicInsets.bottom, max(margin, contentRect.origin.y))
+                
+                let arrowSize = CGSize(width: 23.0, height: 12.0)
+                let arrowFrame: CGRect
+                if contentRect.maxX > layout.size.width {
+                    contentRect.origin.x = sourceRect.minX - size.width - sideSpacing
+                    arrowFrame = CGRect(origin: CGPoint(x: contentRect.maxX - (arrowSize.width - arrowSize.height) / 2.0, y: floor(sourceRect.midY - arrowSize.height / 2.0)), size: arrowSize)
+                    self.arrowNode.transform = CATransform3DMakeRotation(-.pi / 2.0, 0.0, 0.0, 1.0)
+                } else {
+                    arrowFrame = CGRect(origin: CGPoint(x: contentRect.minX - arrowSize.width + (arrowSize.width - arrowSize.height) / 2.0, y: floor(sourceRect.midY - arrowSize.height / 2.0)), size: arrowSize)
+                    self.arrowNode.transform = CATransform3DMakeRotation(.pi / 2.0, 0.0, 0.0, 1.0)
+                }
+                
+                self.arrowNode.frame = arrowFrame
+                self.arrowNode.isHidden = false
+    
+            } else {
+                let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
+                let detailWidth = layout.size.width - masterWidth
+                contentRect = CGRect(origin:  CGPoint(x: masterWidth + floor((detailWidth - size.width) / 2.0), y: floor((layout.size.height - size.height) / 2.0)), size: size)
+                self.arrowNode.isHidden = true
+            }
+            
+            containerContainingFrame = contentRect
+            containerInsets = .zero
+            
+            self.shadowNode.alpha = 1.0
+            if self.shadowNode.image == nil {
+                self.shadowNode.image = generateShadowImage()
+            }
+        } else {
+            self.containerContainingNode.cornerRadius = 0.0
+            
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
+            containerContainingFrame = CGRect(origin: CGPoint(), size: layout.size)
+            containerInsets = layout.intrinsicInsets
+            
+            self.arrowNode.isHidden = true
+            self.shadowNode.alpha = 0.0
+        }
+        transition.updateFrame(node: self.containerContainingNode, frame: containerContainingFrame)
+        
+        let shadowFrame = containerContainingFrame.insetBy(dx: -60.0, dy: -60.0)
+        transition.updateFrame(node: self.shadowNode, frame: shadowFrame)
         
         let expandProgress: CGFloat = 1.0
-
         let scaledInset: CGFloat = 12.0
         let scaledDistance: CGFloat = 4.0
         let minScale = (layout.size.width - scaledInset * 2.0) / layout.size.width
@@ -1593,11 +1676,15 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                 self.containers[i] = container
             }
             
-            let containerFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * layout.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: layout.size)
+            let containerFrame = CGRect(origin: CGPoint(x: CGFloat(indexOffset) * containerContainingFrame.size.width + self.relativeToSelectedStickerPackTransition + scaledOffset, y: containerVerticalOffset), size: containerContainingFrame.size)
             containerTransition.updateFrame(node: container, frame: containerFrame, beginWithCurrentState: true)
             containerTransition.updateSublayerTransformScaleAndOffset(node: container, scale: containerScale, offset: CGPoint(), beginWithCurrentState: true)
+            var containerLayout = layout
+            containerLayout.size = containerFrame.size
+            containerLayout.intrinsicInsets = containerInsets
+            
             if container.validLayout?.0 != layout {
-                container.updateLayout(layout: layout, transition: containerTransition)
+                container.updateLayout(layout: containerLayout, transition: containerTransition)
             }
             
             if wasAdded {
@@ -1680,23 +1767,40 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     }
     
     func animateIn() {
+        guard let layout = self.validLayout else {
+            return
+        }
         self.dimNode.alpha = 1.0
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
-        let minInset: CGFloat = (self.containers.map { (_, container) -> CGFloat in container.topContentInset }).max() ?? 0.0
-        self.containerContainingNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.containerContainingNode.bounds.height - minInset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        if case .regular = layout.metrics.widthClass {
+            
+        } else {
+            let minInset: CGFloat = (self.containers.map { (_, container) -> CGFloat in container.topContentInset }).max() ?? 0.0
+            self.containerContainingNode.layer.animatePosition(from: CGPoint(x: 0.0, y: self.containerContainingNode.bounds.height - minInset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {
+        guard let layout = self.validLayout else {
+            return
+        }
         self.dimNode.alpha = 0.0
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         
-        let minInset: CGFloat = (self.containers.map { (_, container) -> CGFloat in container.topContentInset }).max() ?? 0.0
-        self.containerContainingNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.containerContainingNode.bounds.height - minInset), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
-            completion()
-        })
-        
-        self.modalProgressUpdated(0.0, .animated(duration: 0.2, curve: .easeInOut))
+        if case .regular = layout.metrics.widthClass {
+            self.layer.allowsGroupOpacity = true
+            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+        } else {
+            let minInset: CGFloat = (self.containers.map { (_, container) -> CGFloat in container.topContentInset }).max() ?? 0.0
+            self.containerContainingNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.containerContainingNode.bounds.height - minInset), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
+                completion()
+            })
+            
+            self.modalProgressUpdated(0.0, .animated(duration: 0.2, curve: .easeInOut))
+        }
     }
     
     func dismiss() {
@@ -1764,6 +1868,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
 public final class StickerPackScreenImpl: ViewController {
     private let context: AccountContext
     fileprivate var presentationData: PresentationData
+    private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
     private let stickerPacks: [StickerPackReference]
@@ -1780,6 +1885,8 @@ public final class StickerPackScreenImpl: ViewController {
     
     public var dismissed: (() -> Void)?
     public var actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)?
+    
+    public var getSourceRect: (() -> CGRect?)?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -1807,6 +1914,7 @@ public final class StickerPackScreenImpl: ViewController {
     ) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        self.updatedPresentationData = updatedPresentationData
         self.stickerPacks = stickerPacks
         self.loadedStickerPacks = loadedStickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
@@ -1919,9 +2027,13 @@ public final class StickerPackScreenImpl: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                if let peer = peer, let parentNavigationController = strongSelf.parentNavigationController {
-                    strongSelf.dismiss()
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), animated: true))
+                if let peer {
+                    if let parentNavigationController = strongSelf.parentNavigationController {
+                        strongSelf.dismiss()
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: parentNavigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), animated: true))
+                    }
+                } else {
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
             }))
         })
@@ -2003,9 +2115,17 @@ public final class StickerPackScreenImpl: ViewController {
         }
     }
     
+    private var validLayout: ContainerViewLayout?
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let previousSize = self.validLayout?.size
         super.containerLayoutUpdated(layout, transition: transition)
         
+        self.validLayout = layout
+        if let previousSize, previousSize != layout.size {
+            Queue.mainQueue().after(0.1) {
+                self.controllerNode.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)
     }
 }
@@ -2026,8 +2146,9 @@ public func StickerPackScreen(
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
     actionPerformed: (([(StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction)]) -> Void)? = nil,
-    dismissed: (() -> Void)? = nil) -> ViewController
-{
+    dismissed: (() -> Void)? = nil,
+    getSourceRect: (() -> CGRect?)? = nil
+) -> ViewController {
     let controller = StickerPackScreenImpl(
         context: context,
         stickerPacks: stickerPacks,
@@ -2039,6 +2160,7 @@ public func StickerPackScreen(
         actionPerformed: actionPerformed
     )
     controller.dismissed = dismissed
+    controller.getSourceRect = getSourceRect
     return controller
 }
 
@@ -2055,4 +2177,35 @@ private final class StickerPackContextReferenceContentSource: ContextReferenceCo
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
+}
+
+
+private func generateShadowImage() -> UIImage? {
+    return generateImage(CGSize(width: 140.0, height: 140.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.saveGState()
+        context.setShadow(offset: CGSize(), blur: 60.0, color: UIColor(white: 0.0, alpha: 0.4).cgColor)
+        let path = UIBezierPath(roundedRect: CGRect(x: 60.0, y: 60.0, width: 20.0, height: 20.0), cornerRadius: 10.0).cgPath
+        context.addPath(path)
+        context.fillPath()
+        
+        context.restoreGState()
+        
+        context.setBlendMode(.clear)
+        context.addPath(path)
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: 70, topCapHeight: 70)
+}
+
+private func generateArrowImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 23.0, height: 12.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+      
+        context.setFillColor(color.cgColor)
+    
+        context.translateBy(x: -183.0, y: -209.0)
+        
+        try? drawSvgPath(context, path: "M183.219,208.89 H206.781 C205.648,208.89 204.567,209.371 203.808,210.214 L197.23,217.523 C196.038,218.848 193.962,218.848 192.77,217.523 L186.192,210.214 C185.433,209.371 184.352,208.89 183.219,208.89 Z ")
+    })
 }

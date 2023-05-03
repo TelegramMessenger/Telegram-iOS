@@ -16,6 +16,7 @@ import UrlHandling
 import AccountUtils
 import PremiumUI
 import PasswordSetupUI
+import StorageUsageScreen
 
 private struct DeleteAccountOptionsArguments {
     let changePhoneNumber: () -> Void
@@ -248,7 +249,8 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
                         title: presentationData.strings.TwoFactorSetup_Intro_Title,
                         text: presentationData.strings.TwoFactorSetup_Intro_Text,
                         actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
-                        doneText: presentationData.strings.TwoFactorSetup_Done_Action
+                        doneText: presentationData.strings.TwoFactorSetup_Done_Action,
+                        phoneNumber: nil
                     )))
 
                     replaceTopControllerImpl?(controller, false)
@@ -275,7 +277,9 @@ public func deleteAccountOptionsController(context: AccountContext, navigationCo
     }, clearCache: {
         addAppLogEvent(postbox: context.account.postbox, type: "deactivate.options_clear_cache_tap")
         
-        pushControllerImpl?(storageUsageController(context: context))
+        pushControllerImpl?(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
+            return storageUsageExceptionsScreen(context: context, category: category)
+        }))
         dismissImpl?()
     }, clearSyncedContacts: {
         addAppLogEvent(postbox: context.account.postbox, type: "deactivate.options_clear_contacts_tap")

@@ -628,7 +628,7 @@ public final class RollingText: Component {
                     
                     self.containerView.layer.removeAnimation(forKey: "opacity")
                 }
-                if let snapshotView = self.containerView.snapshotView(afterScreenUpdates: true) {
+                if let snapshotView = self.containerView.snapshotContentTree() {
                     let horizontalOffset = boundingRect.width - snapshotView.frame.width
                     let verticalOffset: CGFloat = 12.0
                     

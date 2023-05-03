@@ -67,7 +67,6 @@ public final class ListViewBackingView: UIView {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.isHidden, let target = self.target {
             if target.bounds.contains(point) {
-                target.scroller.forceDecelerating = false
                 if target.decelerationAnimator != nil {
                     target.decelerationAnimator?.isPaused = true
                     target.decelerationAnimator = nil
@@ -383,8 +382,41 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private let waitingForNodesDisposable = MetaDisposable()
     
     private var auxiliaryDisplayLink: CADisplayLink?
+    private var auxiliaryDisplayLinkHandle: SharedDisplayLinkDriver.Link?
+    private var debugView: UIView?
     private var isAuxiliaryDisplayLinkEnabled: Bool = false {
         didSet {
+            if self.isAuxiliaryDisplayLinkEnabled {
+                if self.auxiliaryDisplayLinkHandle == nil {
+                    self.auxiliaryDisplayLinkHandle = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: true, { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if self.debugView == nil {
+                            let debugView = UIView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)))
+                            debugView.backgroundColor = .black
+                            debugView.alpha = 0.0001
+                            self.debugView = debugView
+                            self.view.addSubview(debugView)
+                        }
+                        if let debugView = self.debugView {
+                            if debugView.frame.origin.x == 0.0 {
+                                debugView.frame = CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: 1.0, height: 1.0))
+                            } else {
+                                debugView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 1.0, height: 1.0))
+                            }
+                        }
+                    })
+                }
+            } else if let auxiliaryDisplayLinkHandle = self.auxiliaryDisplayLinkHandle {
+                self.auxiliaryDisplayLinkHandle = nil
+                auxiliaryDisplayLinkHandle.invalidate()
+                if let debugView = self.debugView {
+                    self.debugView = nil
+                    debugView.removeFromSuperview()
+                }
+            }
+            
             /*if self.isAuxiliaryDisplayLinkEnabled != oldValue {
                 if self.isAuxiliaryDisplayLinkEnabled {
                     if self.auxiliaryDisplayLink == nil {
@@ -803,6 +835,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         self.scrolledToItem = nil
 
+        self.scroller.forceDecelerating = false
         self.isDragging = true
         
         self.beganInteractiveDragging(self.touchesPosition)
@@ -1327,6 +1360,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.ignoreScrollingEvents = true
         self.scroller.setContentOffset(self.scroller.contentOffset, animated: false)
         self.ignoreScrollingEvents = wasIgnoringScrollingEvents
+    }
+    
+    public func cancelTracking() {
+        self.scroller.panGestureRecognizer.isEnabled = false
+        self.scroller.panGestureRecognizer.isEnabled = true
     }
     
     private func updateTopItemOverscrollBackground(transition: ContainedViewLayoutTransition) {
@@ -3536,7 +3574,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, synchronousLoad: Bool, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {
+    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, synchronousLoad: Bool, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {        
         self.assignHeaderSpaceAffinities()
 
         let upperDisplayBound = self.headerInsets.top

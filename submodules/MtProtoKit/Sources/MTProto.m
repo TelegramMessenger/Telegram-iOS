@@ -1926,6 +1926,20 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
+- (void)transportActivityUpdated:(MTTransport * _Nonnull)transport {
+    [[MTProto managerQueue] dispatchOnQueue:^
+    {
+        if (transport != _transport)
+            return;
+        
+        for (id<MTMessageService> messageService in _messageServices)
+        {
+            if ([messageService respondsToSelector:@selector(mtProtoTransportActivityUpdated:)])
+                [messageService mtProtoTransportActivityUpdated:self];
+        }
+    }];
+}
+
 - (void)transportTransactionsSucceeded:(NSArray *)transactionIds
 {
     [[MTProto managerQueue] dispatchOnQueue:^

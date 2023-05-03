@@ -448,11 +448,11 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     public var focusUpdated: ((Bool) -> Void)?
     public var heightUpdated: ((Bool) -> Void)?
     
-    public func updateLayoutSize(_ size: CGSize, sideInset: CGFloat) -> CGFloat {
+    public func updateLayoutSize(_ size: CGSize, sideInset: CGFloat, animated: Bool) -> CGFloat {
         guard let presentationInterfaceState = self.presentationInterfaceState else {
             return 0.0
         }
-        return self.updateLayout(width: size.width, leftInset: sideInset, rightInset: sideInset, bottomInset: 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: size.height, isSecondary: false, transition: .immediate, interfaceState: presentationInterfaceState, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), isMediaInputExpanded: false)
+        return self.updateLayout(width: size.width, leftInset: sideInset, rightInset: sideInset, bottomInset: 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: size.height, isSecondary: false, transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, interfaceState: presentationInterfaceState, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), isMediaInputExpanded: false)
     }
     
     public func setCaption(_ caption: NSAttributedString?) {
@@ -1038,7 +1038,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             if let current = self.dustNode {
                 dustNode = current
             } else {
-                dustNode = InvisibleInkDustNode(textNode: nil)
+                dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
                 dustNode.alpha = self.spoilersRevealed ? 0.0 : 1.0
                 dustNode.isUserInteractionEnabled = false
                 textInputNode.textView.addSubview(dustNode.view)
@@ -1298,7 +1298,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     private func updateOneLineSpoiler() {
         if let textLayout = self.oneLineNode.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
             if self.oneLineDustNode == nil {
-                let oneLineDustNode = InvisibleInkDustNode(textNode: nil)
+                let oneLineDustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
                 self.oneLineDustNode = oneLineDustNode
                 self.oneLineNode.textNode.supernode?.insertSubnode(oneLineDustNode, aboveSubnode: self.oneLineNode.textNode)
                 

@@ -107,7 +107,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.presentController = presentController
         self.getNavigationController = getNavigationController
         
-        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
+        self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings
         
         self.backgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true)
         self.backgroundNode.isUserInteractionEnabled = false
@@ -125,7 +125,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
+        self.loadingNode = ChatLoadingNode(context: context, theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode.alpha = 0.0
                 
@@ -561,7 +561,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, dismissTextInput: {
         }, scrollToMessageId: { _ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
-        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
@@ -666,7 +666,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         let cleanInsets = layout.insets(options: [])
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, transition: transition)
+        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, displayMode: .aspectFill, transition: transition)
         
         let intrinsicPanelHeight: CGFloat = 47.0
         let panelHeight = intrinsicPanelHeight + cleanInsets.bottom
@@ -793,7 +793,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         if peer.id == antiSpamBotConfiguration.antiSpamBotId {
             self.dismissAllTooltips()
             
-            self.presentController(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: self.presentationData.strings.Group_AdminLog_AntiSpamTitle, text: self.presentationData.strings.Group_AdminLog_AntiSpamText, customUndoText: nil), elevatedLayout: true, action: { [weak self] action in
+            self.presentController(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: self.presentationData.strings.Group_AdminLog_AntiSpamTitle, text: self.presentationData.strings.Group_AdminLog_AntiSpamText, customUndoText: nil, timeout: nil), elevatedLayout: true, action: { [weak self] action in
                 if let strongSelf = self {
                     if case .info = action {
                         let _ = strongSelf.getNavigationController()?.popViewController(animated: true)
@@ -927,7 +927,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             |> deliverOnMainQueue).start(), forKey: message.id)
                             
                             Queue.mainQueue().after(0.2, {
-                                strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: nil, text: strongSelf.presentationData.strings.Group_AdminLog_AntiSpamFalsePositiveReportedText, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
+                                strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: nil, text: strongSelf.presentationData.strings.Group_AdminLog_AntiSpamFalsePositiveReportedText, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
                             })
                         }
                     })), at: 0
@@ -974,6 +974,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case .botStart:
                         break
                     case .groupBotStart:
+                        break
+                    case .gameStart:
                         break
                     case let .channelMessage(peer, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {

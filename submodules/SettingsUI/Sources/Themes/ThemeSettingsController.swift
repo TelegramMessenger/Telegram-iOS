@@ -56,14 +56,15 @@ private final class ThemeSettingsControllerArguments {
     let openAutoNightTheme: () -> Void
     let openTextSize: () -> Void
     let openBubbleSettings: () -> Void
-    let toggleLargeEmoji: (Bool) -> Void
+    let openPowerSavingSettings: () -> Void
+    let openStickersAndEmoji: () -> Void
     let disableAnimations: (Bool) -> Void
     let selectAppIcon: (PresentationAppIcon) -> Void
     let editTheme: (PresentationCloudTheme) -> Void
     let themeContextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
     let colorContextAction: (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, openThemeSettings: @escaping () -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void, toggleNightTheme: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, openBubbleSettings: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (PresentationAppIcon) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void, colorContextAction: @escaping (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, openThemeSettings: @escaping () -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void, toggleNightTheme: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, openBubbleSettings: @escaping () -> Void, openPowerSavingSettings: @escaping () -> Void, openStickersAndEmoji: @escaping () -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (PresentationAppIcon) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void, colorContextAction: @escaping (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.openThemeSettings = openThemeSettings
@@ -74,7 +75,8 @@ private final class ThemeSettingsControllerArguments {
         self.openAutoNightTheme = openAutoNightTheme
         self.openTextSize = openTextSize
         self.openBubbleSettings = openBubbleSettings
-        self.toggleLargeEmoji = toggleLargeEmoji
+        self.openPowerSavingSettings = openPowerSavingSettings
+        self.openStickersAndEmoji = openStickersAndEmoji
         self.disableAnimations = disableAnimations
         self.selectAppIcon = selectAppIcon
         self.editTheme = editTheme
@@ -88,6 +90,7 @@ private enum ThemeSettingsControllerSection: Int32 {
     case nightMode
     case message
     case icon
+    case powerSaving
     case other
 }
 
@@ -97,7 +100,8 @@ public enum ThemeSettingsEntryTag: ItemListItemTag {
     case tint
     case accentColor
     case icon
-    case largeEmoji
+    case powerSaving
+    case stickersAndEmoji
     case animations
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
@@ -121,8 +125,9 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case bubbleSettings(PresentationTheme, String, String)
     case iconHeader(PresentationTheme, String)
     case iconItem(PresentationTheme, PresentationStrings, [PresentationAppIcon], Bool, String?)
+    case powerSaving
+    case stickersAndEmoji
     case otherHeader(PresentationTheme, String)
-    case largeEmoji(PresentationTheme, String, Bool)
     case animations(PresentationTheme, String, Bool)
     case animationsInfo(PresentationTheme, String)
     
@@ -136,7 +141,9 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsControllerSection.message.rawValue
             case .iconHeader, .iconItem:
                 return ThemeSettingsControllerSection.icon.rawValue
-            case .otherHeader, .largeEmoji, .animations, .animationsInfo:
+            case .powerSaving, .stickersAndEmoji:
+                return ThemeSettingsControllerSection.message.rawValue
+            case .otherHeader, .animations, .animationsInfo:
                 return ThemeSettingsControllerSection.other.rawValue
         }
     }
@@ -161,18 +168,20 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 7
             case .bubbleSettings:
                 return 8
-            case .iconHeader:
+            case .powerSaving:
                 return 9
-            case .iconItem:
+            case .stickersAndEmoji:
                 return 10
-            case .otherHeader:
+            case .iconHeader:
                 return 11
-            case .largeEmoji:
+            case .iconItem:
                 return 12
-            case .animations:
+            case .otherHeader:
                 return 13
-            case .animationsInfo:
+            case .animations:
                 return 14
+            case .animationsInfo:
+                return 15
         }
     }
     
@@ -244,14 +253,20 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .otherHeader(lhsTheme, lhsText):
-                if case let .otherHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case .powerSaving:
+                if case .powerSaving = rhs {
                     return true
                 } else {
                     return false
                 }
-            case let .largeEmoji(lhsTheme, lhsTitle, lhsValue):
-                if case let .largeEmoji(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+            case .stickersAndEmoji:
+                if case .stickersAndEmoji = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .otherHeader(lhsTheme, lhsText):
+                if case let .otherHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -318,12 +333,16 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsAppIconItem(theme: theme, strings: strings, sectionId: self.section, icons: icons, isPremium: isPremium, currentIconName: value, updated: { icon in
                     arguments.selectAppIcon(icon)
                 })
+            case .powerSaving:
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: presentationData.strings.AppearanceSettings_Animations, label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                    arguments.openPowerSavingSettings()
+                })
+            case .stickersAndEmoji:
+                return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: presentationData.strings.ChatSettings_StickersAndReactions, label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
+                    arguments.openStickersAndEmoji()
+                })
             case let .otherHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .largeEmoji(_, title, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleLargeEmoji(value)
-                }, tag: ThemeSettingsEntryTag.largeEmoji)
             case let .animations(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.disableAnimations(value)
@@ -376,6 +395,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     entries.append(.textSize(presentationData.theme, strings.Appearance_TextSizeSetting, textSizeValue))
     entries.append(.bubbleSettings(presentationData.theme, strings.Appearance_BubbleCornersSetting, ""))
+    entries.append(.powerSaving)
+    entries.append(.stickersAndEmoji)
     
     if !availableAppIcons.isEmpty {
         entries.append(.iconHeader(presentationData.theme, strings.Appearance_AppIcon.uppercased()))
@@ -383,7 +404,6 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     
     entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
-    entries.append(.largeEmoji(presentationData.theme, strings.Appearance_LargeEmoji, presentationData.largeEmoji))
     entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, presentationData.reduceMotion))
     entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
     
@@ -439,6 +459,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let removedThemeIndexesPromise = Promise<Set<Int64>>(Set())
     let removedThemeIndexes = Atomic<Set<Int64>>(value: Set())
     
+    let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
+    archivedPacks.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks() |> map(Optional.init)))
+    
     let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
     |> map { animatedEmoji -> [String: [StickerPackItem]] in
         var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
@@ -492,10 +515,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             let settings = view.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
             pushControllerImpl?(BubbleSettingsController(context: context, presentationThemeSettings: settings))
         })
-    }, toggleLargeEmoji: { largeEmoji in
-        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current.withUpdatedLargeEmoji(largeEmoji)
-        }).start()
+    }, openPowerSavingSettings: {
+        pushControllerImpl?(energySavingSettingsScreen(context: context))
+    }, openStickersAndEmoji: {
+        let _ = (archivedPacks.get() |> take(1) |> deliverOnMainQueue).start(next: { archivedStickerPacks in
+            pushControllerImpl?(installedStickerPacksController(context: context, mode: .general, archivedPacks: archivedStickerPacks, updatedPacks: { _ in
+            }))
+        })
     }, disableAnimations: { reduceMotion in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedReduceMotion(reduceMotion)

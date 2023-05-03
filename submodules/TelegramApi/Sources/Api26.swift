@@ -161,6 +161,48 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum BotApp: TypeConstructorDescription {
+        case botApp(flags: Int32, app: Api.BotApp)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botApp(let flags, let app):
+                    if boxed {
+                        buffer.appendInt32(-347034123)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    app.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botApp(let flags, let app):
+                return ("botApp", [("flags", flags as Any), ("app", app as Any)])
+    }
+    }
+    
+        public static func parse_botApp(_ reader: BufferReader) -> BotApp? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.BotApp?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.BotApp
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.BotApp.botApp(flags: _1!, app: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum BotCallbackAnswer: TypeConstructorDescription {
         case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
     
@@ -210,18 +252,19 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum BotResults: TypeConstructorDescription {
-        case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
+        case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, switchWebview: Api.InlineBotWebView?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .botResults(let flags, let queryId, let nextOffset, let switchPm, let results, let cacheTime, let users):
+                case .botResults(let flags, let queryId, let nextOffset, let switchPm, let switchWebview, let results, let cacheTime, let users):
                     if boxed {
-                        buffer.appendInt32(-1803769784)
+                        buffer.appendInt32(-534646026)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {switchPm!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {switchWebview!.serialize(buffer, true)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(results.count))
                     for item in results {
@@ -239,8 +282,8 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .botResults(let flags, let queryId, let nextOffset, let switchPm, let results, let cacheTime, let users):
-                return ("botResults", [("flags", flags as Any), ("queryId", queryId as Any), ("nextOffset", nextOffset as Any), ("switchPm", switchPm as Any), ("results", results as Any), ("cacheTime", cacheTime as Any), ("users", users as Any)])
+                case .botResults(let flags, let queryId, let nextOffset, let switchPm, let switchWebview, let results, let cacheTime, let users):
+                return ("botResults", [("flags", flags as Any), ("queryId", queryId as Any), ("nextOffset", nextOffset as Any), ("switchPm", switchPm as Any), ("switchWebview", switchWebview as Any), ("results", results as Any), ("cacheTime", cacheTime as Any), ("users", users as Any)])
     }
     }
     
@@ -255,25 +298,30 @@ public extension Api.messages {
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
                 _4 = Api.parse(reader, signature: signature) as? Api.InlineBotSwitchPM
             } }
-            var _5: [Api.BotInlineResult]?
+            var _5: Api.InlineBotWebView?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.InlineBotWebView
+            } }
+            var _6: [Api.BotInlineResult]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInlineResult.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInlineResult.self)
             }
-            var _6: Int32?
-            _6 = reader.readInt32()
-            var _7: [Api.User]?
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: [Api.User]?
             if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = _5 != nil
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.messages.BotResults.botResults(flags: _1!, queryId: _2!, nextOffset: _3, switchPm: _4, results: _5!, cacheTime: _6!, users: _7!)
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.messages.BotResults.botResults(flags: _1!, queryId: _2!, nextOffset: _3, switchPm: _4, switchWebview: _5, results: _6!, cacheTime: _7!, users: _8!)
             }
             else {
                 return nil
@@ -1348,58 +1396,6 @@ public extension Api.messages {
         }
         public static func parse_foundStickerSetsNotModified(_ reader: BufferReader) -> FoundStickerSets? {
             return Api.messages.FoundStickerSets.foundStickerSetsNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum HighScores: TypeConstructorDescription {
-        case highScores(scores: [Api.HighScore], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .highScores(let scores, let users):
-                    if boxed {
-                        buffer.appendInt32(-1707344487)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(scores.count))
-                    for item in scores {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .highScores(let scores, let users):
-                return ("highScores", [("scores", scores as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_highScores(_ reader: BufferReader) -> HighScores? {
-            var _1: [Api.HighScore]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.HighScore.self)
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.HighScores.highScores(scores: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

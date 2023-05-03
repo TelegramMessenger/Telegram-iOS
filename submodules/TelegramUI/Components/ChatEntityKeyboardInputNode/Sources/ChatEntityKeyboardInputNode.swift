@@ -570,6 +570,17 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private weak var currentUndoOverlayController: UndoOverlayController?
     
+    private var choosingStickerDisposable: Disposable?
+    private var scrollingStickersGridPromise = Promise<Bool>(false)
+    private var previewingStickersPromise = ValuePromise<Bool>(false)
+    private var choosingSticker: Signal<Bool, NoError> {
+        return combineLatest(self.scrollingStickersGridPromise.get(), self.previewingStickersPromise.get())
+        |> map { scrollingStickersGrid, previewingStickers -> Bool in
+            return scrollingStickersGrid || previewingStickers
+        }
+        |> distinctUntilChanged
+    }
+    
     public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
@@ -679,7 +690,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     },
                     presentController: controllerInteraction.presentController,
                     presentGlobalOverlayController: controllerInteraction.presentGlobalOverlayController,
-                    navigationController: controllerInteraction.navigationController
+                    navigationController: controllerInteraction.navigationController,
+                    updateIsPreviewing: { [weak self] value in
+                        self?.previewingStickersPromise.set(value)
+                    }
                 ),
                 chatPeerId: chatPeerId,
                 present: { c, a in
@@ -1243,7 +1257,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             return
                         }
                         var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
-                        if let id = groupId.base as? ItemCollectionId {
+                        if let id = groupId.base as? ItemCollectionId, context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
                             bubbleUpEmojiOrStickersets.append(id)
                         }
                         let _ = interfaceInteraction.sendSticker(.standalone(media: file), false, view, rect, layer, bubbleUpEmojiOrStickersets)
@@ -1670,6 +1684,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             })
         }
+        
+        self.choosingStickerDisposable = (self.choosingSticker
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction?.updateChoosingSticker(value)
+            }
+        })
     }
     
     deinit {
@@ -1677,6 +1698,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         self.hasRecentGifsDisposable?.dispose()
         self.emojiSearchDisposable.dispose()
         self.stickerSearchDisposable.dispose()
+        self.choosingStickerDisposable?.dispose()
     }
     
     private func reloadGifContext() {
@@ -1772,6 +1794,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         stickerContent?.inputInteractionHolder.inputInteraction = self.stickerInputInteraction
         self.currentInputData.emoji?.inputInteractionHolder.inputInteraction = self.emojiInputInteraction
         
+        if let stickerInputInteraction = self.stickerInputInteraction {
+            self.scrollingStickersGridPromise.set(stickerInputInteraction.scrollingStickersGridPromise.get())
+        }
+        
         let startTime = CFAbsoluteTimeGetCurrent()
         
         var keyboardBottomInset = bottomInset
@@ -1838,7 +1864,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     strongSelf.reorderItems(category: category, items: items)
                 },
                 makeSearchContainerNode: { [weak self, weak controllerInteraction] content in
-                    guard let controllerInteraction = controllerInteraction else {
+                    guard let self, let controllerInteraction = controllerInteraction else {
                         return nil
                     }
 
@@ -1860,9 +1886,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         mode: mappedMode,
                         trendingGifsPromise: trendingGifsPromise,
                         cancel: {
-                        }
+                        },
+                        peekBehavior: self.emojiInputInteraction?.peekBehavior
                     )
-                    searchContainerNode.openGifContextMenu = { item, sourceNode, sourceRect, gesture, isSaved in
+                    searchContainerNode.openGifContextMenu = { [weak self] item, sourceNode, sourceRect, gesture, isSaved in
                         guard let self else {
                             return
                         }
@@ -1913,9 +1940,14 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         var updatedGroups: [EmojiPagerContentComponent.ItemGroup] = []
         
+        var staticIsFirst = false
+        if let first = itemGroups.first, first.groupId == AnyHashable("static") {
+            staticIsFirst = true
+        }
+        
         for group in itemGroups {
             if !(group.groupId.base is ItemCollectionId) {
-                if group.groupId != AnyHashable("static") {
+                if group.groupId != AnyHashable("static") || staticIsFirst {
                     updatedGroups.append(group)
                 }
             } else {
@@ -2000,6 +2032,17 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
             strongSelf.performLayout(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
         })
+        
+        if self.context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            self.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: presentationData.strings.StickerPacksSettings_DynamicOrderOff, text: presentationData.strings.StickerPacksSettings_DynamicOrderOffInfo, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                    return false
+            }), nil)
+                
+            let _ = updateStickerSettingsInteractively(accountManager: self.context.sharedContext.accountManager, {
+                return $0.withUpdatedDynamicPackOrder(false)
+            }).start()
+        }
     }
     
     private func openGifContextMenu(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?, sourceView: UIView, sourceRect: CGRect, gesture: ContextGesture, isSaved: Bool) {
@@ -2104,7 +2147,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         switch result {
                             case .generic:
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                             case let .limitExceeded(limit, premiumLimit):
                                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                 let text: String
@@ -2113,7 +2156,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 } else {
                                     text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                 }
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                     guard let strongSelf = self else {
                                         return false
                                     }
@@ -2449,8 +2492,9 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
         public let presentController: (ViewController, Any?) -> Void
         public let presentGlobalOverlayController: (ViewController, Any?) -> Void
         public let navigationController: () -> NavigationController?
+        public let updateIsPreviewing: (Bool) -> Void
         
-        public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool, sendEmoji: @escaping (TelegramMediaFile) -> Void, setStatus: @escaping (TelegramMediaFile) -> Void, copyEmoji: @escaping (TelegramMediaFile) -> Void, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?) {
+        public init(sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool, sendEmoji: @escaping (TelegramMediaFile) -> Void, setStatus: @escaping (TelegramMediaFile) -> Void, copyEmoji: @escaping (TelegramMediaFile) -> Void, presentController: @escaping (ViewController, Any?) -> Void, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, updateIsPreviewing: @escaping (Bool) -> Void) {
             self.sendSticker = sendSticker
             self.sendEmoji = sendEmoji
             self.setStatus = setStatus
@@ -2458,6 +2502,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
             self.presentController = presentController
             self.presentGlobalOverlayController = presentGlobalOverlayController
             self.navigationController = navigationController
+            self.updateIsPreviewing = updateIsPreviewing
         }
     }
     
@@ -2486,7 +2531,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
         self.present = present
     }
     
-    public func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?) {
+    public func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, CALayer, TelegramMediaFile)?) {
         self.viewRecords = self.viewRecords.filter({ $0.view != nil })
         
         let viewRecord = self.viewRecords.first(where: { $0.view === view })
@@ -2502,12 +2547,15 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                     return nil
                 }
                 
+                let context = strongSelf.context
+                
                 var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
                 if let id = groupId.base as? ItemCollectionId {
-                    bubbleUpEmojiOrStickersets.append(id)
+                    if file.isCustomEmoji || context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
+                        bubbleUpEmojiOrStickersets.append(id)
+                    }
                 }
                 
-                let context = strongSelf.context
                 let accountPeerId = context.account.peerId
                 let chatPeerId = strongSelf.chatPeerId
                 
@@ -2752,11 +2800,12 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                 let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
                     return (sourceView, sourceRect)
                 })
-                /*controller.visibilityUpdated = { [weak self] visible in
-                    self?.previewingStickersPromise.set(visible)
-                    self?.requestDisableStickerAnimations?(visible)
-                    self?.simulateUpdateLayout(isVisible: !visible)
-                }*/
+                controller.visibilityUpdated = { [weak self] visible in
+                    guard let strongSelf = self, let interaction = strongSelf.interaction else {
+                        return
+                    }
+                    interaction.updateIsPreviewing(visible)
+                }
                 strongSelf.peekController = controller
                 strongSelf.present(controller, nil)
                 return controller

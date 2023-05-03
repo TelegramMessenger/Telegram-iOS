@@ -45,7 +45,7 @@ final class ShareControllerGridSection: GridSection {
     
     func isEqual(to: GridSection) -> Bool {
         if let to = to as? ShareControllerGridSection {
-            return self.title == to.title
+            return self.title == to.title && self.theme === to.theme
         } else {
             return false
         }
@@ -185,7 +185,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     }
     
     func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer?, presence: EnginePeer.Presence?, topicId: Int64?, threadData: MessageHistoryThreadData?, search: Bool, synchronousLoad: Bool, force: Bool) {
-        if force || self.currentState == nil || self.currentState!.0 !== context || self.currentState!.3 != peer || self.currentState!.5 != presence || self.currentState!.6 != topicId {
+        if force || self.currentState == nil || self.currentState!.0 !== context || self.currentState!.2 !== theme || self.currentState!.3 != peer || self.currentState!.5 != presence || self.currentState!.6 != topicId {
             let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: theme.chatList.secretTitleColor, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.checkContentColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)

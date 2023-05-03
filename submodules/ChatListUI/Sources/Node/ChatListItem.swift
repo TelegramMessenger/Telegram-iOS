@@ -667,7 +667,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if threadId == 1 {
                         titleTopicIconContent = .image(image: PresentationResourcesChatList.generalTopicSmallIcon(theme))
                     } else if let fileId = iconId, fileId != 0 {
-                        titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(2))
+                        titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(0))
                     } else {
                         titleTopicIconContent = .topic(title: String(title.string.prefix(1)), color: iconColor, size: CGSize(width: 18.0, height: 18.0))
                     }
@@ -677,7 +677,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         animationCache: context.animationCache,
                         animationRenderer: context.animationRenderer,
                         content: titleTopicIconContent,
-                        isVisibleForAnimations: currentNode?.visibilityStatus ?? false,
+                        isVisibleForAnimations: (currentNode?.visibilityStatus ?? false) && context.sharedContext.energyUsageSettings.loopEmoji,
                         action: nil
                     )
                     
@@ -1322,7 +1322,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if isKnown {
                         let photo = personalPhoto ?? profilePhoto
-                        if let photo = photo, !photo.videoRepresentations.isEmpty || photo.emojiMarkup != nil {
+                        if let photo = photo, item.context.sharedContext.energyUsageSettings.loopEmoji, (!photo.videoRepresentations.isEmpty || photo.emojiMarkup != nil) {
                             let videoNode: AvatarVideoNode
                             if let current = strongSelf.avatarVideoNode {
                                 videoNode = current
@@ -1840,7 +1840,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             switch entity.type {
                             case .Spoiler, .CustomEmoji:
                                 return true
-                            case .Strikethrough, .Italic, .Bold:
+                            case .Strikethrough, .Underline, .Italic, .Bold:
                                 return true
                             default:
                                 return false
@@ -2783,7 +2783,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if threadInfo.id == 1 {
                             avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(item.presentationData.theme))
                         } else if let fileId = threadInfo.info.icon, fileId != 0 {
-                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
+                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                         } else {
                             avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), color: threadInfo.info.iconColor, size: CGSize(width: 32.0, height: 32.0))
                         }
@@ -2793,7 +2793,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             animationCache: item.interaction.animationCache,
                             animationRenderer: item.interaction.animationRenderer,
                             content: avatarIconContent,
-                            isVisibleForAnimations: strongSelf.visibilityStatus,
+                            isVisibleForAnimations: strongSelf.visibilityStatus && item.context.sharedContext.energyUsageSettings.loopEmoji,
                             action: nil
                         )
                         strongSelf.avatarIconComponent = avatarIconComponent
@@ -3129,7 +3129,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let current = strongSelf.dustNode {
                             dustNode = current
                         } else {
-                            dustNode = InvisibleInkDustNode(textNode: nil)
+                            dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                             dustNode.isUserInteractionEnabled = false
                             strongSelf.dustNode = dustNode
                             
@@ -3290,7 +3290,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             animationCache: item.interaction.animationCache,
                             animationRenderer: item.interaction.animationRenderer,
                             content: currentCredibilityIconContent,
-                            isVisibleForAnimations: strongSelf.visibilityStatus,
+                            isVisibleForAnimations: strongSelf.visibilityStatus && item.context.sharedContext.energyUsageSettings.loopEmoji,
                             action: nil
                         )
                         strongSelf.credibilityIconComponent = credibilityIconComponent
@@ -3376,9 +3376,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.updateLayout(size: CGSize(width: layout.contentSize.width, height: itemHeight), leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.editing {
-                        strongSelf.setRevealOptions((left: [], right: []))
+                        strongSelf.setRevealOptions((left: [], right: []), enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                     } else {
-                        strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions))
+                        strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions), enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                     }
                     if !strongSelf.customAnimationInProgress {
                         strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)

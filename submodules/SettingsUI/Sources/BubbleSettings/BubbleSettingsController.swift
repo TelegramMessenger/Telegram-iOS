@@ -285,7 +285,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
         bottomInset = 37.0
         
         self.chatBackgroundNode.frame = chatFrame
-        self.chatBackgroundNode.updateLayout(size: chatFrame.size, transition: transition)
+        self.chatBackgroundNode.updateLayout(size: chatFrame.size, displayMode: .aspectFill, transition: transition)
         self.messagesContainerNode.frame = chatFrame
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))

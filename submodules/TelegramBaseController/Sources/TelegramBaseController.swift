@@ -88,6 +88,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     
     private var dismissingPanel: ASDisplayNode?
     
+    private weak var audioRateTooltipController: UndoOverlayController?
+    
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var playlistPreloadDisposable: Disposable?
@@ -392,10 +394,10 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         
         super.containerLayoutUpdated(layout, transition: transition)
         
-        var navigationHeight = super.navigationLayout(layout: layout).navigationFrame.maxY - self.additionalNavigationBarHeight
-        if !self.displayNavigationBar {
-            navigationHeight = 0.0
-        }
+        let navigationHeight = super.navigationLayout(layout: layout).navigationFrame.height - self.additionalNavigationBarHeight
+//        if !self.displayNavigationBar {
+//            navigationHeight = 0.0
+//        }
         
         var additionalHeight: CGFloat = 0.0
         
@@ -408,7 +410,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             if let current = self.groupCallAccessoryPanel {
                 groupCallAccessoryPanel = current
                 transition.updateFrame(node: groupCallAccessoryPanel, frame: panelFrame)
-                groupCallAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+                groupCallAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: transition)
             } else {
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                 groupCallAccessoryPanel = GroupCallNavigationAccessoryPanel(context: self.context, presentationData: presentationData, tapAction: { [weak self] in
@@ -426,7 +428,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 groupCallAccessoryPanel.frame = panelFrame
                 
                 groupCallAccessoryPanel.update(data: groupCallPanelData)
-                groupCallAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
+                groupCallAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: .immediate)
                 if transition.isAnimated {
                     groupCallAccessoryPanel.animateIn(transition)
                 }
@@ -451,7 +453,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             if let current = self.locationBroadcastAccessoryPanel {
                 locationBroadcastAccessoryPanel = current
                 transition.updateFrame(node: locationBroadcastAccessoryPanel, frame: panelFrame)
-                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: transition)
             } else {
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                 locationBroadcastAccessoryPanel = LocationBroadcastNavigationAccessoryPanel(accountPeerId: self.context.account.peerId, theme: presentationData.theme, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, tapAction: { [weak self] in
@@ -583,7 +585,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 }
                 
                 locationBroadcastAccessoryPanel.update(peers: locationBroadcastPeers, mode: locationBroadcastMode, canClose: canClose)
-                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
+                locationBroadcastAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: .immediate)
                 if transition.isAnimated {
                     locationBroadcastAccessoryPanel.animateIn(transition)
                 }
@@ -614,7 +616,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: transition)
                 switch order {
                     case .regular:
                         mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
@@ -648,6 +650,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 if let (mediaAccessoryPanel, _) = self.mediaAccessoryPanel {
                     self.mediaAccessoryPanel = nil
                     self.dismissingPanel = mediaAccessoryPanel
+                    self.audioRateTooltipController?.dismissWithCommitAction()
                     mediaAccessoryPanel.animateOut(transition: transition, completion: { [weak self, weak mediaAccessoryPanel] in
                         mediaAccessoryPanel?.removeFromSupernode()
                         if let strongSelf = self, strongSelf.dismissingPanel === mediaAccessoryPanel {
@@ -669,7 +672,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         strongSelf.context.sharedContext.mediaManager.setPlaylist(nil, type: type, control: SharedMediaPlayerControlAction.playback(.pause))
                     }
                 }
-                mediaAccessoryPanel.setRate = { [weak self] rate, fromMenu in
+                mediaAccessoryPanel.setRate = { [weak self] rate, changeType in
                     guard let strongSelf = self else {
                         return
                     }
@@ -699,7 +702,21 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         let text: String?
                         let rate: CGFloat?
-                        if baseRate == .x1 {
+                        if case let .sliderCommit(previousValue, newValue) = changeType {
+                            let value = String(format: "%0.1f", baseRate.doubleValue)
+                            if baseRate == .x1 {
+                                text = presentationData.strings.Conversation_AudioRateTooltipNormal
+                            } else {
+                                text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
+                            }
+                            if newValue > previousValue {
+                                rate = .infinity
+                            } else if newValue < previousValue {
+                                rate = -.infinity
+                            } else {
+                                rate = nil
+                            }
+                        } else if baseRate == .x1 {
                             text = presentationData.strings.Conversation_AudioRateTooltipNormal
                             rate = 1.0
                         } else if baseRate == .x1_5 {
@@ -712,22 +729,25 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             text = nil
                             rate = nil
                         }
-                        if let rate, let text, !fromMenu {
-                            strongSelf.present(
-                                UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .audioRate(
-                                        rate: rate,
-                                        text: text
-                                    ),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: hasTooltip,
-                                    action: { action in
-                                        return true
-                                    }
+                        var showTooltip = true
+                        if case .sliderChange = changeType {
+                            showTooltip = false
+                        }
+                        if let rate, let text, showTooltip {
+                            let controller = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .audioRate(
+                                    rate: rate,
+                                    text: text
                                 ),
-                                in: .current
+                                elevatedLayout: false,
+                                animateInAsReplacement: hasTooltip,
+                                action: { action in
+                                    return true
+                                }
                             )
+                            strongSelf.audioRateTooltipController = controller
+                            strongSelf.present(controller, in: .current)
                         }
                     })
                 }
@@ -827,7 +847,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     self.navigationBar?.additionalContentNode.addSubnode(mediaAccessoryPanel)
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: .immediate)
                 switch order {
                     case .regular:
                         mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
@@ -849,6 +869,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         } else if let (mediaAccessoryPanel, _) = self.mediaAccessoryPanel {
             self.mediaAccessoryPanel = nil
             self.dismissingPanel = mediaAccessoryPanel
+            self.audioRateTooltipController?.dismissWithCommitAction()
             mediaAccessoryPanel.animateOut(transition: transition, completion: { [weak self, weak mediaAccessoryPanel] in
                 mediaAccessoryPanel?.removeFromSupernode()
                 if let strongSelf = self, strongSelf.dismissingPanel === mediaAccessoryPanel {

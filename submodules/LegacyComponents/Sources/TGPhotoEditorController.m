@@ -2604,15 +2604,12 @@
     }]];
 }
 
-+ (TGPhotoEditorTab)defaultTabsForAvatarIntent
++ (TGPhotoEditorTab)defaultTabsForAvatarIntent:(bool)hasStickers
 {
-    static dispatch_once_t onceToken;
-    static TGPhotoEditorTab avatarTabs = TGPhotoEditorNoneTab;
-    dispatch_once(&onceToken, ^
-    {
-        if (iosMajorVersion() >= 7)
-            avatarTabs = TGPhotoEditorCropTab | TGPhotoEditorPaintTab | TGPhotoEditorToolsTab;
-    });
+    TGPhotoEditorTab avatarTabs = TGPhotoEditorCropTab | TGPhotoEditorToolsTab;
+    if (hasStickers) {
+        avatarTabs |= TGPhotoEditorPaintTab;
+    }
     return avatarTabs;
 }
 

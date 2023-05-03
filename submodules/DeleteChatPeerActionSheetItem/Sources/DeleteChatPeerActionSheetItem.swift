@@ -129,7 +129,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 }
             case let .clearHistory(canClearCache):
                 if peer.id == context.account.peerId {
-                    text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
+                    text = PresentationStrings.FormattedString(string: strings.ChatList_ClearSavedMessagesConfirmation, ranges: [])
                 } else if case .user = peer {
                     text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 } else {

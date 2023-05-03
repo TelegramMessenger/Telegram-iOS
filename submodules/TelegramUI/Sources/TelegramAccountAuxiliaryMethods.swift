@@ -26,8 +26,6 @@ func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAu
             return fetchICloudFileResource(resource: resource)
         } else if let resource = resource as? SecureIdLocalImageResource {
             return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
-        } else if let resource = resource as? EmojiSpriteResource {
-            return fetchEmojiSpriteResource(account: account, resource: resource)
         } else if let resource = resource as? BundleResource {
             return Signal { subscriber in
                 subscriber.putNext(.reset)
@@ -38,7 +36,8 @@ func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAu
             }
         } else if let wallpaperResource = resource as? WallpaperDataResource {
             let builtinWallpapers: [String] = [
-                "fqv01SQemVIBAAAApND8LDRUhRU"
+                "fqv01SQemVIBAAAApND8LDRUhRU",
+                "Ye7DfT2kCVIKAAAAhzXfrkdOjxs"
             ]
             if builtinWallpapers.contains(wallpaperResource.slug) {
                 if let url = getAppBundle().url(forResource: wallpaperResource.slug, withExtension: "tgv") {
@@ -58,6 +57,19 @@ func makeTelegramAccountAuxiliaryMethods(appDelegate: AppDelegate?) -> AccountAu
         } else if let cloudDocumentMediaResource = resource as? CloudDocumentMediaResource {
             if cloudDocumentMediaResource.fileId == 5789658100176783156 {
                 if let url = getAppBundle().url(forResource: "fqv01SQemVIBAAAApND8LDRUhRU", withExtension: "tgv") {
+                    return Signal { subscriber in
+                        subscriber.putNext(.reset)
+                        if let data = try? Data(contentsOf: url, options: .mappedRead) {
+                            subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
+                        }
+                        
+                        return EmptyDisposable
+                    }
+                } else {
+                    return nil
+                }
+            } else if cloudDocumentMediaResource.fileId == 5911315028815907420 {
+                if let url = getAppBundle().url(forResource: "Ye7DfT2kCVIKAAAAhzXfrkdOjxs", withExtension: "tgv") {
                     return Signal { subscriber in
                         subscriber.putNext(.reset)
                         if let data = try? Data(contentsOf: url, options: .mappedRead) {

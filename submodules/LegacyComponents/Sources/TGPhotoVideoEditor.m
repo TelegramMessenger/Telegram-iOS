@@ -34,7 +34,7 @@
     }
     
     void (^present)(UIImage *) = ^(UIImage *screenImage) {
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSuggestedAvatarIntent adjustments:nil caption:nil screenImage:screenImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSuggestedAvatarIntent adjustments:nil caption:nil screenImage:screenImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent:true] selectedTab:TGPhotoEditorCropTab];
         controller.senderName = senderName;
         controller.stickersContext = stickersContext;
         

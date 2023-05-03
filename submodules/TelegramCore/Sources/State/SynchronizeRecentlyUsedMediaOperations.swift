@@ -15,15 +15,21 @@ func addSynchronizeRecentlyUsedMediaOperation(transaction: Transaction, category
     }
     let peerId = PeerId(0)
     
-    var topOperation: (SynchronizeRecentlyUsedMediaOperation, Int32)?
+    var removeOperations: [(SynchronizeRecentlyUsedMediaOperation, Int32)] = []
     transaction.operationLogEnumerateEntries(peerId: peerId, tag: tag, { entry in
         if let operation = entry.contents as? SynchronizeRecentlyUsedMediaOperation {
-            topOperation = (operation, entry.tagLocalIndex)
+            if case .sync = operation.content {
+                removeOperations.append((operation, entry.tagLocalIndex))
+                return true
+            } else {
+                return false
+            }
+        } else {
+            return false
         }
-        return false
     })
     
-    if let (topOperation, topLocalIndex) = topOperation, case .sync = topOperation.content {
+    for (_, topLocalIndex) in removeOperations {
         let _ = transaction.operationLogRemoveEntry(peerId: peerId, tag: tag, tagLocalIndex: topLocalIndex)
     }
     

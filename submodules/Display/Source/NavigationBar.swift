@@ -9,7 +9,7 @@ open class SparseNode: ASDisplayNode {
         if self.alpha.isZero {
             return nil
         }
-        if !self.bounds.contains(point) {
+        if !self.bounds.inset(by: self.hitTestSlop).contains(point) {
             return nil
         }
         for view in self.view.subviews.reversed() {
@@ -139,7 +139,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
 
     private var enableBlur: Bool
 
-    private var effectView: UIVisualEffectView?
+    public var effectView: UIVisualEffectView?
     private let backgroundNode: ASDisplayNode
 
     private var validLayout: (CGSize, CGFloat)?

@@ -546,7 +546,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
             
                 let animationName: String
-                if rate == 1.5 {
+                if rate == .infinity {
+                    animationName = "anim_voicefast"
+                } else if rate == -.infinity {
+                    animationName = "anim_voiceslow"
+                } else if rate == 1.5 {
                     animationName = "anim_voice1_5x"
                 } else if rate == 2.0 {
                     animationName = "anim_voice2x"
@@ -836,7 +840,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         }
                     }
                 }
-            case let .universal(animation, scale, colors, title, text, customUndoText):
+            case let .universal(animation, scale, colors, title, text, customUndoText, timeout):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -861,7 +865,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if text.contains("](") {
                     isUserInteractionEnabled = true
                 }
-                self.originalRemainingSeconds = isUserInteractionEnabled ? 5 : 3
+                self.originalRemainingSeconds = timeout ?? (isUserInteractionEnabled ? 5 : 3)
             
                 self.textNode.maximumNumberOfLines = 5
                 

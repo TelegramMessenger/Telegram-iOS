@@ -13,6 +13,7 @@ import AccountContext
 import StickerPackPreviewUI
 import ItemListStickerPackItem
 import UndoUI
+import ShareController
 
 public enum ArchivedStickerPacksControllerMode {
     case stickers
@@ -21,19 +22,21 @@ public enum ArchivedStickerPacksControllerMode {
 }
 
 private final class ArchivedStickerPacksControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
     let addPack: (StickerPackCollectionInfo) -> Void
     let removePack: (StickerPackCollectionInfo) -> Void
+    let togglePackSelected: (ItemCollectionId) -> Void
     
-    init(account: Account, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void, removePack: @escaping (StickerPackCollectionInfo) -> Void) {
-        self.account = account
+    init(context: AccountContext, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping (StickerPackCollectionInfo) -> Void, removePack: @escaping (StickerPackCollectionInfo) -> Void, togglePackSelected: @escaping (ItemCollectionId) -> Void) {
+        self.context = context
         self.openStickerPack = openStickerPack
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
         self.addPack = addPack
         self.removePack = removePack
+        self.togglePackSelected = togglePackSelected
     }
 }
 
@@ -48,7 +51,7 @@ private enum ArchivedStickerPacksEntryId: Hashable {
 
 private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
     case info(PresentationTheme, String)
-    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool, Bool, ItemListStickerPackItemEditing)
+    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, StickerPackItem?, String, Bool, Bool, ItemListStickerPackItemEditing, Bool?)
     
     var section: ItemListSectionId {
         switch self {
@@ -61,7 +64,7 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
         switch self {
             case .info:
                 return .index(0)
-            case let .pack(_, _, _, info, _, _, _, _, _):
+            case let .pack(_, _, _, info, _, _, _, _, _, _):
                 return .pack(info.id)
         }
     }
@@ -74,8 +77,8 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsTopItem, lhsCount, lhsPlayAnimatedStickers, lhsEnabled, lhsEditing):
-                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsTopItem, rhsCount, rhsPlayAnimatedStickers, rhsEnabled, rhsEditing) = rhs {
+            case let .pack(lhsIndex, lhsTheme, lhsStrings, lhsInfo, lhsTopItem, lhsCount, lhsPlayAnimatedStickers, lhsEnabled, lhsEditing, lhsSelected):
+                if case let .pack(rhsIndex, rhsTheme, rhsStrings, rhsInfo, rhsTopItem, rhsCount, rhsPlayAnimatedStickers, rhsEnabled, rhsEditing, rhsSelected) = rhs {
                     if lhsIndex != rhsIndex {
                         return false
                     }
@@ -103,6 +106,9 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
                     if lhsEditing != rhsEditing {
                         return false
                     }
+                    if lhsSelected != rhsSelected {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -119,9 +125,9 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .pack(lhsIndex, _, _, _, _, _, _, _, _):
+            case let .pack(lhsIndex, _, _, _, _, _, _, _, _, _):
                 switch rhs {
-                    case let .pack(rhsIndex, _, _, _, _, _, _, _, _):
+                    case let .pack(rhsIndex, _, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     default:
                         return false
@@ -134,8 +140,8 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
         switch self {
             case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
+            case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing, selected):
+                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: editing.editing ? .check(checked: selected ?? false) : .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -144,6 +150,7 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
                 }, removePack: {
                     arguments.removePack(info)
                 }, toggleSelected: {
+                    arguments.togglePackSelected(info.id)
                 })
         }
     }
@@ -151,23 +158,29 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
 
 private struct ArchivedStickerPacksControllerState: Equatable {
     let editing: Bool
+    let selectedPackIds: Set<ItemCollectionId>?
     let packIdWithRevealedOptions: ItemCollectionId?
     let removingPackIds: Set<ItemCollectionId>
     
     init() {
         self.editing = false
+        self.selectedPackIds = nil
         self.packIdWithRevealedOptions = nil
         self.removingPackIds = Set()
     }
     
-    init(editing: Bool, packIdWithRevealedOptions: ItemCollectionId?, removingPackIds: Set<ItemCollectionId>) {
+    init(editing: Bool, selectedPackIds: Set<ItemCollectionId>?, packIdWithRevealedOptions: ItemCollectionId?, removingPackIds: Set<ItemCollectionId>) {
         self.editing = editing
+        self.selectedPackIds = selectedPackIds
         self.packIdWithRevealedOptions = packIdWithRevealedOptions
         self.removingPackIds = removingPackIds
     }
     
     static func ==(lhs: ArchivedStickerPacksControllerState, rhs: ArchivedStickerPacksControllerState) -> Bool {
         if lhs.editing != rhs.editing {
+            return false
+        }
+        if lhs.selectedPackIds != rhs.selectedPackIds {
             return false
         }
         if lhs.packIdWithRevealedOptions != rhs.packIdWithRevealedOptions {
@@ -181,19 +194,23 @@ private struct ArchivedStickerPacksControllerState: Equatable {
     }
     
     func withUpdatedEditing(_ editing: Bool) -> ArchivedStickerPacksControllerState {
-        return ArchivedStickerPacksControllerState(editing: editing, packIdWithRevealedOptions: self.packIdWithRevealedOptions, removingPackIds: self.removingPackIds)
+        return ArchivedStickerPacksControllerState(editing: editing, selectedPackIds: self.selectedPackIds, packIdWithRevealedOptions: self.packIdWithRevealedOptions, removingPackIds: self.removingPackIds)
+    }
+    
+    func withUpdatedSelectedPackIds(_ selectedPackIds: Set<ItemCollectionId>?) -> ArchivedStickerPacksControllerState {
+        return ArchivedStickerPacksControllerState(editing: self.editing, selectedPackIds: selectedPackIds, packIdWithRevealedOptions: self.packIdWithRevealedOptions, removingPackIds: self.removingPackIds)
     }
     
     func withUpdatedPackIdWithRevealedOptions(_ packIdWithRevealedOptions: ItemCollectionId?) -> ArchivedStickerPacksControllerState {
-        return ArchivedStickerPacksControllerState(editing: self.editing, packIdWithRevealedOptions: packIdWithRevealedOptions, removingPackIds: self.removingPackIds)
+        return ArchivedStickerPacksControllerState(editing: self.editing, selectedPackIds: self.selectedPackIds, packIdWithRevealedOptions: packIdWithRevealedOptions, removingPackIds: self.removingPackIds)
     }
     
     func withUpdatedRemovingPackIds(_ removingPackIds: Set<ItemCollectionId>) -> ArchivedStickerPacksControllerState {
-        return ArchivedStickerPacksControllerState(editing: editing, packIdWithRevealedOptions: self.self.packIdWithRevealedOptions, removingPackIds: removingPackIds)
+        return ArchivedStickerPacksControllerState(editing: self.editing, selectedPackIds: self.selectedPackIds, packIdWithRevealedOptions: self.packIdWithRevealedOptions, removingPackIds: removingPackIds)
     }
 }
 
-private func archivedStickerPacksControllerEntries(presentationData: PresentationData, state: ArchivedStickerPacksControllerState, packs: [ArchivedStickerPackItem]?, installedView: CombinedView, stickerSettings: StickerSettings) -> [ArchivedStickerPacksEntry] {
+private func archivedStickerPacksControllerEntries(context: AccountContext, presentationData: PresentationData, state: ArchivedStickerPacksControllerState, packs: [ArchivedStickerPackItem]?, installedView: CombinedView, stickerSettings: StickerSettings) -> [ArchivedStickerPacksEntry] {
     var entries: [ArchivedStickerPacksEntry] = []
     
     if let packs = packs {
@@ -216,7 +233,7 @@ private func archivedStickerPacksControllerEntries(presentationData: Presentatio
                     countTitle = presentationData.strings.StickerPack_StickerCount(item.info.count)
                 }
                 
-                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, countTitle, stickerSettings.loopAnimatedStickers, !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false, selectable: true)))
+                entries.append(.pack(index, presentationData.theme, presentationData.strings, item.info, item.topItems.first, countTitle, context.sharedContext.energyUsageSettings.loopStickers, !state.removingPackIds.contains(item.info.id), ItemListStickerPackItemEditing(editable: true, editing: state.editing, revealed: state.packIdWithRevealedOptions == item.info.id, reorderable: false, selectable: true), state.selectedPackIds?.contains(item.info.id)))
                 index += 1
             }
         }
@@ -264,7 +281,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = ArchivedStickerPacksControllerArguments(account: context.account, openStickerPack: { info in
+    let arguments = ArchivedStickerPacksControllerArguments(context: context, openStickerPack: { info in
         presentStickerPackController?(info)
     }, setPackIdWithRevealedOptions: { packId, fromPackId in
         updateState { state in
@@ -295,10 +312,10 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                     return .complete()
                 } else {
                     return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
-                        |> ignoreValues
-                        |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
-                        }
-                        |> then(.single((info, items)))
+                    |> ignoreValues
+                    |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
+                    }
+                    |> then(.single((info, items)))
                 }
             case .fetching:
                 break
@@ -357,22 +374,22 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
         }
         if remove {
             let applyPacks: Signal<Void, NoError> = stickerPacks.get()
-                |> filter { $0 != nil }
-                |> take(1)
-                |> deliverOnMainQueue
-                |> mapToSignal { packs -> Signal<Void, NoError> in
-                    if let packs = packs {
-                        var updatedPacks = packs
-                        for i in 0 ..< updatedPacks.count {
-                            if updatedPacks[i].info.id == info.id {
-                                updatedPacks.remove(at: i)
-                                break
-                            }
+            |> filter { $0 != nil }
+            |> take(1)
+            |> deliverOnMainQueue
+            |> mapToSignal { packs -> Signal<Void, NoError> in
+                if let packs = packs {
+                    var updatedPacks = packs
+                    for i in 0 ..< updatedPacks.count {
+                        if updatedPacks[i].info.id == info.id {
+                            updatedPacks.remove(at: i)
+                            break
                         }
-                        stickerPacks.set(.single(updatedPacks))
                     }
-                    
-                    return .complete()
+                    stickerPacks.set(.single(updatedPacks))
+                }
+                
+                return .complete()
             }
             removePackDisposables.set((context.engine.stickers.removeArchivedStickerPack(info: info) |> then(applyPacks) |> deliverOnMainQueue).start(completed: {
                 updateState { state in
@@ -382,49 +399,155 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                 }
             }), forKey: info.id)
         }
+    }, togglePackSelected: { packId in
+        updateState { state in
+            if var selectedPackIds = state.selectedPackIds {
+                if selectedPackIds.contains(packId) {
+                    selectedPackIds.remove(packId)
+                } else {
+                    selectedPackIds.insert(packId)
+                }
+                return state.withUpdatedSelectedPackIds(selectedPackIds)
+            } else {
+                return state
+            }
+        }
     })
     
     var previousPackCount: Int?
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
-        |> deliverOnMainQueue
-        |> map { presentationData, state, packs, installedView, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
-            var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
-                stickerSettings = value
-            }
-            
-            var rightNavigationButton: ItemListNavigationButton?
-            if let packs = packs, packs.count != 0 {
-                if state.editing {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+    |> deliverOnMainQueue
+    |> map { presentationData, state, packs, installedView, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var stickerSettings = StickerSettings.defaultSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
+            stickerSettings = value
+        }
+        
+        var rightNavigationButton: ItemListNavigationButton?
+        var toolbarItem: ItemListToolbarItem?
+        if let packs = packs, packs.count != 0 {
+            if state.editing {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                    updateState {
+                        $0.withUpdatedEditing(false)
+                    }
+                })
+                
+                let selectedCount = Int32(state.selectedPackIds?.count ?? 0)
+                toolbarItem = StickersToolbarItem(selectedCount: selectedCount, actions: [.init(title: presentationData.strings.StickerPacks_ActionDelete, isEnabled: selectedCount > 0, action: {
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    var items: [ActionSheetItem] = []
+                    
+                    let title: String
+                    switch mode {
+                    case .emoji:
+                        title = presentationData.strings.StickerPacks_DeleteEmojiPacksConfirmation(selectedCount)
+                    default:
+                        title = presentationData.strings.StickerPacks_DeleteStickerPacksConfirmation(selectedCount)
+                    }
+                    
+                    items.append(ActionSheetButtonItem(title: title, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                       
                         updateState {
-                            $0.withUpdatedEditing(false)
+                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                         }
-                    })
-                } else {
-                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                        
+                        for entry in packs {
+                            if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.info.id) {
+                                let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: entry.info.id.id, accessHash: entry.info.accessHash), forceActualized: false)
+                                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
+                                    switch result {
+                                    case let .result(info, items, installed):
+                                        if installed {
+                                            return .complete()
+                                        } else {
+                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            |> ignoreValues
+                                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
+                                            }
+                                            |> then(.single((info, items)))
+                                        }
+                                    case .fetching:
+                                        break
+                                    case .none:
+                                        break
+                                    }
+                                    return .complete()
+                                }).start()
+                            }
+                        }
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    presentControllerImpl?(actionSheet, nil)
+                }), .init(title: presentationData.strings.StickerPacks_ActionUnarchive, isEnabled: selectedCount > 0, action: {
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.StickerPacks_UnarchiveStickerPacksConfirmation(selectedCount), color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                       
                         updateState {
-                            $0.withUpdatedEditing(true)
+                            $0.withUpdatedEditing(false).withUpdatedSelectedPackIds(nil)
                         }
-                    })
-                }
+                        
+                        var packIds: [ItemCollectionId] = []
+                        for entry in packs {
+                            if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.info.id) {
+                                packIds.append(entry.info.id)
+                            }
+                        }
+                                                    
+                        let _ = context.engine.stickers.removeStickerPacksInteractively(ids: packIds, option: .archive).start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    presentControllerImpl?(actionSheet, nil)
+                }), .init(title: presentationData.strings.StickerPacks_ActionShare, isEnabled: selectedCount > 0, action: {
+                    updateState {
+                        $0.withUpdatedEditing(true).withUpdatedSelectedPackIds(nil)
+                    }
+                    
+                    var packNames: [String] = []
+                    for entry in packs {
+                        if let selectedPackIds = state.selectedPackIds, selectedPackIds.contains(entry.info.id) {
+                            packNames.append(entry.info.shortName)
+                        }
+                    }
+                    let text = packNames.map { "https://t.me/addstickers/\($0)" }.joined(separator: "\n")
+                    let shareController = ShareController(context: context, subject: .text(text), externalShare: true)
+                    presentControllerImpl?(shareController, nil)
+                })])
+            } else {
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                    updateState {
+                        $0.withUpdatedEditing(true).withUpdatedSelectedPackIds(Set())
+                    }
+                })
             }
-            
-            let previous = previousPackCount
-            previousPackCount = packs?.count
-            
-            var emptyStateItem: ItemListControllerEmptyStateItem?
-            if packs == nil {
-                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
-            }
-            
-            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.StickerPacksSettings_ArchivedPacks), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-            
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: archivedStickerPacksControllerEntries(presentationData: presentationData, state: state, packs: packs, installedView: installedView, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        }
+        
+        let previous = previousPackCount
+        previousPackCount = packs?.count
+        
+        var emptyStateItem: ItemListControllerEmptyStateItem?
+        if packs == nil {
+            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.StickerPacksSettings_ArchivedPacks), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: archivedStickerPacksControllerEntries(context: context, presentationData: presentationData, state: state, packs: packs, installedView: installedView, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, toolbarItem: toolbarItem, animateChanges: previous != nil && packs != nil && (previous! != 0 && previous! >= packs!.count - 10))
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)

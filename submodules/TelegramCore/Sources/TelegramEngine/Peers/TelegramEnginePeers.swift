@@ -138,7 +138,7 @@ public extension TelegramEngine {
             return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId)
         }
 
-        public func createGroup(title: String, peerIds: [PeerId], ttlPeriod: Int32?) -> Signal<PeerId?, CreateGroupError> {
+        public func createGroup(title: String, peerIds: [PeerId], ttlPeriod: Int32?) -> Signal<CreateGroupResult?, CreateGroupError> {
             return _internal_createGroup(account: self.account, title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
         }
 
@@ -641,15 +641,23 @@ public extension TelegramEngine {
         public func getNextUnreadChannel(peerId: PeerId, chatListFilterId: Int32?, getFilterPredicate: @escaping (ChatListFilterData) -> ChatListFilterPredicate) -> Signal<(peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)?, NoError> {
             return self.account.postbox.transaction { transaction -> (peer: EnginePeer, unreadCount: Int, location: NextUnreadChannelLocation)? in
                 func getForFilter(predicate: ChatListFilterPredicate?, isArchived: Bool) -> (peer: EnginePeer, unreadCount: Int)? {
+                    let additionalFilter: (Peer) -> Bool = { peer in
+                        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    
                     var peerIds: [PeerId] = []
                     if predicate != nil {
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate, inactiveSecretChatPeerIds: []))
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate, inactiveSecretChatPeerIds: []))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
                     } else {
                         if isArchived {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil, inactiveSecretChatPeerIds: []))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
                         } else {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil, inactiveSecretChatPeerIds: []))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
                         }
                     }
 

@@ -17,6 +17,7 @@ import ReactionSelectionNode
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ChatControllerInteraction
+import ShimmerEffect
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false, forForumOverview: false)
@@ -33,6 +34,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let mediaBackgroundNode: NavigationBackgroundNode
     private let titleNode: TextNode
     private let subtitleNode: TextNode
+    private let placeholderNode: StickerShimmerEffectNode
     private let animationNode: AnimatedStickerNode
     
     private let buttonNode: HighlightTrackingButtonNode
@@ -63,6 +65,9 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    private var animationDisposable: Disposable?
+    private var setupTimestamp: Double?
+    
     required init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
@@ -87,8 +92,12 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.clipsToBounds = true
         self.buttonNode.cornerRadius = 17.0
                 
-        self.animationNode = DefaultAnimatedStickerNodeImpl()
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode.isUserInteractionEnabled = false
+        self.placeholderNode.alpha = 0.75
         
+        self.animationNode = DefaultAnimatedStickerNodeImpl()
+
         self.buttonStarsNode = PremiumStarsNode()
         
         self.buttonTitleNode = TextNode()
@@ -131,11 +140,26 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.animationDisposable?.dispose()
+    }
+    
     @objc private func buttonPressed() {
         guard let item = self.item else {
             return
         }
         let _ = item.controllerInteraction.openMessage(item.message, .default)
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        self.placeholderNode.alpha = 0.0
+        if !animated {
+            self.placeholderNode.removeFromSupernode()
+        } else {
+            self.placeholderNode.layer.animateAlpha(from: self.placeholderNode.alpha, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.placeholderNode.removeFromSupernode()
+            })
+        }
     }
                 
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -236,7 +260,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                             strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
                                                         
-                            strongSelf.mediaBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
+                            strongSelf.mediaBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                             strongSelf.mediaBackgroundNode.update(size: mediaBackgroundFrame.size, transition: .immediate)
                             strongSelf.buttonNode.backgroundColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
@@ -333,6 +357,8 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             backgroundFrame.origin.y += rect.minY
             mediaBackgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
+        
+        self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
 
         if let backgroundNode = self.backgroundNode {
             var backgroundFrame = backgroundNode.frame
@@ -448,6 +474,10 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode.visibility = isPlaying
+        }
+        
+        if isPlaying && self.setupTimestamp == nil {
+            self.setupTimestamp = CACurrentMediaTime()
         }
         
         if isPlaying {

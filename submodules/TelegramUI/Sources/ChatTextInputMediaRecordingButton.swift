@@ -13,6 +13,7 @@ import ChatPresentationInterfaceState
 import ComponentFlow
 import LottieAnimationComponent
 import LottieComponent
+import AccountContext
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0
@@ -130,10 +131,6 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     
     func present() {
         let windowIsVisible: (UIWindow) -> Bool = { window in
-            print(window.alpha)
-            print(window.isHidden)
-            print(window.frame)
-            print(window.subviews)
             return !window.frame.height.isZero
         }
         
@@ -179,6 +176,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
 }
 
 final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButton, TGModernConversationInputMicButtonDelegate {
+    private let context: AccountContext
     private var theme: PresentationTheme
     private let strings: PresentationStrings
     
@@ -302,7 +300,8 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.animationView = ComponentView<Empty>()
@@ -369,15 +368,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
             case .video:
                 animationName = "anim_micToVideo"
         }
-        
-        //var animationMode: LottieAnimationComponent.AnimationItem.Mode = .still(position: .end)
-    
-        /*let colorKeys = ["__allcolors__"]
-        var colors: [String: UIColor] = [:]
-        for colorKey in colorKeys {
-            colors[colorKey] = self.theme.chat.inputPanel.panelControlColor.blitOver(self.theme.chat.inputPanel.inputBackgroundColor, alpha: 1.0)
-        }*/
-        
+
         let _ = animationView.update(
             transition: .immediate,
             component: AnyComponent(LottieComponent(
@@ -505,9 +496,11 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     override func animateIn() {
         super.animateIn()
-
-        micDecoration.isHidden = false
-        micDecoration.startAnimating()
+        
+        if self.context.sharedContext.energyUsageSettings.fullTranslucency {
+            micDecoration.isHidden = false
+            micDecoration.startAnimating()
+        }
 
         let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
         if let layer = self.animationView.view?.layer {

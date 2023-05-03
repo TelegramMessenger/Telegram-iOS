@@ -482,7 +482,7 @@
 "Tour.Text2" = "**Telegram** delivers messages\nfaster than any other application.";
 
 "Tour.Title3" = "Powerful";
-"Tour.Text3" = "**Telegram** has no limits on\nthe size of your chats and media.";
+"Tour.Text3" = "**Telegram** has no limits on\nthe size of your media and chats.";
 
 "Tour.Title4" = "Secure";
 "Tour.Text4" = "**Telegram** keeps your messages\nsafe from hacker attacks.";
@@ -491,30 +491,30 @@
 "Tour.Text5" = "**Telegram** lets you access your\nmessages from multiple devices.";
 
 "Tour.Title6" = "Free";
-"Tour.Text6" = "**Telegram** provides free unlimited cloud storage\nfor chats and media.";
+"Tour.Text6" = "**Telegram** provides free unlimited\ncloud storage for chats and media.";
 
 "Tour.StartButton" = "Start Messaging";
 
 // Login
-"Login.PhoneAndCountryHelp" = "Please confirm your country code and enter your phone number.";
+"Login.PhoneAndCountryHelp" = "Please confirm your country code\nand enter your phone number.";
 "Login.CodeSentInternal" = "We've sent the code to the **Telegram** app on your other device";
-"Login.HaveNotReceivedCodeInternal" = "Haven't received the code?";
-"Login.CodeSentSms" = "We have sent you an SMS with the code";
+"Login.HaveNotReceivedCodeInternal" = "Didn't get the code?";
+"Login.CodeSentSms" = "We've sent you an SMS with the code";
 "Login.Code" = "Code";
-"Login.WillCallYou" = "You can request a voice call in %@";
-"Login.CallRequestState2" = "Requesting a call from Telegram...";
+"Login.WillCallYou" = "Telegram will call you in %@";
+"Login.CallRequestState2" = "Requesting a call from Telegram…";
 "Login.CallRequestState3" = "Telegram dialed your number\n[Didn't get the code?]";
-"Login.EmailNotConfiguredError" = "Please set up an email account.";
+"Login.EmailNotConfiguredError" = "An email account is required so that you can send us details about the error.\n\nPlease go to your device‘s settings > Passwords & Accounts > Add account and set up an email account.";
 "Login.EmailCodeSubject" = "%@, no code";
 "Login.EmailCodeBody" = "My phone number is:\n%@\nI can't get an activation code for Telegram.";
-"Login.UnknownError" = "An error occurred. Please try again later";
-"Login.InvalidCodeError" = "You have entered an invalid code. Please try again.";
+"Login.UnknownError" = "An error occurred, please try again later.";
+"Login.InvalidCodeError" = "Invalid code, please try again.";
 "Login.NetworkError" = "Please check your internet connection and try again.";
-"Login.CodeExpiredError" = "Code expired. Please try again.";
-"Login.CodeFloodError" = "Limit exceeded. Please try again later.";
-"Login.InvalidPhoneError" = "Invalid phone number. Please try again.";
-"Login.InvalidFirstNameError" = "Invalid first name. Please try again.";
-"Login.InvalidLastNameError" = "Invalid last name. Please try again.";
+"Login.CodeExpiredError" = "Code expired, please start over.";
+"Login.CodeFloodError" = "Too many attempts, please try again later.";
+"Login.InvalidPhoneError" = "Invalid phone number, please try again.";
+"Login.InvalidFirstNameError" = "This first name is not allowed, please try another.";
+"Login.InvalidLastNameError" = "Sorry, this last name can't be used.";
 
 "Login.InvalidPhoneEmailSubject" = "Invalid phone number: %@";
 "Login.InvalidPhoneEmailBody" = "I'm trying to use my mobile phone number: %1$@\nBut Telegram says it's invalid. Please help.\n\nApp version: %2$@\nOS version: %3$@\nLocale: %4$@\nMNC: %5$@";
@@ -536,8 +536,8 @@
 "Login.InfoAvatarPhoto" = "photo";
 "Login.InfoFirstNamePlaceholder" = "First Name";
 "Login.InfoLastNamePlaceholder" = "Last Name";
-"Login.InfoDeletePhoto" = "Delete Photo";
-"Login.InfoHelp" = "Enter your name and add a profile picture.";
+"Login.InfoDeletePhoto" = "Remove Photo";
+"Login.InfoHelp" = "Enter your name and add a profile photo.";
 
 // Login.SelectCountry
 "Login.SelectCountry.Title" = "Country";
@@ -1026,6 +1026,7 @@
 "Username.InvalidStartsWithNumber" = "Sorry, a username can't start with a number.";
 "Username.InvalidCharacters" = "Sorry, this username is invalid.";
 "Username.InvalidTaken" = "Sorry, this username is already taken.";
+"Username.InvalidValue" = "Sorry, this username is invalid.";
 
 "Username.CheckingUsername" = "Checking username...";
 "Username.UsernameIsAvailable" = "%@ is available.";
@@ -6503,6 +6504,7 @@ Sorry for the inconvenience.";
 
 "StickerPacks.ActionDelete" = "Delete";
 "StickerPacks.ActionArchive" = "Archive";
+"StickerPacks.ActionUnarchive" = "Unarchive";
 "StickerPacks.ActionShare" = "Share";
 
 "StickerPacks.DeleteStickerPacksConfirmation_0" = "Delete %@ Sticker Sets";
@@ -9043,11 +9045,161 @@ Sorry for the inconvenience.";
 
 "ChatList.EmptyChatListWithArchive" = "All of your chats are archived.";
 
-"Conversation.AudioRateTooltip15X" = "Audio will play at 1.5X speed.";
+"Conversation.AudioRateTooltip15X" = "Audio will play at 1.5x speed.";
 "Conversation.AudioRateOptionsTooltip" = "Long tap for more speed values.";
+"Conversation.AudioRateTooltipCustom" = "Audio will play at %@x speed.";
 
 "ImportStickerPack.EmojiCount_1" = "%@ Emoji";
 "ImportStickerPack.EmojiCount_any" = "%@ Emojis";
 
 "ImportStickerPack.ImportingEmojis" = "Importing Emojis";
 "ImportStickerPack.CreateNewEmojiPack" = "Create a New Emoji Pack";
+
+"VoiceOver.Chat.Sending" = "Sending";
+"VoiceOver.Chat.Failed" = "Failed to send";
+
+"VoiceOver.Chat.PlayedByRecipient" = "Played by recipient";
+"VoiceOver.Chat.PlayedByRecipients" = "Played by recipients";
+
+"VoiceOver.Chat.NotPlayedByRecipient" = "Not played by recipient";
+"VoiceOver.Chat.NotPlayedByRecipients" = "Not played by recipients";
+
+"VoiceOver.Chat.ReplyingToMessage" = "In reply to message: %@";
+
+"MediaPicker.VoiceOver.Camera" = "Camera";
+
+"ChatList.ReadAll" = "Read All";
+
+"ChatList.ClearSavedMessagesConfirmation" = "Are you sure you want to delete all your saved messages?";
+
+"Conversation.Translation.Settings" = "Settings";
+
+"StickerPacksSettings.TrendingStickers" = "Trending Stickers";
+"StickerPacksSettings.MyStickers" = "MY STICKERS";
+
+"StickerPacksSettings.DynamicOrder" = "Dynamic Pack Order";
+"StickerPacksSettings.DynamicOrderInfo" = "Recently used sticker packs will be displayed above the older ones.";
+"StickerPacksSettings.Emoji" = "Emoji";
+
+"StickerPacksSettings.DynamicOrderOff" = "Dynamic Order Off";
+"StickerPacksSettings.DynamicOrderOffInfo" = "Sticker packs will no longer be automatically rearranged every time you use a sticker.";
+
+"GroupPermission.NotAvailableInDiscussionGroups" = "This permission is not available in discussion groups.";
+"GroupPermission.NotAvailableInGeoGroups" = "This permission is not available in location-based groups.";
+
+"Conversation.ShareLinkTooltip.Chat.One" = "Link shared with **%@**";
+"Conversation.ShareLinkTooltip.TwoChats.One" = "Link shared with **%@** and **%@**";
+"Conversation.ShareLinkTooltip.ManyChats.One" = "Link shared with **%@** and %@ others";
+
+"StickerPacks.UnarchiveStickerPacksConfirmation_1" = "Unarchive %@ Pack";
+"StickerPacks.UnarchiveStickerPacksConfirmation_any" = "Unarchive %@ Packs";
+
+"PowerSaving.AlertEnabledTitle" = "Power Saving mode enabled";
+"PowerSaving.AlertEnabledText" = "%@% battery remaining.";
+"PowerSaving.AlertEnabledAction" = "Disable";
+
+"Chat.MessageSeenTimestamp.Date" = "%@";
+"Chat.MessageSeenTimestamp.TodayAt" = "today at %@";
+"Chat.MessageSeenTimestamp.YesterdayAt" = "yesterday at %@";
+
+"PowerSavingScreen.OptionAutoplayVideoTitle" = "Autoplay Videos";
+"PowerSavingScreen.OptionAutoplayVideoText" = "Autoplay and loop videos and video messages in chats.";
+
+"PowerSavingScreen.OptionAutoplayGifTitle" = "Autoplay GIFs";
+"PowerSavingScreen.OptionAutoplayGifText" = "Autoplay and loop GIFs in chats and in the keyboard.";
+
+"PowerSavingScreen.OptionAutoplayStickersTitle" = "Sticker Animations";
+"PowerSavingScreen.OptionAutoplayStickersText" = "Loop animated stickers, play full-screen premium effects.";
+
+"PowerSavingScreen.OptionAutoplayEmojiTitle" = "Emoji Animations";
+"PowerSavingScreen.OptionAutoplayEmojiText" = "Loop animated emoji in messages, reactions, statuses.";
+
+"PowerSavingScreen.OptionAutoplayEffectsTitle" = "Interface Effects";
+"PowerSavingScreen.OptionAutoplayEffectsText" = "Various effects and animations that make Telegram look amazing.";
+
+"PowerSavingScreen.OptionBackgroundTitle" = "Extended Background Time";
+"PowerSavingScreen.OptionBackgroundText" = "Update chats faster when switching between apps.";
+
+"PowerSavingScreen.OptionPreloadTitle" = "Preload Media";
+"PowerSavingScreen.OptionPreloadText" = "Start loading media while in the chat list for faster access.";
+
+"PowerSavingScreen.ToggleHeaderEmpty" = "POWER SAVING MODE";
+"PowerSavingScreen.ToggleHeaderOn" = "POWER SAVING MODE (ON)";
+"PowerSavingScreen.ToggleHeaderOff" = "POWER SAVING MODE (OFF)";
+
+"PowerSavingScreen.OptionsHeader" = "RESOURCE-INTENSIVE PROCESSES";
+
+"PowerSavingScreen.OptionChangeAlertAlways" = "Turn off Power Saving Mode to change these settings.";
+"PowerSavingScreen.OptionChangeAlertConditional" = "Turn off Power Saving Mode or charge your phone to change these settings.";
+
+"PowerSavingScreen.Title" = "Power Saving";
+
+"PowerSaving.BatteryLevelLimit.Off" = "Off";
+"PowerSaving.BatteryLevelLimit.On" = "On";
+"PowerSaving.BatteryLevelLimit.AlwaysOn" = "Always On";
+"PowerSaving.BatteryLevelLimit.AlwaysOff" = "Always Off";
+"PowerSaving.BatteryLevelLimit.WhenBelow" = "When Below %@%";
+
+"PowerSaving.AllDescriptionNever" = "Don’t disable all resource-intensive processes even when the battery is low.";
+"PowerSaving.AllDescriptionAlways" = "Always disable all resource-intensive processes, regardless of the battery charge level.";
+"PowerSaving.AllDescriptionLimit" = "Automatically disable all resource-intensive processes when your battery is below %@%.";
+
+"AppearanceSettings.Animations" = "Animations";
+
+"SendInviteLink.SkipAction" = "Skip";
+"SendInviteLink.InviteTitle" = "Invite via Link";
+"SendInviteLink.LinkUnavailableTitle" = "You can't create a link";
+
+"SendInviteLink.TextAvailableSingleUser" = "**%@** restricts adding them to groups.\nYou can send them an invite link as message instead.";
+"SendInviteLink.TextAvailableMultipleUsers_1" = "**%d user** restrict adding them to groups.\nYou can send them an invite link as message instead.";
+"SendInviteLink.TextAvailableMultipleUsers_any" = "**%d users** restrict adding them to groups.\nYou can send them an invite link as message instead.";
+
+"SendInviteLink.TextUnavailableSingleUser" = "**%@** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links.";
+"SendInviteLink.TextUnavailableMultipleUsers_1" = "**%d user** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links.";
+"SendInviteLink.TextUnavailableMultipleUsers_any" = "**%d users** can only be invited via an invite link.\nHowever the admin of this group restricts you from sharing invite links.";
+
+"SendInviteLink.ActionSkip" = "Skip";
+"SendInviteLink.ActionInvite" = "Send Invite Link";
+"SendInviteLink.ActionClose" = "Close";
+
+"Chat.ContextMenu.AdSponsorInfo" = "Sponsor Info";
+"Chat.ContextMenu.AdSponsorInfoCopied" = "Text copied.";
+
+"Settings.PowerSaving" = "Power Saving";
+"Settings.PowerSavingOn" = "On";
+"Settings.PowerSavingOff" = "Off";
+
+"Conversation.BotApp" = "Bot Application";
+"Conversation.OpenBotApp" = "OPEN APP";
+
+"Attachment.Gift" = "Gift";
+
+"Premium.Gift.TitleShort" = "Telegram Premium";
+
+"VoiceOver.GiftPremium" = "Gift Telegram Premium";
+
+"Login.Email.CantAccess" = "Can't access this email?";
+"Login.Email.ResetTitle" = "Reset Email";
+"Login.Email.ResetText" = "You can change your login email if you are logged into Telegram from another device. Otherwise, if you don't have access to email %1$@, you can reset this email with an **SMS** code **%2$@**.";
+"Login.Email.Reset" = "Reset";
+"Login.Email.ResetNowViaSMS" = "Reset now via SMS";
+"Login.Email.WillBeResetIn" = "Email will be reset %@";
+"Login.Email.PremiumRequiredTitle" = "Telegram Premium Required";
+"Login.Email.PremiumRequiredText" = "Due to high cost of SMS in your country, you need to have a **Telegram Premium** account to reset this email via an SMS code.\n\nYou can ask a friend to gift a Premium subscription for your account\n**%@**";
+
+"ChatList.StartMessaging" = "Select a chat to start messaging";
+
+"Conversation.ForwardOptions.RecipientsMessageForwardVisible" = "Recipients will see that it was forwarded";
+"Conversation.ForwardOptions.RecipientsMessageForwardHidden" = "Recipients won't see that it was forwarded";
+"Conversation.ForwardOptions.RecipientsMessagesForwardVisible" = "Recipients will see they were forwarded";
+"Conversation.ForwardOptions.RecipientsMessagesForwardHidden" = "Recipients won't see they were forwarded";
+
+"Conversation.SendMessage.SendWhenOnline" = "Send When Online";
+
+"DataUsage.HeaderNoDataUsed" = "No data used";
+"DataUsage.Header" = "Data Usage";
+
+"DataUsage.SettingsHelpCellular" = "You can change your auto-download settings for media to reduce data usage when cellular.";
+"DataUsage.SettingsHelpWifi" = "You can change your auto-download settings for media to reduce data usage when on wifi.";
+
+"DataUsage.Reset" = "Reset Statistics";

@@ -187,8 +187,10 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
     private let acceptHeaderNode: ImmediateTextNode
     private let secretChatsTitleNode: ImmediateTextNode
     private let secretChatsSwitchNode: SwitchNode
+    private let secretChatsActivateAreaNode: AccessibilityAreaNode
     private let incomingCallsTitleNode: ImmediateTextNode
     private let incomingCallsSwitchNode: SwitchNode
+    private let incomingCallsActivateAreaNode: AccessibilityAreaNode
     private let acceptSeparatorNode: ASDisplayNode
     
     private let cancelButton: HighlightableButtonNode
@@ -264,8 +266,13 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.incomingCallsTitleNode = ImmediateTextNode()
         self.incomingCallsSwitchNode = SwitchNode()
         
+        self.secretChatsActivateAreaNode = AccessibilityAreaNode()
+        self.incomingCallsActivateAreaNode = AccessibilityAreaNode()
+        
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
+        self.cancelButton.accessibilityLabel = presentationData.strings.Common_Close
+        self.cancelButton.accessibilityTraits = [.button]
                 
         self.terminateButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: self.presentationData.theme.list.itemDestructiveColor), font: .regular, height: 44.0, cornerRadius: 11.0, gloss: false)
         
@@ -341,6 +348,9 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 self.secretChatsSwitchNode.isOn = session.flags.contains(.acceptsSecretChats)
                 self.incomingCallsSwitchNode.isOn = session.flags.contains(.acceptsIncomingCalls)
             
+                self.secretChatsActivateAreaNode.accessibilityValue = self.secretChatsSwitchNode.isOn ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
+                self.incomingCallsActivateAreaNode.accessibilityValue = self.incomingCallsSwitchNode.isOn ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
+            
                 if !session.flags.contains(.passwordPending) && session.apiId != 22 {
                     hasIncomingCalls = true
                     if ![2040, 2496].contains(session.apiId) {
@@ -385,24 +395,42 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(30.0), textColor: textColor)
+        self.titleNode.accessibilityLabel = title
+        self.titleNode.isAccessibilityElement = true
+        
         self.textNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: subtitleActive ? accentColor : secondaryTextColor)
+        self.textNode.accessibilityLabel = subtitle
+        self.textNode.isAccessibilityElement = true
         
         self.deviceTitleNode.attributedText = NSAttributedString(string: deviceTitle, font: Font.regular(17.0), textColor: textColor)
         self.deviceValueNode.attributedText = NSAttributedString(string: device, font: Font.regular(17.0), textColor: secondaryTextColor)
-      
+        self.deviceValueNode.accessibilityLabel = deviceTitle
+        self.deviceValueNode.accessibilityValue = device
+        self.deviceValueNode.isAccessibilityElement = true
+        
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
         
         self.ipTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_IP, font: Font.regular(17.0), textColor: textColor)
         self.ipValueNode.attributedText = NSAttributedString(string: ip, font: Font.regular(17.0), textColor: secondaryTextColor)
+        self.ipValueNode.accessibilityLabel = self.presentationData.strings.AuthSessions_View_IP
+        self.ipValueNode.accessibilityValue = ip
+        self.ipValueNode.isAccessibilityElement = true
         
         self.secondSeparatorNode = ASDisplayNode()
         self.secondSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
         
         self.locationTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_Location, font: Font.regular(17.0), textColor: textColor)
+        
         self.locationValueNode.attributedText = NSAttributedString(string: location, font: Font.regular(17.0), textColor: secondaryTextColor)
+        self.locationValueNode.accessibilityLabel = self.presentationData.strings.AuthSessions_View_Location
+        self.locationValueNode.accessibilityValue = location
+        self.locationValueNode.isAccessibilityElement = true
+
         self.locationInfoNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_LocationInfo, font: Font.regular(13.0), textColor: secondaryTextColor)
         self.locationInfoNode.maximumNumberOfLines = 4
+        self.locationInfoNode.accessibilityLabel = self.presentationData.strings.AuthSessions_View_LocationInfo
+        self.locationInfoNode.isAccessibilityElement = true
         
         self.acceptBackgroundNode = ASDisplayNode()
         self.acceptBackgroundNode.clipsToBounds = true
@@ -410,8 +438,17 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.acceptBackgroundNode.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
         
         self.acceptHeaderNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_AcceptTitle.uppercased(), font: Font.regular(17.0), textColor: textColor)
+        self.acceptHeaderNode.accessibilityLabel = self.presentationData.strings.AuthSessions_View_AcceptTitle
+        self.acceptHeaderNode.isAccessibilityElement = true
+        
         self.secretChatsTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_AcceptSecretChats, font: Font.regular(17.0), textColor: textColor)
         self.incomingCallsTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_AcceptIncomingCalls, font: Font.regular(17.0), textColor: textColor)
+        
+        self.secretChatsActivateAreaNode.accessibilityLabel = self.presentationData.strings.AuthSessions_View_AcceptSecretChats
+        self.secretChatsActivateAreaNode.accessibilityHint = self.presentationData.strings.VoiceOver_Common_SwitchHint
+        
+        self.incomingCallsActivateAreaNode.accessibilityLabel = self.presentationData.strings.AuthSessions_View_AcceptIncomingCalls
+        self.incomingCallsActivateAreaNode.accessibilityHint = self.presentationData.strings.VoiceOver_Common_SwitchHint
         
         self.acceptSeparatorNode = ASDisplayNode()
         self.acceptSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
@@ -463,22 +500,48 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
             if hasSecretChats {
                 self.contentContainerNode.addSubnode(self.secretChatsTitleNode)
                 self.contentContainerNode.addSubnode(self.secretChatsSwitchNode)
+                self.contentContainerNode.addSubnode(self.secretChatsActivateAreaNode)
                 
                 self.secretChatsSwitchNode.valueUpdated = { [weak self] value in
                     if let strongSelf = self {
                         strongSelf.updateAcceptSecretChats?(value)
+                        
+                        strongSelf.secretChatsActivateAreaNode.accessibilityValue = value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
                     }
+                }
+                
+                self.secretChatsActivateAreaNode.activate = { [weak self] in
+                    guard let strongSelf = self else {
+                        return false
+                    }
+                    let value = !strongSelf.secretChatsSwitchNode.isOn
+                    strongSelf.updateAcceptSecretChats?(value)
+                    strongSelf.secretChatsActivateAreaNode.accessibilityValue = value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
+                    return true
                 }
                 
                 self.contentContainerNode.addSubnode(self.acceptSeparatorNode)
             }
             self.contentContainerNode.addSubnode(self.incomingCallsTitleNode)
             self.contentContainerNode.addSubnode(self.incomingCallsSwitchNode)
+            self.contentContainerNode.addSubnode(self.incomingCallsActivateAreaNode)
             
             self.incomingCallsSwitchNode.valueUpdated = { [weak self] value in
                 if let strongSelf = self {
                     strongSelf.updateAcceptIncomingCalls?(value)
+                    
+                    strongSelf.incomingCallsActivateAreaNode.accessibilityValue = value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
                 }
+            }
+            
+            self.incomingCallsActivateAreaNode.activate = { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                let value = !strongSelf.incomingCallsSwitchNode.isOn
+                strongSelf.updateAcceptIncomingCalls?(value)
+                strongSelf.incomingCallsActivateAreaNode.accessibilityValue = value ? presentationData.strings.VoiceOver_Common_On : presentationData.strings.VoiceOver_Common_Off
+                return true
             }
         }
         
@@ -800,6 +863,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 let switchSize = switchView.bounds.size
                 
                 self.secretChatsSwitchNode.frame = CGRect(origin: CGPoint(x: fieldFrame.maxX - switchSize.width - inset, y: secretFrame.minY + floorToScreenPixels((fieldItemHeight - switchSize.height) / 2.0)), size: switchSize)
+                self.secretChatsActivateAreaNode.frame = CGRect(origin: CGPoint(x: secretFrame.minX, y: secretFrame.minY), size: CGSize(width: fieldFrame.width, height: fieldItemHeight))
             }
         }
                 
@@ -815,7 +879,8 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
             }
             let switchSize = switchView.bounds.size
             
-            self.incomingCallsSwitchNode.frame = CGRect(origin: CGPoint(x:  fieldFrame.maxX - switchSize.width - inset, y: secretFrame.maxY - fieldItemHeight + floorToScreenPixels((fieldItemHeight - switchSize.height) / 2.0)), size: switchSize)
+            self.incomingCallsSwitchNode.frame = CGRect(origin: CGPoint(x: fieldFrame.maxX - switchSize.width - inset, y: secretFrame.maxY - fieldItemHeight + floorToScreenPixels((fieldItemHeight - switchSize.height) / 2.0)), size: switchSize)
+            self.incomingCallsActivateAreaNode.frame = CGRect(origin: CGPoint(x: secretFrame.minX, y: secretFrame.maxY - fieldItemHeight), size: CGSize(width: fieldFrame.width, height: fieldItemHeight))
         }
         
         if let _ = self.acceptBackgroundNode.supernode {
@@ -833,8 +898,10 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         if isCurrent {
             contentHeight -= 68.0
             self.terminateButton.isHidden = true
+            self.terminateButton.isAccessibilityElement = false
         } else {
             self.terminateButton.isHidden = false
+            self.terminateButton.isAccessibilityElement = true
         }
         
         let sideInset = floor((layout.size.width - width) / 2.0)

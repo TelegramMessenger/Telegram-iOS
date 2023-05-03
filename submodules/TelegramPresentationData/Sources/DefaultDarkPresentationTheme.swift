@@ -174,6 +174,16 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         }
     }
     
+    var highlightedBubbleFillColor: UIColor?
+    if let outgoingBubbleFillColors {
+        let middleBubbleFillColor = outgoingBubbleFillColors[Int(floor(Float(outgoingBubbleFillColors.count) / 2))]
+        if middleBubbleFillColor.brightness > 0.98 {
+            highlightedBubbleFillColor = middleBubbleFillColor.withMultiplied(hue: 1.0, saturation: 0.87, brightness: 1.0)
+        } else {
+            highlightedBubbleFillColor = middleBubbleFillColor.withMultiplied(hue: 1.0, saturation: 1.1, brightness: 1.121)
+        }
+    }
+    
     chat = chat.withUpdated(
         defaultWallpaper: defaultWallpaper,
         animateMessageColors: animateBubbleColors,
@@ -223,7 +233,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
                 bubble: chat.message.outgoing.bubble.withUpdated(
                     withWallpaper: chat.message.outgoing.bubble.withWallpaper.withUpdated(
                         fill: outgoingBubbleFillColors,
-                        highlightedFill: outgoingBubbleFillColors?.first?.withMultipliedBrightnessBy(1.421),
+                        highlightedFill: highlightedBubbleFillColor,
                         stroke: .clear,
                         reactionInactiveBackground: UIColor(rgb: 0xffffff, alpha: 0.12),
                         reactionInactiveForeground: UIColor(rgb: 0xffffff),
@@ -234,7 +244,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
                     ),
                     withoutWallpaper: chat.message.outgoing.bubble.withoutWallpaper.withUpdated(
                         fill: outgoingBubbleFillColors,
-                        highlightedFill: outgoingBubbleFillColors?.first?.withMultipliedBrightnessBy(1.421),
+                        highlightedFill: highlightedBubbleFillColor,
                         stroke: .clear,
                         reactionInactiveBackground: UIColor(rgb: 0xffffff, alpha: 0.12),
                         reactionInactiveForeground: UIColor(rgb: 0xffffff),
@@ -623,7 +633,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
 
     let inputPanel = PresentationThemeChatInputPanel(
         panelBackgroundColor: rootNavigationBar.blurredBackgroundColor,
-        panelBackgroundColorNoWallpaper: UIColor(rgb: 0x000000, alpha: 0.94),
+        panelBackgroundColorNoWallpaper: UIColor(rgb: 0x000000),
         panelSeparatorColor: UIColor(rgb: 0x545458, alpha: 0.55),
         panelControlAccentColor: UIColor(rgb: 0xffffff),
         panelControlColor: UIColor(rgb: 0x808080),

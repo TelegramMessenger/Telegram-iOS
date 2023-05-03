@@ -88,8 +88,13 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             var selectedContact: TelegramMediaContact?
             for media in item.message.media {
                 if let media = media as? TelegramMediaContact {
-                    selectedContact = media
+                    selectedContact = media;
                 }
+            }
+            
+            var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            if case .forwardedMessages = item.associatedData.subject {
+                incoming = false
             }
             
             var titleString: NSAttributedString?
@@ -149,8 +154,8 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 updatedContactInfo = info
                 
-                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor)
-                textString = NSAttributedString(string: info, font: textFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor)
+                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor)
+                textString = NSAttributedString(string: info, font: textFont, textColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor)
             } else {
                 updatedContactInfo = nil
             }
@@ -193,7 +198,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
-                        if item.message.effectivelyIncoming(item.context.account.peerId) {
+                        if incoming {
                             statusType = .BubbleIncoming
                         } else {
                             if item.message.flags.contains(.Failed) {
@@ -242,7 +247,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let titleColor: UIColor
                 let titleHighlightedColor: UIColor
                 let avatarPlaceholderColor: UIColor
-                if item.message.effectivelyIncoming(item.context.account.peerId) {
+                if incoming {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(item.presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(item.presentationData.theme.theme)!
                     titleColor = item.presentationData.theme.theme.chat.message.incoming.accentTextColor

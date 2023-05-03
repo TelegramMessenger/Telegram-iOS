@@ -27,14 +27,10 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         return parseMarkdownIntoAttributedString(strings.Login_CodeSentCallText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     case .emailSetupRequired:
         return NSAttributedString(string: "", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
-    case let .email(emailPattern, _, _, _, _):
+    case let .email(emailPattern, _, _, _, _, _):
         let mutableString = NSAttributedString(string: strings.Login_EnterCodeEmailText(email ?? emailPattern).string, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center).mutableCopy() as! NSMutableAttributedString
-        
-        let string = mutableString.string
-        let nsString = string as NSString
-
         if let regex = try? NSRegularExpression(pattern: "\\*", options: []) {
-            let matches = regex.matches(in: string, options: [], range: NSMakeRange(0, nsString.length))
+            let matches = regex.matches(in: mutableString.string, options: [], range: NSMakeRange(0, mutableString.length))
             if let first = matches.first {
                 mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: NSRange(location: first.range.location, length: matches.count))
             }

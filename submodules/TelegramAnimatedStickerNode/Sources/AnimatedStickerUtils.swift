@@ -249,12 +249,6 @@ public func cacheAnimatedStickerFrames(data: Data, size: CGSize, fitzModifier: E
                                         
                     subscriber.putNext(.tempFile(tempFile))
                     subscriber.putCompletion()
-                    /*print("animation render time \(CACurrentMediaTime() - startTime)")
-                    print("of which drawing time \(drawingTime)")
-                    print("of which appending time \(appendingTime)")
-                    print("of which delta time \(deltaTime)")
-                    
-                    print("of which compression time \(compressionTime)")*/
                 }
             }
         }))
@@ -399,12 +393,6 @@ public func cacheVideoStickerFrames(path: String, size: CGSize, cacheKey: String
             
             subscriber.putNext(.tempFile(tempFile))
             subscriber.putCompletion()
-            /*print("animation render time \(CACurrentMediaTime() - startTime)")
-            print("of which drawing time \(drawingTime)")
-            print("of which appending time \(appendingTime)")
-            print("of which delta time \(deltaTime)")
-            
-            print("of which compression time \(compressionTime)")*/
         }))
                                           
         return ActionDisposable {

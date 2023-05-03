@@ -9,6 +9,9 @@ import SegmentedControlNode
 import ChatListSearchItemHeader
 
 final class HashtagSearchControllerNode: ASDisplayNode {
+    private let context: AccountContext
+    private weak var controller: HashtagSearchController?
+    
     private let navigationBar: NavigationBar?
 
     private let segmentedControlNode: SegmentedControlNode
@@ -16,15 +19,16 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     let chatController: ChatController?
     
-    private let context: AccountContext
+    
     private let query: String
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var hasValidLayout = false
     
-    init(context: AccountContext, peer: EnginePeer?, query: String, navigationBar: NavigationBar?, navigationController: NavigationController?) {
+    init(context: AccountContext, controller: HashtagSearchController, peer: EnginePeer?, query: String, navigationBar: NavigationBar?, navigationController: NavigationController?) {
         self.context = context
+        self.controller = controller
         self.query = query
         self.navigationBar = navigationBar
         
@@ -74,6 +78,17 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.chatController?.isSelectingMessagesUpdated = { [weak self] isSelecting in
+            if let strongSelf = self {
+                let button: UIBarButtonItem? = isSelecting ? UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .done, target: self, action: #selector(strongSelf.cancelPressed)) : nil
+                strongSelf.controller?.navigationItem.setRightBarButton(button, animated: true)
+            }
+        }
+    }
+    
+    @objc private func cancelPressed() {
+        self.chatController?.cancelSelectingMessages()
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {

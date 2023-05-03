@@ -961,7 +961,7 @@ public final class ContactListNode: ASDisplayNode {
             self?.suppressPermissionWarning?()
         }, openPeer: { [weak self] peer, action in
             if let strongSelf = self {
-                if multipleSelection {
+                if strongSelf.multipleSelection {
                     var updated = false
                     strongSelf.updateSelectionState({ state in
                         if let state = state {

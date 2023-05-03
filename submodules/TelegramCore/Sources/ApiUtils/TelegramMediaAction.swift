@@ -50,8 +50,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .historyScreenshot)
     case let .messageActionCustomAction(message):
         return TelegramMediaAction(action: .customText(text: message, entities: []))
-    case let .messageActionBotAllowed(domain):
-        return TelegramMediaAction(action: .botDomainAccessGranted(domain: domain))
+    case let .messageActionBotAllowed(_, domain, _):
+        return TelegramMediaAction(action: .botDomainAccessGranted(domain: domain ?? ""))
     case .messageActionSecureValuesSentMe:
         return nil
     case let .messageActionSecureValuesSent(types):
@@ -106,8 +106,6 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .topicEdited(components: components))
     case let.messageActionSuggestProfilePhoto(photo):
         return TelegramMediaAction(action: .suggestedProfilePhoto(image: telegramMediaImageFromApiPhoto(photo)))
-    case .messageActionAttachMenuBotAllowed:
-        return TelegramMediaAction(action: .attachMenuBotAllowed)
     case let .messageActionRequestedPeer(buttonId, peer):
         return TelegramMediaAction(action: .requestedPeer(buttonId: buttonId, peerId: peer.peerId))
     }

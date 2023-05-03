@@ -96,9 +96,9 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, interaction: FeaturedInteraction, isOther: Bool) -> GridItem {
+    func item(context: AccountContext, interaction: FeaturedInteraction, isOther: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, fillsRow: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(context: context, theme: self.theme, strings: self.strings, listAppearance: true, fillsRow: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info, !self.installed)
@@ -143,10 +143,10 @@ private enum FeaturedEntry: Identifiable, Comparable {
         }
     }
     
-    func item(account: Account, interaction: FeaturedInteraction) -> GridItem {
+    func item(context: AccountContext, interaction: FeaturedInteraction) -> GridItem {
         switch self {
         case let .pack(pack, isOther):
-            return pack.item(account: account, interaction: interaction, isOther: isOther)
+            return pack.item(context: context, interaction: interaction, isOther: isOther)
         }
     }
 }
@@ -159,12 +159,12 @@ private struct FeaturedTransition {
     let scrollToItem: GridNodeScrollToItem?
 }
 
-private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries: [FeaturedEntry], account: Account, interaction: FeaturedInteraction, initial: Bool, scrollToItem: GridNodeScrollToItem?) -> FeaturedTransition {
+private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries: [FeaturedEntry], context: AccountContext, interaction: FeaturedInteraction, initial: Bool, scrollToItem: GridNodeScrollToItem?) -> FeaturedTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction)) }
     
     return FeaturedTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial, scrollToItem: scrollToItem)
 }
@@ -401,7 +401,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 }
             }
             
-            return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: initial, scrollToItem: scrollToItem)
+            return preparedTransition(from: previous ?? [], to: entries, context: context, interaction: interaction, initial: initial, scrollToItem: scrollToItem)
         }
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             guard let strongSelf = self else {
@@ -713,6 +713,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             itemSize.width -= 60.0
             insets.left += 30.0
             insets.right += 30.0
+        } else {
+            itemSize.width -= layout.safeInsets.left + layout.safeInsets.right
         }
         
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: UIEdgeInsets(top: insets.top, left: insets.left + layout.safeInsets.left, bottom: insets.bottom + layout.safeInsets.bottom, right: insets.right + layout.safeInsets.right), preloadSize: 300.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
@@ -1032,14 +1034,14 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> GridItem {
+    func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
-            return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
+            return StickerPaneSearchStickerItem(context: context, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
                 interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: true, fillsRow: true, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(context: context, theme: theme, strings: strings, listAppearance: true, fillsRow: true, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)
@@ -1060,7 +1062,7 @@ private struct FeaturedSearchGridTransition {
     let animated: Bool
 }
 
-private func preparedFeaturedSearchEntryTransition(account: Account, theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [FeaturedSearchEntry], to toEntries: [FeaturedSearchEntry], interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> FeaturedSearchGridTransition {
+private func preparedFeaturedSearchEntryTransition(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [FeaturedSearchEntry], to toEntries: [FeaturedSearchEntry], interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> FeaturedSearchGridTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     var animated = false
@@ -1069,8 +1071,8 @@ private func preparedFeaturedSearchEntryTransition(account: Account, theme: Pres
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, itemContext: itemContext), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, itemContext: itemContext)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, itemContext: itemContext), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, itemContext: itemContext)) }
     
     let firstIndexInSectionOffset = 0
     
@@ -1182,7 +1184,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 let _ = strongSelf.sendSticker?(file, sourceView, sourceRect)
             }
         }, getItemIsPreviewed: { item in
-            return inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
+            return inputNodeInteraction.previewedStickerPackItemFile?.id == item.file.id
         })
         
         self._ready.set(.single(Void()))
@@ -1373,7 +1375,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 }
                 
                 let previousEntries = strongSelf.currentEntries.swap(entries)
-                let transition = preparedFeaturedSearchEntryTransition(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction, itemContext: strongSelf.itemContext)
+                let transition = preparedFeaturedSearchEntryTransition(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction, itemContext: strongSelf.itemContext)
                 strongSelf.enqueueTransition(transition)
                 
                 if displayResults {

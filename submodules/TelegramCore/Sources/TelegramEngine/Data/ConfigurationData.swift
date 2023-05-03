@@ -185,6 +185,26 @@ public extension EngineConfiguration.SearchBots {
     }
 }
 
+public extension EngineConfiguration {
+    struct Links {
+        public var autologinToken: String?
+
+        public init(
+            autologinToken: String?
+        ) {
+            self.autologinToken = autologinToken
+        }
+    }
+}
+
+public extension EngineConfiguration.Links {
+    init(_ configuration: LinksConfiguration) {
+        self.init(
+            autologinToken: configuration.autologinToken
+        )
+    }
+}
+
 public extension TelegramEngine.EngineData.Item {
     enum Configuration {
         public struct App: TelegramEngineDataItem, PostboxViewDataItem {
@@ -398,6 +418,27 @@ public extension TelegramEngine.EngineData.Item {
                     return GlobalMessageAutoremoveTimeoutSettings.default.messageAutoremoveTimeout
                 }
                 return settings.messageAutoremoveTimeout
+            }
+        }
+        
+        public struct Links: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineConfiguration.Links
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.linksConfiguration]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.linksConfiguration]?.get(LinksConfiguration.self) else {
+                    return EngineConfiguration.Links(LinksConfiguration.defaultValue)
+                }
+                return EngineConfiguration.Links(value)
             }
         }
     }

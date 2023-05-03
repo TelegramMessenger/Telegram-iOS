@@ -156,6 +156,9 @@ open class ManagedAnimationNode: ASDisplayNode {
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
     
+    private var previousTimestamp: Double?
+    private var delta: Double?
+    
     public var customColor: UIColor? {
         didSet {
             if let customColor = self.customColor, oldValue?.rgb != customColor.rgb {
@@ -188,7 +191,22 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
         
         displayLinkUpdate = { [weak self] in
-            self?.updateAnimation()
+            if let strongSelf = self {
+//                let timestamp = CACurrentMediaTime()
+//                var delta: Double
+//                if let previousTimestamp = strongSelf.previousTimestamp {
+//                    delta = min(timestamp - previousTimestamp, 1.0 / 60.0)
+//                    if let currentDelta = strongSelf.delta, currentDelta < delta {
+//                        delta = currentDelta
+//                    }
+//                } else {
+                let delta = 1.0 / 60.0
+//                }
+//                strongSelf.previousTimestamp = timestamp
+                strongSelf.delta = delta
+                
+                strongSelf.updateAnimation()
+            }
         }
     }
     
@@ -278,9 +296,8 @@ open class ManagedAnimationNode: ASDisplayNode {
             }
         }
         
-        var animationAdvancement: Double = 1.0 / 60.0
+        var animationAdvancement: Double = self.delta ?? 1.0 / 60.0
         animationAdvancement *= Double(min(2, self.trackStack.count + 1))
-        
         state.relativeTime += animationAdvancement
         
         if state.relativeTime >= duration && !self.didTryAdvancingState {
@@ -313,6 +330,7 @@ open class ManagedAnimationNode: ASDisplayNode {
 
 public final class SimpleAnimationNode: ManagedAnimationNode {
     private let stillItem: ManagedAnimationItem
+    private let stillEndItem: ManagedAnimationItem
     private let animationItem: ManagedAnimationItem
     
     public let size: CGSize
@@ -323,6 +341,7 @@ public final class SimpleAnimationNode: ManagedAnimationNode {
         self.size = size
         self.playOnce = playOnce
         self.stillItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors, frames: .range(startFrame: 0, endFrame: 0), duration: 0.01)
+        self.stillEndItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors, frames: .still(.end), duration: 0.01)
         self.animationItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors)
 
         super.init(size: size)
@@ -340,5 +359,10 @@ public final class SimpleAnimationNode: ManagedAnimationNode {
     public func reset() {
         self.didPlay = false
         self.trackTo(item: self.stillItem)
+    }
+    
+    public func seekToEnd() {
+        self.didPlay = false
+        self.trackTo(item: self.stillEndItem)
     }
 }

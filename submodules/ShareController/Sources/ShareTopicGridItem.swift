@@ -106,7 +106,7 @@ final class ShareTopicGridItemNode: GridItemNode {
         
         let iconContent: EmojiStatusComponent.Content
         if let fileId = item.threadInfo.info.icon {
-            iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 96.0, height: 96.0), placeholderColor: item.theme.actionSheet.disabledActionTextColor, themeColor: item.theme.actionSheet.primaryTextColor, loopMode: .count(2))
+            iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 96.0, height: 96.0), placeholderColor: item.theme.actionSheet.disabledActionTextColor, themeColor: item.theme.actionSheet.primaryTextColor, loopMode: .count(0))
         } else {
             iconContent = .topic(title: String(item.threadInfo.info.title.prefix(1)), color: item.threadInfo.info.iconColor, size: CGSize(width: 64.0, height: 64.0))
         }

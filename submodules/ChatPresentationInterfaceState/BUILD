@@ -19,7 +19,6 @@ swift_library(
         "//submodules/ChatInterfaceState:ChatInterfaceState",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
-        "//submodules/StickerPeekUI:StickerPeekUI",
     ],
     visibility = [
         "//visibility:public",

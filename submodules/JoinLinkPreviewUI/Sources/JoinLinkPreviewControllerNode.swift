@@ -236,7 +236,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let contentNode = self.contentNode {
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: 0.0), size: gridSize))
-            contentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: 0.0, transition: transition)
+            contentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height && layout.metrics.widthClass == .compact, bottomInset: 0.0, transition: transition)
         }
     }
     

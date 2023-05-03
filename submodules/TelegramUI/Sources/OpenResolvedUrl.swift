@@ -79,7 +79,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 let addMemberImpl = {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let theme = AlertControllerTheme(presentationData: presentationData)
-                    let attributedTitle = NSAttributedString(string: presentationData.strings.Bot_AddToChat_Add_MemberAlertTitle, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                    let attributedTitle = NSAttributedString(string: presentationData.strings.Bot_AddToChat_Add_MemberAlertTitle, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: theme.primaryColor, paragraphAlignment: .center)
                   
                     var isGroup: Bool = false
                     var peerTitle: String = ""
@@ -95,8 +95,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     
                     let text = isGroup ? presentationData.strings.Bot_AddToChat_Add_MemberAlertTextGroup(peerTitle).string : presentationData.strings.Bot_AddToChat_Add_MemberAlertTextChannel(peerTitle).string
                     
-                    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
-                    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+                    let body = MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
                     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
                     
                     let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Bot_AddToChat_Add_MemberAlertAdd, action: {
@@ -159,6 +159,28 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         navigationController?.pushViewController(controller)
                     }
                 }
+            }
+            dismissInput()
+            navigationController?.pushViewController(controller)
+        case let .gameStart(botPeerId, game):
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title, selectForumThreads: true))
+            controller.peerSelected = { [weak controller] peer, _ in
+                let _ = peer.id
+                let _ = botPeerId
+                let _ = game
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                if let peer = peer as? TelegramUser {
+                    text = presentationData.strings.Target_ShareGameConfirmationPrivate(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                } else {
+                    text = presentationData.strings.Target_ShareGameConfirmationGroup(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                }
+                
+                let alertController = textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.RequestPeer_SelectionConfirmationSend, action: {
+                    controller?.dismiss()
+                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                })])
+                present(alertController, nil)
             }
             dismissInput()
             navigationController?.pushViewController(controller)
@@ -511,6 +533,19 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 })
             case .twoStepAuth:
                 break
+            case .enableLog:
+                if let navigationController = navigationController {
+                    let _ = updateLoggingSettings(accountManager: context.sharedContext.accountManager, {
+                        $0.withUpdatedLogToFile(true)
+                    }).start()
+                    
+                    if let controller = context.sharedContext.makeDebugSettingsController(context: context) {
+                        var controllers = navigationController.viewControllers
+                        controllers.append(controller)
+                        
+                        navigationController.setViewControllers(controllers, animated: true)
+                    }
+                }
             }
         case let .premiumOffer(reference):
             dismissInput()

@@ -148,6 +148,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         self.measureTextNode = TextNode()
         
         self.limitTextNode = TextNode()
+        self.limitTextNode.displaysAsynchronously = false
         
         super.init(layerBacked: false, dynamicBounce: false)
         

@@ -358,7 +358,7 @@ public extension Api.auth {
     enum SentCodeType: TypeConstructorDescription {
         case sentCodeTypeApp(length: Int32)
         case sentCodeTypeCall(length: Int32)
-        case sentCodeTypeEmailCode(flags: Int32, emailPattern: String, length: Int32, nextPhoneLoginDate: Int32?)
+        case sentCodeTypeEmailCode(flags: Int32, emailPattern: String, length: Int32, resetAvailablePeriod: Int32?, resetPendingDate: Int32?)
         case sentCodeTypeFirebaseSms(flags: Int32, nonce: Buffer?, receipt: String?, pushTimeout: Int32?, length: Int32)
         case sentCodeTypeFlashCall(pattern: String)
         case sentCodeTypeFragmentSms(url: String, length: Int32)
@@ -380,14 +380,15 @@ public extension Api.auth {
                     }
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
-                case .sentCodeTypeEmailCode(let flags, let emailPattern, let length, let nextPhoneLoginDate):
+                case .sentCodeTypeEmailCode(let flags, let emailPattern, let length, let resetAvailablePeriod, let resetPendingDate):
                     if boxed {
-                        buffer.appendInt32(1511364673)
+                        buffer.appendInt32(-196020837)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(emailPattern, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(nextPhoneLoginDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(resetAvailablePeriod!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(resetPendingDate!, buffer: buffer, boxed: false)}
                     break
                 case .sentCodeTypeFirebaseSms(let flags, let nonce, let receipt, let pushTimeout, let length):
                     if boxed {
@@ -440,8 +441,8 @@ public extension Api.auth {
                 return ("sentCodeTypeApp", [("length", length as Any)])
                 case .sentCodeTypeCall(let length):
                 return ("sentCodeTypeCall", [("length", length as Any)])
-                case .sentCodeTypeEmailCode(let flags, let emailPattern, let length, let nextPhoneLoginDate):
-                return ("sentCodeTypeEmailCode", [("flags", flags as Any), ("emailPattern", emailPattern as Any), ("length", length as Any), ("nextPhoneLoginDate", nextPhoneLoginDate as Any)])
+                case .sentCodeTypeEmailCode(let flags, let emailPattern, let length, let resetAvailablePeriod, let resetPendingDate):
+                return ("sentCodeTypeEmailCode", [("flags", flags as Any), ("emailPattern", emailPattern as Any), ("length", length as Any), ("resetAvailablePeriod", resetAvailablePeriod as Any), ("resetPendingDate", resetPendingDate as Any)])
                 case .sentCodeTypeFirebaseSms(let flags, let nonce, let receipt, let pushTimeout, let length):
                 return ("sentCodeTypeFirebaseSms", [("flags", flags as Any), ("nonce", nonce as Any), ("receipt", receipt as Any), ("pushTimeout", pushTimeout as Any), ("length", length as Any)])
                 case .sentCodeTypeFlashCall(let pattern):
@@ -487,13 +488,16 @@ public extension Api.auth {
             var _3: Int32?
             _3 = reader.readInt32()
             var _4: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 3) != 0 {_4 = reader.readInt32() }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.auth.SentCodeType.sentCodeTypeEmailCode(flags: _1!, emailPattern: _2!, length: _3!, nextPhoneLoginDate: _4)
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.auth.SentCodeType.sentCodeTypeEmailCode(flags: _1!, emailPattern: _2!, length: _3!, resetAvailablePeriod: _4, resetPendingDate: _5)
             }
             else {
                 return nil

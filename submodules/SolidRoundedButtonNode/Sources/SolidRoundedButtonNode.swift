@@ -69,6 +69,95 @@ public enum SolidRoundedButtonProgressType {
     case embedded
 }
 
+private final class BadgeNode: ASDisplayNode {
+    private var fillColor: UIColor
+    private var strokeColor: UIColor
+    private var textColor: UIColor
+    
+    private let textNode: ImmediateTextNode
+    private let backgroundNode: ASImageNode
+    
+    private let font: UIFont = Font.with(size: 15.0, design: .round, weight: .bold)
+    
+    var text: String = "" {
+        didSet {
+            self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
+            self.invalidateCalculatedLayout()
+        }
+    }
+    
+    init(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
+        self.fillColor = fillColor
+        self.strokeColor = strokeColor
+        self.textColor = textColor
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
+        
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor, strokeColor: nil, strokeWidth: 1.0)
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.textNode)
+        
+        self.isUserInteractionEnabled = false
+    }
+    
+    func updateTheme(fillColor: UIColor, strokeColor: UIColor, textColor: UIColor) {
+        self.fillColor = fillColor
+        self.strokeColor = strokeColor
+        self.textColor = textColor
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor, strokeColor: strokeColor, strokeWidth: 1.0)
+        self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
+    }
+    
+    func animateBump(incremented: Bool) {
+        if incremented {
+            let firstTransition = ContainedViewLayoutTransition.animated(duration: 0.1, curve: .easeInOut)
+            firstTransition.updateTransformScale(layer: self.backgroundNode.layer, scale: 1.2)
+            firstTransition.updateTransformScale(layer: self.textNode.layer, scale: 1.2, completion: { finished in
+                if finished {
+                    let secondTransition = ContainedViewLayoutTransition.animated(duration: 0.1, curve: .easeInOut)
+                    secondTransition.updateTransformScale(layer: self.backgroundNode.layer, scale: 1.0)
+                    secondTransition.updateTransformScale(layer: self.textNode.layer, scale: 1.0)
+                }
+            })
+        } else {
+            let firstTransition = ContainedViewLayoutTransition.animated(duration: 0.1, curve: .easeInOut)
+            firstTransition.updateTransformScale(layer: self.backgroundNode.layer, scale: 0.8)
+            firstTransition.updateTransformScale(layer: self.textNode.layer, scale: 0.8, completion: { finished in
+                if finished {
+                    let secondTransition = ContainedViewLayoutTransition.animated(duration: 0.1, curve: .easeInOut)
+                    secondTransition.updateTransformScale(layer: self.backgroundNode.layer, scale: 1.0)
+                    secondTransition.updateTransformScale(layer: self.textNode.layer, scale: 1.0)
+                }
+            })
+        }
+    }
+    
+    func animateOut() {
+        let timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+        self.backgroundNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, delay: 0.0, timingFunction: timingFunction, removeOnCompletion: true, completion: nil)
+        self.textNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, delay: 0.0, timingFunction: timingFunction, removeOnCompletion: true, completion: nil)
+    }
+    
+    func update(_ constrainedSize: CGSize) -> CGSize {
+        let badgeSize = self.textNode.updateLayout(constrainedSize)
+        let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 8.0), height: 18.0)
+        let backgroundFrame = CGRect(origin: CGPoint(), size: backgroundSize)
+        self.backgroundNode.frame = backgroundFrame
+        self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: floorToScreenPixels((backgroundFrame.size.height - badgeSize.height) / 2.0) - UIScreenPixel), size: badgeSize)
+        
+        return backgroundSize
+    }
+}
+
 public final class SolidRoundedButtonNode: ASDisplayNode {
     private var theme: SolidRoundedButtonTheme
     private var font: SolidRoundedButtonFont
@@ -89,6 +178,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private let iconNode: ASImageNode
     private var animationNode: SimpleAnimationNode?
     private var progressNode: ASImageNode?
+    private var badgeNode: BadgeNode?
     
     private let buttonHeight: CGFloat
     private let buttonCornerRadius: CGFloat
@@ -119,6 +209,15 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             self.updateAccessibilityLabels()
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, previousSubtitle: oldValue, transition: .immediate)
+            }
+        }
+    }
+    
+    public var badge: String? {
+        didSet {
+            self.updateAccessibilityLabels()
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
             }
         }
     }
@@ -630,6 +729,23 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
+        if let badge = self.badge {
+            let badgeNode: BadgeNode
+            if let current = self.badgeNode {
+                badgeNode = current
+            } else {
+                badgeNode = BadgeNode(fillColor: self.theme.foregroundColor, strokeColor: .clear, textColor: self.theme.backgroundColor)
+                self.badgeNode = badgeNode
+                self.addSubnode(badgeNode)
+            }
+            badgeNode.text = badge
+            let badgeSize = badgeNode.update(CGSize(width: 100.0, height: 100.0))
+            transition.updateFrame(node: badgeNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + floor((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize))
+        } else if let badgeNode = self.badgeNode {
+            self.badgeNode = nil
+            badgeNode.removeFromSupernode()
+        }
+        
         if self.subtitle != self.subtitleNode.attributedText?.string {
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: self.theme.foregroundColor)
         }
@@ -766,6 +882,7 @@ public final class SolidRoundedButtonView: UIView {
     private let iconNode: UIImageView
     private var animationNode: SimpleAnimationNode?
     private var progressNode: UIImageView?
+    private var badgeNode: BadgeNode?
     
     private let buttonHeight: CGFloat
     private let buttonCornerRadius: CGFloat
@@ -796,6 +913,15 @@ public final class SolidRoundedButtonView: UIView {
             self.updateAccessibilityLabels()
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, previousSubtitle: oldValue, transition: .immediate)
+            }
+        }
+    }
+    
+    public var badge: String? {
+        didSet {
+            self.updateAccessibilityLabels()
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
             }
         }
     }
@@ -900,7 +1026,7 @@ public final class SolidRoundedButtonView: UIView {
     
     public var progressType: SolidRoundedButtonProgressType = .fullSize
     
-    public init(title: String? = nil, label: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
+    public init(title: String? = nil, label: String? = nil, badge: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
         self.fontSize = fontSize
@@ -908,6 +1034,7 @@ public final class SolidRoundedButtonView: UIView {
         self.buttonCornerRadius = cornerRadius
         self.title = title
         self.label = label
+        self.badge = badge
         self.gloss = gloss
         
         self.buttonBackgroundNode = UIImageView()
@@ -1324,6 +1451,23 @@ public final class SolidRoundedButtonView: UIView {
             transition.updateFrame(view: animationNode.view, frame: iconFrame)
         }
         transition.updateFrame(view: self.titleNode, frame: titleFrame)
+        
+        if let badge = self.badge {
+            let badgeNode: BadgeNode
+            if let current = self.badgeNode {
+                badgeNode = current
+            } else {
+                badgeNode = BadgeNode(fillColor: self.theme.foregroundColor, strokeColor: .clear, textColor: self.theme.backgroundColor)
+                self.badgeNode = badgeNode
+                self.addSubnode(badgeNode)
+            }
+            badgeNode.text = badge
+            let badgeSize = badgeNode.update(CGSize(width: 100.0, height: 100.0))
+            transition.updateFrame(node: badgeNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + floor((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize))
+        } else if let badgeNode = self.badgeNode {
+            self.badgeNode = nil
+            badgeNode.removeFromSupernode()
+        }
         
         if self.subtitle != self.subtitleNode.attributedText?.string {
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: self.theme.foregroundColor)

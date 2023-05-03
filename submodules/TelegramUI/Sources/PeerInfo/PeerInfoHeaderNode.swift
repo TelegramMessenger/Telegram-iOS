@@ -3133,7 +3133,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleLockOffset: CGFloat = 7.0 + singleTitleLockOffset
         let titleMaxLockOffset: CGFloat = 7.0
         var titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
-        if case .regular = metrics.widthClass {
+        if case .regular = metrics.widthClass, !isSettings {
             titleCollapseOffset -= 7.0
         }
         let titleOffset = -min(titleCollapseOffset, contentOffset)

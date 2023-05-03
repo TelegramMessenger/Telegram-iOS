@@ -559,9 +559,9 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
         text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), EnginePeer(member).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
     }
     
-    let attributedTitle = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
-    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+    let attributedTitle = NSAttributedString(string: title, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: theme.primaryColor, paragraphAlignment: .center)
+    let body = MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
+    let bold = MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: theme.primaryColor)
     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
     
     let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_OwnershipTransfer_ChangeOwner, action: {
@@ -575,16 +575,17 @@ func channelOwnershipTransferController(context: AccountContext, updatedPresenta
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
-    var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
+    var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.semibold(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
     
     var text = presentationData.strings.OwnershipTransfer_SecurityRequirements
+    let textFontSize = presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0
+    
     var isGroup = true
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
         isGroup = false
     }
     
     var actions: [TextAlertAction] = []
-    
     switch initialError {
         case .requestPassword:
             return confirmChannelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, member: member, present: present, completion: completion)
@@ -618,8 +619,8 @@ func channelOwnershipTransferController(context: AccountContext, updatedPresenta
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
     }
     
-    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
-    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+    let body = MarkdownAttributeSet(font: Font.regular(textFontSize), textColor: theme.primaryColor)
+    let bold = MarkdownAttributeSet(font: Font.semibold(textFontSize), textColor: theme.primaryColor)
     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
     
     return richTextAlertController(context: context, title: title, text: attributedText, actions: actions)

@@ -17,6 +17,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
     ],
     visibility = [
         "//visibility:public",

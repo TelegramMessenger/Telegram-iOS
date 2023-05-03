@@ -67,7 +67,7 @@ final class StickerPaneSearchStickerSectionNode: ASDisplayNode {
 }
 
 public final class StickerPaneSearchStickerItem: GridItem {
-    public let account: Account
+    public let context: AccountContext
     public let code: String?
     public let stickerItem: FoundStickerItem
     public let selected: (ASDisplayNode, CGRect) -> Void
@@ -75,8 +75,8 @@ public final class StickerPaneSearchStickerItem: GridItem {
     
     public let section: GridSection?
     
-    public init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
-        self.account = account
+    public init(context: AccountContext, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
+        self.context = context
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
         self.selected = selected
@@ -87,7 +87,7 @@ public final class StickerPaneSearchStickerItem: GridItem {
     public func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchStickerItemNode()
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem, code: self.code)
+        node.setup(context: self.context, stickerItem: self.stickerItem, code: self.code)
         node.selected = self.selected
         return node
     }
@@ -98,7 +98,7 @@ public final class StickerPaneSearchStickerItem: GridItem {
             return
         }
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem, code: self.code)
+        node.setup(context: self.context, stickerItem: self.stickerItem, code: self.code)
         node.selected = self.selected
     }
 }
@@ -106,7 +106,7 @@ public final class StickerPaneSearchStickerItem: GridItem {
 private let textFont = Font.regular(20.0)
 
 public final class StickerPaneSearchStickerItemNode: GridItemNode {
-    private var currentState: (Account, FoundStickerItem, CGSize)?
+    private var currentState: (AccountContext, FoundStickerItem, CGSize)?
     public let imageNode: TransformImageNode
     public private(set) var animationNode: AnimatedStickerNode?
     private let textNode: ASTextNode
@@ -152,8 +152,8 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: FoundStickerItem, code: String?) {
-        if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
+    func setup(context: AccountContext, stickerItem: FoundStickerItem, code: String?) {
+        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 != stickerItem {
             self.textNode.attributedText = NSAttributedString(string: code ?? "", font: textFont, textColor: .black)
             
             if let dimensions = stickerItem.file.dimensions {
@@ -166,20 +166,20 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
                     }
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
-                    self.animationNode?.visibility = self.isVisibleInGrid
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: context.account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+                    self.animationNode?.visibility = self.isVisibleInGrid && context.sharedContext.energyUsageSettings.loopStickers
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
                         animationNode.visibility = false
                         self.animationNode = nil
                         animationNode.removeFromSupernode()
                     }
-                    self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: stickerItem.file, small: true))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                    self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: stickerItem.file, small: true))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 }
                 
-                self.currentState = (account, stickerItem, dimensions.cgSize)
+                self.currentState = (context, stickerItem, dimensions.cgSize)
                 self.setNeedsLayout()
             }
         }
@@ -217,7 +217,11 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
     }
     
     public func updateVisibility() {
-        let isPlaying = self.isVisibleInGrid
+        guard let context = self.currentState?.0 else {
+            return
+        }
+        
+        let isPlaying = self.isVisibleInGrid && context.sharedContext.energyUsageSettings.loopStickers
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode?.visibility = isPlaying
@@ -227,7 +231,7 @@ public final class StickerPaneSearchStickerItemNode: GridItemNode {
     public func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
-            isPreviewing = interaction.previewedStickerPackItem == .found(item)
+            isPreviewing = interaction.previewedStickerPackItemFile?.id == item.file.id
         }
         if self.currentIsPreviewing != isPreviewing {
             self.currentIsPreviewing = isPreviewing

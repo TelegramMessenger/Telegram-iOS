@@ -697,7 +697,7 @@ private final class NotificationServiceHandler {
         Logger.shared.logToConsole = loggingSettings.logToConsole
         Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
 
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild)
         
         let isLockedMessage: String?
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
@@ -745,7 +745,14 @@ private final class NotificationServiceHandler {
         
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(excludeAccountIds: excludeAccountIds),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.ptgSettings, ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            self.accountManager.sharedData(keys: [
+                ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
+                ApplicationSpecificSharedDataKeys.voiceCallSettings,
+                ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings,
+                SharedDataKeys.loggingSettings,
+                ApplicationSpecificSharedDataKeys.ptgSettings,
+                ApplicationSpecificSharedDataKeys.ptgSecretPasscodes
+            ])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -755,6 +762,14 @@ private final class NotificationServiceHandler {
             let loggingSettings = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
             Logger.shared.logToFile = loggingSettings.logToFile
             Logger.shared.logToConsole = loggingSettings.logToConsole
+            
+            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                automaticMediaDownloadSettings = value
+            } else {
+                automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
+            }
+            let shouldSynchronizeState = true//automaticMediaDownloadSettings.energyUsageSettings.synchronizeInBackground
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
                 outer: for listRecord in records.records {
@@ -1499,34 +1514,38 @@ private final class NotificationServiceHandler {
 
                                 let pollSignal: Signal<Never, NoError>
 
-                                stateManager.network.shouldKeepConnection.set(.single(true))
-                                if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                    Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
-
-                                    pollSignal = standalonePollChannelOnce(
-                                        accountPeerId: stateManager.accountPeerId,
-                                        postbox: stateManager.postbox,
-                                        network: stateManager.network,
-                                        peerId: peerId,
-                                        stateManager: stateManager
-                                    )
+                                if !shouldSynchronizeState {
+                                    pollSignal = .complete()
                                 } else {
-                                    Logger.shared.log("NotificationService \(episode)", "Will perform non-specific getDifference")
-                                    enum ControlError {
-                                        case restart
-                                    }
-                                    let signal = stateManager.standalonePollDifference()
-                                    |> castError(ControlError.self)
-                                    |> mapToSignal { result -> Signal<Never, ControlError> in
-                                        if result {
-                                            return .complete()
-                                        } else {
-                                            return .fail(.restart)
+                                    stateManager.network.shouldKeepConnection.set(.single(true))
+                                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                        Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
+                                        
+                                        pollSignal = standalonePollChannelOnce(
+                                            accountPeerId: stateManager.accountPeerId,
+                                            postbox: stateManager.postbox,
+                                            network: stateManager.network,
+                                            peerId: peerId,
+                                            stateManager: stateManager
+                                        )
+                                    } else {
+                                        Logger.shared.log("NotificationService \(episode)", "Will perform non-specific getDifference")
+                                        enum ControlError {
+                                            case restart
                                         }
+                                        let signal = stateManager.standalonePollDifference()
+                                        |> castError(ControlError.self)
+                                        |> mapToSignal { result -> Signal<Never, ControlError> in
+                                            if result {
+                                                return .complete()
+                                            } else {
+                                                return .fail(.restart)
+                                            }
+                                        }
+                                        |> restartIfError
+                                        
+                                        pollSignal = signal
                                     }
-                                    |> restartIfError
-
-                                    pollSignal = signal
                                 }
 
                                 let pollWithUpdatedContent: Signal<NotificationContent, NoError>

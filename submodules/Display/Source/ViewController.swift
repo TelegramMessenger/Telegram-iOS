@@ -408,8 +408,10 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         
         self.navigationBarOrigin = navigationBarFrame.origin.y
 
-        let isLandscape = layout.size.width > layout.size.height
-        
+        var isLandscape = layout.size.width > layout.size.height
+        if case .regular = layout.metrics.widthClass {
+            isLandscape = false
+        }
         if let navigationBar = self.navigationBar {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y -= navigationLayout.defaultContentHeight
@@ -420,6 +422,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
                 navigationBarFrame.size.height += NavigationBar.defaultSecondaryContentHeight
                 //navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
             }
+            
             navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.removeAnimation(forKey: "bounds")

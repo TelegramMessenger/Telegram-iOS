@@ -148,6 +148,16 @@ public protocol SharedMediaPlaylistLocation {
     func isEqual(to: SharedMediaPlaylistLocation) -> Bool
 }
 
+public func areSharedMediaPlaylistsEqual(_ lhs: SharedMediaPlaylist?, _ rhs: SharedMediaPlaylist?) -> Bool {
+    if let lhs = lhs, let rhs = rhs {
+        return lhs.id.isEqual(to: rhs.id) && lhs.location.isEqual(to: rhs.location)
+    } else if (lhs != nil) != (rhs != nil) {
+        return false
+    } else {
+        return true
+    }
+}
+
 public protocol SharedMediaPlaylist: AnyObject {
     var id: SharedMediaPlaylistId { get }
     var location: SharedMediaPlaylistLocation { get }

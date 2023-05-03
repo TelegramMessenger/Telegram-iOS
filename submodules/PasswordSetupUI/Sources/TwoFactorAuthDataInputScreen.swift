@@ -35,7 +35,7 @@ public enum TwoFactorDataInputMode {
         case authorized
     }
 
-    case password(doneText: String)
+    case password(phoneNumber: String?, doneText: String)
     case passwordRecoveryEmail(emailPattern: String, mode: PasswordRecoveryEmailMode, doneText: String)
     case passwordRecovery(recovery: Recovery, doneText: String)
     case emailAddress(password: String, hint: String, doneText: String)
@@ -99,8 +99,11 @@ public final class TwoFactorDataInputScreen: ViewController {
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        if case .rememberPassword = self.mode {
+        switch self.mode {
+        case .rememberPassword, .password:
             (self.displayNode as? TwoFactorDataInputScreenNode)?.focus()
+        default:
+            break
         }
     }
     
@@ -110,7 +113,7 @@ public final class TwoFactorDataInputScreen: ViewController {
                 return
             }
             switch strongSelf.mode {
-            case let .password(doneText):
+            case let .password(_, doneText):
                 let values = (strongSelf.displayNode as! TwoFactorDataInputScreenNode).inputText
                 if values.count != 2 {
                     return
@@ -924,7 +927,7 @@ public final class TwoFactorDataInputScreen: ViewController {
 }
 
 private enum TwoFactorDataInputTextNodeType {
-    case password(confirmation: Bool)
+    case password(phoneNumber: String?, confirmation: Bool)
     case email
     case code
     case hint
@@ -984,6 +987,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
     private let toggleTextHidden: (TwoFactorDataInputTextNode) -> Void
     
     private let backgroundNode: ASImageNode
+    private var shadowInputNode: TextFieldNode?
     private let inputNode: TextFieldNode
     private let hideButtonNode: HighlightableButtonNode
     private let clearButtonNode: HighlightableButtonNode
@@ -1068,7 +1072,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
         self.hideButtonNode = HighlightableButtonNode()
         
         switch mode {
-        case let .password(confirmation):
+        case let .password(phoneNumber, confirmation):
             self.inputNode.textField.keyboardType = .default
             self.inputNode.textField.isSecureTextEntry = true
             if confirmation {
@@ -1076,29 +1080,72 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
             } else {
                 self.inputNode.textField.returnKeyType = .next
             }
+            if #available(iOS 12.0, *) {
+                #if DEBUG
+                if !confirmation, let phoneNumber {
+                    let shadowInputNode = TextFieldNode()
+                    shadowInputNode.textField.font = Font.regular(17.0)
+                    shadowInputNode.textField.textColor = theme.list.freePlainInputField.primaryColor
+                    shadowInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.list.freePlainInputField.placeholderColor)
+                    self.shadowInputNode = shadowInputNode
+                    
+                    
+                    shadowInputNode.textField.textContentType = .username
+                    shadowInputNode.textField.text = phoneNumber
+                }
+                #endif
+                
+                #if DEBUG
+                self.inputNode.textField.textContentType = .newPassword
+                self.inputNode.textField.passwordRules = UITextInputPasswordRules(descriptor: "minlength: 8;")
+                #endif
+            }
             self.hideButtonNode.isHidden = confirmation
         case .email:
             self.inputNode.textField.keyboardType = .emailAddress
             self.inputNode.textField.returnKeyType = .done
             self.hideButtonNode.isHidden = true
+            
+            if #available(iOS 12.0, *) {
+                self.inputNode.textField.textContentType = .emailAddress
+            }
+            
+            self.inputNode.textField.autocorrectionType = .no
+            self.inputNode.textField.autocapitalizationType = .none
+            self.inputNode.textField.spellCheckingType = .no
+            if #available(iOS 11.0, *) {
+                self.inputNode.textField.smartQuotesType = .no
+                self.inputNode.textField.smartDashesType = .no
+                self.inputNode.textField.smartInsertDeleteType = .no
+            }
         case .code:
             self.inputNode.textField.keyboardType = .numberPad
             self.inputNode.textField.returnKeyType = .done
             self.hideButtonNode.isHidden = true
+            
+            self.inputNode.textField.autocorrectionType = .no
+            self.inputNode.textField.autocapitalizationType = .none
+            self.inputNode.textField.spellCheckingType = .no
+            if #available(iOS 11.0, *) {
+                self.inputNode.textField.smartQuotesType = .no
+                self.inputNode.textField.smartDashesType = .no
+                self.inputNode.textField.smartInsertDeleteType = .no
+            }
         case .hint:
             self.inputNode.textField.keyboardType = .asciiCapable
             self.inputNode.textField.returnKeyType = .done
             self.hideButtonNode.isHidden = true
+            
+            self.inputNode.textField.autocorrectionType = .no
+            self.inputNode.textField.autocapitalizationType = .none
+            self.inputNode.textField.spellCheckingType = .no
+            if #available(iOS 11.0, *) {
+                self.inputNode.textField.smartQuotesType = .no
+                self.inputNode.textField.smartDashesType = .no
+                self.inputNode.textField.smartInsertDeleteType = .no
+            }
         }
         
-        self.inputNode.textField.autocorrectionType = .no
-        self.inputNode.textField.autocapitalizationType = .none
-        self.inputNode.textField.spellCheckingType = .no
-        if #available(iOS 11.0, *) {
-            self.inputNode.textField.smartQuotesType = .no
-            self.inputNode.textField.smartDashesType = .no
-            self.inputNode.textField.smartInsertDeleteType = .no
-        }
         self.inputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         
         self.hideButtonNode.setImage(generateTextHiddenImage(color: theme.list.freePlainInputField.controlColor, on: false), for: [])
@@ -1110,6 +1157,10 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
         super.init()
         
         self.addSubnode(self.backgroundNode)
+        if let shadowInputNode = self.shadowInputNode {
+            shadowInputNode.alpha = 0.001
+            self.addSubnode(shadowInputNode)
+        }
         self.addSubnode(self.inputNode)
         self.addSubnode(self.hideButtonNode)
         
@@ -1178,6 +1229,10 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
         
         let leftInset: CGFloat = 16.0
         let rightInset: CGFloat = 38.0
+        
+        if let shadowInputNode = self.shadowInputNode {
+            transition.updateFrame(node: shadowInputNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset, height: size.height)))
+        }
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.inputNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: size.width - leftInset - rightInset, height: size.height)))
@@ -1299,7 +1354,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         var toggleTextHidden: ((TwoFactorDataInputTextNode) -> Void)?
         
         switch mode {
-        case .password:
+        case let .password(phoneNumber, _):
             title = presentationData.strings.TwoFactorSetup_Password_Title
             text = NSAttributedString(string: "", font: Font.regular(16.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             buttonText = presentationData.strings.TwoFactorSetup_Password_Action
@@ -1307,7 +1362,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             changeEmailActionText = ""
             resendCodeActionText = ""
             inputNodes = [
-                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(confirmation: false), placeholder: presentationData.strings.TwoFactorSetup_Password_PlaceholderPassword, focusUpdated: { node, focused in
+                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(phoneNumber: phoneNumber, confirmation: false), placeholder: presentationData.strings.TwoFactorSetup_Password_PlaceholderPassword, focusUpdated: { node, focused in
                     focusUpdated?(node, focused)
                 }, next: { node in
                     next?(node)
@@ -1316,7 +1371,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 }, toggleTextHidden: { node in
                     toggleTextHidden?(node)
                 }),
-                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(confirmation: true), placeholder: presentationData.strings.TwoFactorSetup_Password_PlaceholderConfirmPassword, focusUpdated: { node, focused in
+                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(phoneNumber: phoneNumber, confirmation: true), placeholder: presentationData.strings.TwoFactorSetup_Password_PlaceholderConfirmPassword, focusUpdated: { node, focused in
                     focusUpdated?(node, focused)
                 }, next: { node in
                     next?(node)
@@ -1334,7 +1389,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             changeEmailActionText = ""
             resendCodeActionText = ""
             inputNodes = [
-                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(confirmation: false), placeholder: presentationData.strings.TwoFactorSetup_PasswordRecovery_PlaceholderPassword, focusUpdated: { node, focused in
+                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(phoneNumber: nil, confirmation: false), placeholder: presentationData.strings.TwoFactorSetup_PasswordRecovery_PlaceholderPassword, focusUpdated: { node, focused in
                     focusUpdated?(node, focused)
                 }, next: { node in
                     next?(node)
@@ -1343,7 +1398,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
                 }, toggleTextHidden: { node in
                     toggleTextHidden?(node)
                 }),
-                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(confirmation: true), placeholder: presentationData.strings.TwoFactorSetup_PasswordRecovery_PlaceholderConfirmPassword, focusUpdated: { node, focused in
+                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(phoneNumber: nil, confirmation: true), placeholder: presentationData.strings.TwoFactorSetup_PasswordRecovery_PlaceholderConfirmPassword, focusUpdated: { node, focused in
                     focusUpdated?(node, focused)
                 }, next: { node in
                     next?(node)
@@ -1453,7 +1508,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
             changeEmailActionText = ""
             resendCodeActionText = ""
             inputNodes = [
-                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(confirmation: false), placeholder: presentationData.strings.TwoFactorRemember_Placeholder, focusUpdated: { node, focused in
+                TwoFactorDataInputTextNode(theme: presentationData.theme, mode: .password(phoneNumber: nil, confirmation: false), placeholder: presentationData.strings.TwoFactorRemember_Placeholder, focusUpdated: { node, focused in
                     focusUpdated?(node, focused)
                 }, next: { node in
                     next?(node)

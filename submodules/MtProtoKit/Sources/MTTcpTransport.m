@@ -551,6 +551,19 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
+- (void)tcpConnectionDownloadActivityUpdated:(MTTcpConnection *)connection {
+    MTTcpTransportContext *transportContext = _transportContext;
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        if (transportContext.connection != connection)
+            return;
+        
+        id<MTTransportDelegate> delegate = self.delegate;
+        if ([delegate respondsToSelector:@selector(transportUpdatedDataReceiveProgress:progressToken:packetLength:progress:)])
+            [delegate transportActivityUpdated:self];
+    }];
+}
+
 - (void)tcpConnectionBehaviourRequestsReconnection:(MTTcpConnectionBehaviour *)behaviour error:(bool)error
 {
     MTTcpTransportContext *transportContext = _transportContext;

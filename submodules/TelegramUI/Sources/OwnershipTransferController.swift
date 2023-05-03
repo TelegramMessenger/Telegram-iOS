@@ -84,11 +84,11 @@ func ownershipTransferController(context: AccountContext, updatedPresentationDat
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
-    var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
+    var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.semibold(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
     
     var text = presentationData.strings.OwnershipTransfer_SecurityRequirements
     var actions: [TextAlertAction] = []
-    
+    let textFontSize = presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0
     switch initialError {
         case .requestPassword:
             return commitOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, present: present, commit: commit, completion: completion)
@@ -114,8 +114,8 @@ func ownershipTransferController(context: AccountContext, updatedPresentationDat
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
     }
     
-    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
-    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+    let body = MarkdownAttributeSet(font: Font.regular(textFontSize), textColor: theme.primaryColor)
+    let bold = MarkdownAttributeSet(font: Font.semibold(textFontSize), textColor: theme.primaryColor)
     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
     
     return richTextAlertController(context: context, title: title, text: attributedText, actions: actions)

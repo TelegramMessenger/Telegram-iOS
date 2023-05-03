@@ -66,6 +66,7 @@ public final class AnimatedAvatarSetContext {
 private let avatarFont = avatarPlaceholderFont(size: 12.0)
 
 private final class ContentNode: ASDisplayNode {
+    private let context: AccountContext
     private var audioLevelView: VoiceBlobView?
     private var audioLevelBlobOverlay: UIImageView?
     private let unclippedNode: ASImageNode
@@ -77,6 +78,7 @@ private final class ContentNode: ASDisplayNode {
     private var disposable: Disposable?
     
     init(context: AccountContext, peer: EnginePeer?, placeholderColor: UIColor, synchronousLoad: Bool, size: CGSize, spacing: CGFloat) {
+        self.context = context
         self.size = size
         self.spacing = spacing
 
@@ -162,7 +164,7 @@ private final class ContentNode: ASDisplayNode {
     }
     
     func updateAudioLevel(color: UIColor, backgroundColor: UIColor, value: Float) {
-        if self.audioLevelView == nil, value > 0.0 {
+        if self.audioLevelView == nil, value > 0.0, self.context.sharedContext.energyUsageSettings.fullTranslucency {
             let blobFrame = self.unclippedNode.bounds.insetBy(dx: -8.0, dy: -8.0)
             
             let audioLevelView = VoiceBlobView(

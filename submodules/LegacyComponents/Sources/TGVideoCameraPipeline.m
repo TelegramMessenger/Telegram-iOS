@@ -695,7 +695,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     _videoTransform = [self transformForOrientation:self.orientation];
 
     CGSize size = [TGMediaVideoConversionPresetSettings maximumSizeForPreset:preset];
-    NSDictionary *videoSettings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:size];
+    NSDictionary *videoSettings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:size frameRate:30];
 	[recorder addVideoTrackWithSourceFormatDescription:self.outputVideoFormatDescription transform:CGAffineTransformIdentity settings:videoSettings];
 	_recorder = recorder;
 	

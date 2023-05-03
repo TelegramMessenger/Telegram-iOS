@@ -516,7 +516,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
                         
                         let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
-                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, imageSize: thumbnailDimensions.cgSize)
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: thumbnailDimensions.cgSize)
                         strongSelf.placeholderNode.frame = emojiFrame
                     }
                     
@@ -1531,7 +1531,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
                 
         self.containerNode = ASDisplayNode()
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         
         self.codeBackgroundNode = ASDisplayNode()
         self.codeBackgroundNode.backgroundColor = .white
@@ -1852,7 +1852,14 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.wallpaperBackgroundNode.updateLayout(size: size, transition: transition)
+        
+        let displayMode: WallpaperDisplayMode
+        if max(size.width, size.height) > 1000.0 {
+            displayMode = .aspectFit
+        } else {
+            displayMode = .aspectFill
+        }
+        self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: displayMode, transition: transition)
         
         let textLength = self.codeTextNode.attributedText?.string.count ?? 0
         
@@ -2015,7 +2022,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         
         self.containerNode = ASDisplayNode()
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundImageNode = ASImageNode()
@@ -2195,7 +2202,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.wallpaperBackgroundNode.updateLayout(size: size, transition: transition)
+        self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: transition)
         
         let inset: CGFloat = 24.0
         let contentInset: CGFloat = 16.0

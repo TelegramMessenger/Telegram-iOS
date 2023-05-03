@@ -17,6 +17,7 @@ import ChatMessageBackground
 private class MediaPickerSelectedItemNode: ASDisplayNode {
     let asset: TGMediaEditableItem
     private let interaction: MediaPickerInteraction?
+    private let enableAnimations: Bool
     
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
@@ -56,14 +57,15 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     
     private var videoDuration: Double?
     
-    init(asset: TGMediaEditableItem, interaction: MediaPickerInteraction?) {
+    init(asset: TGMediaEditableItem, interaction: MediaPickerInteraction?, enableAnimations: Bool) {
+        self.asset = asset
+        self.interaction = interaction
+        self.enableAnimations = enableAnimations
+        
         self.imageNode = ImageNode()
         self.imageNode.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
         self.imageNode.animateFirstTransition = false
-        
-        self.asset = asset
-        self.interaction = interaction
         
         super.init()
         
@@ -165,7 +167,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     
         if hasSpoiler {
             if self.spoilerNode == nil {
-                let spoilerNode = SpoilerOverlayNode()
+                let spoilerNode = SpoilerOverlayNode(enableAnimations: self.enableAnimations)
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
                 self.spoilerNode = spoilerNode
                 
@@ -521,7 +523,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         self.context = context
         self.persistentItems = persistentItems
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         self.wallpaperBackgroundNode.backgroundColor = .black
         self.scrollNode = ASScrollNode()
         
@@ -781,7 +783,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             if let current = self.itemNodes[identifier] {
                 itemNode = current
             } else {
-                itemNode = MediaPickerSelectedItemNode(asset: asset, interaction: self.interaction)
+                itemNode = MediaPickerSelectedItemNode(asset: asset, interaction: self.interaction, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
                 self.itemNodes[identifier] = itemNode
                 self.scrollNode.addSubnode(itemNode)
                 
@@ -1070,7 +1072,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
         self.wallpaperBackgroundNode.updateBubbleTheme(bubbleTheme: theme, bubbleCorners: bubbleCorners)
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(x: inset, y: 0.0), size: CGSize(width: size.width - inset * 2.0, height: size.height)))
-        self.wallpaperBackgroundNode.updateLayout(size: CGSize(width: size.width - inset * 2.0, height: size.height), transition: transition)
+        self.wallpaperBackgroundNode.updateLayout(size: CGSize(width: size.width - inset * 2.0, height: size.height), displayMode: .aspectFill, transition: transition)
         
         self.updateItems(transition: itemsTransition)
         

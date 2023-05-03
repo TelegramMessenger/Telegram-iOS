@@ -65,6 +65,9 @@ private struct SharePeerEntry: Comparable, Identifiable {
         if lhs.threadData != rhs.threadData {
             return false
         }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         
         return true
     }
@@ -100,7 +103,8 @@ private func preparedGridEntryTransition(context: AccountContext, from fromEntri
 final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let sharedContext: SharedAccountContext
     private let context: AccountContext
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
+    private let themePromise: Promise<PresentationTheme>
     private let strings: PresentationStrings
     private let nameDisplayOrder: PresentationPersonNameOrder
     private let controllerInteraction: ShareControllerInteraction
@@ -153,6 +157,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
+        self.themePromise = Promise()
+        self.themePromise.set(.single(theme))
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
         self.controllerInteraction = controllerInteraction
@@ -164,8 +170,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.peersValue.set(.single(peers))
         
-        let items: Signal<[SharePeerEntry], NoError> = combineLatest(self.peersValue.get(), self.foundPeers.get(), self.tick.get())
-        |> map { [weak controllerInteraction] initialPeers, foundPeers, _ -> [SharePeerEntry] in
+        let items: Signal<[SharePeerEntry], NoError> = combineLatest(self.peersValue.get(), self.foundPeers.get(), self.tick.get(), self.themePromise.get())
+        |> map { [weak controllerInteraction] initialPeers, foundPeers, _, theme -> [SharePeerEntry] in
             var entries: [SharePeerEntry] = []
             var index: Int32 = 0
             
@@ -301,6 +307,13 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     deinit {
         self.disposable.dispose()
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        self.themePromise.set(.single(theme))
+        self.contentTitleNode.attributedText = NSAttributedString(string: self.strings.ShareMenu_ShareTo, font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
+        self.updateSelectedPeers(animated: false)
     }
     
     private func enqueueTransition(_ transition: ShareGridTransaction, firstTime: Bool) {
@@ -684,11 +697,11 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             if node.isHidden {
                 continue
             }
-            if let result = node.hitTest(point.offsetBy(dx: -nodeFrame.minX, dy: -nodeFrame.minY), with: event) {
+            if let result = node.hitTest(point.offsetBy(dx: -self.headerNode.frame.minX, dy: -self.headerNode.frame.minY).offsetBy(dx: -nodeFrame.minX, dy: -nodeFrame.minY), with: event) {
                 return result
             }
         }
-        
+
         return super.hitTest(point, with: event)
     }
     

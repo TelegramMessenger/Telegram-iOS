@@ -15,6 +15,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/ContextUI:ContextUI",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AnimatedCountLabelNode:AnimatedCountLabelNode",
     ],
     visibility = [
         "//visibility:public",

@@ -87,16 +87,16 @@ private enum StickerSearchEntry: Identifiable, Comparable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> GridItem {
+    func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
-            return StickerPaneSearchStickerItem(account: account, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
+            return StickerPaneSearchStickerItem(context: context, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
                 interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             let itemContext = StickerPaneSearchGlobalItemContext()
             itemContext.canPlayMedia = true
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(context: context, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)
@@ -117,7 +117,7 @@ private struct StickerPaneSearchGridTransition {
     let animated: Bool
 }
 
-private func preparedChatMediaInputGridEntryTransition(account: Account, theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [StickerSearchEntry], to toEntries: [StickerSearchEntry], interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> StickerPaneSearchGridTransition {
+private func preparedChatMediaInputGridEntryTransition(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, from fromEntries: [StickerSearchEntry], to toEntries: [StickerSearchEntry], interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> StickerPaneSearchGridTransition {
     let stationaryItems: GridNodeStationaryItems = .none
     let scrollToItem: GridNodeScrollToItem? = nil
     var animated = false
@@ -126,8 +126,8 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, theme: 
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
-    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction), previousIndex: $0.2) }
-    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction)) }
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction)) }
     
     let firstIndexInSectionOffset = 0
     
@@ -177,7 +177,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.strings = strings
         
         self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
-            return inputNodeInteraction?.previewedStickerPackItem == .pack(item.file)
+            return inputNodeInteraction?.previewedStickerPackItemFile?.id == item.file.id
         }, isPane: false)
         
         self.gridNode = GridNode()
@@ -315,7 +315,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil, [])
             }
         }, getItemIsPreviewed: { item in
-            return inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
+            return inputNodeInteraction.previewedStickerPackItemFile?.id == item.file.id
         })
         
         self._ready.set(self.trendingPane.ready)
@@ -508,7 +508,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 }
                 
                 let previousEntries = strongSelf.currentEntries.swap(entries)
-                let transition = preparedChatMediaInputGridEntryTransition(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction)
+                let transition = preparedChatMediaInputGridEntryTransition(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, from: previousEntries ?? [], to: entries, interaction: interaction, inputNodeInteraction: strongSelf.inputNodeInteraction)
                 strongSelf.enqueueTransition(transition)
             }
         }))

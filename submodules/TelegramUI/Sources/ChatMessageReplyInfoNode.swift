@@ -186,7 +186,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                     
                 let entities = messageEntities.filter { entity in
-                    if case .Spoiler = entity.type {
+                    if case .Strikethrough = entity.type {
+                        return true
+                    } else if case .Spoiler = entity.type {
                         return true
                     } else if case .CustomEmoji = entity.type {
                         return true
@@ -348,7 +350,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     if let current = node.dustNode {
                         dustNode = current
                     } else {
-                        dustNode = InvisibleInkDustNode(textNode: nil)
+                        dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: arguments.context.sharedContext.energyUsageSettings.fullTranslucency)
                         dustNode.isUserInteractionEnabled = false
                         node.dustNode = dustNode
                         node.contentNode.insertSubnode(dustNode, aboveSubnode: textNode.textNode)

@@ -49,13 +49,6 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                                         context.setBlendMode(.copy)
                                         drawImage(context: context, image: image.cgImage!, orientation: image.imageOrientation, in: CGRect(origin: CGPoint(), size: size))
                                     }, scale: 1.0), let thumbnailData = scaledImage.jpegData(compressionQuality: 0.6) {
-                                        /*if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                                            #if DEBUG
-                                            if true, let heicData = compressImage(scaledImage, quality: 0.7) {
-                                                print("data \(thumbnailData.count), heicData \(heicData.count)")
-                                            }
-                                            #endif
-                                        }*/
                                         let imageDimensions = CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale)
                                         
                                         let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))

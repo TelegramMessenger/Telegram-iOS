@@ -76,7 +76,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.selectedMessages = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
-        self.listNode = ChatHistoryListNode(context: context, updatedPresentationData: updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast, hintLinks: tagMask == .webPage, isGlobalSearch: false))
+        self.listNode = ChatHistoryListNode(context: context, updatedPresentationData: updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, reverseGroups: false, displayHeaders: .allButLast, hintLinks: tagMask == .webPage, isGlobalSearch: false))
         self.listNode.clipsToBounds = true
         self.listNode.defaultToSynchronousTransactionWhileScrolling = true
         self.listNode.scroller.bounces = false
@@ -207,7 +207,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - panelHeight), size: CGSize(width: size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInset, rightInset: sideInset, transition: transition)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInset, rightInset: sideInset, isHidden: false, transition: transition)
                 switch order {
                 case .regular:
                     mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)
@@ -262,7 +262,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                         strongSelf.context.sharedContext.mediaManager.setPlaylist(nil, type: type, control: SharedMediaPlayerControlAction.playback(.pause))
                     }
                 }
-                mediaAccessoryPanel.setRate = { [weak self] rate, fromMenu in
+                mediaAccessoryPanel.setRate = { [weak self] rate, changeType in
                     guard let strongSelf = self else {
                         return
                     }
@@ -289,11 +289,25 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                 }
                                 return true
                             })
-                            
+
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             let text: String?
                             let rate: CGFloat?
-                            if baseRate == .x1 {
+                            if case let .sliderCommit(previousValue, newValue) = changeType {
+                                let value = String(format: "%0.1f", baseRate.doubleValue)
+                                if baseRate == .x1 {
+                                    text = presentationData.strings.Conversation_AudioRateTooltipNormal
+                                } else {
+                                    text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
+                                }
+                                if newValue > previousValue {
+                                    rate = .infinity
+                                } else if newValue < previousValue {
+                                    rate = -.infinity
+                                } else {
+                                    rate = nil
+                                }
+                            } else if baseRate == .x1 {
                                 text = presentationData.strings.Conversation_AudioRateTooltipNormal
                                 rate = 1.0
                             } else if baseRate == .x1_5 {
@@ -306,7 +320,11 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                 text = nil
                                 rate = nil
                             }
-                            if let rate, let text, !fromMenu {
+                            var showTooltip = true
+                            if case .sliderChange = changeType {
+                                showTooltip = false
+                            }
+                            if let rate, let text, showTooltip {
                                 controller.present(
                                     UndoOverlayController(
                                         presentationData: presentationData,
@@ -410,7 +428,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     self.mediaAccessoryPanelContainer.addSubnode(mediaAccessoryPanel)
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
-                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInset, rightInset: sideInset, transition: .immediate)
+                mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: sideInset, rightInset: sideInset, isHidden: false, transition: .immediate)
                 switch order {
                     case .regular:
                         mediaAccessoryPanel.containerNode.headerNode.playbackItems = (item, previousItem, nextItem)

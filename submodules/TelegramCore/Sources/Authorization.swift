@@ -680,7 +680,7 @@ public func sendLoginEmailCode(account: UnauthorizedAccount, email: String) -> S
                         return account.postbox.transaction { transaction -> Signal<Void, NoError> in
                             switch result {
                                 case let .sentEmailCode(emailPattern, length):
-                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: .email(emailPattern: emailPattern, length: length, nextPhoneLoginDate: nil, appleSignInAllowed: false, setup: true), hash: phoneCodeHash, timeout: nil, nextType: nil, syncContacts: syncContacts)))
+                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: .email(emailPattern: emailPattern, length: length, resetAvailablePeriod: nil, resetPendingDate: nil, appleSignInAllowed: false, setup: true), hash: phoneCodeHash, timeout: nil, nextType: nil, syncContacts: syncContacts)))
                             }
                             return .complete()
                         }
@@ -800,6 +800,65 @@ public func verifyLoginEmailSetup(account: UnauthorizedAccount, code: Authorizat
         }
     }
     |> mapError { _ -> AuthorizationEmailVerificationError in
+    }
+    |> switchToLatest
+    |> ignoreValues
+}
+
+public enum AuthorizationEmailResetError {
+    case generic
+    case limitExceeded
+    case codeExpired
+    case alreadyInProgress
+}
+
+public func resetLoginEmail(account: UnauthorizedAccount, phoneNumber: String, phoneCodeHash: String) -> Signal<Never, AuthorizationEmailResetError> {
+    return account.postbox.transaction { transaction -> Signal<Never, AuthorizationEmailResetError> in
+        if let state = transaction.getState() as? UnauthorizedAccountState {
+            switch state.contents {
+                case let .confirmationCodeEntry(phoneNumber, _, phoneCodeHash, _, _, syncContacts):
+                    return account.network.request(Api.functions.auth.resetLoginEmail(phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash), automaticFloodWait: false)
+                    |> `catch` { error -> Signal<Api.auth.SentCode, AuthorizationEmailResetError> in
+                        let errorDescription = error.errorDescription ?? ""
+                        if errorDescription.hasPrefix("FLOOD_WAIT") {
+                            return .fail(.limitExceeded)
+                        } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
+                            return .fail(.codeExpired)
+                        } else if errorDescription == "TASK_ALREADY_EXISTS" {
+                            return .fail(.alreadyInProgress)
+                        } else {
+                            return .fail(.generic)
+                        }
+                    }
+                    |> mapToSignal { sentCode -> Signal<Never, AuthorizationEmailResetError> in
+                        return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+                            switch sentCode {
+                            case let .sentCode(_, type, phoneCodeHash, nextType, codeTimeout):
+                                var parsedNextType: AuthorizationCodeNextType?
+                                if let nextType = nextType {
+                                    parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+                                }
+                                
+                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType, syncContacts: syncContacts)))
+                                
+                                return .complete()
+                            case .sentCodeSuccess:
+                                return .complete()
+                            }
+                        }
+                        |> switchToLatest
+                        |> mapError { _ -> AuthorizationEmailResetError in
+                        }
+                        |> ignoreValues
+                    }
+                default:
+                    return .fail(.generic)
+            }
+        } else {
+            return .fail(.generic)
+        }
+    }
+    |> mapError { _ -> AuthorizationEmailResetError in
     }
     |> switchToLatest
     |> ignoreValues

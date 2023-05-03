@@ -62,6 +62,7 @@ final class ContactsControllerNode: ASDisplayNode {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    private let stringsPromise = Promise<PresentationStrings>()
     
     weak var controller: ContactsController?
     
@@ -70,20 +71,21 @@ final class ContactsControllerNode: ASDisplayNode {
         self.controller = controller
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.stringsPromise.set(.single(self.presentationData.strings))
         
         var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
         var unavailableImpl: (() -> Void)?
         
-        // these options are shown anyway, so it can not be peeped that account is hidable
-        let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: context.immediateIsHidable ? { unavailableImpl?() } : {
-            addNearbyImpl?()
-        }), ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: context.immediateIsHidable ? { unavailableImpl?() } : {
-            inviteImpl?()
-        })]
-        
-        let presentation = sortOrder
-        |> map { sortOrder -> ContactListPresentation in
+        let presentation = combineLatest(sortOrder, self.stringsPromise.get())
+        |> map { sortOrder, strings -> ContactListPresentation in
+            // these options are shown anyway, so it can not be peeped that account is hidable
+            let options = [ContactListAdditionalOption(title: strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: context.immediateIsHidable ? { unavailableImpl?() } : {
+                addNearbyImpl?()
+            }), ContactListAdditionalOption(title: strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: context.immediateIsHidable ? { unavailableImpl?() } : {
+                inviteImpl?()
+            })]
+            
             switch sortOrder {
                 case .presence:
                     return .orderedByPresence(options: options)
@@ -115,6 +117,10 @@ final class ContactsControllerNode: ASDisplayNode {
                 let previousStrings = strongSelf.presentationData.strings
                 
                 strongSelf.presentationData = presentationData
+                
+                if previousStrings !== presentationData.strings {
+                    strongSelf.stringsPromise.set(.single(presentationData.strings))
+                }
                 
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.updateThemeAndStrings()

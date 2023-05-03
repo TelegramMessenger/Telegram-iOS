@@ -547,6 +547,11 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
     var entries: [ChannelPermissionsEntry] = []
     
     if let channel = view.peers[view.peerId] as? TelegramChannel, let participants = participants, let cachedData = view.cachedData as? CachedChannelData, let defaultBannedRights = channel.defaultBannedRights {
+        var isDiscussion = false
+        if case .group = channel.info, case let .known(peerId) = cachedData.linkedDiscussionPeerId, peerId != nil {
+            isDiscussion = true
+        }
+        
         let effectiveRightsFlags: TelegramChatBannedRightsFlags
         if let modifiedRightsFlags = state.modifiedRightsFlags {
             effectiveRightsFlags = modifiedRightsFlags
@@ -558,7 +563,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         var rightIndex: Int = 0
         for (rights, correspondingAdminRight) in allGroupPermissionList(peer: .channel(channel), expandMedia: false) {
             var enabled = true
-            if channel.addressName != nil && publicGroupRestrictedPermissions.contains(rights) {
+            if (channel.addressName != nil || channel.flags.contains(.hasGeo) || isDiscussion) && publicGroupRestrictedPermissions.contains(rights) {
                 enabled = false
             }
             if !channel.hasPermission(.inviteMembers) {
@@ -938,7 +943,17 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                     } else if right.contains(.banAddMembers) {
                         text = presentationData.strings.GroupPermission_AddMembersNotAvailable
                     } else {
-                        text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
+                        var isDiscussion = false
+                        if case .group = channel.info, let cachedData = view.cachedData as? CachedChannelData, case let .known(peerId) = cachedData.linkedDiscussionPeerId, peerId != nil {
+                            isDiscussion = true
+                        }
+                        if channel.flags.contains(.hasGeo) {
+                            text = presentationData.strings.GroupPermission_NotAvailableInGeoGroups
+                        } else if isDiscussion {
+                            text = presentationData.strings.GroupPermission_NotAvailableInDiscussionGroups
+                        } else {
+                            text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
+                        }
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     break
@@ -951,9 +966,9 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         controller.navigationPresentation = .modal
         controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
         controller.proceed = { [weak controller] result in
-            let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.medium(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
-            let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
-            let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let attributedTitle = NSAttributedString(string: presentationData.strings.BroadcastGroups_ConfirmationAlert_Title, font: Font.semibold(presentationData.listsFontSize.baseDisplaySize), textColor: presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+            let body = MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
             let attributedText = parseMarkdownIntoAttributedString(presentationData.strings.BroadcastGroups_ConfirmationAlert_Text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
             
             let alertController = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BroadcastGroups_ConfirmationAlert_Convert, action: { [weak controller] in

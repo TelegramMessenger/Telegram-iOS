@@ -453,7 +453,7 @@ public final class EmojiTextAttachmentView: UIView {
         super.init(frame: CGRect())
         
         self.layer.addSublayer(self.contentLayer)
-        self.contentLayer.isVisibleForAnimations = true
+        self.contentLayer.isVisibleForAnimations = context.sharedContext.energyUsageSettings.loopEmoji
     }
     
     required public init?(coder: NSCoder) {

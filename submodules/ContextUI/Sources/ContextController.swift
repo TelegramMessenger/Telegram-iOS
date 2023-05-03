@@ -994,15 +994,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let _ = self.presentationNode {
             self.currentPresentationStateTransition = .animateOut(result: initialResult, completion: completion)
             if let validLayout = self.validLayout {
-                if case .custom = initialResult {
+                if case let .custom(transition) = initialResult {
                     self.delayLayoutUpdate = true
-                    Queue.mainQueue().after(0.05) {
+                    Queue.mainQueue().after(0.1) {
                         self.delayLayoutUpdate = false
                         self.updateLayout(
                             layout: validLayout,
-                            transition: .animated(duration: 0.35, curve: .easeInOut),
+                            transition: transition,
                             previousActionsContainerNode: nil
                         )
+                        self.isAnimatingOut = true
                     }
                 } else {
                     self.updateLayout(
@@ -2207,16 +2208,22 @@ public extension ContextLocationContentSource {
 }
 
 public final class ContextControllerReferenceViewInfo {
+    public enum ActionsPosition {
+        case bottom
+        case top
+    }
     public let referenceView: UIView
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
+    public let actionsPosition: ActionsPosition
     
-    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom) {
         self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
         self.customPosition = customPosition
+        self.actionsPosition = actionsPosition
     }
 }
 
@@ -2343,6 +2350,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public struct Items {
         public enum Content {
             case list([ContextMenuItem])
+            case twoLists([ContextMenuItem], [ContextMenuItem])
             case custom(ContextControllerItemsContent)
         }
         

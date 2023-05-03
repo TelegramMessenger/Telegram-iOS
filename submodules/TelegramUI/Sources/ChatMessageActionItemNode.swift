@@ -212,7 +212,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
                     backgroundMaskImage = (currentOffset, currentImage)
                 } else {
-                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
+                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .white, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
                     backgroundMaskUpdated = true
                 }
             
@@ -320,7 +320,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 if let current = strongSelf.dustNode {
                                     dustNode = current
                                 } else {
-                                    dustNode = InvisibleInkDustNode(textNode: nil)
+                                    dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                                     dustNode.isUserInteractionEnabled = false
                                     strongSelf.dustNode = dustNode
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: strongSelf.labelNode.textNode)
@@ -335,29 +335,37 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
 
                             if let (offset, image) = backgroundMaskImage {
-                                if strongSelf.backgroundNode == nil {
-                                    if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
-                                        strongSelf.backgroundNode = backgroundNode
-                                        backgroundNode.addSubnode(strongSelf.backgroundColorNode)
-                                        strongSelf.insertSubnode(backgroundNode, at: 0)
+                                if item.context.sharedContext.energyUsageSettings.fullTranslucency {
+                                    if strongSelf.backgroundNode == nil {
+                                        if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                                            strongSelf.backgroundNode = backgroundNode
+                                            backgroundNode.addSubnode(strongSelf.backgroundColorNode)
+                                            strongSelf.insertSubnode(backgroundNode, at: 0)
+                                        }
+                                    }
+                                    
+                                    if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+                                        strongSelf.backgroundColorNode.isHidden = true
+                                    } else {
+                                        strongSelf.backgroundColorNode.isHidden = true
+                                    }
+                                } else {
+                                    if strongSelf.backgroundMaskNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.backgroundMaskNode, at: 0)
                                     }
                                 }
-                                
-                                if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
-                                    strongSelf.backgroundColorNode.isHidden = true
-                                } else {
-                                    strongSelf.backgroundColorNode.isHidden = false
-                                }
 
-                                if backgroundMaskUpdated, let backgroundNode = strongSelf.backgroundNode {
-                                    if labelRects.count == 1 {
-                                        backgroundNode.clipsToBounds = true
-                                        backgroundNode.cornerRadius = labelRects[0].height / 2.0
-                                        backgroundNode.view.mask = nil
-                                    } else {
-                                        backgroundNode.clipsToBounds = false
-                                        backgroundNode.cornerRadius = 0.0
-                                        backgroundNode.view.mask = strongSelf.backgroundMaskNode.view
+                                if backgroundMaskUpdated {
+                                    if let backgroundNode = strongSelf.backgroundNode {
+                                        if labelRects.count == 1 {
+                                            backgroundNode.clipsToBounds = true
+                                            backgroundNode.cornerRadius = labelRects[0].height / 2.0
+                                            backgroundNode.view.mask = nil
+                                        } else {
+                                            backgroundNode.clipsToBounds = false
+                                            backgroundNode.cornerRadius = 0.0
+                                            backgroundNode.view.mask = strongSelf.backgroundMaskNode.view
+                                        }
                                     }
                                 }
 
@@ -366,9 +374,14 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     if let (rect, size) = strongSelf.absoluteRect {
                                         strongSelf.updateAbsoluteRect(rect, within: size)
                                     }
+                                    strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: image.size)
+                                    strongSelf.backgroundMaskNode.layer.layerTintColor = nil
+                                } else {
+                                    strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(x: baseBackgroundFrame.minX + offset.x, y: baseBackgroundFrame.minY + offset.y), size: image.size)
+                                    strongSelf.backgroundMaskNode.layer.layerTintColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).cgColor
                                 }
+                                
                                 strongSelf.backgroundMaskNode.image = image
-                                strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: image.size)
 
                                 strongSelf.backgroundColorNode.frame = CGRect(origin: CGPoint(), size: image.size)
 

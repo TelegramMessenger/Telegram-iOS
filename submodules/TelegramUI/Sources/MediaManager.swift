@@ -494,50 +494,71 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                 switch type {
                     case .voice:
                         strongSelf.musicMediaPlayer?.control(.playback(.pause))
-                        strongSelf.voiceMediaPlayer?.stop()
                         if let (account, playlist, settings, storedState) = inputData {
-                            let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: true, type: type)
-                            strongSelf.voiceMediaPlayer = voiceMediaPlayer
-                            voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
-                                if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
-                                    voiceMediaPlayer.stop()
-                                    strongSelf.voiceMediaPlayer = nil
+                            if areSharedMediaPlaylistsEqual(playlist, strongSelf.voiceMediaPlayer?.playlist), case .seek = control {
+                                strongSelf.voiceMediaPlayer?.control(control)
+                            } else {
+                                strongSelf.voiceMediaPlayer?.stop()
+                                var continueInstantVideoLoopAfterFinish: Bool = true
+                                var controlPlaybackWithProximity: Bool = true
+                                if let playlist = playlist as? PeerMessagesMediaPlaylist {
+                                    continueInstantVideoLoopAfterFinish = playlist.context.sharedContext.energyUsageSettings.autoplayVideo
+                                    controlPlaybackWithProximity = playlist.context.sharedContext.currentMediaInputSettings.with({ $0.enableRaiseToSpeak })
                                 }
-                            }
-                            voiceMediaPlayer.cancelled = { [weak voiceMediaPlayer] in
-                                if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
-                                    voiceMediaPlayer.stop()
-                                    strongSelf.voiceMediaPlayer = nil
+                                
+                                let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: controlPlaybackWithProximity, type: type, continueInstantVideoLoopAfterFinish: continueInstantVideoLoopAfterFinish)
+                                strongSelf.voiceMediaPlayer = voiceMediaPlayer
+                                voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
+                                    if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
+                                        voiceMediaPlayer.stop()
+                                        strongSelf.voiceMediaPlayer = nil
+                                    }
                                 }
+                                voiceMediaPlayer.cancelled = { [weak voiceMediaPlayer] in
+                                    if let strongSelf = self, let voiceMediaPlayer = voiceMediaPlayer, voiceMediaPlayer === strongSelf.voiceMediaPlayer {
+                                        voiceMediaPlayer.stop()
+                                        strongSelf.voiceMediaPlayer = nil
+                                    }
+                                }
+                                
+                                var control = control
+                                if case .seek = control {
+                                } else if let timestamp = storedState?.timestamp {
+                                    control = .seek(timestamp)
+                                }
+                                voiceMediaPlayer.control(control)
+                                voiceMediaPlayer.control(.playback(.play))
                             }
-                            
-                            var control = control
-                            if let timestamp = storedState?.timestamp {
-                                control = .seek(timestamp)
-                            }
-                            voiceMediaPlayer.control(control)
                         } else {
+                            strongSelf.voiceMediaPlayer?.stop()
                             strongSelf.voiceMediaPlayer = nil
                         }
                     case .music, .file:
-                        strongSelf.musicMediaPlayer?.stop()
                         strongSelf.voiceMediaPlayer?.control(.playback(.pause))
                         if let (account, playlist, settings, storedState) = inputData {
-                            let musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: storedState?.playbackRate ?? .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false, type: type)
-                            strongSelf.musicMediaPlayer = musicMediaPlayer
-                            musicMediaPlayer.cancelled = { [weak musicMediaPlayer] in
-                                if let strongSelf = self, let musicMediaPlayer = musicMediaPlayer, musicMediaPlayer === strongSelf.musicMediaPlayer {
-                                    musicMediaPlayer.stop()
-                                    strongSelf.musicMediaPlayer = nil
+                            if areSharedMediaPlaylistsEqual(playlist, strongSelf.musicMediaPlayer?.playlist), case .seek = control {
+                                strongSelf.musicMediaPlayer?.control(control)
+                            } else {
+                                strongSelf.musicMediaPlayer?.stop()
+                                let musicMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: settings.order, initialLooping: settings.looping, initialPlaybackRate: storedState?.playbackRate ?? .x1, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: false, type: type, continueInstantVideoLoopAfterFinish: true)
+                                strongSelf.musicMediaPlayer = musicMediaPlayer
+                                musicMediaPlayer.cancelled = { [weak musicMediaPlayer] in
+                                    if let strongSelf = self, let musicMediaPlayer = musicMediaPlayer, musicMediaPlayer === strongSelf.musicMediaPlayer {
+                                        musicMediaPlayer.stop()
+                                        strongSelf.musicMediaPlayer = nil
+                                    }
                                 }
+                                
+                                var control = control
+                                if case .seek = control {
+                                } else if let timestamp = storedState?.timestamp {
+                                    control = .seek(timestamp)
+                                }
+                                strongSelf.musicMediaPlayer?.control(control)
+                                strongSelf.musicMediaPlayer?.control(.playback(.play))
                             }
-                            
-                            var control = control
-                            if let timestamp = storedState?.timestamp {
-                                control = .seek(timestamp)
-                            }
-                            strongSelf.musicMediaPlayer?.control(control)
                         } else {
+                            strongSelf.musicMediaPlayer?.stop()
                             strongSelf.musicMediaPlayer = nil
                         }
                 }

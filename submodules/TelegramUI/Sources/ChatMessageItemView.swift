@@ -237,6 +237,9 @@ final class ChatMessageAccessibilityData {
                         }
                     } else if let file = media as? TelegramMediaFile {
                         var isSpecialFile = false
+                        
+                        let isVideo = file.isInstantVideo
+                        
                         for attribute in file.attributes {
                             switch attribute {
                                 case let .Sticker(displayText, _, _):
@@ -264,6 +267,9 @@ final class ChatMessageAccessibilityData {
                                         }
                                     }
                                 case let .Audio(isVoice, duration, title, performer, _):
+                                    if isVideo {
+                                        continue
+                                    }
                                     isSpecialFile = true
                                     if isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
@@ -552,12 +558,37 @@ final class ChatMessageAccessibilityData {
                 let dateString = DateFormatter.localizedString(from: Date(timeIntervalSince1970: Double(message.timestamp)), dateStyle: .medium, timeStyle: .short)
                 
                 result += "\n\(dateString)"
-                if !isIncoming && item.read && !isReply {
+                if !isIncoming && !isReply {
                     result += "\n"
-                    if announceIncomingAuthors {
-                        result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
+                    if item.sending {
+                        result += item.presentationData.strings.VoiceOver_Chat_Sending
+                    } else if item.failed {
+                        result += item.presentationData.strings.VoiceOver_Chat_Failed
                     } else {
-                        result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
+                        if item.read {
+                            if announceIncomingAuthors {
+                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
+                            } else {
+                                result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
+                            }
+                        }
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? ConsumableContentMessageAttribute {
+                                if !attribute.consumed {
+                                    if announceIncomingAuthors {
+                                        result += item.presentationData.strings.VoiceOver_Chat_NotPlayedByRecipients
+                                    } else {
+                                        result += item.presentationData.strings.VoiceOver_Chat_NotPlayedByRecipient
+                                    }
+                                } else {
+                                    if announceIncomingAuthors {
+                                        result += item.presentationData.strings.VoiceOver_Chat_PlayedByRecipients
+                                    } else {
+                                        result += item.presentationData.strings.VoiceOver_Chat_PlayedByRecipient
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 value = result
@@ -581,6 +612,7 @@ final class ChatMessageAccessibilityData {
         }
         
         var (label, value) = dataForMessage(item.message, false)
+        var replyValue: String?
         
         for attribute in item.message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -621,8 +653,8 @@ final class ChatMessageAccessibilityData {
                     replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
                 
-//                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
-//                replyLabel += "\(replyLabel): \(replyMessageLabel), \(replyMessageValue)"
+                let (_, replyMessageValue) = dataForMessage(replyMessage, true)
+                replyValue = replyMessageValue
                 
                 label = "\(replyLabel) . \(label)"
             }
@@ -672,6 +704,10 @@ final class ChatMessageAccessibilityData {
                 customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextReply, target: nil, selector: #selector(self.noop), action: .reply))
             }
             customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: nil, selector: #selector(self.noop), action: .options))
+        }
+        
+        if let replyValue {
+            value = "\(value). \(item.presentationData.strings.VoiceOver_Chat_ReplyingToMessage(replyValue).string)"
         }
         
         self.label = label
@@ -869,7 +905,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                         }
                     })
                 case let .openWebView(url, simple):
-                    item.controllerInteraction.openWebView(button.title, url, simple, false)
+                    item.controllerInteraction.openWebView(button.title, url, simple, .generic)
                 case .requestPeer:
                     break
             }
@@ -922,5 +958,9 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     }
     
     func unreadMessageRangeUpdated() {
+    }
+    
+    public func contentFrame() -> CGRect {
+        return self.bounds
     }
 }

@@ -265,7 +265,7 @@ final class ChatListTable: Table {
         }
     }
     
-    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
+    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, additionalFilter: ((Peer) -> Bool)?, stopOnFirstMatch: Bool, inactiveSecretChatPeerIds: Set<PeerId>) -> [PeerId] {
         let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
         var result: [PeerId] = []
@@ -276,24 +276,20 @@ final class ChatListTable: Table {
                 return true
             }
             
-            if let state = postbox.readStateTable.getCombinedState(messageIndex.id.peerId), state.isUnread {
-                let passFilter: Bool
+            if let state = postbox.readStateTable.getCombinedState(messageIndex.id.peerId), state.isUnread, let peer = postbox.peerTable.get(messageIndex.id.peerId) {
+                var passFilter: Bool
                 if let filterPredicate = filterPredicate {
-                    if let peer = postbox.peerTable.get(messageIndex.id.peerId) {
-                        let isUnread = postbox.readStateTable.getCombinedState(messageIndex.id.peerId)?.isUnread ?? false
-                        let isContact = postbox.contactsTable.isContact(peerId: messageIndex.id.peerId)
-                        
-                        let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId))
-                        
-                        let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
-                        
-                        if filterPredicate.pinnedPeerIds.contains(peer.id) {
-                            passFilter = true
-                        } else if filterPredicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: messageTagSummaryResult) {
-                            passFilter = true
-                        } else {
-                            passFilter = false
-                        }
+                    let isUnread = postbox.readStateTable.getCombinedState(messageIndex.id.peerId)?.isUnread ?? false
+                    let isContact = postbox.contactsTable.isContact(peerId: messageIndex.id.peerId)
+                    
+                    let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId))
+                    
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
+                    
+                    if filterPredicate.pinnedPeerIds.contains(peer.id) {
+                        passFilter = true
+                    } else if filterPredicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: messageTagSummaryResult) {
+                        passFilter = true
                     } else {
                         passFilter = false
                     }
@@ -301,8 +297,17 @@ final class ChatListTable: Table {
                     passFilter = true
                 }
                 
+                if passFilter, let additionalFilter = additionalFilter {
+                    if !additionalFilter(peer) {
+                        passFilter = false
+                    }
+                }
+                
                 if passFilter {
                     result.append(messageIndex.id.peerId)
+                    if stopOnFirstMatch {
+                        return false
+                    }
                 }
             }
             return true

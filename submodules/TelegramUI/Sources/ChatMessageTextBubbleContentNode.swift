@@ -405,7 +405,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         replyCount: dateReplies,
-                        isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
+                        isPinned: item.message.tags.contains(.pinned) && (!item.associatedData.isInPinnedListMode || isReplyThread),
                         hasAutoremove: item.message.isSelfExpiring,
                         canViewReactionList: canViewMessageReactionList(message: item.message),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -489,7 +489,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 if let current = strongSelf.dustNode {
                                     dustNode = current
                                 } else {
-                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode)
+                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
                                     strongSelf.dustNode = dustNode
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
                                 }

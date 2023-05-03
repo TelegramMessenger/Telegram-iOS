@@ -208,12 +208,25 @@ public struct ChatControllerInitialAttachBotStart {
     }
 }
 
+public struct ChatControllerInitialBotAppStart {
+    public let botApp: BotApp
+    public let payload: String?
+    public let justInstalled: Bool
+    
+    public init(botApp: BotApp, payload: String?, justInstalled: Bool) {
+        self.botApp = botApp
+        self.payload = payload
+        self.justInstalled = justInstalled
+    }
+}
+
 public enum ChatControllerInteractionNavigateToPeer {
     case `default`
     case chat(textInputState: ChatTextInputState?, subject: ChatControllerSubject?, peekData: ChatPeekTimeout?)
     case info
     case withBotStartPayload(ChatControllerInitialBotStart)
     case withAttachBot(ChatControllerInitialAttachBotStart)
+    case withBotApp(ChatControllerInitialBotAppStart)
 }
 
 public struct ChatInterfaceForwardOptionsState: Codable, Equatable {
@@ -476,7 +489,7 @@ public enum ChatControllerSubject: Equatable {
     case message(id: MessageSubject, highlight: Bool, timecode: Double?)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
-    case forwardedMessages(ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
+    case forwardedMessages(peerIds: [EnginePeer.Id], ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
     
     public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
         switch lhs {
@@ -498,8 +511,8 @@ public enum ChatControllerSubject: Equatable {
             } else {
                 return false
             }
-        case let .forwardedMessages(lhsIds, _):
-            if case let .forwardedMessages(rhsIds, _) = rhs, lhsIds == rhsIds {
+        case let .forwardedMessages(lhsPeerIds, lhsIds, _):
+            if case let .forwardedMessages(rhsPeerIds, rhsIds, _) = rhs, lhsPeerIds == rhsPeerIds, lhsIds == rhsIds {
                 return true
             } else {
                 return false
@@ -625,6 +638,9 @@ public protocol ChatController: ViewController {
     func hintPlayNextOutgoingGift()
     
     var isSendButtonVisible: Bool { get }
+    
+    var isSelectingMessagesUpdated: ((Bool) -> Void)? { get set }
+    func cancelSelectingMessages()
 }
 
 public protocol ChatMessagePreviewItemNode: AnyObject {
@@ -653,4 +669,5 @@ public enum FileMediaResourceMediaStatus: Equatable {
 
 public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
+    func contentFrame() -> CGRect
 }

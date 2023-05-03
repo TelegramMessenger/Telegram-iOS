@@ -23,6 +23,14 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     
+    var hasExpandedAudioTranscription: Bool {
+        if case .expanded = self.audioTranscriptionState {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             var wasVisible = false
@@ -331,12 +339,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             )
                             animation.animator.updateFrame(layer: strongSelf.backdropMaskForeground, frame: backdropMaskFrame, completion: nil)
                                                         
-                            let videoLayoutData: ChatMessageInstantVideoItemLayoutData
-                            if incoming {
-                                videoLayoutData = .constrained(left: 0.0, right: 0.0) //max(0.0, availableContentWidth - videoFrame.width))
-                            } else {
-                                videoLayoutData = .constrained(left: 0.0, right: 0.0)
-                            }
+                            let videoLayoutData: ChatMessageInstantVideoItemLayoutData = .constrained(left: 0.0, right: 0.0)
                             
                             var videoAnimation = animation
                             var fileAnimation = animation
@@ -388,11 +391,11 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
-//        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
+        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
     }
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
-//        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
+        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {

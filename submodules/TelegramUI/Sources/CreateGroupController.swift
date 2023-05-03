@@ -31,6 +31,7 @@ import ChatTimerScreen
 import AsyncDisplayKit
 import TextFormat
 import AvatarEditorScreen
+import SendInviteLinkScreen
 
 private struct CreateGroupArguments {
     let context: AccountContext
@@ -606,13 +607,15 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     let autoremoveTimeout = stateValue.with({ $0 }).autoremoveTimeout ?? globalAutoremoveTimeout
                     let ttlPeriod: Int32? = autoremoveTimeout == 0 ? nil : autoremoveTimeout
                     
-                    var createSignal: Signal<PeerId?, CreateGroupError>
+                    var createSignal: Signal<CreateGroupResult?, CreateGroupError>
                     switch mode {
                     case .generic:
                         createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
                     case .supergroup:
                         createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
-                        |> map(Optional.init)
+                        |> map { peerId -> CreateGroupResult? in
+                            return CreateGroupResult(peerId: peerId, failedToInvitePeerIds: [])
+                        }
                         |> mapError { error -> CreateGroupError in
                             switch error {
                             case .generic:
@@ -634,12 +637,14 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         
                         createSignal = addressPromise.get()
                         |> castError(CreateGroupError.self)
-                        |> mapToSignal { address -> Signal<PeerId?, CreateGroupError> in
+                        |> mapToSignal { address -> Signal<CreateGroupResult?, CreateGroupError> in
                             guard let address = address else {
                                 return .complete()
                             }
                             return context.engine.peers.createSupergroup(title: title, description: nil, location: (location.latitude, location.longitude, address))
-                            |> map(Optional.init)
+                            |> map { peerId -> CreateGroupResult? in
+                                return CreateGroupResult(peerId: peerId, failedToInvitePeerIds: [])
+                            }
                             |> mapError { error -> CreateGroupError in
                                 switch error {
                                 case .generic:
@@ -661,9 +666,11 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             isForum = true
                         }
                         
-                        let createGroupSignal: (Bool) -> Signal<PeerId?, CreateGroupError> = { isForum in
+                        let createGroupSignal: (Bool) -> Signal<CreateGroupResult?, CreateGroupError> = { isForum in
                             return context.engine.peers.createSupergroup(title: title, description: nil, isForum: isForum)
-                            |> map(Optional.init)
+                            |> map { peerId -> CreateGroupResult? in
+                                return CreateGroupResult(peerId: peerId, failedToInvitePeerIds: [])
+                            }
                             |> mapError { error -> CreateGroupError in
                                 switch error {
                                 case .generic:
@@ -681,14 +688,14 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         }
                         if let publicLink, !publicLink.isEmpty {
                             createSignal = createGroupSignal(isForum)
-                            |> mapToSignal { peerId in
-                                if let peerId = peerId {
-                                    return context.engine.peers.updateAddressName(domain: .peer(peerId), name: publicLink)
+                            |> mapToSignal { result in
+                                if let result = result {
+                                    return context.engine.peers.updateAddressName(domain: .peer(result.peerId), name: publicLink)
                                     |> mapError { _ in
                                         return .generic
                                     }
-                                    |> map { _ in
-                                        return peerId
+                                    |> map { _ -> CreateGroupResult? in
+                                        return result
                                     }
                                 } else {
                                     return .fail(.generic)
@@ -702,14 +709,14 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
 
                         if group.userAdminRights?.rights.contains(.canBeAnonymous) == true {
                             createSignal = createSignal
-                            |> mapToSignal { peerId in
-                                if let peerId = peerId {
-                                    return context.engine.peers.updateChannelAdminRights(peerId: peerId, adminId: context.account.peerId, rights: TelegramChatAdminRights(rights: .canBeAnonymous), rank: nil)
+                            |> mapToSignal { result in
+                                if let result = result {
+                                    return context.engine.peers.updateChannelAdminRights(peerId: result.peerId, adminId: context.account.peerId, rights: TelegramChatAdminRights(rights: .canBeAnonymous), rank: nil)
                                     |> mapError { _ in
                                         return .generic
                                     }
                                     |> map { _ in
-                                        return peerId
+                                        return result
                                     }
                                 } else {
                                     return .fail(.generic)
@@ -718,27 +725,32 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         }
                     }
                     
+                    let _ = createSignal
+                    let _ = replaceControllerImpl
+                    let _ = dismissImpl
+                    let _ = uploadedVideoAvatar
+                    
                     actionsDisposable.add((createSignal
-                    |> mapToSignal { peerId -> Signal<PeerId?, CreateGroupError> in
-                        guard let peerId = peerId else {
+                    |> mapToSignal { result -> Signal<CreateGroupResult?, CreateGroupError> in
+                        guard let result = result else {
                             return .single(nil)
                         }
                         let updatingAvatar = stateValue.with {
                             return $0.avatar
                         }
                         if let _ = updatingAvatar {
-                            return context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
+                            return context.engine.peers.updatePeerPhoto(peerId: result.peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
                                 return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                             })
                             |> ignoreValues
                             |> `catch` { _ -> Signal<Never, CreateGroupError> in
                                 return .complete()
                             }
-                            |> mapToSignal { _ -> Signal<PeerId?, CreateGroupError> in
+                            |> mapToSignal { _ -> Signal<CreateGroupResult?, CreateGroupError> in
                             }
-                            |> then(.single(peerId))
+                            |> then(.single(result))
                         } else {
-                            return .single(peerId)
+                            return .single(result)
                         }
                     }
                     |> deliverOnMainQueue
@@ -750,15 +762,53 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                 return current
                             }
                         }
-                    }).start(next: { peerId in
-                        if let peerId = peerId {
+                    }).start(next: { result in
+                        if let result = result {
                             if let completion = completion {
-                                completion(peerId, {
+                                completion(result.peerId, {
                                     dismissImpl?()
                                 })
                             } else {
-                                let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: peerId))
+                                let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: result.peerId))
                                 replaceControllerImpl?(controller)
+                                
+                                if !result.failedToInvitePeerIds.isEmpty {
+                                    context.account.viewTracker.forceUpdateCachedPeerData(peerId: result.peerId)
+                                    let _ = (context.engine.data.subscribe(
+                                        TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: result.peerId)
+                                    )
+                                    |> filter { $0 != nil }
+                                    |> take(1)
+                                    |> timeout(1.0, queue: .mainQueue(), alternate: .single(nil))
+                                    |> deliverOnMainQueue).start(next: { [weak controller] exportedInvitation in
+                                        let _ = (context.engine.data.get(
+                                            TelegramEngine.EngineData.Item.Peer.Peer(id: result.peerId)
+                                        )
+                                        |> deliverOnMainQueue).start(next: { peer in
+                                            let _ = controller
+                                            let _ = exportedInvitation
+                                            
+                                            if let peer, let exportedInvitation, let link = exportedInvitation.link {
+                                                let _ = (context.engine.data.get(
+                                                    EngineDataList(result.failedToInvitePeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                                                )
+                                                |> deliverOnMainQueue).start(next: { peerItems in
+                                                    guard let controller else {
+                                                        return
+                                                    }
+                                                    let _ = controller
+                                                    let _ = peerItems
+                                                    
+                                                    let peers = peerItems.compactMap { $0 }
+                                                    if !peers.isEmpty {
+                                                        let inviteScreen = SendInviteLinkScreen(context: context, peer: peer, link: link, peers: peers)
+                                                        controller.push(inviteScreen)
+                                                    }
+                                                })
+                                            }
+                                        })
+                                    })
+                                }
                             }
                         }
                     }, error: { error in

@@ -363,6 +363,8 @@ swift_library(
         "//submodules/MediaPasteboardUI:MediaPasteboardUI",
         "//submodules/DrawingUI:DrawingUI",
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
+        "//submodules/TelegramUI/Components/SendInviteLinkScreen",
+        "//submodules/TelegramUI/Components/SliderContextItem:SliderContextItem",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

@@ -524,7 +524,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }*/
         
-        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
+        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
     }
     
     private func enqueueTransition(width: CGFloat, panelHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, animation: PinnedMessageAnimation?, pinnedMessage: ChatPinnedMessage, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: PeerId, firstTime: Bool, isReplyThread: Bool, translateToLanguage: String?) {
@@ -768,7 +768,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         if let current = strongSelf.dustNode {
                             dustNode = current
                         } else {
-                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode)
+                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: strongSelf.context.sharedContext.energyUsageSettings.fullTranslucency)
                             strongSelf.dustNode = dustNode
                             strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
                         }
@@ -904,7 +904,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             }
                         })
                     case let .openWebView(url, simple):
-                        controllerInteraction.openWebView(button.title, url, simple, false)
+                        controllerInteraction.openWebView(button.title, url, simple, .generic)
                     case .requestPeer:
                         break
                     }

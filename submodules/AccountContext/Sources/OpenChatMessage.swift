@@ -45,6 +45,7 @@ public final class OpenChatMessageParams {
     public let playlistLocation: PeerMessagesPlaylistLocation?
     public let gallerySource: GalleryControllerItemSource?
     public let centralItemUpdated: ((MessageId) -> Void)?
+    public let getSourceRect: (() -> CGRect?)?
     
     public init(
         context: AccountContext,
@@ -72,7 +73,8 @@ public final class OpenChatMessageParams {
         actionInteraction: GalleryControllerActionInteraction? = nil,
         playlistLocation: PeerMessagesPlaylistLocation? = nil,
         gallerySource: GalleryControllerItemSource? = nil,
-        centralItemUpdated: ((MessageId) -> Void)? = nil
+        centralItemUpdated: ((MessageId) -> Void)? = nil,
+        getSourceRect: (() -> CGRect?)? = nil
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
@@ -100,5 +102,6 @@ public final class OpenChatMessageParams {
         self.playlistLocation = playlistLocation
         self.gallerySource = gallerySource
         self.centralItemUpdated = centralItemUpdated
+        self.getSourceRect = getSourceRect
     }
 }

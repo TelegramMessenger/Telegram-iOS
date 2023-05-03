@@ -103,6 +103,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     private var isDrawing = false
     private var drawingGestureStartTimestamp: Double?
     
+    var animationsEnabled = true
+    
     private func loadTemplates() {
         func load(_ name: String) {
             if let url = getAppBundle().url(forResource: name, withExtension: "json"),
@@ -920,7 +922,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: false,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .arrow:
@@ -931,7 +934,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: true,
                 isEraser: false,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .marker:
@@ -956,7 +960,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: false,
                 isBlur: true,
-                blurredImage: self.preparedBlurredImage
+                blurredImage: self.preparedBlurredImage,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .eraser:
@@ -967,7 +972,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: true,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         }

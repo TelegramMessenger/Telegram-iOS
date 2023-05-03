@@ -20,6 +20,7 @@ public enum AttachmentButtonType: Equatable {
     case contact
     case poll
     case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case gift
     case standalone
     
     public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
@@ -56,6 +57,12 @@ public enum AttachmentButtonType: Equatable {
                 }
             case let .app(lhsPeer, lhsTitle, lhsIcons):
                 if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+                    return true
+                } else {
+                    return false
+                }
+            case .gift:
+                if case .gift = rhs {
                     return true
                 } else {
                     return false
@@ -110,6 +117,12 @@ public extension AttachmentContainable {
 }
 
 public enum AttachmentMediaPickerSendMode {
+    case generic
+    case silently
+    case whenOnline
+}
+
+public enum AttachmentMediaPickerAttachmentMode {
     case media
     case files
 }
@@ -124,7 +137,7 @@ public protocol AttachmentMediaPickerContext {
     func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode)
     func schedule()
 }
 
@@ -373,12 +386,14 @@ public class AttachmentController: ViewController {
             self.panel.sendMessagePressed = { [weak self] mode in
                 if let strongSelf = self {
                     switch mode {
-                        case .generic:
-                            strongSelf.mediaPickerContext?.send(silently: false, mode: .media)
-                        case .silent:
-                            strongSelf.mediaPickerContext?.send(silently: true, mode: .media)
-                        case .schedule:
-                            strongSelf.mediaPickerContext?.schedule()
+                    case .generic:
+                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media)
+                    case .silent:
+                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media)
+                    case .schedule:
+                        strongSelf.mediaPickerContext?.schedule()
+                    case .whenOnline:
+                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media)
                     }
                 }
             }
@@ -429,6 +444,16 @@ public class AttachmentController: ViewController {
                 if case let .app(bot, _, _) = controller.initialButton {
                     if let index = controller.buttons.firstIndex(where: {
                         if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }) {
+                        self.panel.updateSelectedIndex(index)
+                    }
+                } else if controller.initialButton != .standalone {
+                    if let index = controller.buttons.firstIndex(where: {
+                        if $0 == controller.initialButton {
                             return true
                         } else {
                             return false
@@ -944,9 +969,15 @@ public class AttachmentController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let previousSize = self.validLayout?.size
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
+        if let previousSize, previousSize != layout.size {
+            Queue.mainQueue().after(0.1) {
+                self.node.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
     

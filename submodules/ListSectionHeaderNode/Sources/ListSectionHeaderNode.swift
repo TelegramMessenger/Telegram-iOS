@@ -23,6 +23,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
     public var title: String? {
         didSet {
             self.label.attributedText = NSAttributedString(string: self.title ?? "", font: titleFont, textColor: self.theme.chatList.sectionHeaderTextColor)
+            self.label.accessibilityLabel = self.title
             
             if let (size, leftInset, rightInset) = self.validLayout {
                 self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
@@ -72,6 +73,8 @@ public final class ListSectionHeaderNode: ASDisplayNode {
                     actionColor = self.theme.list.itemDestructiveColor
             }
             self.actionButtonLabel?.attributedText = NSAttributedString(string: action, font: actionFont, textColor: actionColor)
+            self.actionButton?.accessibilityLabel = action
+            self.actionButton?.accessibilityTraits = [.button]
         }
         
         if let (size, leftInset, rightInset) = self.validLayout {
@@ -86,9 +89,11 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false
+        self.label.isAccessibilityElement = true
         
         super.init()
         
+
         self.addSubnode(self.label)
         
         self.backgroundColor = theme.chatList.sectionHeaderFillColor

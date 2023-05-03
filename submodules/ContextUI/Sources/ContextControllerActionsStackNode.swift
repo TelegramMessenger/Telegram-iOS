@@ -821,16 +821,18 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     }
 }
 
-func makeContextControllerActionsStackItem(items: ContextController.Items) -> ContextControllerActionsStackItem {
+func makeContextControllerActionsStackItem(items: ContextController.Items) -> [ContextControllerActionsStackItem] {
     var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     if let context = items.context, let animationCache = items.animationCache, !items.reactionItems.isEmpty {
         reactionItems = (context, items.reactionItems, items.selectedReactionItems, animationCache, items.getEmojiContent)
     }
     switch items.content {
     case let .list(listItems):
-        return ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
+        return [ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)]
+    case let .twoLists(listItems1, listItems2):
+        return [ContextControllerActionsListStackItem(items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil), ContextControllerActionsListStackItem(items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil)]
     case let .custom(customContent):
-        return ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
+        return [ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)]
     }
 }
 
@@ -838,6 +840,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     enum Presentation {
         case modal
         case inline
+        case additional
     }
     
     final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
@@ -927,6 +930,9 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 self.parentShadowNode.isHidden = true
             case .inline:
                 self.backgroundNode.updateColor(color: presentationData.theme.contextMenu.backgroundColor, enableBlur: true, forceKeepBlur: true, transition: transition)
+                self.parentShadowNode.isHidden = false
+            case .additional:
+                self.backgroundNode.updateColor(color: presentationData.theme.contextMenu.backgroundColor.withMultipliedAlpha(0.5), enableBlur: true, forceKeepBlur: true, transition: transition)
                 self.parentShadowNode.isHidden = false
             }
             self.backgroundNode.update(size: size, transition: transition)

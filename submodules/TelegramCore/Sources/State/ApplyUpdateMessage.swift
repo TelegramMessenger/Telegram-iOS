@@ -26,7 +26,10 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
             }
         }
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
-            copyOrMoveResourceData(from: fromLargestRepresentation.resource, to: toLargestRepresentation.resource, mediaBox: postbox.mediaBox)
+            if fromLargestRepresentation.resource is CloudPeerPhotoSizeMediaResource {
+            } else {
+                copyOrMoveResourceData(from: fromLargestRepresentation.resource, to: toLargestRepresentation.resource, mediaBox: postbox.mediaBox)
+            }
         }
     } else if let fromFile = from as? TelegramMediaFile, let toFile = to as? TelegramMediaFile {
         if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
@@ -370,7 +373,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                         mapping.append((message, MessageIndex(id: id, timestamp: storeMessage.timestamp), storeMessage))
                     }
                 } else {
-                    assertionFailure()
+                  //  assertionFailure()
                 }
             } else {
                 assertionFailure()

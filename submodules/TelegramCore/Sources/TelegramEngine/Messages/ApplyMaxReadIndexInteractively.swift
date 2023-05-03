@@ -235,7 +235,7 @@ public func clearPeerUnseenReactionsInteractively(account: Account, peerId: Peer
 }
 
 func _internal_markAllChatsAsReadInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, inactiveSecretChatPeerIds: Set<PeerId>) {
-    for peerId in transaction.getUnreadChatListPeerIds(groupId: groupId, filterPredicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds) {
+    for peerId in transaction.getUnreadChatListPeerIds(groupId: groupId, filterPredicate: filterPredicate, additionalFilter: nil, stopOnFirstMatch: false, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds) {
         _internal_togglePeerUnreadMarkInteractively(transaction: transaction, network: network, viewTracker: viewTracker, peerId: peerId, setToValue: false)
     }
 }

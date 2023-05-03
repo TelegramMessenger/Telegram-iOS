@@ -36,6 +36,7 @@
     NSMutableArray *_dropReponseContexts;
     
     MTTimer *_requestsServiceTimer;
+    MTTimer *_requestsTimeoutTimer;
 }
 
 @end
@@ -71,6 +72,10 @@
     {
         [_requestsServiceTimer invalidate];
         _requestsServiceTimer = nil;
+    }
+    if (_requestsTimeoutTimer != nil) {
+        [_requestsTimeoutTimer invalidate];
+        _requestsTimeoutTimer = nil;
     }
 }
 
@@ -147,6 +152,7 @@
         }
         
         [self updateRequestsTimer];
+        [self updateRequestsTimeoutTimerWithReset:false];
     }];
 }
 
@@ -265,6 +271,75 @@
     
     MTProto *mtProto = _mtProto;
     [mtProto requestTransportTransaction];
+}
+
+- (void)updateRequestsTimeoutTimerWithReset:(bool)reset {
+    CFAbsoluteTime currentTime = MTAbsoluteSystemTime();
+    
+    bool needTimer = false;
+    
+    for (MTRequest *request in _requests) {
+        if (!request.needsTimeoutTimer) {
+            continue;
+        }
+        if (request.errorContext != nil) {
+            if (request.errorContext.waitingForRequestToComplete != nil) {
+                bool foundDependency = false;
+                for (MTRequest *anotherRequest in _requests) {
+                    if (request.errorContext.waitingForRequestToComplete == anotherRequest.internalId) {
+                        foundDependency = true;
+                        break;
+                    }
+                }
+                
+                if (!foundDependency) {
+                    needTimer = true;
+                }
+            }
+            
+            if (request.requestContext == nil) {
+                if (request.errorContext.minimalExecuteTime > currentTime + DBL_EPSILON) {
+                } else {
+                    request.errorContext.minimalExecuteTime = 0.0;
+                    needTimer = true;
+                }
+            }
+        } else {
+            needTimer = true;
+        }
+    }
+    
+    if (needTimer) {
+        if (reset) {
+            if (_requestsTimeoutTimer != nil) {
+                [_requestsTimeoutTimer invalidate];
+                _requestsTimeoutTimer = nil;
+            }
+        }
+        
+        if (_requestsTimeoutTimer == nil) {
+            __weak MTRequestMessageService *weakSelf = self;
+            _requestsTimeoutTimer = [[MTTimer alloc] initWithTimeout:5.0 repeat:false completion:^
+            {
+                __strong MTRequestMessageService *strongSelf = weakSelf;
+                [strongSelf requestTimerTimeoutEvent];
+            } queue:_queue.nativeQueue];
+            [_requestsTimeoutTimer start];
+        }
+    } else {
+        if (_requestsTimeoutTimer != nil) {
+            [_requestsTimeoutTimer invalidate];
+            _requestsTimeoutTimer = nil;
+        }
+    }
+}
+
+- (void)requestTimerTimeoutEvent {
+    MTProto *mtProto = _mtProto;
+    if (mtProto) {
+        [mtProto requestSecureTransportReset];
+        [mtProto requestTransportTransaction];
+    }
 }
 
 - (void)mtProtoWillAddService:(MTProto *)mtProto
@@ -824,6 +899,7 @@
             }
             
             [self updateRequestsTimer];
+            [self updateRequestsTimeoutTimerWithReset:false];
         }
     }
 }
@@ -838,6 +914,10 @@
                 request.acknowledgementReceived();
         }
     }
+}
+
+- (void)mtProtoTransportActivityUpdated:(MTProto *) __unused mtProto {
+    [self updateRequestsTimeoutTimerWithReset:true];
 }
 
 - (void)mtProto:(MTProto *)__unused mtProto messageDeliveryConfirmed:(NSArray *)messageIds

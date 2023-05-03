@@ -336,18 +336,25 @@ public enum PatternWallpaperDrawMode {
 }
 
 public struct PatternWallpaperArguments: TransformImageCustomArguments {
+    public enum DisplayMode: Int32 {
+        case aspectFill
+        case aspectFit
+        case halfAspectFill
+    }
     let colors: [UIColor]
     let rotation: Int32?
     let preview: Bool
     let customPatternColor: UIColor?
     let bakePatternAlpha: CGFloat
+    let displayMode: DisplayMode
     
-    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false, bakePatternAlpha: CGFloat = 1.0) {
+    public init(colors: [UIColor], rotation: Int32?, customPatternColor: UIColor? = nil, preview: Bool = false, bakePatternAlpha: CGFloat = 1.0, displayMode: DisplayMode = .aspectFill) {
         self.colors = colors
         self.rotation = rotation
         self.customPatternColor = customPatternColor
         self.preview = preview
         self.bakePatternAlpha = bakePatternAlpha
+        self.displayMode = displayMode
     }
     
     public func serialized() -> NSArray {
@@ -359,6 +366,7 @@ public struct PatternWallpaperArguments: TransformImageCustomArguments {
         }
         array.add(NSNumber(value: self.preview))
         array.add(NSNumber(value: Double(self.bakePatternAlpha)))
+        array.add(NSNumber(value: self.displayMode.rawValue))
         return array
     }
 }
@@ -539,12 +547,13 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         c.restoreGState()
                     }
 
+                    let displayMode = customArguments.displayMode
                     let overlayImage = generateImage(arguments.drawingRect.size, rotatedContext: { size, c in
                         c.clear(CGRect(origin: CGPoint(), size: size))
                         var image: UIImage?
                         if let fullSizeData = fullSizeData {
                             if mode == .screen {
-                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, 1.0)
+                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, 1.0, displayMode == .aspectFit)
                             } else {
                                 image = UIImage(data: fullSizeData)
                             }
@@ -566,38 +575,62 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                             if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
                                 fittedSize.height = arguments.boundingSize.height
                             }
-                            fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
-
-                            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-
+                            switch displayMode {
+                            case .aspectFill:
+                                fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
+                            case .halfAspectFill:
+                                fittedSize = fittedSize.aspectFilled(arguments.drawingRect.size)
+                                fittedSize = CGSize(width: fittedSize.width * 0.5, height: fittedSize.height * 0.5)
+                            case .aspectFit:
+                                fittedSize = fittedSize.aspectFitted(arguments.drawingRect.size)
+                            }
+                            
                             c.interpolationQuality = customArguments.preview ? .low : .medium
-                            c.clip(to: fittedRect, mask: image.cgImage!)
+                            
+                            let drawTile: (CGRect) -> Void = { fittedRect in
+                                c.saveGState()
+                                c.clip(to: fittedRect, mask: image.cgImage!)
 
-                            if let customPatternColor = customArguments.customPatternColor {
-                                c.setFillColor(customPatternColor.cgColor)
-                                c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
-                            } else if colors.count >= 3 && customArguments.customPatternColor == nil {
-                                c.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
-                                c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
-                            } else if colors.count == 1 {
-                                c.setFillColor(customArguments.customPatternColor?.cgColor ?? patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
-                                c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
-                            } else {
-                                let gradientColors = colors.map { patternColor(for: $0, intensity: intensity, prominent: prominent).cgColor } as CFArray
-                                let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
+                                if let customPatternColor = customArguments.customPatternColor {
+                                    c.setFillColor(customPatternColor.cgColor)
+                                    c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
+                                } else if colors.count >= 3 && customArguments.customPatternColor == nil {
+                                    c.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+                                    c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
+                                } else if colors.count == 1 {
+                                    c.setFillColor(customArguments.customPatternColor?.cgColor ?? patternColor(for: color, intensity: intensity, prominent: prominent).cgColor)
+                                    c.fill(CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
+                                } else {
+                                    let gradientColors = colors.map { patternColor(for: $0, intensity: intensity, prominent: prominent).cgColor } as CFArray
+                                    let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
 
-                                var locations: [CGFloat] = []
-                                for i in 0 ..< colors.count {
-                                    locations.append(delta * CGFloat(i))
+                                    var locations: [CGFloat] = []
+                                    for i in 0 ..< colors.count {
+                                        locations.append(delta * CGFloat(i))
+                                    }
+                                    let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                                    c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
+                                    c.rotate(by: CGFloat(customArguments.rotation ?? 0) * CGFloat.pi / -180.0)
+                                    c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
+
+                                    c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
                                 }
-                                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-
-                                c.translateBy(x: arguments.drawingSize.width / 2.0, y: arguments.drawingSize.height / 2.0)
-                                c.rotate(by: CGFloat(customArguments.rotation ?? 0) * CGFloat.pi / -180.0)
-                                c.translateBy(x: -arguments.drawingSize.width / 2.0, y: -arguments.drawingSize.height / 2.0)
-
-                                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                                c.restoreGState()
+                            }
+                            
+                            switch displayMode {
+                            case .aspectFit, .halfAspectFill:
+                                var fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                                drawTile(fittedRect)
+                                while (fittedRect.maxX < size.width) {
+                                    fittedRect = fittedRect.offsetBy(dx: fittedSize.width, dy: 0.0)
+                                    drawTile(fittedRect)
+                                }
+                            case .aspectFill:
+                                let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                                drawTile(fittedRect)
                             }
                         }
                     })

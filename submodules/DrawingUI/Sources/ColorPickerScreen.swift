@@ -10,6 +10,7 @@ import AccountContext
 import TelegramPresentationData
 import SheetComponent
 import ViewControllerComponent
+import BlurredBackgroundComponent
 import SegmentedControlNode
 import MultilineTextComponent
 import HexColor
@@ -1850,59 +1851,6 @@ final class ColorSwatchComponent: Component {
     }
 }
 
-
-class BlurredRectangle: Component {
-    let color: UIColor
-    let radius: CGFloat
-
-    init(color: UIColor, radius: CGFloat = 0.0) {
-        self.color = color
-        self.radius = radius
-    }
-
-    static func ==(lhs: BlurredRectangle, rhs: BlurredRectangle) -> Bool {
-        if !lhs.color.isEqual(rhs.color) {
-            return false
-        }
-        if lhs.radius != rhs.radius {
-            return false
-        }
-        return true
-    }
-
-    final class View: UIView {
-        private let background: NavigationBackgroundNode
-
-        init() {
-            self.background = NavigationBackgroundNode(color: .clear)
-
-            super.init(frame: CGRect())
-
-            self.addSubview(self.background.view)
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-
-        func update(component: BlurredRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
-            transition.setFrame(view: self.background.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            self.background.updateColor(color: component.color, transition: .immediate)
-            self.background.update(size: availableSize, cornerRadius: component.radius, transition: .immediate)
-
-            return availableSize
-        }
-    }
-
-    func makeView() -> View {
-        return View()
-    }
-
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
 private final class ColorPickerContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -2054,9 +2002,8 @@ private final class ColorPickerContent: CombinedComponent {
                         AnyComponentWithIdentity(
                             id: "background",
                             component: AnyComponent(
-                                BlurredRectangle(
-                                    color:  UIColor(rgb: 0x888888, alpha: 0.1),
-                                    radius: 15.0
+                                BlurredBackgroundComponent(
+                                    color:  UIColor(rgb: 0x888888, alpha: 0.1)
                                 )
                             )
                         ),
@@ -2076,6 +2023,8 @@ private final class ColorPickerContent: CombinedComponent {
             )
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - closeButton.size.width - 1.0, y: 29.0))
+                .clipsToBounds(true)
+                .cornerRadius(15.0)
             )
             
             let title = title.update(
@@ -2465,12 +2414,19 @@ private final class ColorPickerSheetComponent: CombinedComponent {
 }
 
 class ColorPickerScreen: ViewControllerComponentContainer {
+    private var dismissed: () -> Void
+    
     init(context: AccountContext, initialColor: DrawingColor, updated: @escaping (DrawingColor) -> Void, openEyedropper: @escaping () -> Void, dismissed: @escaping () -> Void = {}) {
+        self.dismissed = dismissed
         super.init(context: context, component: ColorPickerSheetComponent(context: context, initialColor: initialColor, updated: updated, openEyedropper: openEyedropper, dismissed: dismissed), navigationBarAppearance: .none)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.navigationPresentation = .flatModal
+    }
+    
+    deinit {
+        self.dismissed()
     }
     
     required init(coder aDecoder: NSCoder) {

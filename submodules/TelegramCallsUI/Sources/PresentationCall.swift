@@ -616,6 +616,8 @@ public final class PresentationCallImpl: PresentationCall {
                     let debugLogValue = Promise<String?>()
                     self.ongoingContext?.stop(sendDebugLogs: options.contains(.sendDebugLogs), debugLogValue: debugLogValue)
                 }
+            case .dropping:
+                break
             default:
                 self.audioSessionShouldBeActive.set(false)
                 if wasActive {

@@ -1641,7 +1641,7 @@ final class MessageStoryRenderer {
         let size = layout.size
         self.containerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.instantChatBackgroundNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.instantChatBackgroundNode.updateLayout(size: size, transition: .immediate)
+        self.instantChatBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: .immediate)
         self.messagesContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
         let addressLayout = self.addressNode.updateLayout(size)
