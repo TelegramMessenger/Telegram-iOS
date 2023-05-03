@@ -851,8 +851,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             section = .devices
                         case "password":
                             section = .twoStepAuth
+                        #if DEBUG
                         case "enable_log":
                             section = .enableLog
+                        #endif
                         default:
                             break
                         }
