@@ -1325,7 +1325,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     return
                 }
                 if groupId == AnyHashable("popular") {
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = strongSelf.presentationData
                     let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                     var items: [ActionSheetItem] = []
                     let context = strongSelf.context
@@ -1601,7 +1601,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.didAnimateIn = true
         
-        if !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion {
+        if !self.presentationData.reduceMotion {
             for i in 0 ..< self.items.count {
                 guard let itemNode = self.visibleItemNodes[i] else {
                     continue
@@ -2053,7 +2053,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             
                             standaloneReactionAnimation.animateReactionSelection(
                                 context: strongSelf.context,
-                                theme: strongSelf.context.sharedContext.currentPresentationData.with({ $0 }).theme,
+                                theme: strongSelf.presentationData.theme,
                                 animationCache: strongSelf.animationCache,
                                 reaction: itemNode.item,
                                 avatarPeers: [],

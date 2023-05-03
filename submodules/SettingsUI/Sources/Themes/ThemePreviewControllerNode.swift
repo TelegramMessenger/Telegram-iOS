@@ -371,6 +371,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             gesture?.cancel()
         }, present: { _ in
         }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {
+        }, openStories: { _ in
         })
 
         func makeChatListItem(
@@ -433,7 +434,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     hasFailedMessages: false,
                     forumTopicData: nil,
                     topForumTopicItems: [],
-                    autoremoveTimeout: nil
+                    autoremoveTimeout: nil,
+                    hasNewStories: false
                 )),
                 editing: false,
                 hasActiveRevealControls: false,

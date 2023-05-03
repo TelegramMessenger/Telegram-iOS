@@ -327,6 +327,72 @@ public extension Api {
     }
 }
 public extension Api {
+    indirect enum StoryItem: TypeConstructorDescription {
+        case storyItem(id: Int64, date: Int32, media: Api.MessageMedia)
+        case storyItemDeleted(id: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyItem(let id, let date, let media):
+                    if boxed {
+                        buffer.appendInt32(-1230510430)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    media.serialize(buffer, true)
+                    break
+                case .storyItemDeleted(let id):
+                    if boxed {
+                        buffer.appendInt32(-2020380585)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyItem(let id, let date, let media):
+                return ("storyItem", [("id", id as Any), ("date", date as Any), ("media", media as Any)])
+                case .storyItemDeleted(let id):
+                return ("storyItemDeleted", [("id", id as Any)])
+    }
+    }
+    
+        public static func parse_storyItem(_ reader: BufferReader) -> StoryItem? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.MessageMedia?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StoryItem.storyItem(id: _1!, date: _2!, media: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_storyItemDeleted(_ reader: BufferReader) -> StoryItem? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StoryItem.storyItemDeleted(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum TextWithEntities: TypeConstructorDescription {
         case textWithEntities(text: String, entities: [Api.MessageEntity])
     
@@ -823,6 +889,7 @@ public extension Api {
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
         case updateStickerSets(flags: Int32)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
+        case updateStories(stories: Api.UserStories)
         case updateTheme(theme: Api.Theme)
         case updateTranscribedAudio(flags: Int32, peer: Api.Peer, msgId: Int32, transcriptionId: Int64, text: String)
         case updateUser(userId: Int64)
@@ -1715,6 +1782,12 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     break
+                case .updateStories(let stories):
+                    if boxed {
+                        buffer.appendInt32(1727715253)
+                    }
+                    stories.serialize(buffer, true)
+                    break
                 case .updateTheme(let theme):
                     if boxed {
                         buffer.appendInt32(-2112423005)
@@ -1999,6 +2072,8 @@ public extension Api {
                 return ("updateStickerSets", [("flags", flags as Any)])
                 case .updateStickerSetsOrder(let flags, let order):
                 return ("updateStickerSetsOrder", [("flags", flags as Any), ("order", order as Any)])
+                case .updateStories(let stories):
+                return ("updateStories", [("stories", stories as Any)])
                 case .updateTheme(let theme):
                 return ("updateTheme", [("theme", theme as Any)])
                 case .updateTranscribedAudio(let flags, let peer, let msgId, let transcriptionId, let text):
@@ -3767,6 +3842,19 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateStickerSetsOrder(flags: _1!, order: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateStories(_ reader: BufferReader) -> Update? {
+            var _1: Api.UserStories?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.UserStories
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateStories(stories: _1!)
             }
             else {
                 return nil

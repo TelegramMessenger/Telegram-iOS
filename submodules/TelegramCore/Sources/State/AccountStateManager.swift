@@ -224,6 +224,11 @@ public final class AccountStateManager {
             return self.deletedMessagesPipe.signal()
         }
         
+        private let storyUpdatesPipe = ValuePipe<[InternalStoryUpdate]>()
+        public var storyUpdates: Signal<[InternalStoryUpdate], NoError> {
+            return self.storyUpdatesPipe.signal()
+        }
+        
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
         
@@ -960,6 +965,9 @@ public final class AccountStateManager {
                             if !events.updatedGroupCallParticipants.isEmpty {
                                 strongSelf.groupCallParticipantUpdatesPipe.putNext(events.updatedGroupCallParticipants)
                             }
+                            if !events.storyUpdates.isEmpty {
+                                strongSelf.storyUpdatesPipe.putNext(events.storyUpdates)
+                            }
                             if !events.updatedIncomingThreadReadStates.isEmpty || !events.updatedOutgoingThreadReadStates.isEmpty {
                                 strongSelf.threadReadStateUpdatesPipe.putNext((events.updatedIncomingThreadReadStates, events.updatedOutgoingThreadReadStates))
                             }
@@ -1622,6 +1630,12 @@ public final class AccountStateManager {
     public var deletedMessages: Signal<[DeletedMessageId], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.deletedMessages.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    var storyUpdates: Signal<[InternalStoryUpdate], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.storyUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

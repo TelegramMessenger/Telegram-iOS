@@ -102,7 +102,8 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         hasFailedMessages: false,
                         forumTopicData: nil,
                         topForumTopicItems: [],
-                        autoremoveTimeout: nil
+                        autoremoveTimeout: nil,
+                        hasNewStories: false
                     )),
                     editing: false,
                     hasActiveRevealControls: false,
@@ -267,6 +268,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, openPremiumIntro: {
         }, openChatFolderUpdates: {
         }, hideChatFolderUpdates: {
+        }, openStories: { _ in
         })
         interaction.searchTextHighightState = searchQuery
         self.interaction = interaction

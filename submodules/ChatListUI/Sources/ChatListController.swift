@@ -45,6 +45,8 @@ import ChatListHeaderComponent
 import ChatListTitleView
 import InviteLinksUI
 import ChatFolderLinkPreviewScreen
+import StoryContainerScreen
+import StoryContentComponent
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -204,6 +206,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var plainTitle: String = ""
     
     private var powerSavingMonitoringDisposable: Disposable?
+    
+    private var storyListContext: StoryListContext?
+    private var storyListStateDisposable: Disposable?
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
@@ -739,6 +744,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.joinForumDisposable.dispose()
         self.actionDisposables.dispose()
         self.powerSavingMonitoringDisposable?.dispose()
+        self.storyListStateDisposable?.dispose()
     }
     
     private func updateNavigationMetadata() {
@@ -1312,6 +1318,30 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.presentInGlobalOverlay(contextController)
                 }
             }
+        }
+        
+        self.chatListDisplayNode.mainContainerNode.openStories = { [weak self] peerId in
+            guard let self, let storyListContext = self.storyListContext else {
+                return
+            }
+            
+            let _ = (StoryChatContent.stories(
+                context: self.context,
+                storyList: storyListContext,
+                focusItem: nil
+            )
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] initialContent in
+                guard let self else {
+                    return
+                }
+                let storyContainerScreen = StoryContainerScreen(
+                    context: self.context,
+                    initialFocusedId: AnyHashable(peerId),
+                    initialContent: initialContent
+                )
+                self.push(storyContainerScreen)
+            })
         }
         
         self.chatListDisplayNode.peerContextAction = { [weak self] peer, source, node, gesture, location in
@@ -2027,6 +2057,29 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }))
                         }
                     }
+                }
+            })
+            
+            let storyListContext = self.context.engine.messages.allStories()
+            self.storyListContext = storyListContext
+            self.storyListStateDisposable = (storyListContext.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                let _ = self
+                let _ = state
+                
+                self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
+                    var chatListState = chatListState
+                    
+                    var peersWithNewStories = Set<EnginePeer.Id>()
+                    for itemSet in state.itemSets {
+                        peersWithNewStories.insert(itemSet.peerId)
+                    }
+                    chatListState.peersWithNewStories = peersWithNewStories
+                    
+                    return chatListState
                 }
             })
         }

@@ -568,5 +568,21 @@ public extension TelegramEngine {
                 _internal_removeSyncrhonizeAutosaveItemOperations(transaction: transaction, indices: indices)
             }).start()
         }
+        
+        public func allStories() -> StoryListContext {
+            return StoryListContext(account: self.account, scope: .all)
+        }
+        
+        public func peerStories(id: EnginePeer.Id) -> StoryListContext {
+            return StoryListContext(account: self.account, scope: .peer(id))
+        }
+        
+        public func uploadStory(media: EngineStoryInputMedia) -> Signal<Never, NoError> {
+            return _internal_uploadStory(account: self.account, media: media)
+        }
+        
+        public func deleteStory(id: Int64) -> Signal<Never, NoError> {
+            return _internal_deleteStory(account: account, id: id)
+        }
     }
 }

@@ -111,6 +111,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var forumTopicData: EngineChatList.ForumTopicData?
         var topForumTopicItems: [EngineChatList.ForumTopicData]
         var revealed: Bool
+        var hasNewStories: Bool
         
         init(
             index: EngineChatList.Item.Index,
@@ -134,7 +135,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             autoremoveTimeout: Int32?,
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
-            revealed: Bool
+            revealed: Bool,
+            hasNewStories: Bool
         ) {
             self.index = index
             self.presentationData = presentationData
@@ -158,6 +160,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.forumTopicData = forumTopicData
             self.topForumTopicItems = topForumTopicItems
             self.revealed = revealed
+            self.hasNewStories = hasNewStories
         }
         
         static func ==(lhs: PeerEntryData, rhs: PeerEntryData) -> Bool {
@@ -265,6 +268,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return false
             }
             if lhs.revealed != rhs.revealed {
+                return false
+            }
+            if lhs.hasNewStories != rhs.hasNewStories {
                 return false
             }
             return true
@@ -632,7 +638,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             autoremoveTimeout: entry.autoremoveTimeout,
             forumTopicData: entry.forumTopicData,
             topForumTopicItems: entry.topForumTopicItems,
-            revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
+            revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing),
+            hasNewStories: state.peersWithNewStories.contains(entry.renderedPeer.peerId)
         ))
         
         if let threadInfo, threadInfo.isHidden {
@@ -681,7 +688,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         autoremoveTimeout: nil,
                         forumTopicData: nil,
                         topForumTopicItems: [],
-                        revealed: false
+                        revealed: false,
+                        hasNewStories: false
                     )))
                     if foundPinningIndex != 0 {
                         foundPinningIndex -= 1
@@ -711,7 +719,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                 autoremoveTimeout: nil,
                 forumTopicData: nil,
                 topForumTopicItems: [],
-                revealed: false
+                revealed: false,
+                hasNewStories: false
             )))
         } else {
             if !filteredAdditionalItemEntries.isEmpty {
@@ -761,7 +770,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         autoremoveTimeout: item.item.autoremoveTimeout,
                         forumTopicData: item.item.forumTopicData,
                         topForumTopicItems: item.item.topForumTopicItems,
-                        revealed: state.hiddenItemShouldBeTemporaryRevealed || state.editing
+                        revealed: state.hiddenItemShouldBeTemporaryRevealed || state.editing,
+                        hasNewStories: false
                     )))
                     if pinningIndex != 0 {
                         pinningIndex -= 1

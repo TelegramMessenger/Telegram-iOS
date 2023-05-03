@@ -108,6 +108,6 @@ extension UserLimitsConfiguration {
         self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)
         self.maxReactionsPerMessage = getValue("reactions_user_max", orElse: 1)
         self.maxSharedFolderInviteLinks = getValue("chatlist_invites_limit", orElse: isPremium ? 100 : 3)
-        self.maxSharedFolderJoin = getValue("chatlist_joined_limit", orElse: isPremium ? 100 : 2)
+        self.maxSharedFolderJoin = getValue("chatlists_joined_limit", orElse: isPremium ? 100 : 2)
     }
 }

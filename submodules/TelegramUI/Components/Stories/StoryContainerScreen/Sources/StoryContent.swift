@@ -43,6 +43,7 @@ public final class StoryContentItem {
     public let rightInfoComponent: AnyComponent<Empty>?
     public let targetMessageId: EngineMessage.Id?
     public let preload: Signal<Never, NoError>?
+    public let delete: (() -> Void)?
     public let hasLike: Bool
     public let isMy: Bool
 
@@ -54,6 +55,7 @@ public final class StoryContentItem {
         rightInfoComponent: AnyComponent<Empty>?,
         targetMessageId: EngineMessage.Id?,
         preload: Signal<Never, NoError>?,
+        delete: (() -> Void)?,
         hasLike: Bool,
         isMy: Bool
     ) {
@@ -64,23 +66,27 @@ public final class StoryContentItem {
         self.rightInfoComponent = rightInfoComponent
         self.targetMessageId = targetMessageId
         self.preload = preload
+        self.delete = delete
         self.hasLike = hasLike
         self.isMy = isMy
     }
 }
 
 public final class StoryContentItemSlice {
-    public let focusedItemId: AnyHashable
+    public let id: AnyHashable
+    public let focusedItemId: AnyHashable?
     public let items: [StoryContentItem]
     public let totalCount: Int
     public let update: (StoryContentItemSlice, AnyHashable) -> Signal<StoryContentItemSlice, NoError>
 
     public init(
-        focusedItemId: AnyHashable,
+        id: AnyHashable,
+        focusedItemId: AnyHashable?,
         items: [StoryContentItem],
         totalCount: Int,
         update: @escaping (StoryContentItemSlice, AnyHashable) -> Signal<StoryContentItemSlice, NoError>
     ) {
+        self.id = id
         self.focusedItemId = focusedItemId
         self.items = items
         self.totalCount = totalCount

@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/Display",
+        "//submodules/AsyncDisplayKit",
         "//submodules/ComponentFlow",
         "//submodules/Components/ViewControllerComponent",
         "//submodules/Components/ComponentDisplayAdapters",
@@ -20,6 +21,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AppBundle",
         "//submodules/TelegramCore",
+        "//submodules/Postbox",
         "//submodules/ShareController",
         "//submodules/UndoUI",
         "//submodules/AttachmentUI",
@@ -41,8 +43,11 @@ swift_library(
         "//submodules/LegacyComponents",
         "//submodules/TelegramUI/Components/LegacyCamera",
         "//submodules/TelegramUI/Components/LegacyInstantVideoController",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/TelegramUI/Components/Stories/StoryFooterPanelComponent",
         "//submodules/TelegramPresentationData",
+        "//submodules/ReactionSelectionNode",
+        "//submodules/ContextUI",
     ],
     visibility = [
         "//visibility:public",
