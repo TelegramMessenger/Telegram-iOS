@@ -2741,14 +2741,19 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     loadState = .empty(.generic)
                 }
             } else {
-                loadState = .messages
+                if transition.historyView.filteredEntries.count == 1, let entry = transition.historyView.filteredEntries.first, case .ChatInfoEntry = entry {
+                    loadState = .empty(.botInfo)
+                } else {
+                    loadState = .messages
+                }
             }
             if self.loadState != loadState {
                 self.loadState = loadState
                 self.loadStateUpdated?(loadState, transition.options.contains(.AnimateInsertion))
             }
             
-            let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+            let isEmpty = transition.historyView.originalView.entries.isEmpty || loadState == .empty(.botInfo)
+            let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty)
             if self.currentHistoryState != historyState {
                 self.currentHistoryState = historyState
                 self.historyState.set(historyState)
@@ -2926,7 +2931,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if historyView.originalView.isLoadingEarlier && strongSelf.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser {
                             loadState = .loading(true)
                         } else {
-                            loadState = .messages
+                            if historyView.filteredEntries.count == 1, let entry = historyView.filteredEntries.first, case .ChatInfoEntry = entry {
+                                loadState = .empty(.botInfo)
+                            } else {
+                                loadState = .messages
+                            }
                         }
                     }
                 } else {
@@ -2990,7 +2999,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf._initialData.set(.single(ChatHistoryCombinedInitialData(initialData: transition.initialData, buttonKeyboardMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData)))
                 }
                 strongSelf._cachedPeerDataAndMessages.set(.single((transition.cachedData, transition.cachedDataMessages)))
-                let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: transition.historyView.originalView.entries.isEmpty)
+                let isEmpty = transition.historyView.originalView.entries.isEmpty || loadState == .empty(.botInfo)
+                let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty)
                 if strongSelf.currentHistoryState != historyState {
                     strongSelf.currentHistoryState = historyState
                     strongSelf.historyState.set(historyState)
@@ -3780,15 +3790,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
 
-        let snapshotView = self.view.snapshotView(afterScreenUpdates: false)!
+        let snapshotView = self.view//.snapshotView(afterScreenUpdates: false)!
+        self.globalIgnoreScrollingEvents = true
 
-        snapshotView.frame = self.view.bounds
-        if let sublayers = self.layer.sublayers {
+        //snapshotView.frame = self.view.bounds
+        /*if let sublayers = self.layer.sublayers {
             for sublayer in sublayers {
                 sublayer.isHidden = true
             }
-        }
-        self.view.addSubview(snapshotView)
+        }*/
+        //self.view.addSubview(snapshotView)
 
         let overscrollView = self.overscrollView
         if let overscrollView = overscrollView {
@@ -3826,6 +3837,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         snapshotParentView.frame = self.view.frame
 
         snapshotState.snapshotView.frame = snapshotParentView.bounds
+        
+        snapshotState.snapshotView.clipsToBounds = true
+        snapshotState.snapshotView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        
         self.view.superview?.insertSubview(snapshotParentView, belowSubview: self.view)
 
         snapshotParentView.layer.animatePosition(from: CGPoint(x: 0.0, y: 0.0), to: CGPoint(x: 0.0, y: -self.view.bounds.height - snapshotState.snapshotBottomInset - snapshotTopInset), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak snapshotParentView] _ in

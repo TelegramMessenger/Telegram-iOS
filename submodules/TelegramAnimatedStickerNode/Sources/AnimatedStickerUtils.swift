@@ -72,8 +72,8 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
                         let alphaData = NSMutableData()
                         
                         if let colorDestination = CGImageDestinationCreateWithData(colorData as CFMutableData, kUTTypeJPEG, 1, nil), let alphaDestination = CGImageDestinationCreateWithData(alphaData as CFMutableData, kUTTypeJPEG, 1, nil) {
-                            CGImageDestinationSetProperties(colorDestination, [:] as CFDictionary)
-                            CGImageDestinationSetProperties(alphaDestination, [:] as CFDictionary)
+                            CGImageDestinationSetProperties(colorDestination, NSDictionary() as CFDictionary)
+                            CGImageDestinationSetProperties(alphaDestination, NSDictionary() as CFDictionary)
                             
                             let colorQuality: Float
                             let alphaQuality: Float
@@ -387,7 +387,7 @@ public func cacheVideoStickerFrames(path: String, size: CGSize, cacheKey: String
             }
             
             if frameCount > 0 {
-                file.seek(position: 4)
+                let _ = file.seek(position: 4)
                 let _ = file.write(&frameCount, count: 4)
             }
             

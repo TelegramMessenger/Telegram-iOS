@@ -124,6 +124,7 @@ public final class AnimatedTextComponent: Component {
                     if let characterComponentView = characterView.view {
                         var animateIn = false
                         if characterComponentView.superview == nil {
+                            characterComponentView.layer.rasterizationScale = UIScreenScale
                             self.addSubview(characterComponentView)
                             animateIn = true
                         }

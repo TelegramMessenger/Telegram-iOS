@@ -436,8 +436,9 @@ public struct NetworkInitializationArguments {
     public let encryptionProvider: EncryptionProvider
     public let deviceModelName:String?
     public let useBetaFeatures: Bool
+    public let isICloudEnabled: Bool
     
-    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool) {
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool, isICloudEnabled: Bool) {
         self.apiId = apiId
         self.apiHash = apiHash
         self.languagesCategory = languagesCategory
@@ -449,6 +450,7 @@ public struct NetworkInitializationArguments {
         self.encryptionProvider = encryptionProvider
         self.deviceModelName = deviceModelName
         self.useBetaFeatures = useBetaFeatures
+        self.isICloudEnabled = isICloudEnabled
     }
 }
 #if os(iOS)
@@ -543,7 +545,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             context.keychain = keychain
             var wrappedAdditionalSource: MTSignal?
             #if os(iOS)
-            if #available(iOS 10.0, *), !supplementary {
+            if #available(iOS 10.0, *), !supplementary, arguments.isICloudEnabled {
                 var cloudDataContextValue: CloudDataContext?
                 if let value = cloudDataContext.with({ $0 }) {
                     cloudDataContextValue = value
@@ -605,7 +607,9 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures)
+            let useExperimentalFeatures = networkSettings?.useExperimentalDownload ?? false
+            
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures)
             appDataUpdatedImpl = { [weak network] data in
                 guard let data = data else {
                     return
@@ -737,6 +741,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     private let useRequestTimeoutTimers: Bool
     public let useBetaFeatures: Bool
+    public let useExperimentalFeatures: Bool
     
     private let appDataDisposable: Disposable
     
@@ -783,7 +788,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return "Network context: \(self.context)"
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool, useExperimentalFeatures: Bool) {
         self.encryptionProvider = encryptionProvider
         
         self.queue = queue
@@ -798,6 +803,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self.basePath = basePath
         self.useRequestTimeoutTimers = useRequestTimeoutTimers
         self.useBetaFeatures = useBetaFeatures
+        self.useExperimentalFeatures = useExperimentalFeatures
         
         super.init()
         
@@ -1075,7 +1081,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                 requestStartedUptime = getDeviceUptimeSeconds(nil)
             }
             
-            request.completed = { (boxedResponse, timestamp, error) -> () in
+            request.completed = { (boxedResponse, responseInfo, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
                 } else {
@@ -1088,11 +1094,11 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                     }
                 }
                 
-                if let requestStartedUptime, let strongSelf = self, !strongSelf.isTrustedTimeSet {
+                if let requestStartedUptime, let strongSelf = self, !strongSelf.isTrustedTimeSet, let responseInfo {
                     let requestCompletedUptime = getDeviceUptimeSeconds(nil)
                     // checking request duration to make sure timestamp is recent
                     if requestCompletedUptime - requestStartedUptime < 10 {
-                        let _ = strongSelf.trustedTime.swap((timestamp, requestCompletedUptime))
+                        let _ = strongSelf.trustedTime.swap((responseInfo.timestamp, requestCompletedUptime))
                         assert(strongSelf.mtProto.messageServiceQueue().isCurrentQueue())
                         strongSelf.isTrustedTimeSet = true
                     }

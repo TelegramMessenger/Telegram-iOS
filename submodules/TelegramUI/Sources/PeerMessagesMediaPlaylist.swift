@@ -60,7 +60,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
         return MessageMediaPlaylistItemStableId(stableId: message.stableId)
     }
     
-    var playbackData: SharedMediaPlaybackData? {
+    lazy var playbackData: SharedMediaPlaybackData? = {
         if let file = extractFileMedia(self.message) {
             let fileReference = FileMediaReference.message(message: MessageReference(self.message), media: file)
             let source = SharedMediaPlaybackDataSource.telegramFile(reference: fileReference, isCopyProtected: self.message.isCopyProtected())
@@ -93,9 +93,9 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
             }
         }
         return nil
-    }
+    }()
 
-    var displayData: SharedMediaPlaybackDisplayData? {
+    lazy var displayData: SharedMediaPlaybackDisplayData? = {
         if let file = extractFileMedia(self.message) {
             let text = self.message.text
             var entities: [MessageTextEntity] = []
@@ -108,40 +108,42 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                         
             for attribute in file.attributes {
                 switch attribute {
-                    case let .Audio(isVoice, duration, title, performer, _):
-                        if isVoice {
-                            return SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId])
-                        } else {
-                            var updatedTitle = title
-                            let updatedPerformer = performer
-                            if (title ?? "").isEmpty && (performer ?? "").isEmpty {
-                                updatedTitle = file.fileName ?? ""
-                            }
-                            
-                            let albumArt: SharedMediaPlaybackAlbumArt?
-                            if file.fileName?.lowercased().hasSuffix(".ogg") == true {
-                                albumArt = nil
-                            } else {
-                                albumArt = SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(self.message), media: file), title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(self.message), media: file), title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false))
-                            }
-                            
-                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: CGFloat(duration) > 10.0 * 60.0, caption: caption)
+                case let .Audio(isVoice, duration, title, performer, _):
+                    let displayData: SharedMediaPlaybackDisplayData
+                    if isVoice {
+                        displayData = SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId])
+                    } else {
+                        var updatedTitle = title
+                        let updatedPerformer = performer
+                        if (title ?? "").isEmpty && (performer ?? "").isEmpty {
+                            updatedTitle = file.fileName ?? ""
                         }
-                    case let .Video(_, _, flags):
-                        if flags.contains(.instantRoundVideo) {
-                            return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId], timestamp: self.message.timestamp)
+                        
+                        let albumArt: SharedMediaPlaybackAlbumArt?
+                        if file.fileName?.lowercased().hasSuffix(".ogg") == true {
+                            albumArt = nil
                         } else {
-                            return nil
+                            albumArt = SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(self.message), media: file), title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(self.message), media: file), title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false))
                         }
-                    default:
-                        break
+                        
+                        displayData = SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: CGFloat(duration) > 10.0 * 60.0, caption: caption)
+                    }
+                    return displayData
+                case let .Video(_, _, flags):
+                    if flags.contains(.instantRoundVideo) {
+                        return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId], timestamp: self.message.timestamp)
+                    } else {
+                        return nil
+                    }
+                default:
+                    break
                 }
             }
             
             return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.effectiveAuthor?.debugDisplayTitle ?? "", albumArt: nil, long: false, caption: caption)
         }
         return nil
-    }
+    }()
 }
 
 private enum NavigatedMessageFromViewPosition {

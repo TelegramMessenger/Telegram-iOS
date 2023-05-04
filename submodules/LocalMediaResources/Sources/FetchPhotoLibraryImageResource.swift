@@ -82,76 +82,74 @@ extension UIImage.Orientation {
     }
 }
 
+private let fetchPhotoWorkers = ThreadPool(threadCount: 3, threadPriority: 0.2)
+
 public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
+        let queue = ThreadPoolQueue(threadPool: fetchPhotoWorkers)
+        
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
         let requestId = Atomic<RequestId>(value: RequestId())
         if fetchResult.count != 0 {
             let asset = fetchResult.object(at: 0)
             let option = PHImageRequestOptions()
-            option.deliveryMode = .opportunistic
+            option.deliveryMode = .highQualityFormat
             option.isNetworkAccessAllowed = true
             option.isSynchronous = false
-            let madeProgress = Atomic<Bool>(value: false)
-            option.progressHandler = { progress, error, _, _ in
-                if !madeProgress.swap(true) {
-                    //subscriber.putNext(.reset)
-                }
-            }
+            
             let size = CGSize(width: 1280.0, height: 1280.0)
             
-            let startTime = CACurrentMediaTime()
-            
-            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: option, resultHandler: { (image, info) -> Void in
-                Queue.concurrentDefaultQueue().async {
-                    requestId.with { current -> Void in
-                        if !current.invalidated {
-                            current.id = nil
-                            current.invalidated = true
+            queue.addTask(ThreadPoolTask({ _ in
+                let startTime = CACurrentMediaTime()
+                
+                let semaphore = DispatchSemaphore(value: 0)
+                let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: option, resultHandler: { (image, info) -> Void in
+                    Queue.concurrentDefaultQueue().async {
+                        requestId.with { current -> Void in
+                            if !current.invalidated {
+                                current.id = nil
+                                current.invalidated = true
+                            }
                         }
-                    }
-                    if let image = image {
-                        if let info = info, let degraded = info[PHImageResultIsDegradedKey], (degraded as AnyObject).boolValue!{
-                            if !madeProgress.swap(true) {
-                                //subscriber.putNext(.reset)
+                        if let image = image {
+                            if let info = info, let degraded = info[PHImageResultIsDegradedKey], (degraded as AnyObject).boolValue!{
+
+                            } else {
+#if DEBUG
+                                print("load completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+#endif
+                                
+                                let scale = min(1.0, min(size.width / max(1.0, image.size.width), size.height / max(1.0, image.size.height)))
+                                let scaledSize = CGSize(width: floor(image.size.width * scale), height: floor(image.size.height * scale))
+                                let scaledImage = resizedImage(image, for: scaledSize)
+                                
+#if DEBUG
+                                print("scaled completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+#endif
+                                
+                                if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6) {
+#if DEBUG
+                                    print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+#endif
+                                    subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
+                                    subscriber.putCompletion()
+                                } else {
+                                    subscriber.putCompletion()
+                                }
+                                semaphore.signal()
                             }
                         } else {
-                            #if DEBUG
-                            print("load completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
-                            #endif
-                            
-                            _ = madeProgress.swap(true)
-
-                            let scale = min(1.0, min(size.width / max(1.0, image.size.width), size.height / max(1.0, image.size.height)))
-                            let scaledSize = CGSize(width: floor(image.size.width * scale), height: floor(image.size.height * scale))
-                            let scaledImage = resizedImage(image, for: scaledSize)
-
-                            #if DEBUG
-                            print("scaled completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
-                            #endif
-                            
-                            if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6) {
-                                #if DEBUG
-                                print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
-                                #endif
-                                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
-                                subscriber.putCompletion()
-                            } else {
-                                subscriber.putCompletion()
-                            }
-                        }
-                    } else {
-                        if !madeProgress.swap(true) {
-                            //subscriber.putNext(.reset)
+                            semaphore.signal()
                         }
                     }
+                })
+                requestId.with { current -> Void in
+                    if !current.invalidated {
+                        current.id = requestIdValue
+                    }
                 }
-            })
-            requestId.with { current -> Void in
-                if !current.invalidated {
-                    current.id = requestIdValue
-                }
-            }
+                semaphore.wait()
+            }))
         } else {
             subscriber.putNext(.reset)
         }

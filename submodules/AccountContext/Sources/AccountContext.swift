@@ -305,6 +305,7 @@ public enum ResolvedUrl {
     case startAttach(peerId: PeerId, payload: String?, choose: ResolvedBotChoosePeerTypes?)
     case invoice(slug: String, invoice: TelegramMediaInvoice?)
     case premiumOffer(reference: String?)
+    case chatFolder(slug: String)
 }
 
 public enum NavigateToChatKeepStack {
@@ -766,6 +767,7 @@ public protocol SharedAccountContext: AnyObject {
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
     var currentStickerSettings: Atomic<StickerSettings> { get }
+    var currentMediaDisplaySettings: Atomic<MediaDisplaySettings> { get }
     
     var energyUsageSettings: EnergyUsageSettings { get }
     
@@ -914,6 +916,9 @@ public enum PremiumLimitSubject {
     case pins
     case files
     case accounts
+    case linksPerSharedFolder
+    case membershipInSharedFolders
+    case channels
 }
 
 public protocol ComposeController: ViewController {

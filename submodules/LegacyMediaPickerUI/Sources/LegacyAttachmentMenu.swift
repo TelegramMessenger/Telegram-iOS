@@ -58,7 +58,47 @@ public enum LegacyAttachmentMenuMediaEditing {
     case file
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public enum LegacyMediaEditorMode {
+    case draw
+    case adjustments
+}
+
+
+public func legacyWallpaperEditor(context: AccountContext, item: TGMediaEditableItem, cropRect: CGRect, adjustments: TGMediaEditAdjustments?, referenceView: UIView, beginTransitionOut: ((Bool) -> Void)?, finishTransitionOut: (() -> Void)?, completion: @escaping (UIImage?, TGMediaEditAdjustments?) -> Void, fullSizeCompletion: @escaping (UIImage?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
+    legacyController.blocksBackgroundWhenInOverlay = true
+    legacyController.acceptsFocusWhenInOverlay = true
+    legacyController.statusBar.statusBarStyle = .Ignore
+    legacyController.controllerLoaded = { [weak legacyController] in
+        legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
+    }
+
+    let emptyController = LegacyEmptyController(context: legacyController.context)!
+    emptyController.navigationBarShouldBeHidden = true
+    let navigationController = makeLegacyNavigationController(rootController: emptyController)
+    navigationController.setNavigationBarHidden(true, animated: false)
+    legacyController.bind(controller: navigationController)
+
+    legacyController.enableSizeClassSignal = true
+    
+    present(legacyController, nil)
+    
+    TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, with: item, cropRect: cropRect, adjustments: adjustments, referenceView: referenceView, completion: { image, adjustments in
+        completion(image, adjustments)
+    }, fullSizeCompletion: { image in
+        Queue.mainQueue().async {
+            fullSizeCompletion(image)
+        }
+    }, beginTransitionOut: { saving in
+        beginTransitionOut?(saving)
+    }, finishTransitionOut: { [weak legacyController] in
+        legacyController?.dismiss()
+        finishTransitionOut?()
+    })
+}
+
+public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, mode: LegacyMediaEditorMode, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -107,7 +147,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: 
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, appeared: {
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: mode == .draw, adjustments: mode == .adjustments, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, appeared: {
             transitionCompletion?()
         }, completion: { result, editingContext in
             let nativeGenerator = legacyAssetPickerItemGenerator()
@@ -365,7 +405,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, threadTitl
                 
                 present(legacyController, nil)
                 
-                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: [], immediate: false, appeared: {
+                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, adjustments: false, recipientName: recipientName, stickersContext: paintStickersContext, from: .zero, mainSnapshot: nil, snapshots: [], immediate: false, appeared: {
                 }, completion: { result, editingContext in
                     let nativeGenerator = legacyAssetPickerItemGenerator()
                     var selectableResult: TGMediaSelectableItem?

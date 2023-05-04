@@ -59,6 +59,7 @@ bazel-Partisan-Telegram-iOS
 bazel-Partisan-Telegram-iOS/*
 bazel-testlogs
 bazel-testlogs/*
+xcodeproj.bazelrc
 */*.swp
 *.swp
 build-input/*

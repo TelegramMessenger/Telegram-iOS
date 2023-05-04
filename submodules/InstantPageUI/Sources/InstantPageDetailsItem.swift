@@ -9,11 +9,11 @@ import TelegramUIPreferences
 import AccountContext
 import ContextUI
 
-final class InstantPageDetailsItem: InstantPageItem {
-    var frame: CGRect
-    let wantsNode: Bool = true
-    let separatesTiles: Bool = true
-    var medias: [InstantPageMedia] {
+public final class InstantPageDetailsItem: InstantPageItem {
+    public var frame: CGRect
+    public let wantsNode: Bool = true
+    public let separatesTiles: Bool = true
+    public var medias: [InstantPageMedia] {
         var result: [InstantPageMedia] = []
         for item in self.items {
             result.append(contentsOf: item.medias)
@@ -21,13 +21,13 @@ final class InstantPageDetailsItem: InstantPageItem {
         return result
     }
 
-    let titleItems: [InstantPageItem]
-    let titleHeight: CGFloat
-    let items: [InstantPageItem]
+    public let titleItems: [InstantPageItem]
+    public let titleHeight: CGFloat
+    public let items: [InstantPageItem]
     let safeInset: CGFloat
     let rtl: Bool
-    let initiallyExpanded: Bool
-    let index: Int
+    public let initiallyExpanded: Bool
+    public let index: Int
     
     init(frame: CGRect, titleItems: [InstantPageItem], titleHeight: CGFloat, items: [InstantPageItem], safeInset: CGFloat, rtl: Bool, initiallyExpanded: Bool, index: Int) {
         self.frame = frame
@@ -40,19 +40,19 @@ final class InstantPageDetailsItem: InstantPageItem {
         self.index = index
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         var expanded: Bool?
         if let expandedDetails = currentExpandedDetails, let currentlyExpanded = expandedDetails[self.index] {
             expanded = currentlyExpanded
         }
-        return InstantPageDetailsNode(context: context, sourceLocation: sourceLocation, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, item: self, openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl, currentlyExpanded: expanded, updateDetailsExpanded: updateDetailsExpanded)
+        return InstantPageDetailsNode(context: context, sourceLocation: sourceLocation, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, item: self, openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished, openPeer: openPeer, openUrl: openUrl, currentlyExpanded: expanded, updateDetailsExpanded: updateDetailsExpanded)
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         if let node = node as? InstantPageDetailsNode {
             return self === node.item
         } else {
@@ -60,18 +60,18 @@ final class InstantPageDetailsItem: InstantPageItem {
         }
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return 8
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         return CGFloat.greatestFiniteMagnitude
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         if point.y < self.titleHeight {
             for item in self.titleItems {
                 if item.frame.contains(point) {

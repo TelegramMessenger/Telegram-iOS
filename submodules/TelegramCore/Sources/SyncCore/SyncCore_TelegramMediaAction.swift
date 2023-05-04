@@ -95,12 +95,14 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case setChatTheme(emoji: String)
     case joinedByRequest
     case webViewData(String)
-    case giftPremium(currency: String, amount: Int64, months: Int32)
+    case giftPremium(currency: String, amount: Int64, months: Int32, cryptoCurrency: String?, cryptoAmount: Int64?)
     case topicCreated(title: String, iconColor: Int32, iconFileId: Int64?)
     case topicEdited(components: [ForumTopicEditComponent])
     case suggestedProfilePhoto(image: TelegramMediaImage?)
     case attachMenuBotAllowed
     case requestedPeer(buttonId: Int32, peerId: PeerId)
+    case setChatWallpaper(wallpaper: TelegramWallpaper)
+    case setSameChatWallpaper(wallpaper: TelegramWallpaper)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -170,7 +172,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 26:
             self = .webViewData(decoder.decodeStringForKey("t", orElse: ""))
         case 27:
-            self = .giftPremium(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), months: decoder.decodeInt32ForKey("months", orElse: 0))
+            self = .giftPremium(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), months: decoder.decodeInt32ForKey("months", orElse: 0), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"))
         case 28:
             self = .topicCreated(title: decoder.decodeStringForKey("title", orElse: ""), iconColor: decoder.decodeInt32ForKey("iconColor", orElse: 0), iconFileId: decoder.decodeOptionalInt64ForKey("iconFileId"))
         case 29:
@@ -181,6 +183,18 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .attachMenuBotAllowed
         case 32:
             self = .requestedPeer(buttonId: decoder.decodeInt32ForKey("b", orElse: 0), peerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)))
+        case 33:
+            if let wallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value {
+                self = .setChatWallpaper(wallpaper: wallpaper)
+            } else {
+                self = .unknown
+            }
+        case 34:
+            if let wallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value {
+                self = .setSameChatWallpaper(wallpaper: wallpaper)
+            } else {
+                self = .unknown
+            }
         default:
             self = .unknown
         }
@@ -310,11 +324,15 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .webViewData(text):
             encoder.encodeInt32(26, forKey: "_rawValue")
             encoder.encodeString(text, forKey: "t")
-        case let .giftPremium(currency, amount, months):
+        case let .giftPremium(currency, amount, months, cryptoCurrency, cryptoAmount):
             encoder.encodeInt32(27, forKey: "_rawValue")
             encoder.encodeString(currency, forKey: "currency")
             encoder.encodeInt64(amount, forKey: "amount")
             encoder.encodeInt32(months, forKey: "months")
+            if let cryptoCurrency = cryptoCurrency, let cryptoAmount = cryptoAmount {
+                encoder.encodeString(cryptoCurrency, forKey: "cryptoCurrency")
+                encoder.encodeInt64(cryptoAmount, forKey: "cryptoAmount")
+            }
         case let .topicCreated(title, iconColor, iconFileId):
             encoder.encodeInt32(28, forKey: "_rawValue")
             encoder.encodeString(title, forKey: "title")
@@ -338,6 +356,12 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(32, forKey: "_rawValue")
             encoder.encodeInt32(buttonId, forKey: "b")
             encoder.encodeInt64(peerId.toInt64(), forKey: "pi")
+        case let .setChatWallpaper(wallpaper):
+            encoder.encodeInt32(33, forKey: "_rawValue")
+            encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "wallpaper")
+        case let .setSameChatWallpaper(wallpaper):
+            encoder.encodeInt32(34, forKey: "_rawValue")
+            encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "wallpaper")
         }
     }
     

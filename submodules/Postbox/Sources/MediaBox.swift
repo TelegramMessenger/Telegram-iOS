@@ -47,7 +47,7 @@ public struct ResourceStorePaths {
     public let complete: String
 }
 
-public struct MediaResourceData {
+public struct MediaResourceData: Equatable {
     public let path: String
     public let offset: Int64
     public let size: Int64
@@ -139,7 +139,7 @@ public final class MediaBox {
     
     private let statusQueue = Queue()
     private let concurrentQueue = Queue.concurrentDefaultQueue()
-    private let dataQueue = Queue()
+    private let dataQueue = Queue(name: "MediaBox-Data")
     private let dataFileManager: MediaBoxFileManager
     private let cacheQueue = Queue()
     private let timeBasedCleanup: TimeBasedCleanup
@@ -209,6 +209,58 @@ public final class MediaBox {
         let _ = self.ensureDirectoryCreated
         
         //self.updateResourceIndex()
+        
+        /*#if DEBUG
+        self.dataQueue.async {
+            for _ in 0 ..< 5 {
+                let tempFile = TempBox.shared.tempFile(fileName: "file")
+                print("MediaBox test: file \(tempFile.path)")
+                let queue2 = Queue.concurrentDefaultQueue()
+                if let fileContext = MediaBoxFileContextV2Impl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: tempFile.path.data(using: .utf8)!, path: tempFile.path + "_complete", partialPath: tempFile.path + "_partial", metaPath: tempFile.path + "_partial" + ".meta") {
+                    let _ = fileContext.fetched(
+                        range: 0 ..< Int64.max,
+                        priority: .default,
+                        fetch: { ranges in
+                            return ranges
+                            |> filter { !$0.isEmpty }
+                            |> take(1)
+                            |> castError(MediaResourceDataFetchError.self)
+                            |> mapToSignal { _ in
+                                return Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
+                                    queue2.async {
+                                        subscriber.putNext(.resourceSizeUpdated(524288))
+                                    }
+                                    queue2.async {
+                                        subscriber.putNext(.resourceSizeUpdated(393216))
+                                    }
+                                    queue2.async {
+                                        subscriber.putNext(.resourceSizeUpdated(655360))
+                                    }
+                                    queue2.async {
+                                        subscriber.putNext(.resourceSizeUpdated(169608))
+                                    }
+                                    queue2.async {
+                                        subscriber.putNext(.dataPart(resourceOffset: 131072, data: Data(repeating: 0xbb, count: 38536), range: 0 ..< 38536, complete: true))
+                                    }
+                                    queue2.async {
+                                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(repeating: 0xaa, count: 131072), range: 0 ..< 131072, complete: false))
+                                    }
+                                    
+                                    return EmptyDisposable
+                                }
+                            }
+                        },
+                        error: { _ in
+                        },
+                        completed: {
+                            assert(try! Data(contentsOf: URL(fileURLWithPath: tempFile.path + "_complete")) == Data(repeating: 0xaa, count: 131072) + Data(repeating: 0xbb, count: 38536))
+                            let _ = fileContext.addReference()
+                        }
+                    )
+                }
+            }
+        }
+        #endif*/
     }
     
     public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
@@ -576,12 +628,22 @@ public final class MediaBox {
                 paths.partial,
                 paths.partial + ".meta"
             ])
-            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
+            
+            #if true
+            if let fileContext = MediaBoxFileContextV2Impl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
                 context = fileContext
                 self.fileContexts[resourceId] = fileContext
             } else {
                 return nil
             }
+            #else
+            if let fileContext = MediaBoxFileContextImpl(queue: self.dataQueue, manager: self.dataFileManager, storageBox: self.storageBox, resourceId: id.stringRepresentation.data(using: .utf8)!, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
+                context = fileContext
+                self.fileContexts[resourceId] = fileContext
+            } else {
+                return nil
+            }
+            #endif
         }
         if let context = context {
             let index = context.addReference()
@@ -679,7 +741,7 @@ public final class MediaBox {
                         let clippedLowerBound = min(completeSize, max(0, range.lowerBound))
                         let clippedUpperBound = min(completeSize, max(0, range.upperBound))
                         if clippedLowerBound < clippedUpperBound && (clippedUpperBound - clippedLowerBound) <= 64 * 1024 * 1024 {
-                            file.seek(position: clippedLowerBound)
+                            let _ = file.seek(position: clippedLowerBound)
                             let data = file.readData(count: Int(clippedUpperBound - clippedLowerBound))
                             subscriber.putNext((data, true))
                         } else {
@@ -716,7 +778,7 @@ public final class MediaBox {
                                 subscriber.putNext((Data(), true))
                                 subscriber.putCompletion()
                             } else if clippedUpperBound <= fileSize && (clippedUpperBound - clippedLowerBound) <= 64 * 1024 * 1024 {
-                                file.seek(position: Int64(clippedLowerBound))
+                                let _ = file.seek(position: Int64(clippedLowerBound))
                                 let resultData = file.readData(count: Int(clippedUpperBound - clippedLowerBound))
                                 subscriber.putNext((resultData, true))
                                 subscriber.putCompletion()

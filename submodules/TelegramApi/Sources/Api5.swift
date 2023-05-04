@@ -1025,6 +1025,60 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ExportedChatlistInvite: TypeConstructorDescription {
+        case exportedChatlistInvite(flags: Int32, title: String, url: String, peers: [Api.Peer])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .exportedChatlistInvite(let flags, let title, let url, let peers):
+                    if boxed {
+                        buffer.appendInt32(206668204)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedChatlistInvite(let flags, let title, let url, let peers):
+                return ("exportedChatlistInvite", [("flags", flags as Any), ("title", title as Any), ("url", url as Any), ("peers", peers as Any)])
+    }
+    }
+    
+        public static func parse_exportedChatlistInvite(_ reader: BufferReader) -> ExportedChatlistInvite? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.Peer]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ExportedChatlistInvite.exportedChatlistInvite(flags: _1!, title: _2!, url: _3!, peers: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum ExportedContactToken: TypeConstructorDescription {
         case exportedContactToken(url: String, expires: Int32)
     
@@ -1056,46 +1110,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ExportedContactToken.exportedContactToken(url: _1!, expires: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum ExportedMessageLink: TypeConstructorDescription {
-        case exportedMessageLink(link: String, html: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .exportedMessageLink(let link, let html):
-                    if boxed {
-                        buffer.appendInt32(1571494644)
-                    }
-                    serializeString(link, buffer: buffer, boxed: false)
-                    serializeString(html, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .exportedMessageLink(let link, let html):
-                return ("exportedMessageLink", [("link", link as Any), ("html", html as Any)])
-    }
-    }
-    
-        public static func parse_exportedMessageLink(_ reader: BufferReader) -> ExportedMessageLink? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
             }
             else {
                 return nil

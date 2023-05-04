@@ -108,7 +108,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     if let textEntities = textEntities, !textEntities.isEmpty && !tags.contains(.webPage) {
         for entity in textEntities {
             switch entity.type {
-                case .Url, .Email:
+                case .Url, .TextUrl, .Email:
                     if media.isEmpty || !(media.first is TelegramMediaWebpage) {
                         tags.insert(.webPage)
                     }
@@ -205,7 +205,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionSetSameChatWallPaper:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)))

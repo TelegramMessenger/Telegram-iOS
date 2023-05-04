@@ -239,7 +239,7 @@ public final class TextNodeWithEntities {
                     let id = InlineStickerItemLayer.Key(id: stickerItem.emoji.fileId, index: index)
                     validIds.append(id)
                     
-                    let itemSize = floor(stickerItem.fontSize * 24.0 / 17.0)
+                    let itemSize = floorToScreenPixels(stickerItem.fontSize * 24.0 / 17.0)
                     
                     var itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
                     itemFrame.origin.x = floorToScreenPixels(itemFrame.origin.x)

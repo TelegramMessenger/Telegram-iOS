@@ -353,6 +353,8 @@
 
 "PUSH_MESSAGE_SUGGEST_USERPIC" = "%1$@|suggested you new profile photo";
 
+"PUSH_MESSAGE_WALLPAPER" = "%1$@ set a new wallpaper for the chat with you";
+"PUSH_MESSAGE_SAME_WALLPAPER" = "%1$@ set the same wallpaper for the chat with you";
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
@@ -6892,6 +6894,7 @@ Sorry for the inconvenience.";
 
 "Conversation.ForwardOptions.Text" = "What whould you like to do with %1$@ from %2$@?";
 "Conversation.ForwardOptions.TextPersonal" = "What whould you like to do with %1$@ from your chat with %2$@?";
+"Conversation.ForwardOptions.TextSaved" = "What whould you like to do with %1$@ from your Saved Messages?";
 "Conversation.ForwardOptions.ShowOptions" = "Show Forwarding Options";
 "Conversation.ForwardOptions.CancelForwarding" = "Cancel Forwarding";
 
@@ -9186,6 +9189,8 @@ Sorry for the inconvenience.";
 "Login.Email.WillBeResetIn" = "Email will be reset %@";
 "Login.Email.PremiumRequiredTitle" = "Telegram Premium Required";
 "Login.Email.PremiumRequiredText" = "Due to high cost of SMS in your country, you need to have a **Telegram Premium** account to reset this email via an SMS code.\n\nYou can ask a friend to gift a Premium subscription for your account\n**%@**";
+"Login.Email.ElapsedTime" = "in %@";
+"Login.Email.ResetingNow" = "Please wait...";
 
 "ChatList.StartMessaging" = "Select a chat to start messaging";
 
@@ -9203,3 +9208,269 @@ Sorry for the inconvenience.";
 "DataUsage.SettingsHelpWifi" = "You can change your auto-download settings for media to reduce data usage when on wifi.";
 
 "DataUsage.Reset" = "Reset Statistics";
+
+"Conversation.SendWhenOnlineTooltip" = "Long tap to send the message later.";
+
+"Bot.Active" = "bot is active now";
+"Bot.Inactive" = "bot is not active";
+"Bot.Slow" = "bot replies slowly";
+"Bot.TapToUse" = "Tap here to use this bot";
+
+"CreateGroup.PeersTitleDelimeter" = ", ";
+"CreateGroup.PeersTitleLastDelimeter" = " and ";
+
+"Conversation.SendMessageErrorTooFastTitle" = "Not so fast";
+"Conversation.SendMessageErrorTooFast" = "You are sending messages too fast. Please wait a bit.";
+
+"PeerInfo.CancelSelectionAlertText" = "Cancel selection?";
+"PeerInfo.CancelSelectionAlertYes" = "Yes";
+"PeerInfo.CancelSelectionAlertNo" = "No";
+
+"StickerPacksSettings.SuggestAnimatedEmojiInfo" = "Each time you enter an emoji you can replace it with an animated emoji.";
+
+"DialogList.DeleteBotClearHistory" = "Clear Chat History";
+
+"TextFormat.EditLinkTitle" = "Edit Link";
+
+"PeerInfo.BotLinks" = "Public Links";
+"Username.BotLinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on the bot info page.";
+
+"Wallpaper.ApplyForAll" = "Apply For All Chats";
+"Wallpaper.ApplyForChat" = "Apply For This Chat";
+
+"ChatList.ChatFolderUpdateCount_1" = "1 new chat";
+"ChatList.ChatFolderUpdateCount_any" = "%d new chats";
+"ChatList.ChatFolderUpdateHintTitle" = "You can join %@";
+"ChatList.ChatFolderUpdateHintText" = "Tap here to view them";
+
+"Premium.MaxSharedFolderMembershipText" = "You can only add **%1$@** shareable folders. Upgrade to **Telegram Premium** to increase this limit up to **%2$@**.";
+"Premium.MaxSharedFolderMembershipNoPremiumText" = "You can only add **%1$@** shareable folders. We are working to let you increase this limit in the future.";
+"Premium.MaxSharedFolderMembershipFinalText" = "Sorry, you can only add **%1$@** shareable folders.";
+
+"Premium.MaxSharedFolderLinksText" = "You can only create **%1$@** invite links. Upgrade to **Telegram Premium** to increase the links limit to **%2$@**.";
+"Premium.MaxSharedFolderLinksNoPremiumText" = "You can only create **%1$@** invite links. We are working to let you increase this limit in the future.";
+"Premium.MaxSharedFolderLinksFinalText" = "Sorry, you can only create **%1$@** invite links";
+
+"Premium.GiftedTitle.Someone" = "Someone";
+
+"Notification.ChangedWallpaper" = "%1$@ set a new wallpaper for this chat";
+"Notification.YouChangedWallpaper" = "You set a new wallpaper for this chat";
+"Notification.YouChangingWallpaper" = "Setting new wallpaper";
+"Notification.Wallpaper.View" = "View Wallpaper";
+
+"Notification.ChangedToSameWallpaper" = "%1$@ set the same wallpaper for this chat";
+"Notification.YouChangedToSameWallpaper" = "You set the same wallpaper for this chat";
+
+"Channel.AdminLog.JoinedViaFolderInviteLink" = "%1$@ joined via invite link %2$@ (community)";
+
+"Conversation.OpenChatFolder" = "VIEW CHAT LIST";
+
+"Premium.MaxChannelsText" = "You can only join **%1$@** groups and channels. Upgrade to **Telegram Premium** to increase the links limit to **%2$@**.";
+"Premium.MaxChannelsNoPremiumText" = "You can only join **%1$@** groups and channels. We are working to let you increase this limit in the future.";
+"Premium.MaxChannelsFinalText" = "Sorry, you can only join **%1$@** groups and channels";
+
+"Username.BotLinkHint" = "This username cannot be edited.";
+"Username.BotLinkHintExtended" = "This username cannot be edited. You can acquire additional usernames on [Fragment]().";
+
+"Username.BotActivateAlertText" = "Do you want to show this link on the bot's info page?";
+"Username.BotDeactivateAlertText" = "Do you want to hide this link from the bot's info page?";
+"Username.BotActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of the bot's active public links first.";
+
+"PeerInfo.Bot.EditIntro" = "Edit Intro";
+"PeerInfo.Bot.EditCommands" = "Edit Commands";
+"PeerInfo.Bot.ChangeSettings" = "Change Bot Settings";
+"PeerInfo.Bot.BotFatherInfo" = "Use [@BotFather]() to manage this bot.";
+
+"WallpaperPreview.NotAppliedInfo" = "**%@** will be able to apply this wallpaper";
+"WallpaperPreview.ChatTopText" = "Apply the wallpaper in this chat.";
+"WallpaperPreview.ChatBottomText" = "Enjoy the view.";
+
+"Conversation.Theme.SetPhotoWallpaper" = "Choose Wallpaper from Photos";
+"Conversation.Theme.SetNewPhotoWallpaper" = "Choose a New Wallpaper";
+"Conversation.Theme.SetColorWallpaper" = "Set a Color as Wallpaper";
+
+"Conversation.Theme.ChooseWallpaperTitle" = "Choose Wallpaper";
+"Conversation.Theme.ResetWallpaper" = "Remove Wallpaper";
+"Conversation.Theme.ChooseColorTitle" = "Set a Color";
+"Conversation.Theme.SetCustomColor" = "Set Custom";
+
+"Appearance.ShowNextMediaOnTap" = "Show Next Media on Tap";
+"Appearance.ShowNextMediaOnTapInfo" = "Tap near the edge of the screen while viewing media to navigate between photos.";
+
+"WebApp.LaunchMoreInfo" = "More about this bot";
+"WebApp.LaunchConfirmation" = "To launch this web app, you will connect to its website.";
+"WebApp.LaunchOpenApp" = "Open App";
+
+"WallpaperPreview.PreviewInNightMode" = "Preview this wallpaper in night mode.";
+"WallpaperPreview.PreviewInDayMode" = "Preview this wallpaper in day mode.";
+
+"PeerInfo.BotBlockedTitle" = "Bot Blocked";
+"PeerInfo.BotBlockedText" = "This bot will not be able to message you.";
+
+"ChatList.ContextMuteAll" = "Mute All";
+"ChatList.ContextUnmuteAll" = "Unmute All";
+"ChatList.ToastFolderMuted" = "All chats in **%@** are now muted";
+"ChatList.ToastFolderUnmuted" = "All chats in **%@** are now unmuted";
+"ChatList.ContextMenuShare" = "Share";
+"ChatList.ContextMenuBadgeNew" = "NEW";
+"ChatList.AlertDeleteFolderTitle" = "Delete Folder";
+"ChatList.AlertDeleteFolderText" = "Are you sure you want to delete this folder? This will also deactivate all the invite links used to share this folder.";
+"ChatList.PanelNewChatsAvailable_1" = "1 New Chat Available";
+"ChatList.PanelNewChatsAvailable_any" = "%d New Chats Available";
+
+"ChatListFilter.SectionShare" = "SHARE FOLDER";
+"ChatListFilter.CreateLink" = "Create a new Link";
+"ChatListFilter.CreateLinkNew" = "Create an Invite Link";
+"ChatListFilter.ExcludeChatsAction" = "Add Chats to Exclude";
+"ChatListFilter.LinkListInfo" = "Create more links to set up different access levels for different people.";
+"ChatListFilter.LinkListInfoNew" = "Share access to some of this folder's groups and channels with others.";
+"ChatListFilter.ToastChatsAddedTitle_1" = "Сhat added to folder";
+"ChatListFilter.ToastChatsAddedTitle_any" = "%d chats added to folder";
+"ChatListFilter.ToastChatsAddedText" = "It will not affect chatlist of the links of this folder";
+"ChatListFilter.ToastChatsRemovedTitle_1" = "Сhat removed from folder";
+"ChatListFilter.ToastChatsRemovedTitle_any" = "%d chats added to folder";
+"ChatListFilter.ToastChatsRemovedText" = "It will not affect chatlist of the links of this folder";
+"ChatListFilter.AlertCreateFolderBeforeSharingText" = "Please finish creating this folder to share it.";
+"ChatListFilter.ErrorShareInvalidFolder" = "You can’t share folders which have chat types or excluded chats.";
+"ChatListFilter.SaveAlertActionSave" = "Save";
+"ChatListFilter.CreateLinkUnknownError" = "Error creating a share link";
+"ChatListFilter.CreateLinkErrorSomeoneHasChannelLimit" = "One of the groups in this folder can’t be added because one of its admins has too many groups and channels.";
+
+"ChatListFilterList.CreateFolder" = "Create a Folder";
+
+"FolderLinkScreen.LabelCanInvite" = "you can invite others here";
+
+"FolderLinkScreen.LabelUnavailableBot" = "you can't share chats with bots";
+"FolderLinkScreen.AlertTextUnavailableBot" = "You can't share chats with bots";
+
+"FolderLinkScreen.LabelUnavailableUser" = "you can't share private chats";
+"FolderLinkScreen.AlertTextUnavailableUser" = "You can't share private chats";
+
+"FolderLinkScreen.LabelUnavailableGeneric" = "you can't invite others here";
+"FolderLinkScreen.AlertTextUnavailablePrivateGroup" = "You don't have the admin rights to share invite links to this private group.";
+"FolderLinkScreen.AlertTextUnavailablePublicGroup" = "You don't have the admin rights to share invite links to this group chat.";
+"FolderLinkScreen.AlertTextUnavailablePrivateChannel" = "You don't have the admin rights to share invite links to this private channel.";
+"FolderLinkScreen.AlertTextUnavailablePublicChannel" = "You don't have the admin rights to share invite links to this channel.";
+
+"FolderLinkScreen.TitleDescriptionUnavailable" = "You can only share groups and channels in which you are allowed to create invite links.";
+"FolderLinkScreen.ChatCountHeaderUnavailable" = "There are no chats in this folder that you can share with others.";
+"FolderLinkScreen.ChatsSectionHeaderUnavailable" = "THESE CHATS CANNOT BE SHARED";
+
+"FolderLinkScreen.TitleDescriptionDeselected" = "Anyone with this link can add **%@** folder and the chats selected below.";
+"FolderLinkScreen.ChatsSectionHeader" = "CHATS";
+"FolderLinkScreen.ChatsSectionHeaderActionSelectAll" = "SELECT ALL";
+"FolderLinkScreen.ChatsSectionHeaderActionDeselectAll" = "DESELECT ALL";
+
+"FolderLinkScreen.TitleDescriptionSelectedCount_1" = "the 1 chat";
+"FolderLinkScreen.TitleDescriptionSelectedCount_any" = "the %d chats";
+"FolderLinkScreen.TitleDescriptionSelected" = "Anyone with this link can add **%1$@** folder and %2$@ selected below.";
+
+"FolderLinkScreen.ChatsSectionHeaderSelected_1" = "1 CHAT SELECTED";
+"FolderLinkScreen.ChatsSectionHeaderSelected_any" = "%d CHATS SELECTED";
+
+"FolderLinkScreen.LinkSectionHeader" = "INVITE LINK";
+
+"FolderLinkScreen.ContextActionNameLink" = "Name Link";
+"FolderLinkScreen.NameLink.Title" = "Name This Link";
+
+"FolderLinkScreen.ToastNewChatAdded" = "People who already used the invite link will be able to join newly added chats.";
+"FolderLinkScreen.SaveUnknownError" = "An error occurred while updating the link";
+"FolderLinkScreen.ToastLinkUpdated" = "Link updated";
+
+"FolderLinkScreen.Title" = "Share Folder";
+
+"FolderLinkScreen.SaveAlertTitle" = "Unsaved Changes";
+"FolderLinkScreen.SaveAlertText" = "You have changed the settings of this folder. Apply changes?";
+"FolderLinkScreen.SaveAlertActionDiscard" = "Discard";
+"FolderLinkScreen.SaveAlertActionApply" = "Apply";
+"FolderLinkScreen.SaveAlertActionContinue" = "Cancel";
+
+"FolderLinkScreen.LinkActionCopy" = "Copy";
+"FolderLinkScreen.LinkActionShare" = "Share";
+
+"InviteLink.LabelJoinedViaFolder" = "joined via a folder invite link";
+
+"ChatListFilter.LinkLabelChatCount_1" = "includes 1 chat";
+"ChatListFilter.LinkLabelChatCount_any" = "includes %d chats";
+"ChatListFilter.LinkActionDelete" = "Delete";
+
+"InviteLink.QRCodeFolder.Title" = "Invite by QR Code";
+"InviteLink.QRCodeFolder.Text" = "Everyone on Telegram can scan this code to add this folder and join the chats included in this invite link.";
+
+"FolderLinkPreview.IconTabLeft" = "All Chats";
+"FolderLinkPreview.IconTabRight" = "Personal";
+"FolderLinkPreview.TitleShare" = "Share Folder";
+"FolderLinkPreview.TitleRemove" = "Remove Folder";
+"FolderLinkPreview.TitleAddFolder" = "Add Folder";
+"FolderLinkPreview.TitleAddChats_1" = "Add %d Chat";
+"FolderLinkPreview.TitleAddChats_any" = "Add %d Chats";
+"FolderLinkPreview.LinkSectionHeader" = "INVITE LINKS";
+"FolderLinkPreview.RemoveSectionSelectedHeader_1" = "%d CHAT TO QUIT";
+"FolderLinkPreview.RemoveSectionSelectedHeader_any" = "%d CHATS TO QUIT";
+"FolderLinkPreview.ChatSectionHeader_1" = "1 CHAT IN THIS FOLDER";
+"FolderLinkPreview.ChatSectionHeader_any" = "%d CHATS IN THIS FOLDER";
+"FolderLinkPreview.ChatSectionJoinHeader_1" = "1 CHAT IN THIS FOLDER TO JOIN";
+"FolderLinkPreview.ChatSectionJoinHeader_any" = "%d CHATS IN THIS FOLDER TO JOIN";
+
+"FolderLinkPreview.ToastChatsAddedTitle" = "Folder %@ Updated";
+"FolderLinkPreview.ToastChatsAddedText_1" = "You have joined %d new chat";
+"FolderLinkPreview.ToastChatsAddedText_any" = "You have joined %d new chats";
+
+"FolderLinkPreview.ToastFolderAddedTitle" = "Folder %@ Added";
+"FolderLinkPreview.ToastFolderAddedText_1" = "You also joined %d chat";
+"FolderLinkPreview.ToastFolderAddedText_any" = "You also joined %d chats";
+
+"FolderLinkPreview.TextLinkList" = "Create more links to set up different access\nlevels for different people.";
+"FolderLinkPreview.TextRemoveFolder" = "Do you also want to quit the chats included in this folder?";
+"FolderLinkPreview.TextAllAdded" = "You have already added this\nfolder and its chats.";
+"FolderLinkPreview.TextAddFolder" = "Do you want to add a new chat folder\nand join its groups and channels?";
+
+"FolderLinkPreview.TextAddChatsCount_1" = "%d chat";
+"FolderLinkPreview.TextAddChatsCount_any" = "%d chats";
+"FolderLinkPreview.TextAddChats" = "Do you want to add **%1$@** to the\nfolder **%2$@**?";
+
+"FolderLinkPreview.LabelPeerSubscriber" = "You are already a subscriber";
+"FolderLinkPreview.LabelPeerSubscribers_1" = "%d subscriber";
+"FolderLinkPreview.LabelPeerSubscribers_any" = "%d subscribers";
+
+"FolderLinkPreview.LabelPeerMember" = "You are already a member";
+"FolderLinkPreview.LabelPeerMembers_1" = "%d member";
+"FolderLinkPreview.LabelPeerMembers_any" = "%d members";
+
+"FolderLinkPreview.ToastAlreadyMemberChannel" = "You are already subscribed to this channel.";
+"FolderLinkPreview.ToastAlreadyMemberGroup" = "You are already a member of this group.";
+
+"FolderLinkPreview.ButtonRemoveFolder" = "Remove Folder";
+"FolderLinkPreview.ButtonRemoveFolderAndChats" = "Remove Folder and Chats";
+
+"FolderLinkPreview.ButtonDoNotJoinChats" = "Do Not Join Any Chats";
+"FolderLinkPreview.ButtonJoinChats" = "Join Chats";
+"FolderLinkPreview.ButtonAddFolder" = "Add Folder";
+
+"FolderLinkPreview.ToastLeftTitle" = "Folder %@ deleted";
+"FolderLinkPreview.ToastLeftChatsText_1" = "You also left **%d** chat";
+"FolderLinkPreview.ToastLeftChatsText_any" = "You also left **%d** chats";
+
+"FolderLinkPreview.ListSelectionSelectAllDynamicPartSelect" = "SELECT";
+"FolderLinkPreview.ListSelectionSelectAllDynamicPartDeselect" = "DESELECT";
+"FolderLinkPreview.ListSelectionSelectAllStaticPartSelect" = "ALL";
+"FolderLinkPreview.ListSelectionSelectAllStaticPartDeselect" = "ALL";
+"FolderLinkPreview.ListSelectionSelectAllFormat" = "{dynamic}{static}";
+
+"UserInfo.ChangeWallpaper" = "Change Wallpaper";
+
+"Conversation.Theme.PreviewDarkShort" = "Tap to view this theme in the night mode.";
+"Conversation.Theme.PreviewLightShort" = "Tap to view this theme in the day mode.";
+
+"ChatList.EmptyListContactsHeader" = "YOUR CONTACTS ON TELEGRAM";
+"ChatList.EmptyListContactsHeaderHide" = "hide";
+"ChatList.EmptyListTooltip" = "Send a message or\nstart a group here.";
+
+"Username.BotTitle" = "Public Links";
+
+"Notification.LockScreenReactionPlaceholder" = "Reaction";
+
+"UserInfo.BotNamePlaceholder" = "Bot Name";
+
+"ChatList.PremiumRestoreDiscountTitle" = "Get Premium back with up to %@ off";
+"ChatList.PremiumRestoreDiscountText" = "Your Telegram Premium has recently expired. Tap here to extend it.";

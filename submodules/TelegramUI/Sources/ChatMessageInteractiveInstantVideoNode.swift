@@ -690,7 +690,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         }
                                     }
                                 }
-                            }), content: NativeVideoContent(id: .message(item.message.stableId, telegramFile.fileId), userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo ? .conservative : .none, enableSound: false, fetchAutomatically: false, captureProtected: item.message.isCopyProtected(), storeAfterDownload: nil), priority: .embedded, autoplay: item.context.sharedContext.energyUsageSettings.autoplayVideo, sourceAccountId: item.context.account.id)
+                            }), content: NativeVideoContent(id: .message(item.message.stableId, telegramFile.fileId), userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo ? .conservative : .none, enableSound: false, fetchAutomatically: false, isAudioVideoMessage: true, captureProtected: item.message.isCopyProtected(), storeAfterDownload: nil), priority: .embedded, autoplay: item.context.sharedContext.energyUsageSettings.autoplayVideo, sourceAccountId: item.context.account.id)
                             if let previousVideoNode = previousVideoNode {
                                 videoNode.bounds = previousVideoNode.bounds
                                 videoNode.position = previousVideoNode.position
@@ -1601,7 +1601,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let duration: Double = 0.2
         
         node.alpha = 1.0
-        node.isHidden = false
+        if node.supernode == nil {
+            self.supernode?.insertSubnode(node, belowSubnode: self)
+        }
         
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
@@ -1715,7 +1717,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         
         node.alpha = 0.0
         node.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { _ in
-            node.isHidden = true
+            node.removeFromSupernode()
         })
         node.waveformView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
                 

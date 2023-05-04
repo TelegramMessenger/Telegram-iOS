@@ -726,6 +726,16 @@ private func iconColors(theme: PresentationTheme) -> [String: UIColor] {
     return colors
 }
 
+private func interpolateColors(from: [String: UIColor], to: [String: UIColor], fraction: CGFloat) -> [String: UIColor] {
+    var colors: [String: UIColor] = [:]
+    for (key, fromValue) in from {
+        if let toValue = to[key] {
+            colors[key] = fromValue.interpolateTo(toValue, fraction: fraction)
+        }
+    }
+    return colors
+}
+
 private let defaultEmoticon = "🏠"
 
 private func generateShadowImage() -> UIImage? {
@@ -1149,11 +1159,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.switchThemeButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.animationNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.animationNode.alpha = 0.4
+                    strongSelf.animationContainerNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.animationContainerNode.alpha = 0.4
                 } else {
-                    strongSelf.animationNode.alpha = 1.0
-                    strongSelf.animationNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.animationContainerNode.alpha = 1.0
+                    strongSelf.animationContainerNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -1233,6 +1243,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         })
     }
     
+    private var switchThemeIconAnimator: DisplayLinkAnimator?
     func updatePresentationData(_ presentationData: PresentationData) {
         guard !self.animatedOut else {
             return
@@ -1250,22 +1261,20 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
         
-        if self.animationNode.isPlaying {
-            if let animationNode = self.animationNode.makeCopy(colors: iconColors(theme: self.presentationData.theme), progress: 0.2) {
-                let previousAnimationNode = self.animationNode
-                self.animationNode = animationNode
-                
-                animationNode.completion = { [weak previousAnimationNode] in
-                    previousAnimationNode?.removeFromSupernode()
-                }
-                animationNode.isUserInteractionEnabled = false
-                animationNode.frame = previousAnimationNode.frame
-                previousAnimationNode.supernode?.insertSubnode(animationNode, belowSubnode: previousAnimationNode)
-                previousAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreen.themeCrossfadeDuration, removeOnCompletion: false)
-                animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        let previousIconColors = iconColors(theme: previousTheme)
+        let newIconColors = iconColors(theme: self.presentationData.theme)
+        
+        if !self.switchThemeButton.isUserInteractionEnabled {
+            Queue.mainQueue().after(ChatThemeScreen.themeCrossfadeDelay) {
+                self.switchThemeIconAnimator = DisplayLinkAnimator(duration: ChatThemeScreen.themeCrossfadeDuration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
+                    self?.animationNode.setColors(colors: interpolateColors(from: previousIconColors, to: newIconColors, fraction: value))
+                }, completion: { [weak self] in
+                    self?.switchThemeIconAnimator?.invalidate()
+                    self?.switchThemeIconAnimator = nil
+                })
             }
         } else {
-            self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
+            self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: newIconColors)
         }
     }
         
@@ -1292,7 +1301,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         self.animateCrossfade(animateIcon: false)
         self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
-        self.animationNode.playOnce()
+        Queue.mainQueue().justDispatch {
+            self.animationNode.playOnce()
+        }
         
         let isDarkAppearance = !self.isDarkAppearance
         
@@ -1437,7 +1448,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let switchThemeFrame = CGRect(origin: CGPoint(x: 3.0, y: 6.0), size: switchThemeSize)
         transition.updateFrame(node: self.switchThemeButton, frame: switchThemeFrame)
         transition.updateFrame(node: self.animationContainerNode, frame: switchThemeFrame.insetBy(dx: 9.0, dy: 9.0))
-        transition.updateFrame(node: self.animationNode, frame: CGRect(origin: CGPoint(), size: self.animationContainerNode.frame.size))
+        transition.updateFrameAsPositionAndBounds(node: self.animationNode, frame: CGRect(origin: CGPoint(), size: self.animationContainerNode.frame.size))
         
         let cancelSize = CGSize(width: 44.0, height: 44.0)
         let cancelFrame = CGRect(origin: CGPoint(x: contentFrame.width - cancelSize.width - 3.0, y: 6.0), size: cancelSize)

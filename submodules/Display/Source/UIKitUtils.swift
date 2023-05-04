@@ -437,9 +437,21 @@ public extension UIImage {
     }
 }
 
-private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) -> UIView? {
+private func makeSubtreeSnapshot(layer: CALayer, keepPortals: Bool = false, keepTransform: Bool = false) -> UIView? {
     if layer is AVSampleBufferDisplayLayer {
         return nil
+    }
+    if keepPortals && layer.description.contains("PortalLayer") {
+        let sourceView = (layer.delegate as? UIView)?.value(forKey: "sourceView") as? UIView
+        if let snapshotView = sourceView?.snapshotContentTree() {
+            let globalFrame = layer.convert(layer.bounds, to: sourceView?.layer)
+            snapshotView.frame = CGRect(origin: CGPoint(x: -globalFrame.minX, y: -globalFrame.minY), size: snapshotView.frame.size)
+            snapshotView.alpha = 1.0
+            snapshotView.tag = 0xbeef
+            return snapshotView
+        } else {
+            return nil
+        }
     }
     let view = UIView()
     view.layer.isHidden = layer.isHidden
@@ -475,21 +487,23 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
     view.layer.backgroundColor = layer.backgroundColor
     if let sublayers = layer.sublayers {
         for sublayer in sublayers {
-            let subtree = makeSubtreeSnapshot(layer: sublayer, keepTransform: keepTransform)
+            let subtree = makeSubtreeSnapshot(layer: sublayer, keepPortals: keepPortals, keepTransform: keepTransform)
             if let subtree = subtree {
                 if keepTransform {
                     subtree.layer.transform = sublayer.transform
                 }
-                subtree.layer.transform = sublayer.transform
-                subtree.layer.position = sublayer.position
-                subtree.layer.bounds = sublayer.bounds
-                subtree.layer.anchorPoint = sublayer.anchorPoint
-                subtree.layer.layerTintColor = sublayer.layerTintColor
+                if subtree.tag != 0xbeef {
+                    subtree.layer.transform = sublayer.transform
+                    subtree.layer.position = sublayer.position
+                    subtree.layer.bounds = sublayer.bounds
+                    subtree.layer.anchorPoint = sublayer.anchorPoint
+                    subtree.layer.layerTintColor = sublayer.layerTintColor
+                }
                 if let maskLayer = subtree.layer.mask {
-                    maskLayer.transform = sublayer.transform
-                    maskLayer.position = sublayer.position
-                    maskLayer.bounds = sublayer.bounds
-                    maskLayer.anchorPoint = sublayer.anchorPoint
+//                    maskLayer.transform = sublayer.transform
+//                    maskLayer.position = sublayer.position
+//                    maskLayer.bounds = sublayer.bounds
+//                    maskLayer.anchorPoint = sublayer.anchorPoint
                     maskLayer.layerTintColor = sublayer.layerTintColor
                 }
                 view.addSubview(subtree)
@@ -685,12 +699,12 @@ private func makeLayerSubtreeSnapshotAsView(layer: CALayer) -> UIView? {
 
 
 public extension UIView {
-    func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
+    func snapshotContentTree(unhide: Bool = false, keepPortals: Bool = false, keepTransform: Bool = false) -> UIView? {
         let wasHidden = self.isHidden
         if unhide && wasHidden {
             self.isHidden = false
         }
-        let snapshot = makeSubtreeSnapshot(layer: self.layer, keepTransform: keepTransform)
+        let snapshot = makeSubtreeSnapshot(layer: self.layer, keepPortals: keepPortals, keepTransform: keepTransform)
         if unhide && wasHidden {
             self.isHidden = true
         }

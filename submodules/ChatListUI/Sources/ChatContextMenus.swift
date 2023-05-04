@@ -103,9 +103,10 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                 return context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.IsContact(id: peer.id),
                     TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id),
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global(),
                     TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peer.id)
                 )
-                |> map { [weak chatListController] isContact, notificationSettings, readCounters -> [ContextMenuItem] in
+                |> map { [weak chatListController] isContact, notificationSettings, globalNotificationSettings, readCounters -> [ContextMenuItem] in
                     if promoInfo != nil {
                         return []
                     }
@@ -164,8 +165,21 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     }
 
                     var isMuted = false
-                    if case .muted = notificationSettings.muteState {
+                    if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                         isMuted = true
+                    } else if case .default = notificationSettings.muteState {
+                        if case .user = peer {
+                            isMuted = !globalNotificationSettings.privateChats.enabled
+                        } else if case .legacyGroup = peer {
+                            isMuted = !globalNotificationSettings.groupChats.enabled
+                        } else if case let .channel(channel) = peer {
+                            switch channel.info {
+                            case .group:
+                                isMuted = !globalNotificationSettings.groupChats.enabled
+                            case .broadcast:
+                                isMuted = !globalNotificationSettings.channels.enabled
+                            }
+                        }
                     }
 
                     var isUnread = false
@@ -406,8 +420,21 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
 
                         if !isSavedMessages {
                             var isMuted = false
-                            if case .muted = notificationSettings.muteState {
+                            if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                                 isMuted = true
+                            } else if case .default = notificationSettings.muteState {
+                                if case .user = peer {
+                                    isMuted = !globalNotificationSettings.privateChats.enabled
+                                } else if case .legacyGroup = peer {
+                                    isMuted = !globalNotificationSettings.groupChats.enabled
+                                } else if case let .channel(channel) = peer {
+                                    switch channel.info {
+                                    case .group:
+                                        isMuted = !globalNotificationSettings.groupChats.enabled
+                                    case .broadcast:
+                                        isMuted = !globalNotificationSettings.channels.enabled
+                                    }
+                                }
                             }
                             items.append(.action(ContextMenuActionItem(text: isMuted ? strings.ChatList_Context_Unmute : strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                 let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: nil)
@@ -506,9 +533,10 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
     return context.engine.data.get(
         TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
         TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
-        TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId)
+        TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId),
+        TelegramEngine.EngineData.Item.NotificationSettings.Global()
     )
-    |> mapToSignal { peer, peerNotificationSettings, threadData -> Signal<[ContextMenuItem], NoError> in
+    |> mapToSignal { peer, peerNotificationSettings, threadData, globalNotificationSettings -> Signal<[ContextMenuItem], NoError> in
         guard case let .channel(channel) = peer else {
             return .single([])
         }
@@ -560,9 +588,15 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         case .unmuted:
             isMuted = false
         case .default:
-            if case .muted = peerNotificationSettings.muteState {
-                isMuted = true
+            var peerIsMuted = false
+            if case let .muted(until) = peerNotificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                peerIsMuted = true
+            } else if case .default = peerNotificationSettings.muteState {
+                if case let .channel(channel) = peer, case .group = channel.info {
+                    peerIsMuted = !globalNotificationSettings.groupChats.enabled
+                }
             }
+            isMuted = peerIsMuted
         }
         items.append(.action(ContextMenuActionItem(text: isMuted ? strings.ChatList_Context_Unmute : strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { [weak chatListController] c, f in
             if isMuted {

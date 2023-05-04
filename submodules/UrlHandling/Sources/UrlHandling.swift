@@ -97,6 +97,7 @@ public enum ParsedInternalUrl {
     case phone(String, String?, String?)
     case startAttach(String, String?, String?)
     case contactToken(String)
+    case chatFolder(slug: String)
 }
 
 private enum ParsedUrl {
@@ -116,6 +117,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
         var pathComponents = components.path.components(separatedBy: "/")
         if !pathComponents.isEmpty {
             pathComponents.removeFirst()
+        }
+        if let lastComponent = pathComponents.last, lastComponent.isEmpty {
+            pathComponents.removeLast()
         }
         if !pathComponents.isEmpty && !pathComponents[0].isEmpty {
             let peerName: String = pathComponents[0]
@@ -190,6 +194,22 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         if let phone = phone, let hash = hash {
                             return .cancelAccountReset(phone: phone, hash: hash)
                         }
+                    } else if peerName == "msg" {
+                        var url: String?
+                        var text: String?
+                        var to: String?
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "url" {
+                                    url = value
+                                } else if queryItem.name == "text" {
+                                    text = value
+                                } else if queryItem.name == "to" {
+                                    to = value
+                                }
+                            }
+                        }
+                        return .share(url: url, text: text, to: to)
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -414,6 +434,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
                     return .theme(pathComponents[1])
+                } else if pathComponents[0] == "addlist" || pathComponents[0] == "folder" || pathComponents[0] == "list" {
+                    return .chatFolder(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?
@@ -771,6 +793,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
         case let .stickerPack(name, type):
             return .single(.stickerPack(name: name, type: type))
+        case let .chatFolder(slug):
+            return .single(.chatFolder(slug: slug))
         case let .invoice(slug):
             return context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
             |> map(Optional.init)

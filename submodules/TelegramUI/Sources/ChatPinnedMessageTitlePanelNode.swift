@@ -867,7 +867,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         controllerInteraction.requestMessageActionCallback(message.id, nil, true, false)
                     case let .callback(requiresPassword, data):
                         controllerInteraction.requestMessageActionCallback(message.id, data, false, requiresPassword)
-                    case let .switchInline(samePeer, query):
+                    case let .switchInline(samePeer, query, peerTypes):
                         var botPeer: Peer?
                         
                         var found = false
@@ -888,7 +888,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             peerId = message.id.peerId
                         }
                         if let botPeer = botPeer, let addressName = botPeer.addressName {
-                            controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)")
+                            controllerInteraction.activateSwitchInline(peerId, "@\(addressName) \(query)", peerTypes)
                         }
                     case .payment:
                         controllerInteraction.openCheckoutOrReceipt(message.id)

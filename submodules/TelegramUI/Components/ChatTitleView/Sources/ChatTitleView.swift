@@ -368,14 +368,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-            case let .peer(peerView, _, _, isScheduledMessages, _, customMessageCount, _):
+            case let .peer(peerView, _, _, isScheduledMessages, _, _, _):
                 if let peer = peerViewMainPeer(peerView) {
                     if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                         inputActivitiesAllowed = false
                     }
-                }
-                if customMessageCount != nil {
-                    inputActivitiesAllowed = false
                 }
             case .replyThread:
                 inputActivitiesAllowed = true

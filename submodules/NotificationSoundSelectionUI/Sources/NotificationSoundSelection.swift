@@ -541,7 +541,7 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                     let data = try Data(contentsOf: url)
                     
                     if data.count > settings.maxSize {
-                        presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string))
+                        presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string, timeout: nil))
                         
                         souceUrl.stopAccessingSecurityScopedResource()
                         TempBox.shared.dispose(tempFile)
@@ -594,7 +594,7 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                             if duration > Double(settings.maxDuration) {
                                 souceUrl.stopAccessingSecurityScopedResource()
                                 
-                                presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
+                                presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string, timeout: nil))
                             } else {
                                 Logger.shared.log("NotificationSoundSelection", "Uploading sound")
                                 

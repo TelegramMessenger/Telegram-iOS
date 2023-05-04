@@ -29,26 +29,6 @@ private let premiumBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bund
 private let featuredBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeAdd"), color: .white)
 private let lockedBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeLock"), color: .white)
 
-private let staticEmojiMapping: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = {
-    guard let path = getAppBundle().path(forResource: "emoji1016", ofType: "txt") else {
-        return []
-    }
-    guard let string = try? String(contentsOf: URL(fileURLWithPath: path)) else {
-        return []
-    }
-    
-    var result: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = []
-    
-    let orderedSegments = EmojiPagerContentComponent.StaticEmojiSegment.allCases
-    
-    let segments = string.components(separatedBy: "\n\n")
-    for i in 0 ..< min(segments.count, orderedSegments.count) {
-        let list = segments[i].components(separatedBy: " ")
-        result.append((orderedSegments[i], list))
-    }
-    
-    return result
-}()
 
 private final class WarpView: UIView {
     private final class WarpPartView: UIView {
@@ -2226,6 +2206,27 @@ public protocol EmojiContentPeekBehavior: AnyObject {
 }
 
 public final class EmojiPagerContentComponent: Component {
+    public static let staticEmojiMapping: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = {
+        guard let path = getAppBundle().path(forResource: "emoji1016", ofType: "txt") else {
+            return []
+        }
+        guard let string = try? String(contentsOf: URL(fileURLWithPath: path)) else {
+            return []
+        }
+        
+        var result: [(EmojiPagerContentComponent.StaticEmojiSegment, [String])] = []
+        
+        let orderedSegments = EmojiPagerContentComponent.StaticEmojiSegment.allCases
+        
+        let segments = string.components(separatedBy: "\n\n")
+        for i in 0 ..< min(segments.count, orderedSegments.count) {
+            let list = segments[i].components(separatedBy: " ")
+            result.append((orderedSegments[i], list))
+        }
+        
+        return result
+    }()
+    
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
     
     public final class ContentAnimation {
@@ -8051,7 +8052,6 @@ public final class EmojiPagerContentComponent: Component {
             searchCategories
         )
         |> map { view, hasPremium, featuredStickerPacks, featuredStickersConfiguration, dismissedTrendingStickerPacks, peerSpecificPack, searchCategories -> EmojiPagerContentComponent in
-            let actuallyHasPremium = hasPremium
             let hasPremium = forceHasPremium || hasPremium
             struct ItemGroup {
                 var supergroupId: AnyHashable
@@ -8070,14 +8070,11 @@ public final class EmojiPagerContentComponent: Component {
             
             var savedStickers: OrderedItemListView?
             var recentStickers: OrderedItemListView?
-            var cloudPremiumStickers: OrderedItemListView?
             for orderedView in view.orderedItemListsViews {
                 if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStickers {
                     recentStickers = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
                     savedStickers = orderedView
-                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudAllPremiumStickers {
-                    cloudPremiumStickers = orderedView
                 }
             }
             
@@ -8225,64 +8222,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
             }
-            
-            var premiumStickers: [StickerPackItem] = []
-            if hasPremium {
-                for entry in view.entries {
-                    guard let item = entry.item as? StickerPackItem else {
-                        continue
-                    }
-                    
-                    if item.file.isPremiumSticker {
-                        premiumStickers.append(item)
-                    }
-                }
-                
-                if let cloudPremiumStickers = cloudPremiumStickers, !cloudPremiumStickers.items.isEmpty, actuallyHasPremium {
-                    premiumStickers.append(contentsOf: cloudPremiumStickers.items.compactMap { item -> StickerPackItem? in guard let item = item.contents.get(RecentMediaItem.self) else {
-                            return nil
-                        }
-                        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: item.media, indexKeys: [])
-                    })
-                }
-            }
-            
-            if !premiumStickers.isEmpty {
-                var processedIds = Set<MediaId>()
-                for item in premiumStickers {
-                    if isPremiumDisabled && item.file.isPremiumSticker {
-                        continue
-                    }
-                    if processedIds.contains(item.file.fileId) {
-                        continue
-                    }
-                    processedIds.insert(item.file.fileId)
-                    
-                    var tintMode: Item.TintMode = .none
-                    if item.file.isCustomTemplateEmoji {
-                        tintMode = .primary
-                    }
-                    
-                    let animationData = EntityKeyboardAnimationData(file: item.file)
-                    let resultItem = EmojiPagerContentComponent.Item(
-                        animationData: animationData,
-                        content: .animation(animationData),
-                        itemFile: item.file,
-                        subgroupId: nil,
-                        icon: .none,
-                        tintMode: tintMode
-                    )
-                    
-                    let groupId = "premium"
-                    if let groupIndex = itemGroupIndexById[groupId] {
-                        itemGroups[groupIndex].items.append(resultItem)
-                    } else {
-                        itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitlePremiumStickers, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, headerItem: nil, items: [resultItem]))
-                    }
-                }
-            }
-            
+              
             var avatarPeer: EnginePeer?
             if let peerSpecificPack = peerSpecificPack {
                 avatarPeer = peerSpecificPack.peer

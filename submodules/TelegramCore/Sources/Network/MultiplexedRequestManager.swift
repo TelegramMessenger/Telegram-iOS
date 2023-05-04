@@ -33,10 +33,10 @@ private final class RequestData {
     let continueInBackground: Bool
     let automaticFloodWait: Bool
     let deserializeResponse: (Buffer) -> Any?
-    let completed: (Any, Double) -> Void
+    let completed: (Any, NetworkResponseInfo) -> Void
     let error: (MTRpcError, Double) -> Void
     
-    init(id: Int32, consumerId: Int64, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any, Double) -> Void, error: @escaping (MTRpcError, Double) -> Void) {
+    init(id: Int32, consumerId: Int64, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) {
         self.id = id
         self.consumerId = consumerId
         self.target = target
@@ -80,6 +80,11 @@ private struct MultiplexedRequestTargetTimerKey: Equatable, Hashable {
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
+struct NetworkResponseInfo {
+    var timestamp: Double
+    var networkType: NetworkStatsContext.NetworkType
+    var networkDuration: Double
+}
 
 private final class MultiplexedRequestManagerContext {
     private let queue: Queue
@@ -109,15 +114,15 @@ private final class MultiplexedRequestManagerContext {
         }
     }
     
-    func request(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, completed: @escaping (Any, Double) -> Void, error: @escaping (MTRpcError, Double) -> Void) -> Disposable {
+    func request(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) -> Disposable {
         let targetKey = MultiplexedRequestTargetKey(target: target, continueInBackground: continueInBackground)
         
         let requestId = self.nextId
         self.nextId += 1
         self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, target: target, functionDescription: data.0, payload: data.1, tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, deserializeResponse: { buffer in
             return data.2(buffer)
-        }, completed: { result, timestamp in
-            completed(result, timestamp)
+        }, completed: { result, info in
+            completed(result, info)
         }, error: { e, timestamp in
             error(e, timestamp)
         }))
@@ -189,7 +194,7 @@ private final class MultiplexedRequestManagerContext {
                 let requestId = request.id
                 selectedContext.requests.append(ExecutingRequestData(requestId: requestId, disposable: disposable))
                 let queue = self.queue
-                disposable.set(selectedContext.worker.rawRequest((request.functionDescription, request.payload, request.deserializeResponse), automaticFloodWait: request.automaticFloodWait).start(next: { [weak self, weak selectedContext] result, timestamp in
+                disposable.set(selectedContext.worker.rawRequest((request.functionDescription, request.payload, request.deserializeResponse), automaticFloodWait: request.automaticFloodWait).start(next: { [weak self, weak selectedContext] result, info in
                     queue.async {
                         guard let strongSelf = self else {
                             return
@@ -202,7 +207,7 @@ private final class MultiplexedRequestManagerContext {
                                 }
                             }
                         }
-                        request.completed(result, timestamp)
+                        request.completed(result, info)
                         strongSelf.updateState()
                     }
                 }, error: { [weak self, weak selectedContext] error, timestamp in
@@ -299,18 +304,18 @@ final class MultiplexedRequestManager {
         }
     }
     
-    func requestWithAdditionalInfo<T>(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true) -> Signal<(T, Double), (MTRpcError, Double)> {
+    func requestWithAdditionalInfo<T>(to target: MultiplexedRequestTarget, consumerId: Int64, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true) -> Signal<(T, NetworkResponseInfo), (MTRpcError, Double)> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.context.with { context in
                 disposable.set(context.request(to: target, consumerId: consumerId, data: (data.0, data.1, { buffer in
                     return data.2.parse(buffer)
-                }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, completed: { result, timestamp in
+                }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, completed: { result, info in
                     if let result = result as? T {
-                        subscriber.putNext((result, timestamp))
+                        subscriber.putNext((result, info))
                         subscriber.putCompletion()
                     } else {
-                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), timestamp))
+                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), info.timestamp))
                     }
                 }, error: { error, timestamp in
                     subscriber.putError((error, timestamp))

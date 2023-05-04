@@ -169,6 +169,10 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case dismissedTrendingEmojiPacks = 35
     case audioRateOptionsTip = 36
     case translationSuggestion = 37
+    case sendWhenOnlineTip = 38
+    case chatWallpaperLightPreviewTip = 39
+    case chatWallpaperDarkPreviewTip = 40
+    case displayChatListContacts = 41
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -331,6 +335,14 @@ private struct ApplicationSpecificNoticeKeys {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatSpecificThemeDarkPreviewTip.key)
     }
     
+    static func chatWallpaperLightPreviewTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatWallpaperLightPreviewTip.key)
+    }
+    
+    static func chatWallpaperDarkPreviewTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatWallpaperDarkPreviewTip.key)
+    }
+    
     static func chatForwardOptionsTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatForwardOptionsTip.key)
     }
@@ -373,6 +385,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func audioRateOptionsTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.audioRateOptionsTip.key)
+    }
+    
+    static func sendWhenOnlineTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.sendWhenOnlineTip.key)
+    }
+    
+    static func displayChatListContacts() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayChatListContacts.key)
     }
 }
 
@@ -1104,6 +1124,60 @@ public struct ApplicationSpecificNotice {
         }
     }
     
+    public static func getChatWallpaperLightPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {
+        return accountManager.transaction { transaction -> (Int32, Int32) in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatWallpaperLightPreviewTip())?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
+                return (value.counter, value.timestamp)
+            } else {
+                return (0, 0)
+            }
+        }
+    }
+    
+    public static func incrementChatWallpaperLightPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1, timestamp: Int32) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatWallpaperLightPreviewTip())?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
+                currentValue = value.counter
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.chatWallpaperLightPreviewTip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getChatWallpaperDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {
+        return accountManager.transaction { transaction -> (Int32, Int32) in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatWallpaperDarkPreviewTip())?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
+                return (value.counter, value.timestamp)
+            } else {
+                return (0, 0)
+            }
+        }
+    }
+    
+    public static func incrementChatWallpaperDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1, timestamp: Int32) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatWallpaperDarkPreviewTip())?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
+                currentValue = value.counter
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.chatWallpaperDarkPreviewTip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
     public static func getChatForwardOptionsTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
         return accountManager.transaction { transaction -> Int32 in
             if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatForwardOptionsTip())?.get(ApplicationSpecificCounterNotice.self) {
@@ -1325,6 +1399,50 @@ public struct ApplicationSpecificNotice {
             }
             return previousValue
         }
+    }
+    
+    public static func getSendWhenOnlineTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sendWhenOnlineTip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementSendWhenOnlineTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sendWhenOnlineTip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.sendWhenOnlineTip(), entry)
+            }
+        }
+    }
+    
+    public static func displayChatListContacts(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayChatListContacts())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func setDisplayChatListContacts(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayChatListContacts(), entry)
+            }
+        }
+        |> ignoreValues
     }
     
     public static func reset(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {

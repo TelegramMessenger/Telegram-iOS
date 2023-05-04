@@ -495,7 +495,7 @@ extension UserDefaults {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild)
+        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: buildConfig.isICloudEnabled)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
@@ -753,8 +753,9 @@ extension UserDefaults {
                 completion(false)
             }
         }, siriAuthorization: {
-            if #available(iOS 10, *), BuildConfig.siriEnabled() {
-                switch INPreferences.siriAuthorizationStatus() {
+            if buildConfig.isSiriEnabled {
+                if #available(iOS 10, *) {
+                    switch INPreferences.siriAuthorizationStatus() {
                     case .authorized:
                         return .allowed
                     case .denied, .restricted:
@@ -763,6 +764,9 @@ extension UserDefaults {
                         return .notDetermined
                     @unknown default:
                         return .notDetermined
+                    }
+                } else {
+                    return .denied
                 }
             } else {
                 return .denied
@@ -2304,18 +2308,18 @@ extension UserDefaults {
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         if #available(iOS 10.0, *) {
             var startCallContacts: [INPerson]?
-            var startCallIsVideo = false
+            var isVideo = false
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
                 startCallContacts = startCallIntent.contacts
-                startCallIsVideo = false
+                isVideo = false
             } else if let startCallIntent = userActivity.interaction?.intent as? SupportedStartVideoCallIntent {
                 startCallContacts = startCallIntent.contacts
-                startCallIsVideo = true
+                isVideo = true
             }
             
             if let startCallContacts = startCallContacts {
-                let startCall: (Int64) -> Void = { userId in
-                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), isVideo: startCallIsVideo)
+                let startCall: (PeerId) -> Void = { peerId in
+                    self.startCallWhenReady(accountId: nil, peerId: peerId, isVideo: isVideo)
                 }
                 
                 func cleanPhoneNumber(_ text: String) -> String {
@@ -2358,20 +2362,20 @@ extension UserDefaults {
                     let _ = (contactByIdentifier |> deliverOnMainQueue).start(next: { peerByContact in
                         var processed = false
                         if let peerByContact = peerByContact {
-                            startCall(peerByContact.id.id._internalGetInt64Value())
+                            startCall(peerByContact.id)
                             processed = true
                         } else if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                             let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                            if let userId = Int64(string) {
-                                startCall(userId)
+                            if let value = Int64(string) {
+                                startCall(PeerId(value))
                                 processed = true
                             }
                         }
                         if !processed, let handle = contact.personHandle, let value = handle.value {
                             switch handle.type {
                                 case .unknown:
-                                    if let userId = Int64(value) {
-                                        startCall(userId)
+                                    if let value = Int64(value) {
+                                        startCall(PeerId(value))
                                         processed = true
                                     }
                                 case .phoneNumber:
@@ -2395,7 +2399,7 @@ extension UserDefaults {
                                         }
                                         |> deliverOnMainQueue).start(next: { peerId in
                                             if let peerId = peerId {
-                                                startCall(peerId.id._internalGetInt64Value())
+                                                startCall(peerId)
                                             }
                                         })
                                         processed = true
@@ -2413,13 +2417,17 @@ extension UserDefaults {
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                    if let userId = Int64(string) {
+                    if let value = Int64(string) {
                         let _ = (self.sharedContextPromise.get()
                         |> take(1)
                         |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
                         |> deliverOnMainQueue).start(next: { _ in
                         
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), threadId: nil, activateInput: true)
+                        guard PeerId(value).namespace == Namespaces.Peer.CloudUser else {
+                            return
+                        }
+                        
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(value), threadId: nil, activateInput: true)
                         
                         })
                     }
@@ -2610,13 +2618,13 @@ extension UserDefaults {
                     self.handleNotification(response.notification.request.content.userInfo)
                 } else if let (peerId, threadId) = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
-                    if response.notification.request.content.categoryIdentifier == "watch" {
+                    if response.notification.request.content.categoryIdentifier == "c" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
                     self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId)
                 }
                 completionHandler()
-            } else if response.actionIdentifier == "reply", let (peerId, _) = peerIdFromNotification(response.notification), let accountId = accountId {
+            } else if response.actionIdentifier == "reply", let (peerId, threadId) = peerIdFromNotification(response.notification), let accountId = accountId {
                 guard let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty else {
                     completionHandler()
                     return
@@ -2642,7 +2650,11 @@ extension UserDefaults {
                         if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
                             let _ = TelegramEngine(account: account).messages.applyMaxReadIndexInteractively(index: MessageIndex(id: messageId, timestamp: 0)).start()
                         }
-                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                        var replyToMessageId: MessageId?
+                        if let threadId {
+                            replyToMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))
+                        }
+                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
                         |> map { messageIds -> MessageId? in
                             if messageIds.isEmpty {
                                 return nil
@@ -2704,123 +2716,82 @@ extension UserDefaults {
     }
 
     private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
-        if #available(iOS 10.0, *) {
-            let notificationCenter = UNUserNotificationCenter.current()
-            Logger.shared.log("App \(self.episodeId)", "register for notifications: get settings (authorize: \(authorize))")
-            notificationCenter.getNotificationSettings(completionHandler: { settings in
-                Logger.shared.log("App \(self.episodeId)", "register for notifications: received settings: \(settings.authorizationStatus)")
-                
-                switch (settings.authorizationStatus, authorize) {
-                    case (.authorized, _), (.notDetermined, true):
-                        var authorizationOptions: UNAuthorizationOptions = [.badge, .sound, .alert, .carPlay]
-                        if #available(iOS 12.0, *) {
-                            authorizationOptions.insert(.providesAppNotificationSettings)
-                        }
-                        if #available(iOS 13.0, *) {
-                            authorizationOptions.insert(.announcement)
-                        }
-                        Logger.shared.log("App \(self.episodeId)", "register for notifications: request authorization")
-                        notificationCenter.requestAuthorization(options: authorizationOptions, completionHandler: { result, _ in
-                            Logger.shared.log("App \(self.episodeId)", "register for notifications: received authorization: \(result)")
-                            completion(result)
-                            if result {
-                                Queue.mainQueue().async {
-                                    let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
-                                                                        
-                                    let unknownMessageCategory: UNNotificationCategory
-                                    let replyMessageCategory: UNNotificationCategory
-                                    let replyLegacyMessageCategory: UNNotificationCategory
-                                    let replyLegacyMediaMessageCategory: UNNotificationCategory
-                                    let replyMediaMessageCategory: UNNotificationCategory
-                                    let legacyChannelMessageCategory: UNNotificationCategory
-                                    let muteMessageCategory: UNNotificationCategory
-                                    let muteMediaMessageCategory: UNNotificationCategory
-                                    
-                                    if #available(iOS 11.0, *) {
-                                        var options: UNNotificationCategoryOptions = []
-                                        if includeNames {
-                                            options.insert(.hiddenPreviewsShowTitle)
-                                        }
-                                        
-                                        var carPlayOptions = options
-                                        carPlayOptions.insert(.allowInCarPlay)
-                                        if #available(iOS 13.2, *) {
-                                            carPlayOptions.insert(.allowAnnouncement)
-                                        }
-                                        
-                                        unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                        replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                        replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                        legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                        muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                        muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    } else {
-                                        let carPlayOptions: UNNotificationCategoryOptions = [.allowInCarPlay]
-                                        
-                                        unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
-                                        replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
-                                        replyLegacyMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
-                                        replyLegacyMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
-                                        replyMediaMessageCategory = UNNotificationCategory(identifier: "withReplyMedia", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
-                                        legacyChannelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
-                                        muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], options: [])
-                                        muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], options: [])
+        let notificationCenter = UNUserNotificationCenter.current()
+        Logger.shared.log("App \(self.episodeId)", "register for notifications: get settings (authorize: \(authorize))")
+        notificationCenter.getNotificationSettings(completionHandler: { settings in
+            Logger.shared.log("App \(self.episodeId)", "register for notifications: received settings: \(settings.authorizationStatus)")
+            
+            switch (settings.authorizationStatus, authorize) {
+                case (.authorized, _), (.notDetermined, true):
+                    var authorizationOptions: UNAuthorizationOptions = [.badge, .sound, .alert, .carPlay]
+                    if #available(iOS 12.0, *) {
+                        authorizationOptions.insert(.providesAppNotificationSettings)
+                    }
+                    if #available(iOS 13.0, *) {
+                        authorizationOptions.insert(.announcement)
+                    }
+                    Logger.shared.log("App \(self.episodeId)", "register for notifications: request authorization")
+                    notificationCenter.requestAuthorization(options: authorizationOptions, completionHandler: { result, _ in
+                        Logger.shared.log("App \(self.episodeId)", "register for notifications: received authorization: \(result)")
+                        completion(result)
+                        if result {
+                            Queue.mainQueue().async {
+                                let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
+                                                                    
+                                let unknownMessageCategory: UNNotificationCategory
+                                let repliableMessageCategory: UNNotificationCategory
+                                let repliableMediaMessageCategory: UNNotificationCategory
+                                let groupRepliableMessageCategory: UNNotificationCategory
+                                let groupRepliableMediaMessageCategory: UNNotificationCategory
+                                let channelMessageCategory: UNNotificationCategory
+                                
+                                if #available(iOS 11.0, *) {
+                                    var options: UNNotificationCategoryOptions = []
+                                    if includeNames {
+                                        options.insert(.hiddenPreviewsShowTitle)
                                     }
                                     
-                                    UNUserNotificationCenter.current().setNotificationCategories([unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, legacyChannelMessageCategory, muteMessageCategory, muteMediaMessageCategory])
+                                    var carPlayOptions = options
+                                    carPlayOptions.insert(.allowInCarPlay)
+                                    if #available(iOS 13.2, *) {
+                                        carPlayOptions.insert(.allowAnnouncement)
+                                    }
                                     
-                                    Logger.shared.log("App \(self.episodeId)", "register for notifications: invoke registerForRemoteNotifications")
-                                    UIApplication.shared.registerForRemoteNotifications()
+                                    unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                    repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
+                                    repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
+                                    groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                    groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                    channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                } else {
+                                    let carPlayOptions: UNNotificationCategoryOptions = [.allowInCarPlay]
+                                
+                                    unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
+                                    repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
+                                    repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
+                                    groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: [])
+                                    groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], options: [])
+                                    channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
                                 }
+                                
+                                UNUserNotificationCenter.current().setNotificationCategories([
+                                    unknownMessageCategory,
+                                    repliableMessageCategory,
+                                    repliableMediaMessageCategory,
+                                    channelMessageCategory,
+                                    groupRepliableMessageCategory,
+                                    groupRepliableMediaMessageCategory
+                                ])
+                                
+                                Logger.shared.log("App \(self.episodeId)", "register for notifications: invoke registerForRemoteNotifications")
+                                UIApplication.shared.registerForRemoteNotifications()
                             }
-                        })
-                    default:
-                        break
-                }
-            })
-        } else {
-            let reply = UIMutableUserNotificationAction()
-            reply.identifier = "reply"
-            reply.title = replyString
-            reply.isDestructive = false
-            reply.isAuthenticationRequired = false
-            reply.behavior = .textInput
-            reply.activationMode = .background
-            
-            let unknownMessageCategory = UIMutableUserNotificationCategory()
-            unknownMessageCategory.identifier = "unknown"
-            
-            let replyMessageCategory = UIMutableUserNotificationCategory()
-            replyMessageCategory.identifier = "withReply"
-            replyMessageCategory.setActions([reply], for: .default)
-            
-            let replyLegacyMessageCategory = UIMutableUserNotificationCategory()
-            replyLegacyMessageCategory.identifier = "r"
-            replyLegacyMessageCategory.setActions([reply], for: .default)
-            
-            let replyLegacyMediaMessageCategory = UIMutableUserNotificationCategory()
-            replyLegacyMediaMessageCategory.identifier = "m"
-            replyLegacyMediaMessageCategory.setActions([reply], for: .default)
-            
-            let replyMediaMessageCategory = UIMutableUserNotificationCategory()
-            replyMediaMessageCategory.identifier = "withReplyMedia"
-            replyMediaMessageCategory.setActions([reply], for: .default)
-            
-            let legacyChannelMessageCategory = UIMutableUserNotificationCategory()
-            legacyChannelMessageCategory.identifier = "c"
-            
-            let muteMessageCategory = UIMutableUserNotificationCategory()
-            muteMessageCategory.identifier = "withMute"
-           
-            let muteMediaMessageCategory = UIMutableUserNotificationCategory()
-            muteMediaMessageCategory.identifier = "withMuteMedia"
-            
-            let settings = UIUserNotificationSettings(types: [.badge, .sound, .alert], categories: [])
-            UIApplication.shared.registerUserNotificationSettings(settings)
-            UIApplication.shared.registerForRemoteNotifications()
-        }
+                        }
+                    })
+                default:
+                    break
+            }
+        })
     }
     
     @available(iOS 10.0, *)

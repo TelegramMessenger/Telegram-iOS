@@ -320,7 +320,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     let bold = MarkdownAttributeSet(font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
                     if let _ = resetPendingDate {
                         self.actionDisposable.set(
-                            resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash).start(error: { [weak self] error in
+                            (resetLoginEmail(account: self.account, phoneNumber: number, phoneCodeHash: phoneCodeHash)
+                            |> deliverOnMainQueue).start(error: { [weak self] error in
                                 if let self, case .alreadyInProgress = error {
                                     let formattedNumber = formatPhoneNumber(number)
                                     let title = NSAttributedString(string: self.presentationData.strings.Login_Email_PremiumRequiredTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)

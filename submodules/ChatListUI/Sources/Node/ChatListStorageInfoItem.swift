@@ -7,16 +7,22 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ListSectionHeaderNode
 import AppBundle
+import ItemListUI
 
 class ChatListStorageInfoItem: ListViewItem {
+    enum Action {
+        case activate
+        case hide
+    }
+    
     let theme: PresentationTheme
     let strings: PresentationStrings
     let notice: ChatListNotice
-    let action: () -> Void
+    let action: (Action) -> Void
     
     let selectable: Bool = true
     
-    init(theme: PresentationTheme, strings: PresentationStrings, notice: ChatListNotice, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, notice: ChatListNotice, action: @escaping (Action) -> Void) {
         self.theme = theme
         self.strings = strings
         self.notice = notice
@@ -26,7 +32,7 @@ class ChatListStorageInfoItem: ListViewItem {
     func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
         
-        self.action()
+        self.action(.activate)
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -72,7 +78,8 @@ private let separatorHeight = 1.0 / UIScreen.main.scale
 private let titleFont = Font.semibold(15.0)
 private let textFont = Font.regular(15.0)
 
-class ChatListStorageInfoItemNode: ListViewItemNode {
+class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
+    private let contentContainer: ASDisplayNode
     private let titleNode: TextNode
     private let textNode: TextNode
     private let arrowNode: ASImageNode
@@ -81,17 +88,23 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
     private var item: ChatListStorageInfoItem?
     
     required init() {
+        self.contentContainer = ASDisplayNode()
+        
         self.titleNode = TextNode()
         self.textNode = TextNode()
         self.arrowNode = ASImageNode()
         self.separatorNode = ASDisplayNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        
+        self.clipsToBounds = true
         
         self.addSubnode(self.separatorNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.arrowNode)
+        self.contentContainer.addSubnode(self.titleNode)
+        self.contentContainer.addSubnode(self.textNode)
+        self.contentContainer.addSubnode(self.arrowNode)
+        
+        self.addSubnode(self.contentContainer)
         
         self.zPosition = 1.0
     }
@@ -160,6 +173,25 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumAnnualDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .premiumRestore(discount):
+                let discountString = "\(discount)%"
+                let rawTitleString = item.strings.ChatList_PremiumRestoreDiscountTitle(discountString)
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                if let range = rawTitleString.ranges.first {
+                    titleStringValue.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
+                }
+                titleString = titleStringValue
+                
+                textString = NSAttributedString(string: item.strings.ChatList_PremiumRestoreDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .chatFolderUpdates(count):
+                let rawTitleString = item.strings.ChatList_ChatFolderUpdateHintTitle(item.strings.ChatList_ChatFolderUpdateCount(Int32(count)))
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString.string, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                if let range = rawTitleString.ranges.first {
+                    titleStringValue.addAttribute(.foregroundColor, value: item.theme.rootController.navigationBar.accentTextColor, range: range.range)
+                }
+                titleString = titleStringValue
+                
+                textString = NSAttributedString(string: item.strings.ChatList_ChatFolderUpdateHintText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
@@ -192,8 +224,41 @@ class ChatListStorageInfoItemNode: ListViewItemNode {
                     
                     strongSelf.contentSize = layout.contentSize
                     strongSelf.insets = layout.insets
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    strongSelf.contentContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    
+                    switch item.notice {
+                    case .chatFolderUpdates:
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.strings.ChatList_HideAction, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                    default:
+                        strongSelf.setRevealOptions((left: [], right: []))
+                    }
                 }
             })
         }
+    }
+    
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+        
+        //self.transitionOffset = self.bounds.size.height * 1.6
+        //self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
+    }
+    
+    override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        transition.updateSublayerTransformOffset(layer: self.contentContainer.layer, offset: CGPoint(x: offset, y: 0.0))
+    }
+    
+    override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        if let item = self.item {
+            item.action(.hide)
+        }
+        
+        self.setRevealOptionsOpened(false, animated: true)
+        self.revealOptionsInteractivelyClosed()
     }
 }

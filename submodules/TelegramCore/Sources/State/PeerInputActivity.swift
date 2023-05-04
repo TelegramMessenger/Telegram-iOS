@@ -52,7 +52,7 @@ public struct EmojiInteraction: Equatable {
     fileprivate let roundingBehavior = NSDecimalNumberHandler(roundingMode: .plain, scale: 2, raiseOnExactness: false, raiseOnOverflow: false, raiseOnUnderflow: false, raiseOnDivideByZero: true)
 
     public var apiDataJson: Api.DataJSON {
-        let dict = ["v": 1, "a": self.animations.map({ ["i": $0.index, "t": NSDecimalNumber(value: $0.timeOffset).rounding(accordingToBehavior: roundingBehavior)] })] as [String : Any]
+        let dict = ["v": 1, "a": self.animations.map({ ["i": $0.index, "t": NSDecimalNumber(value: $0.timeOffset).rounding(accordingToBehavior: roundingBehavior)] as [String : Any] })] as [String : Any]
         if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let dataString = String(data: data, encoding: .utf8) {
             return .dataJSON(data: dataString)
         } else {

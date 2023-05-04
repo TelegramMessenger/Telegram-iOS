@@ -28,6 +28,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     UIView *_transitionInReferenceView;
     UIView *_transitionInParentView;
     CGRect _transitionTargetFrame;
+    
+    UIView *_upperTransitionView;
+    CGRect _upperTransitionTargetFrame;
 }
 @end
 
@@ -114,6 +117,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     _dismissing = false;
     
     CGRect targetFrame = [self _targetFrameForTransitionInFromFrame:referenceFrame];
+    if (self.intent == TGPhotoEditorControllerWallpaperIntent) {
+        targetFrame = [self.view convertRect:targetFrame toView: parentView];
+    }
     
     if (_CGRectEqualToRectWithEpsilon(targetFrame, referenceFrame, FLT_EPSILON))
     {
@@ -157,12 +163,20 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
             _transitionView = referenceView;
         }
         transitionViewSuperview = parentView;
+        
+        if (self.intent == TGPhotoEditorControllerWallpaperIntent) {
+            _upperTransitionView = [referenceView snapshotViewAfterScreenUpdates:false];
+            _upperTransitionView.alpha = 0.0;
+            _upperTransitionView.frame = [parentView convertRect:referenceFrame toView:self.view];
+            _upperTransitionTargetFrame = [self _targetFrameForTransitionInFromFrame:referenceFrame];
+            [self.view insertSubview:_upperTransitionView atIndex:2];
+        }
     }
     
     
     _transitionView.hidden = false;
     _transitionView.frame = referenceFrame;
-    _transitionTargetFrame = [self _targetFrameForTransitionInFromFrame:referenceFrame];
+    _transitionTargetFrame = targetFrame;
     [transitionViewSuperview addSubview:_transitionView];
 }
 
@@ -174,6 +188,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     _transitionInProgress = true;
     
     CGAffineTransform initialTransform = _transitionView.transform;
+    [UIView animateWithDuration:0.25 animations:^{
+        _upperTransitionView.alpha = 1.0;
+    }];
     [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionLayoutSubviews animations:^
     {
         if (_animateScale) {
@@ -182,6 +199,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
             _transitionView.transform = CGAffineTransformScale(initialTransform, scale, scale);
         } else {
             _transitionView.frame = _transitionTargetFrame;
+            _upperTransitionView.frame = _upperTransitionTargetFrame;
         }
     } completion:^(BOOL finished) {
         _transitionInProgress = false;
@@ -201,6 +219,13 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         }
          
         [self _finishedTransitionInWithView:transitionView];
+        
+        [UIView animateWithDuration:0.2 animations:^{
+            _upperTransitionView.alpha = 0.0;
+        } completion:^(BOOL finished) {
+            [_upperTransitionView removeFromSuperview];
+            _upperTransitionView = nil;
+        }];
     }];
 }
 
@@ -249,7 +274,7 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     }
     
     if (self.beginTransitionOut != nil)
-        referenceView = self.beginTransitionOut(&referenceFrame, &parentView);
+        referenceView = self.beginTransitionOut(&referenceFrame, &parentView, saving);
     
     if (parentView == nil)
         parentView = referenceView.superview.superview;
@@ -275,7 +300,11 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
     if (saving)
     {
-        [self _animatePreviewViewTransitionOutToFrame:CGRectNull saving:saving parentView:parentView completion:^
+        CGRect targetFrame = CGRectNull;
+        if (self.intent == TGPhotoEditorControllerWallpaperIntent) {
+            targetFrame = referenceFrame;
+        }
+        [self _animatePreviewViewTransitionOutToFrame:targetFrame saving:saving parentView:parentView completion:^
         {
             if (completion != nil)
                 completion();
@@ -316,6 +345,9 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
             orientation = UIInterfaceOrientationPortrait;
 
         CGRect sourceFrame = [self transitionOutSourceFrameForReferenceFrame:referenceView.frame orientation:orientation];
+        if (self.intent == TGPhotoEditorControllerWallpaperIntent) {
+            sourceFrame = [self.view convertRect:sourceFrame toView: parentView];
+        }
         CGRect targetFrame = referenceFrame;
         toTransitionView.frame = sourceFrame;
         
@@ -334,7 +366,12 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
         };
         
         [animations addObject:@1];
-        [self _animatePreviewViewTransitionOutToFrame:targetFrame saving:saving parentView:nil completion:^
+        
+        CGRect previewTargetFrame = targetFrame;
+        if (self.intent == TGPhotoEditorControllerWallpaperIntent) {
+            previewTargetFrame = [referenceView convertRect:referenceView.bounds toView:self.view];
+        }
+        [self _animatePreviewViewTransitionOutToFrame:previewTargetFrame saving:saving parentView:nil completion:^
         {
             onAnimationCompletion(@1);
         }];

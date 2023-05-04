@@ -472,6 +472,10 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         }
     }
     
+    public func selectAll() {
+        self.textNode.textView.selectAll(nil)
+    }
+    
     public func animateError() {
         self.textNode.layer.addShakeAnimation()
     }

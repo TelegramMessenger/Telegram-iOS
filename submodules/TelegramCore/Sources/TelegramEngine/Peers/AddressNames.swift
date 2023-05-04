@@ -23,6 +23,7 @@ public enum AddressNameAvailability: Equatable {
 public enum AddressNameDomain {
     case account
     case peer(PeerId)
+    case bot(PeerId)
     case theme(TelegramTheme)
 }
 
@@ -55,8 +56,26 @@ func _internal_checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -
 func _internal_addressNameAvailability(account: Account, domain: AddressNameDomain, name: String) -> Signal<AddressNameAvailability, NoError> {
     return account.postbox.transaction { transaction -> Signal<AddressNameAvailability, NoError> in
         switch domain {
-            case .account:
-                return account.network.request(Api.functions.account.checkUsername(username: name))
+        case .account:
+            return account.network.request(Api.functions.account.checkUsername(username: name))
+            |> map { result -> AddressNameAvailability in
+                switch result {
+                    case .boolTrue:
+                        return .available
+                    case .boolFalse:
+                        return .taken
+                }
+            }
+            |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+                if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
+                    return .single(.purchaseAvailable)
+                } else {
+                    return .single(.invalid)
+                }
+            }
+        case let .peer(peerId):
+            if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+                return account.network.request(Api.functions.channels.checkUsername(channel: inputChannel, username: name))
                 |> map { result -> AddressNameAvailability in
                     switch result {
                         case .boolTrue:
@@ -72,58 +91,42 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                         return .single(.invalid)
                     }
                 }
-            case let .peer(peerId):
-                if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-                    return account.network.request(Api.functions.channels.checkUsername(channel: inputChannel, username: name))
-                    |> map { result -> AddressNameAvailability in
-                        switch result {
-                            case .boolTrue:
-                                return .available
-                            case .boolFalse:
-                                return .taken
-                        }
+            } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                return account.network.request(Api.functions.channels.checkUsername(channel: .inputChannelEmpty, username: name))
+                |> map { result -> AddressNameAvailability in
+                    switch result {
+                        case .boolTrue:
+                            return .available
+                        case .boolFalse:
+                            return .taken
                     }
-                    |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                        if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
-                            return .single(.purchaseAvailable)
-                        } else {
-                            return .single(.invalid)
-                        }
-                    }
-                } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-                    return account.network.request(Api.functions.channels.checkUsername(channel: .inputChannelEmpty, username: name))
-                    |> map { result -> AddressNameAvailability in
-                        switch result {
-                            case .boolTrue:
-                                return .available
-                            case .boolFalse:
-                                return .taken
-                        }
-                    }
-                    |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                        if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
-                            return .single(.purchaseAvailable)
-                        } else {
-                            return .single(.invalid)
-                        }
-                    }
-                } else {
-                    return .single(.invalid)
-                }
-            case .theme:
-                return account.network.request(Api.functions.account.createTheme(flags: 0, slug: name, title: "", document: .inputDocumentEmpty, settings: nil))
-                |> map { _ -> AddressNameAvailability in
-                    return .available
                 }
                 |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                    if error.errorDescription == "THEME_SLUG_OCCUPIED" {
-                        return .single(.taken)
-                    } else if error.errorDescription == "THEME_SLUG_INVALID" {
-                        return .single(.invalid)
+                    if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
+                        return .single(.purchaseAvailable)
                     } else {
-                        return .single(.available)
+                        return .single(.invalid)
                     }
                 }
+            } else {
+                return .single(.invalid)
+            }
+        case .bot:
+            return .single(.invalid)
+        case .theme:
+            return account.network.request(Api.functions.account.createTheme(flags: 0, slug: name, title: "", document: .inputDocumentEmpty, settings: nil))
+            |> map { _ -> AddressNameAvailability in
+                return .available
+            }
+            |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+                if error.errorDescription == "THEME_SLUG_OCCUPIED" {
+                    return .single(.taken)
+                } else if error.errorDescription == "THEME_SLUG_INVALID" {
+                    return .single(.invalid)
+                } else {
+                    return .single(.available)
+                }
+            }
         }
     } |> switchToLatest
 }
@@ -172,6 +175,8 @@ func _internal_updateAddressName(account: Account, domain: AddressNameDomain, na
                 } else {
                     return .fail(.generic)
                 }
+            case .bot:
+                return .fail(.generic)
             case let .theme(theme):
                 let flags: Int32 = 1 << 0
                 return account.network.request(Api.functions.account.updateTheme(flags: flags, format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: nil, title: nil, document: nil, settings: nil))
@@ -233,126 +238,187 @@ public enum ToggleAddressNameActiveError {
 func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDomain, name: String, active: Bool) -> Signal<Void, ToggleAddressNameActiveError> {
     return account.postbox.transaction { transaction -> Signal<Void, ToggleAddressNameActiveError> in
         switch domain {
-            case .account:
-                return account.network.request(Api.functions.account.toggleUsername(username: name, active: active ? .boolTrue : .boolFalse), automaticFloodWait: false)
-                |> mapError { error -> ToggleAddressNameActiveError in
-                    if error.errorDescription == "USERNAMES_ACTIVE_TOO_MUCH" {
-                        return .activeLimitReached
-                    } else {
-                        return .generic
-                    }
-                }
-                |> mapToSignal { result -> Signal<Void, ToggleAddressNameActiveError> in
-                    return account.postbox.transaction { transaction -> Void in
-                        if case .boolTrue = result, let peer = transaction.getPeer(account.peerId) as? TelegramUser {
-                            var updatedNames = peer.usernames
-                            if let index = updatedNames.firstIndex(where: { $0.username == name }) {
-                                var updatedFlags = updatedNames[index].flags
-                                var updateOrder = true
-                                var updatedIndex = index
-                                if active {
-                                    if updatedFlags.contains(.isActive) {
-                                        updateOrder = false
-                                    }
-                                    updatedFlags.insert(.isActive)
-                                } else {
-                                    if !updatedFlags.contains(.isActive) {
-                                        updateOrder = false
-                                    }
-                                    updatedFlags.remove(.isActive)
-                                }
-                                let updatedName = TelegramPeerUsername(flags: updatedFlags, username: name)
-                                updatedNames.remove(at: index)
-                                if updateOrder {
-                                    if active {
-                                        updatedIndex = 0
-                                    } else {
-                                        updatedIndex = updatedNames.count
-                                    }
-                                    var i = 0
-                                    for name in updatedNames {
-                                        if active && !name.flags.contains(.isActive) {
-                                            updatedIndex = i
-                                            break
-                                        } else if !active && !name.flags.contains(.isActive) {
-                                            updatedIndex = i
-                                            break
-                                        }
-                                        i += 1
-                                    }
-                                }
-                                updatedNames.insert(updatedName, at: updatedIndex)
-                            }
-                            let updatedUser = peer.withUpdatedUsernames(updatedNames)
-                            updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
-                                return updated
-                            })
-                        }
-                    } |> mapError { _ -> ToggleAddressNameActiveError in }
-                }
-            case let .peer(peerId):
-                if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-                    return account.network.request(Api.functions.channels.toggleUsername(channel: inputChannel, username: name, active: active ? .boolTrue : .boolFalse), automaticFloodWait: false)
-                        |> mapError { error -> ToggleAddressNameActiveError in
-                            if error.errorDescription == "USERNAMES_ACTIVE_TOO_MUCH" {
-                                return .activeLimitReached
-                            } else {
-                                return .generic
-                            }
-                        }
-                        |> mapToSignal { result -> Signal<Void, ToggleAddressNameActiveError> in
-                            return account.postbox.transaction { transaction -> Void in
-                                if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
-                                    var updatedNames = peer.usernames
-                                    if let index = updatedNames.firstIndex(where: { $0.username == name }) {
-                                        var updatedFlags = updatedNames[index].flags
-                                        var updateOrder = true
-                                        var updatedIndex = index
-                                        if active {
-                                            if updatedFlags.contains(.isActive) {
-                                                updateOrder = false
-                                            }
-                                            updatedFlags.insert(.isActive)
-                                        } else {
-                                            if !updatedFlags.contains(.isActive) {
-                                                updateOrder = false
-                                            }
-                                            updatedFlags.remove(.isActive)
-                                        }
-                                        let updatedName = TelegramPeerUsername(flags: updatedFlags, username: name)
-                                        updatedNames.remove(at: index)
-                                        if updateOrder {
-                                            if active {
-                                                updatedIndex = 0
-                                            } else {
-                                                updatedIndex = updatedNames.count
-                                            }
-                                            var i = 0
-                                            for name in updatedNames {
-                                                if active && !name.flags.contains(.isActive) {
-                                                    updatedIndex = i
-                                                    break
-                                                } else if !active && !name.flags.contains(.isActive) {
-                                                    updatedIndex = i
-                                                    break
-                                                }
-                                                i += 1
-                                            }
-                                        }
-                                        updatedNames.insert(updatedName, at: updatedIndex)
-                                    }
-                                    let updatedPeer = peer.withUpdatedAddressNames(updatedNames)
-                                    updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                                        return updated
-                                    })
-                                }
-                            } |> mapError { _ -> ToggleAddressNameActiveError in }
-                    }
+        case .account:
+            return account.network.request(Api.functions.account.toggleUsername(username: name, active: active ? .boolTrue : .boolFalse), automaticFloodWait: false)
+            |> mapError { error -> ToggleAddressNameActiveError in
+                if error.errorDescription == "USERNAMES_ACTIVE_TOO_MUCH" {
+                    return .activeLimitReached
                 } else {
-                    return .fail(.generic)
+                    return .generic
                 }
-            case .theme:
-                return .complete()
+            }
+            |> mapToSignal { result -> Signal<Void, ToggleAddressNameActiveError> in
+                return account.postbox.transaction { transaction -> Void in
+                    if case .boolTrue = result, let peer = transaction.getPeer(account.peerId) as? TelegramUser {
+                        var updatedNames = peer.usernames
+                        if let index = updatedNames.firstIndex(where: { $0.username == name }) {
+                            var updatedFlags = updatedNames[index].flags
+                            var updateOrder = true
+                            var updatedIndex = index
+                            if active {
+                                if updatedFlags.contains(.isActive) {
+                                    updateOrder = false
+                                }
+                                updatedFlags.insert(.isActive)
+                            } else {
+                                if !updatedFlags.contains(.isActive) {
+                                    updateOrder = false
+                                }
+                                updatedFlags.remove(.isActive)
+                            }
+                            let updatedName = TelegramPeerUsername(flags: updatedFlags, username: name)
+                            updatedNames.remove(at: index)
+                            if updateOrder {
+                                if active {
+                                    updatedIndex = 0
+                                } else {
+                                    updatedIndex = updatedNames.count
+                                }
+                                var i = 0
+                                for name in updatedNames {
+                                    if active && !name.flags.contains(.isActive) {
+                                        updatedIndex = i
+                                        break
+                                    } else if !active && !name.flags.contains(.isActive) {
+                                        updatedIndex = i
+                                        break
+                                    }
+                                    i += 1
+                                }
+                            }
+                            updatedNames.insert(updatedName, at: updatedIndex)
+                        }
+                        let updatedUser = peer.withUpdatedUsernames(updatedNames)
+                        updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
+                            return updated
+                        })
+                    }
+                } |> mapError { _ -> ToggleAddressNameActiveError in }
+            }
+        case let .peer(peerId):
+            if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+                return account.network.request(Api.functions.channels.toggleUsername(channel: inputChannel, username: name, active: active ? .boolTrue : .boolFalse), automaticFloodWait: false)
+                    |> mapError { error -> ToggleAddressNameActiveError in
+                        if error.errorDescription == "USERNAMES_ACTIVE_TOO_MUCH" {
+                            return .activeLimitReached
+                        } else {
+                            return .generic
+                        }
+                    }
+                    |> mapToSignal { result -> Signal<Void, ToggleAddressNameActiveError> in
+                        return account.postbox.transaction { transaction -> Void in
+                            if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                                var updatedNames = peer.usernames
+                                if let index = updatedNames.firstIndex(where: { $0.username == name }) {
+                                    var updatedFlags = updatedNames[index].flags
+                                    var updateOrder = true
+                                    var updatedIndex = index
+                                    if active {
+                                        if updatedFlags.contains(.isActive) {
+                                            updateOrder = false
+                                        }
+                                        updatedFlags.insert(.isActive)
+                                    } else {
+                                        if !updatedFlags.contains(.isActive) {
+                                            updateOrder = false
+                                        }
+                                        updatedFlags.remove(.isActive)
+                                    }
+                                    let updatedName = TelegramPeerUsername(flags: updatedFlags, username: name)
+                                    updatedNames.remove(at: index)
+                                    if updateOrder {
+                                        if active {
+                                            updatedIndex = 0
+                                        } else {
+                                            updatedIndex = updatedNames.count
+                                        }
+                                        var i = 0
+                                        for name in updatedNames {
+                                            if active && !name.flags.contains(.isActive) {
+                                                updatedIndex = i
+                                                break
+                                            } else if !active && !name.flags.contains(.isActive) {
+                                                updatedIndex = i
+                                                break
+                                            }
+                                            i += 1
+                                        }
+                                    }
+                                    updatedNames.insert(updatedName, at: updatedIndex)
+                                }
+                                let updatedPeer = peer.withUpdatedAddressNames(updatedNames)
+                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                                    return updated
+                                })
+                            }
+                        } |> mapError { _ -> ToggleAddressNameActiveError in }
+                }
+            } else {
+                return .fail(.generic)
+            }
+        case let .bot(peerId):
+            if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
+                return account.network.request(Api.functions.bots.toggleUsername(bot: inputUser, username: name, active: active ? .boolTrue : .boolFalse), automaticFloodWait: false)
+                    |> mapError { error -> ToggleAddressNameActiveError in
+                        if error.errorDescription == "USERNAMES_ACTIVE_TOO_MUCH" {
+                            return .activeLimitReached
+                        } else {
+                            return .generic
+                        }
+                    }
+                    |> mapToSignal { result -> Signal<Void, ToggleAddressNameActiveError> in
+                        return account.postbox.transaction { transaction -> Void in
+                            if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                                var updatedNames = peer.usernames
+                                if let index = updatedNames.firstIndex(where: { $0.username == name }) {
+                                    var updatedFlags = updatedNames[index].flags
+                                    var updateOrder = true
+                                    var updatedIndex = index
+                                    if active {
+                                        if updatedFlags.contains(.isActive) {
+                                            updateOrder = false
+                                        }
+                                        updatedFlags.insert(.isActive)
+                                    } else {
+                                        if !updatedFlags.contains(.isActive) {
+                                            updateOrder = false
+                                        }
+                                        updatedFlags.remove(.isActive)
+                                    }
+                                    let updatedName = TelegramPeerUsername(flags: updatedFlags, username: name)
+                                    updatedNames.remove(at: index)
+                                    if updateOrder {
+                                        if active {
+                                            updatedIndex = 0
+                                        } else {
+                                            updatedIndex = updatedNames.count
+                                        }
+                                        var i = 0
+                                        for name in updatedNames {
+                                            if active && !name.flags.contains(.isActive) {
+                                                updatedIndex = i
+                                                break
+                                            } else if !active && !name.flags.contains(.isActive) {
+                                                updatedIndex = i
+                                                break
+                                            }
+                                            i += 1
+                                        }
+                                    }
+                                    updatedNames.insert(updatedName, at: updatedIndex)
+                                }
+                                let updatedPeer = peer.withUpdatedAddressNames(updatedNames)
+                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                                    return updated
+                                })
+                            }
+                        } |> mapError { _ -> ToggleAddressNameActiveError in }
+                }
+            } else {
+                return .fail(.generic)
+            }
+        case .theme:
+            return .fail(.generic)
         }
     } |> mapError { _ -> ToggleAddressNameActiveError in } |> switchToLatest
 }
@@ -364,42 +430,61 @@ public enum ReorderAddressNamesError {
 func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, names: [TelegramPeerUsername]) -> Signal<Void, ReorderAddressNamesError> {
     return account.postbox.transaction { transaction -> Signal<Void, ReorderAddressNamesError> in
         switch domain {
-            case .account:
-                return account.network.request(Api.functions.account.reorderUsernames(order: names.filter { $0.isActive }.map { $0.username }), automaticFloodWait: false)
+        case .account:
+            return account.network.request(Api.functions.account.reorderUsernames(order: names.filter { $0.isActive }.map { $0.username }), automaticFloodWait: false)
+            |> mapError { _ -> ReorderAddressNamesError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<Void, ReorderAddressNamesError> in
+                return account.postbox.transaction { transaction -> Void in
+                    if case .boolTrue = result, let peer = transaction.getPeer(account.peerId) as? TelegramUser {
+                        let updatedUser = peer.withUpdatedUsernames(names)
+                        updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
+                            return updated
+                        })
+                    }
+                } |> mapError { _ -> ReorderAddressNamesError in }
+            }
+        case let .peer(peerId):
+            if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+                return account.network.request(Api.functions.channels.reorderUsernames(channel: inputChannel, order: names.filter { $0.isActive }.map { $0.username }), automaticFloodWait: false)
                 |> mapError { _ -> ReorderAddressNamesError in
                     return .generic
                 }
                 |> mapToSignal { result -> Signal<Void, ReorderAddressNamesError> in
                     return account.postbox.transaction { transaction -> Void in
-                        if case .boolTrue = result, let peer = transaction.getPeer(account.peerId) as? TelegramUser {
-                            let updatedUser = peer.withUpdatedUsernames(names)
-                            updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
+                        if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                            let updatedPeer = peer.withUpdatedAddressNames(names)
+                            updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                 return updated
                             })
                         }
                     } |> mapError { _ -> ReorderAddressNamesError in }
                 }
-            case let .peer(peerId):
-                if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-                    return account.network.request(Api.functions.channels.reorderUsernames(channel: inputChannel, order: names.filter { $0.isActive }.map { $0.username }), automaticFloodWait: false)
-                    |> mapError { _ -> ReorderAddressNamesError in
-                        return .generic
-                    }
-                    |> mapToSignal { result -> Signal<Void, ReorderAddressNamesError> in
-                        return account.postbox.transaction { transaction -> Void in
-                            if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
-                                let updatedPeer = peer.withUpdatedAddressNames(names)
-                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                                    return updated
-                                })
-                            }
-                        } |> mapError { _ -> ReorderAddressNamesError in }
-                    }
-                } else {
-                    return .fail(.generic)
+            } else {
+                return .fail(.generic)
+            }
+        case let .bot(peerId):
+            if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
+                return account.network.request(Api.functions.bots.reorderUsernames(bot: inputUser, order: names.filter { $0.isActive }.map { $0.username }), automaticFloodWait: false)
+                |> mapError { _ -> ReorderAddressNamesError in
+                    return .generic
                 }
-            case .theme:
-                return .complete()
+                |> mapToSignal { result -> Signal<Void, ReorderAddressNamesError> in
+                    return account.postbox.transaction { transaction -> Void in
+                        if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                            let updatedPeer = peer.withUpdatedAddressNames(names)
+                            updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                                return updated
+                            })
+                        }
+                    } |> mapError { _ -> ReorderAddressNamesError in }
+                }
+            } else {
+                return .fail(.generic)
+            }
+        case .theme:
+            return .fail(.generic)
         }
     } |> mapError { _ -> ReorderAddressNamesError in } |> switchToLatest
 }

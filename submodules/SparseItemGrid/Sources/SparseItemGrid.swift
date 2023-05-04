@@ -1344,6 +1344,18 @@ public final class SparseItemGrid: ASDisplayNode {
             self.pinchRecognizer?.isEnabled = self.pinchEnabled
         }
     }
+    
+    public var isScrollEnabled: Bool = true {
+        didSet {
+            self.currentViewport?.scrollView.isScrollEnabled = self.isScrollEnabled
+        }
+    }
+    
+    public func scrollWithDelta(_ delta: CGFloat) {
+        if let scrollView = self.currentViewport?.scrollView {
+            scrollView.setContentOffset(CGPoint(x: 0.0, y: scrollView.contentOffset.y + delta), animated: false)
+        }
+    }
 
     public init(theme: PresentationTheme, initialZoomLevel: ZoomLevel? = nil) {
         self.theme = theme

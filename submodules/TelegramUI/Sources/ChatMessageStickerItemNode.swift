@@ -513,6 +513,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
+            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                needsShareButton = false
+            }
+            
             var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             if dateHeaderAtBottom {
                 layoutInsets.top += layoutConstants.timestampHeaderHeight
@@ -894,7 +898,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             }
                         }
                         
-                        let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
+                        let foregroundColor: UIColor = .clear//bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
                         
                         let placeholderFrame = updatedImageFrame.insetBy(dx: innerImageInset, dy: innerImageInset)

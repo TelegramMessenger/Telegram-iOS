@@ -57,6 +57,7 @@ swift_library(
         "//submodules/LocalizedPeerData:LocalizedPeerData",
         "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
         "//submodules/QrCodeUI:QrCodeUI",
+        "//submodules/PromptUI",
     ],
     visibility = [
         "//visibility:public",

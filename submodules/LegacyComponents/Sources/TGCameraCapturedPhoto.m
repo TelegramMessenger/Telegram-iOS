@@ -81,9 +81,6 @@
     [[NSFileManager defaultManager] removeItemAtPath:[self filePath] error:nil];
 }
 
-#define PGTick   NSDate *startTime = [NSDate date]
-#define PGTock   NSLog(@"!=========== %s Time: %f", __func__, -[startTime timeIntervalSinceNow])
-
 - (void)_saveToDisk:(UIImage *)image
 {
     if (image == nil)

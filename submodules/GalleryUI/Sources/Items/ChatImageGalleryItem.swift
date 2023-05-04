@@ -656,6 +656,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     barButtonItems.append(moreMenuItem)
                 }
                 self._rightBarButtonItems.set(.single(barButtonItems))
+                
+                self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: userLocation, userContentType: .image, reference: fileReference.resourceReference(fileReference.media.resource)).start())
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -874,12 +876,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        if let (_, mediaReference) = self.contextAndMedia, let _ = mediaReference.concrete(TelegramMediaFile.self) {
+        /*if let (_, mediaReference) = self.contextAndMedia, let _ = mediaReference.concrete(TelegramMediaFile.self) {
             if isVisible {
             } else {
                 self.fetchDisposable.set(nil)
             }
-        }
+        }*/
     }
     
     override func title() -> Signal<String, NoError> {

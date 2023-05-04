@@ -22,6 +22,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
 import ContextUI
+import TextFormat
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -599,6 +600,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, beginCall: { _ in
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
+        }, presentControllerInCurrent: { _, _ in
         }, getNavigationController: {
             return nil
         }, presentGlobalOverlayController: { _, _ in
@@ -612,19 +614,28 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, openLinkEditing: { [weak self] in
             if let strongSelf = self {
                 var selectionRange: Range<Int>?
-                var text: String?
+                var text: NSAttributedString?
                 var inputMode: ChatInputMode?
                 
                 strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
                     selectionRange = state.interfaceState.effectiveInputState.selectionRange
                     if let selectionRange = selectionRange {
-                        text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count)).string
+                        text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count))
                     }
                     inputMode = state.inputMode
                     return state
                 })
                 
-                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text ?? "", link: nil, apply: { [weak self] link in
+                var link: String?
+                if let text {
+                    text.enumerateAttributes(in: NSMakeRange(0, text.length)) { attributes, _, _ in
+                        if let linkAttribute = attributes[ChatTextInputAttributes.textUrl] as? ChatTextInputTextUrlAttribute {
+                            link = linkAttribute.url
+                        }
+                    }
+                }
+                
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text?.string ?? "", link: link, apply: { [weak self] link in
                     if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
                         if let link = link {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, { state in

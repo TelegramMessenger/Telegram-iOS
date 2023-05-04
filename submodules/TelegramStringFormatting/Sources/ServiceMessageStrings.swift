@@ -95,6 +95,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
     for media in message.media {
         if let action = media as? TelegramMediaAction {
             let authorName = message.author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+            let compactAuthorName = message.author?.compactDisplayTitle ?? ""
             
             var isChannel = false
             if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -695,7 +696,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = NSAttributedString(string: strings.Notification_YouDisabledTheme, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let attributePeerIds: [(Int, EnginePeer.Id?)] = [(0, message.author?.id)]
-                        let resultTitleString = strings.Notification_DisabledTheme(authorName)
+                        let resultTitleString = strings.Notification_DisabledTheme(compactAuthorName)
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 } else {
@@ -704,20 +705,20 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     } else if message.author?.id == accountPeerId {
                         attributedString = NSAttributedString(string: strings.Notification_YouChangedTheme(emoji).string, font: titleFont, textColor: primaryTextColor)
                     } else {
-                        let resultTitleString = strings.Notification_ChangedTheme(authorName, emoji)
+                        let resultTitleString = strings.Notification_ChangedTheme(compactAuthorName, emoji)
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     }
                 }
             case let .webViewData(text):
                 attributedString = NSAttributedString(string: strings.Notification_WebAppSentData(text).string, font: titleFont, textColor: primaryTextColor)
-            case let .giftPremium(currency, amount, _):
+            case let .giftPremium(currency, amount, _, _, _):
                 let price = formatCurrencyAmount(amount, currency: currency)
                 if message.author?.id == accountPeerId {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 } else {
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                     attributes[1] = boldAttributes
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(compactAuthorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
             case let .topicCreated(title, iconColor, iconFileId):
                 if forForumOverview {
@@ -873,6 +874,20 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 let botName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                 let peerName = message.peers[peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                 attributedString = addAttributesToStringWithRanges(strings.Notification_RequestedPeer(peerName, botName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId), (1, message.id.peerId)]))
+            case .setChatWallpaper:
+                if message.author?.id == accountPeerId {
+                    attributedString = NSAttributedString(string: strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                } else {
+                    let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
+                    attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                }
+            case .setSameChatWallpaper:
+                if message.author?.id == accountPeerId {
+                    attributedString = NSAttributedString(string: strings.Notification_YouChangedToSameWallpaper, font: titleFont, textColor: primaryTextColor)
+                } else {
+                    let resultTitleString = strings.Notification_ChangedToSameWallpaper(compactAuthorName)
+                    attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                }
             case .unknown:
                 attributedString = nil
             }

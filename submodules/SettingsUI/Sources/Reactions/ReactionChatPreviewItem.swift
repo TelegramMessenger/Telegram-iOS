@@ -309,6 +309,9 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             if let node = node {
                 contentSize.height += node.frame.size.height
             }
+            if item.reaction == nil {
+                contentSize.height += 34.0
+            }
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -333,7 +336,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     
-                    var topOffset: CGFloat = 16.0
+                    var topOffset: CGFloat = 16.0 + 17.0
                     if let node = node {
                         strongSelf.messageNode = node
                         if node.supernode == nil {

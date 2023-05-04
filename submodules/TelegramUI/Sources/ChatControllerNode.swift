@@ -535,12 +535,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var emptyType: ChatHistoryNodeLoadState.EmptyType?
                 if case let .empty(type) = loadState {
-                    emptyType = type
-                    if case .joined = type {
-                        if strongSelf.didDisplayEmptyGreeting {
-                            emptyType = .generic
-                        } else {
-                            strongSelf.didDisplayEmptyGreeting = true
+                    if case .botInfo = type {
+                    } else {
+                        emptyType = type
+                        if case .joined = type {
+                            if strongSelf.didDisplayEmptyGreeting {
+                                emptyType = .generic
+                            } else {
+                                strongSelf.didDisplayEmptyGreeting = true
+                            }
                         }
                     }
                 } else if case .messages = loadState {
@@ -1966,13 +1969,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             if inputPanelNodeHandlesTransition {
-                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: .immediate)
                 inputPanelNode.frame = apparentInputPanelFrame
                 inputPanelNode.alpha = 1.0
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: .immediate)
             } else {
-                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: transition)
                 transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
                 transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: transition)
             }
             
             if let viewForOverlayContent = inputPanelNode.viewForOverlayContent {
@@ -3440,6 +3443,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
 
     final class SnapshotState {
+        let backgroundNode: WallpaperBackgroundNode
         fileprivate let historySnapshotState: ChatHistoryListNode.SnapshotState
         let titleViewSnapshotState: ChatTitleView.SnapshotState?
         let avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?
@@ -3450,6 +3454,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let inputPanelOverscrollNodeSnapshot: UIView?
 
         fileprivate init(
+            backgroundNode: WallpaperBackgroundNode,
             historySnapshotState: ChatHistoryListNode.SnapshotState,
             titleViewSnapshotState: ChatTitleView.SnapshotState?,
             avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
@@ -3459,6 +3464,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelNodeSnapshot: UIView?,
             inputPanelOverscrollNodeSnapshot: UIView?
         ) {
+            self.backgroundNode = backgroundNode
             self.historySnapshotState = historySnapshotState
             self.titleViewSnapshotState = titleViewSnapshotState
             self.avatarSnapshotState = avatarSnapshotState
@@ -3490,6 +3496,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelOverscrollNodeSnapshot = snapshot
         }
         return SnapshotState(
+            backgroundNode: self.backgroundNode,
             historySnapshotState: self.historyNode.prepareSnapshotState(),
             titleViewSnapshotState: titleViewSnapshotState,
             avatarSnapshotState: avatarSnapshotState,
@@ -3502,7 +3509,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
 
     func animateFromSnapshot(_ snapshotState: SnapshotState, completion: @escaping () -> Void) {
-        self.historyNode.animateFromSnapshot(snapshotState.historySnapshotState, completion: completion)
+        let previousBackgroundNode = snapshotState.backgroundNode
+        self.backgroundNode.supernode?.insertSubnode(previousBackgroundNode, belowSubnode: self.backgroundNode)
+        
+        self.historyNode.animateFromSnapshot(snapshotState.historySnapshotState, completion: { [weak previousBackgroundNode] in
+            previousBackgroundNode?.removeFromSupernode()
+            
+            completion()
+        })
         self.navigateButtons.animateFromSnapshot(snapshotState.navigationButtonsSnapshotState)
 
         if let titleAccessoryPanelSnapshot = snapshotState.titleAccessoryPanelSnapshot {

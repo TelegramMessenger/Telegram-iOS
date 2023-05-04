@@ -338,10 +338,10 @@
 
 - (void)presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)item tab:(TGPhotoEditorTab)tab
 {
-    [self presentPhotoEditorForItem:item tab:tab snapshots:@[]];
+    [self presentPhotoEditorForItem:item tab:tab snapshots:@[] fromRect:CGRectZero];
 }
 
-- (void)presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)item tab:(TGPhotoEditorTab)tab snapshots:(NSArray *)snapshots
+- (void)presentPhotoEditorForItem:(id<TGModernGalleryEditableItem>)item tab:(TGPhotoEditorTab)tab snapshots:(NSArray *)snapshots fromRect:(CGRect)fromRect
 {
     __weak TGMediaPickerGalleryModel *weakSelf = self;
     
@@ -356,12 +356,15 @@
 
     CGRect refFrame = CGRectZero;
     UIView *editorReferenceView = [self referenceViewForItem:item frame:&refFrame];
+    if (!CGRectEqualToRect(fromRect, CGRectZero)) {
+        refFrame = fromRect;
+    }
     UIView *referenceView = nil;
     UIImage *screenImage = nil;
     UIView *referenceParentView = nil;
     UIImage *image = nil;
     
-    UIView<TGPhotoDrawingEntitiesView> *entitiesView = nil;
+     UIView<TGPhotoDrawingEntitiesView> *entitiesView = nil;
     
     id<TGMediaEditableItem> editableMediaItem = item.editableMediaItem;
     
@@ -513,7 +516,7 @@
         [zoomableItemView reset];
     };
     
-    controller.beginTransitionOut = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView)
+    controller.beginTransitionOut = ^UIView *(CGRect *referenceFrame, __unused UIView **parentView, __unused bool saving)
     {
         __strong TGMediaPickerGalleryModel *strongSelf = weakSelf;
         if (strongSelf == nil)

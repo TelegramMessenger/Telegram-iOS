@@ -247,7 +247,7 @@ public extension Api {
         case messageActionEmpty
         case messageActionGameScore(gameId: Int64, score: Int32)
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
-        case messageActionGiftPremium(currency: String, amount: Int64, months: Int32)
+        case messageActionGiftPremium(flags: Int32, currency: String, amount: Int64, months: Int32, cryptoCurrency: String?, cryptoAmount: Int64?)
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
@@ -261,7 +261,9 @@ public extension Api {
         case messageActionSecureValuesSent(types: [Api.SecureValueType])
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSetChatTheme(emoticon: String)
+        case messageActionSetChatWallPaper(wallpaper: Api.WallPaper)
         case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
+        case messageActionSetSameChatWallPaper(wallpaper: Api.WallPaper)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
         case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
@@ -387,13 +389,16 @@ public extension Api {
                     toId.serialize(buffer, true)
                     serializeInt32(distance, buffer: buffer, boxed: false)
                     break
-                case .messageActionGiftPremium(let currency, let amount, let months):
+                case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount):
                     if boxed {
-                        buffer.appendInt32(-1415514682)
+                        buffer.appendInt32(-935499028)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
                     serializeInt32(months, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(cryptoCurrency!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(cryptoAmount!, buffer: buffer, boxed: false)}
                     break
                 case .messageActionGroupCall(let flags, let call, let duration):
                     if boxed {
@@ -503,6 +508,12 @@ public extension Api {
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
+                case .messageActionSetChatWallPaper(let wallpaper):
+                    if boxed {
+                        buffer.appendInt32(-1136350937)
+                    }
+                    wallpaper.serialize(buffer, true)
+                    break
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                     if boxed {
                         buffer.appendInt32(1007897979)
@@ -510,6 +521,12 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(autoSettingFrom!, buffer: buffer, boxed: false)}
+                    break
+                case .messageActionSetSameChatWallPaper(let wallpaper):
+                    if boxed {
+                        buffer.appendInt32(-1065845395)
+                    }
+                    wallpaper.serialize(buffer, true)
                     break
                 case .messageActionSuggestProfilePhoto(let photo):
                     if boxed {
@@ -588,8 +605,8 @@ public extension Api {
                 return ("messageActionGameScore", [("gameId", gameId as Any), ("score", score as Any)])
                 case .messageActionGeoProximityReached(let fromId, let toId, let distance):
                 return ("messageActionGeoProximityReached", [("fromId", fromId as Any), ("toId", toId as Any), ("distance", distance as Any)])
-                case .messageActionGiftPremium(let currency, let amount, let months):
-                return ("messageActionGiftPremium", [("currency", currency as Any), ("amount", amount as Any), ("months", months as Any)])
+                case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount):
+                return ("messageActionGiftPremium", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("months", months as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any)])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", flags as Any), ("call", call as Any), ("duration", duration as Any)])
                 case .messageActionGroupCallScheduled(let call, let scheduleDate):
@@ -616,8 +633,12 @@ public extension Api {
                 return ("messageActionSecureValuesSentMe", [("values", values as Any), ("credentials", credentials as Any)])
                 case .messageActionSetChatTheme(let emoticon):
                 return ("messageActionSetChatTheme", [("emoticon", emoticon as Any)])
+                case .messageActionSetChatWallPaper(let wallpaper):
+                return ("messageActionSetChatWallPaper", [("wallpaper", wallpaper as Any)])
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                 return ("messageActionSetMessagesTTL", [("flags", flags as Any), ("period", period as Any), ("autoSettingFrom", autoSettingFrom as Any)])
+                case .messageActionSetSameChatWallPaper(let wallpaper):
+                return ("messageActionSetSameChatWallPaper", [("wallpaper", wallpaper as Any)])
                 case .messageActionSuggestProfilePhoto(let photo):
                 return ("messageActionSuggestProfilePhoto", [("photo", photo as Any)])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
@@ -820,17 +841,26 @@ public extension Api {
             }
         }
         public static func parse_messageActionGiftPremium(_ reader: BufferReader) -> MessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _6: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionGiftPremium(currency: _1!, amount: _2!, months: _3!)
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.MessageAction.messageActionGiftPremium(flags: _1!, currency: _2!, amount: _3!, months: _4!, cryptoCurrency: _5, cryptoAmount: _6)
             }
             else {
                 return nil
@@ -1031,6 +1061,19 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_messageActionSetChatWallPaper(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.WallPaper?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.WallPaper
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSetChatWallPaper(wallpaper: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_messageActionSetMessagesTTL(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1043,6 +1086,19 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageAction.messageActionSetMessagesTTL(flags: _1!, period: _2!, autoSettingFrom: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionSetSameChatWallPaper(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.WallPaper?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.WallPaper
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSetSameChatWallPaper(wallpaper: _1!)
             }
             else {
                 return nil

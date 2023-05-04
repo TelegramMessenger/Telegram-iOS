@@ -1370,7 +1370,7 @@ public final class CalendarMessageScreen: ViewController {
             if self.selectionState?.dayRange == nil {
                 if let selectionToolbarNode = self.selectionToolbarNode {
                     let toolbarFrame = selectionToolbarNode.view.convert(selectionToolbarNode.bounds, to: self.view)
-                    self.controller?.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.MessageCalendar_EmptySelectionTooltip, style: .default, icon: .none, location: .point(toolbarFrame.insetBy(dx: 0.0, dy: 10.0), .bottom), shouldDismissOnTouch: { point in
+                    self.controller?.present(TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: self.presentationData.strings.MessageCalendar_EmptySelectionTooltip, style: .default, icon: .none, location: .point(toolbarFrame.insetBy(dx: 0.0, dy: 10.0), .bottom), shouldDismissOnTouch: { point in
                         return .dismiss(consume: false)
                     }), in: .current)
                 }

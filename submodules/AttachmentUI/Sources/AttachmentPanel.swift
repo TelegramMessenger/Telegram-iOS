@@ -18,6 +18,7 @@ import SemanticStatusNode
 import MediaResources
 import MultilineTextComponent
 import ShimmerEffect
+import TextFormat
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -386,7 +387,13 @@ public struct AttachmentMainButtonState {
         case center
     }
     
+    public enum Font: Equatable {
+        case regular
+        case bold
+    }
+    
     public let text: String?
+    public let font: Font
     public let background: Background
     public let textColor: UIColor
     public let isVisible: Bool
@@ -395,6 +402,7 @@ public struct AttachmentMainButtonState {
     
     public init(
         text: String?,
+        font: Font,
         background: Background,
         textColor: UIColor,
         isVisible: Bool,
@@ -402,6 +410,7 @@ public struct AttachmentMainButtonState {
         isEnabled: Bool
     ) {
         self.text = text
+        self.font = font
         self.background = background
         self.textColor = textColor
         self.isVisible = isVisible
@@ -410,7 +419,7 @@ public struct AttachmentMainButtonState {
     }
     
     static var initial: AttachmentMainButtonState {
-        return AttachmentMainButtonState(text: nil, background: .color(.clear), textColor: .clear, isVisible: false, progress: .none, isEnabled: false)
+        return AttachmentMainButtonState(text: nil, font: .bold, background: .color(.clear), textColor: .clear, isVisible: false, progress: .none, isEnabled: false)
     }
 }
 
@@ -442,6 +451,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         
         super.init(pointerStyle: pointerStyle)
         
+        self.isExclusiveTouch = true
         self.clipsToBounds = true
                 
         self.addSubnode(self.backgroundAnimationNode)
@@ -642,7 +652,14 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         self.setupShimmering()
         
         if let text = state.text {
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(17.0), textColor: state.textColor)
+            let font: UIFont
+            switch state.font {
+            case .regular:
+                font = Font.regular(17.0)
+            case .bold:
+                font = Font.semibold(17.0)
+            }
+            self.textNode.attributedText = NSAttributedString(string: text, font: font, textColor: state.textColor)
             
             let textSize = self.textNode.updateLayout(size)
             self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
@@ -701,6 +718,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         let statusSize = CGSize(width: 20.0, height: 20.0)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: size.width - statusSize.width - 15.0, y: floorToScreenPixels((size.height - statusSize.height) / 2.0)), size: statusSize))
         
+        self.statusNode.foregroundNodeColor = state.textColor
         self.statusNode.transitionToState(state.progress == .side ? .progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0)) : .none)
     }
 }
@@ -757,13 +775,13 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     
     var mainButtonPressed: () -> Void = { }
     
-    init(context: AccountContext, chatLocation: ChatLocation, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+    init(context: AccountContext, chatLocation: ChatLocation?, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
         self.makeEntityInputView = makeEntityInputView
                 
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: chatLocation, subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: chatLocation ?? .peer(id: context.account.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
         
         self.containerNode = ASDisplayNode()
         self.containerNode.clipsToBounds = true
@@ -871,6 +889,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, beginCall: { _ in
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
+        }, presentControllerInCurrent: { _, _ in
         }, getNavigationController: {
             return nil
         }, presentGlobalOverlayController: { _, _ in
@@ -884,20 +903,29 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, openLinkEditing: { [weak self] in
             if let strongSelf = self {
                 var selectionRange: Range<Int>?
-                var text: String?
+                var text: NSAttributedString?
                 var inputMode: ChatInputMode?
 
                 strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
                     selectionRange = state.interfaceState.effectiveInputState.selectionRange
                     if let selectionRange = selectionRange {
-                        text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count)).string
+                        text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count))
                     }
                     inputMode = state.inputMode
                     return state
                 })
+                
+                var link: String?
+                if let text {
+                    text.enumerateAttributes(in: NSMakeRange(0, text.length)) { attributes, _, _ in
+                        if let linkAttribute = attributes[ChatTextInputAttributes.textUrl] as? ChatTextInputTextUrlAttribute {
+                            link = linkAttribute.url
+                        }
+                    }
+                }
 
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text ?? "", link: nil, apply: { [weak self] link in
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text?.string ?? "", link: link, apply: { [weak self] link in
                     if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
                         if let link = link {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
@@ -925,7 +953,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 return
             }
             textInputPanelNode.loadTextInputNodeIfNeeded()
-            guard let textInputNode = textInputPanelNode.textInputNode, let peerId = chatLocation.peerId else {
+            guard let textInputNode = textInputPanelNode.textInputNode, let peerId = chatLocation?.peerId else {
                 return
             }
             
@@ -1256,7 +1284,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     func updateMainButtonState(_ mainButtonState: AttachmentMainButtonState?) {
         var currentButtonState = self.mainButtonState
         if mainButtonState == nil {
-            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, background: currentButtonState.background, textColor: currentButtonState.textColor, isVisible: false, progress: .none, isEnabled: currentButtonState.isEnabled)
+            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, font: currentButtonState.font, background: currentButtonState.background, textColor: currentButtonState.textColor, isVisible: false, progress: .none, isEnabled: currentButtonState.isEnabled)
         }
         self.mainButtonState = mainButtonState ?? currentButtonState
     }
@@ -1406,6 +1434,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.isUserInteractionEnabled = !isSelecting
         
         let isButtonVisible = self.mainButtonState.isVisible
+        let isNarrowButton = isButtonVisible && self.mainButtonState.font == .regular
         
         var insets = layout.insets(options: [])
         if let inputHeight = layout.inputHeight, inputHeight > 0.0 && (isSelecting || isButtonVisible) {
@@ -1441,12 +1470,12 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: buttonSize.height + insets.bottom))
-        let containerTransition: ContainedViewLayoutTransition
+        var containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
         if isButtonVisible {
             var height: CGFloat
             if layout.intrinsicInsets.bottom > 0.0 && (layout.inputHeight ?? 0.0).isZero {
-                height = bounds.height + 9.0
+                height = bounds.height
                 if case .regular = layout.metrics.widthClass {
                     if self.isStandalone {
                         height -= 3.0
@@ -1455,7 +1484,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             } else {
-                height = bounds.height + 9.0 + 8.0
+                height = bounds.height + 8.0
+            }
+            if !isNarrowButton {
+                height += 9.0
             }
             containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: height))
         } else if isSelecting {
@@ -1487,6 +1519,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                     textInputPanelNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 44.0), duration: 0.25, additive: true)
                 }
             }
+        }
+        
+        if self.containerNode.frame.size.width.isZero {
+            containerTransition = .immediate
         }
         
         containerTransition.updateFrame(node: self.containerNode, frame: containerFrame)
@@ -1521,11 +1557,13 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
 
         let sideInset: CGFloat = 16.0
         let buttonSize = CGSize(width: layout.size.width - (sideInset + layout.safeInsets.left) * 2.0, height: 50.0)
+        let buttonTopInset: CGFloat = isNarrowButton ? 2.0 : 8.0
+        
         if !self.dismissed {
             self.mainButtonNode.updateLayout(size: buttonSize, state: self.mainButtonState, transition: transition)
         }
         if !self.animatingTransition {
-            transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible || self.fromMenu ? 8.0 : containerFrame.height), size: buttonSize))
+            transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible || self.fromMenu ? buttonTopInset : containerFrame.height), size: buttonSize))
         }
         
         return containerFrame.height

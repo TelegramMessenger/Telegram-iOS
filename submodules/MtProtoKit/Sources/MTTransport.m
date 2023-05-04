@@ -58,12 +58,12 @@
 {
 }
 
-- (void)_processIncomingData:(NSData *)data scheme:(MTTransportScheme *)scheme transactionId:(id)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^)(id transactionId, bool success))decodeResult
+- (void)_processIncomingData:(NSData *)data scheme:(MTTransportScheme *)scheme networkType:(int32_t)networkType transactionId:(id)transactionId requestTransactionAfterProcessing:(bool)requestTransactionAfterProcessing decodeResult:(void (^)(id transactionId, bool success))decodeResult
 {
     id<MTTransportDelegate> delegate = _delegate;
-    if ([delegate respondsToSelector:@selector(transportHasIncomingData:scheme:data:transactionId:requestTransactionAfterProcessing:decodeResult:)])
+    if ([delegate respondsToSelector:@selector(transportHasIncomingData:scheme:networkType:data:transactionId:requestTransactionAfterProcessing:decodeResult:)])
     {
-        [delegate transportHasIncomingData:self scheme:scheme data:data transactionId:transactionId requestTransactionAfterProcessing:requestTransactionAfterProcessing decodeResult:decodeResult];
+        [delegate transportHasIncomingData:self scheme:scheme networkType:networkType data:data transactionId:transactionId requestTransactionAfterProcessing:requestTransactionAfterProcessing decodeResult:decodeResult];
     }
 }
 

@@ -63,16 +63,17 @@ private func preparedThemeColorsGridEntryTransition(context: AccountContext, fro
     return ThemeColorsGridEntryTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: nil, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
 
-final class ThemeColorsGridControllerNode: ASDisplayNode {
+final class ThemeColorsGridControllerNode: ASDisplayNode {    
     private let context: AccountContext
+    private weak var controller: ThemeColorsGridController?
     private var presentationData: PresentationData
     private var controllerInteraction: ThemeColorsGridControllerInteraction?
-    private let present: (ViewController, Any?) -> Void
+    private let push: (ViewController) -> Void
     private let presentColorPicker: () -> Void
     
     let ready = ValuePromise<Bool>()
     
-    private var backgroundNode: ASDisplayNode
+    private var topBackgroundNode: ASDisplayNode
     private var separatorNode: ASDisplayNode
     
     private let customColorItemNode: ItemListActionItemNode
@@ -87,10 +88,11 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, presentationData: PresentationData, gradients: [[UInt32]], colors: [UInt32], present: @escaping (ViewController, Any?) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, controller: ThemeColorsGridController, gradients: [[UInt32]], colors: [UInt32], push: @escaping (ViewController) -> Void, pop: @escaping () -> Void, presentColorPicker: @escaping () -> Void) {
         self.context = context
+        self.controller = controller
         self.presentationData = presentationData
-        self.present = present
+        self.push = push
         self.presentColorPicker = presentColorPicker
         
         self.gridNode = GridNode()
@@ -100,8 +102,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.rightOverlayNode = ASDisplayNode()
         self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.topBackgroundNode = ASDisplayNode()
+        self.topBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -119,23 +121,54 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         
-        self.gridNode.addSubnode(self.backgroundNode)
-        self.gridNode.addSubnode(self.separatorNode)
-        self.gridNode.addSubnode(self.customColorItemNode)
+        if case .default = controller.mode {
+            self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+            self.gridNode.addSubnode(self.topBackgroundNode)
+            self.gridNode.addSubnode(self.separatorNode)
+            self.gridNode.addSubnode(self.customColorItemNode)
+        } else {
+            self.backgroundColor = presentationData.theme.list.plainBackgroundColor
+        }
         self.addSubnode(self.gridNode)
         
         let previousEntries = Atomic<[ThemeColorsGridControllerEntry]?>(value: nil)
-        
+                
         let interaction = ThemeColorsGridControllerInteraction(openWallpaper: { [weak self] wallpaper in
             if let strongSelf = self {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
                     let wallpapers = entries.map { $0.wallpaper }
-                    let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors))
-                    controller.apply = {  _, _, _ in
-                        pop()
+                    let controller = WallpaperGalleryController(context: context, source: .list(wallpapers: wallpapers, central: wallpaper, type: .colors), mode: strongSelf.controller?.mode.galleryMode ?? .default)
+
+                    let dismissControllers = { [weak self, weak controller] in
+                        if let self {
+                            if let dismissControllers = self.controller?.dismissControllers {
+                                dismissControllers()
+                                controller?.dismiss(animated: true)
+                            } else if let navigationController = self.controller?.navigationController as? NavigationController {
+                                let controllers = navigationController.viewControllers.filter({ controller in
+                                    if controller is ThemeColorsGridController || controller is WallpaperGalleryController {
+                                        return false
+                                    }
+                                    return true
+                                })
+                                navigationController.setViewControllers(controllers, animated: true)
+                            }
+                        }
                     }
-                    strongSelf.present(controller, nil)
+                    
+                    controller.navigationPresentation = .modal
+                    controller.apply = { [weak self] wallpaper, _, _, _, _ in
+                        if let strongSelf = self, let mode = strongSelf.controller?.mode, case let .peer(peer) = mode, case let .wallpaper(wallpaperValue, _) = wallpaper {
+                            let _ = (strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: wallpaperValue)
+                            |> deliverOnMainQueue).start(completed: {
+                                dismissControllers()
+                            })
+                        } else {
+                            pop()
+                        }
+                    }
+                    strongSelf.push(controller)
                 }
             }
         })
@@ -218,9 +251,19 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        if let controller = self.controller, case .default = controller.mode {
+            self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+            self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+            self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        } else {
+            self.backgroundColor = presentationData.theme.list.plainBackgroundColor
+        }
+        
         self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        
+        self.topBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         self.customColorItem = ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: presentationData.strings.WallpaperColors_SetCustomColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentColorPicker()
@@ -250,6 +293,9 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let controller = self.controller else {
+            return
+        }
         let hadValidLayout = self.validLayout != nil
         
         var insets = layout.insets(options: [.input])
@@ -258,7 +304,18 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         insets.right = layout.safeInsets.right
         let scrollIndicatorInsets = insets
         
-        let minSpacing: CGFloat = 8.0
+        let itemsPerRow: Int
+        if case .compact = layout.metrics.widthClass {
+            switch layout.orientation {
+                case .portrait:
+                    itemsPerRow = 3
+                case .landscape:
+                    itemsPerRow = 5
+            }
+        } else {
+            itemsPerRow = 3
+        }
+        
         let referenceImageSize: CGSize
         let screenWidth = min(layout.size.width, layout.size.height)
         if screenWidth >= 375.0 {
@@ -266,29 +323,56 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         } else {
             referenceImageSize = CGSize(width: 91.0, height: 91.0)
         }
-        let imageCount = Int((layout.size.width - insets.left - insets.right - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
-        let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
-        let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
+        
+        let width = layout.size.width - layout.safeInsets.left - layout.safeInsets.right
+        let imageSize: CGSize
+        let spacing: CGFloat
+        var fillWidth: Bool?
+        if case .peer = controller.mode {
+            spacing = 1.0
+            
+            let itemWidth = floorToScreenPixels((width - spacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow))
+            imageSize = CGSize(width: itemWidth, height: itemWidth)
+            fillWidth = true
+        } else {
+            let minSpacing = 8.0
+            
+            imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((width - CGFloat(itemsPerRow + 1) * minSpacing) / CGFloat(itemsPerRow)), height: referenceImageSize.height))
+            spacing = floor((width - CGFloat(itemsPerRow) * imageSize.width) / CGFloat(itemsPerRow + 1))
+        }
+        
+        let buttonTopInset: CGFloat = 32.0
+        let buttonHeight: CGFloat = 44.0
+        let buttonBottomInset: CGFloat = 35.0
+        
+        var buttonInset: CGFloat = buttonTopInset + buttonHeight + buttonBottomInset
+        var buttonOffset = buttonInset + 10.0
         
         var listInsets = insets
-        if layout.size.width >= 375.0 {
-            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-            listInsets.left += inset
-            listInsets.right += inset
-           
-            if self.leftOverlayNode.supernode == nil {
-                self.gridNode.addSubnode(self.leftOverlayNode)
-            }
-            if self.rightOverlayNode.supernode == nil {
-                self.gridNode.addSubnode(self.rightOverlayNode)
+        if case .default = controller.mode {
+            if layout.size.width >= 375.0 {
+                let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                listInsets.left += inset
+                listInsets.right += inset
+                
+                if self.leftOverlayNode.supernode == nil {
+                    self.gridNode.addSubnode(self.leftOverlayNode)
+                }
+                if self.rightOverlayNode.supernode == nil {
+                    self.gridNode.addSubnode(self.rightOverlayNode)
+                }
+            } else {
+                if self.leftOverlayNode.supernode != nil {
+                    self.leftOverlayNode.removeFromSupernode()
+                }
+                if self.rightOverlayNode.supernode != nil {
+                    self.rightOverlayNode.removeFromSupernode()
+                }
             }
         } else {
-            if self.leftOverlayNode.supernode != nil {
-                self.leftOverlayNode.removeFromSupernode()
-            }
-            if self.rightOverlayNode.supernode != nil {
-                self.rightOverlayNode.removeFromSupernode()
-            }
+            self.customColorItemNode.isHidden = true
+            buttonOffset = 0.0
+            buttonInset = 0.0
         }
         
         let makeColorLayout = self.customColorItemNode.asyncLayout()
@@ -296,14 +380,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         let (colorLayout, colorApply) = makeColorLayout(self.customColorItem, params, ItemListNeighbors(top: .none, bottom: .none))
         colorApply()
     
-        let buttonTopInset: CGFloat = 32.0
-        let buttonHeight: CGFloat = 44.0
-        let buttonBottomInset: CGFloat = 35.0
-        
-        let buttonInset: CGFloat = buttonTopInset + buttonHeight + buttonBottomInset
-        let buttonOffset = buttonInset + 10.0
-        
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset - 500.0), size: CGSize(width: layout.size.width, height: buttonInset + 500.0)))
+        transition.updateFrame(node: self.topBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset - 500.0), size: CGSize(width: layout.size.width, height: buttonInset + 500.0)))
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonInset - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.customColorItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonTopInset), size: colorLayout.contentSize))
     
@@ -312,7 +389,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         insets.top += spacing + buttonInset
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, fillWidth: nil, lineSpacing: spacing, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, fillWidth: fillWidth, lineSpacing: spacing, itemSpacing: fillWidth != nil ? spacing : nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         self.gridNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         
@@ -328,7 +405,7 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .animated(duration: 0.25, curve: .easeInOut), directionHint: .up, adjustForSection: true, adjustForTopInset: true), updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
-        self.backgroundNode.layer.animatePosition(from: self.backgroundNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.backgroundNode.layer.position, duration: duration)
+        self.topBackgroundNode.layer.animatePosition(from: self.topBackgroundNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.topBackgroundNode.layer.position, duration: duration)
         self.separatorNode.layer.animatePosition(from: self.separatorNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.separatorNode.layer.position, duration: duration)
         self.customColorItemNode.layer.animatePosition(from: self.customColorItemNode.layer.position.offsetBy(dx: 0.0, dy: -offset), to: self.customColorItemNode.layer.position, duration: duration)
     }

@@ -864,16 +864,19 @@ public final class SemanticStatusNode: ASControlNode {
         }
     }
         
-    public func setBackgroundImage(_ image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>) {
+    public func setBackgroundImage(_ image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, size: CGSize) {
         let start = CACurrentMediaTime()
-        self.disposable = combineLatest(queue: Queue.mainQueue(), image, self.hasLayoutPromise.get()).start(next: { [weak self] transform, ready in
+        let imageSignal: Signal<UIImage?, NoError> = image
+        |> map { transform -> UIImage? in
+            let context = transform(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+            return context?.generateImage()
+        }
+        self.disposable = combineLatest(queue: Queue.mainQueue(), imageSignal, self.hasLayoutPromise.get()).start(next: { [weak self] image, ready in
             guard let strongSelf = self, ready else {
                 return
             }
-            let context = transform(TransformImageArguments(corners: ImageCorners(radius: strongSelf.bounds.width / 2.0), imageSize: strongSelf.bounds.size, boundingSize: strongSelf.bounds.size, intrinsicInsets: UIEdgeInsets()))
-            
             let previousAppearanceContext = strongSelf.appearanceContext
-            strongSelf.appearanceContext = strongSelf.appearanceContext.withUpdatedBackgroundImage(context?.generateImage())
+            strongSelf.appearanceContext = strongSelf.appearanceContext.withUpdatedBackgroundImage(image)
             
             if CACurrentMediaTime() - start > 0.3 {
                 strongSelf.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: nil, previousAppearanceContext: previousAppearanceContext, completion: {})
@@ -915,7 +918,7 @@ public final class SemanticStatusNode: ASControlNode {
         self.displaysAsynchronously = true
         
         if let image {
-            self.setBackgroundImage(image)
+            self.setBackgroundImage(image, size: CGSize(width: 44.0, height: 44.0))
         }
     }
     

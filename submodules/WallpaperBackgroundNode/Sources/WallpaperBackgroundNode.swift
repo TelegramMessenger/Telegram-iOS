@@ -154,6 +154,7 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
     }
     
     private var isUsingSoftlight: Bool = false
+    private var useFilter: Bool = false
     
     var suspendCompositionUpdates: Bool = false
     private var needsCompositionUpdate: Bool = false
@@ -172,10 +173,11 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
             useSoftlight = true
             useFilter = false
         }
-        if self.isUsingSoftlight != useSoftlight {
+        if self.isUsingSoftlight != useSoftlight || self.useFilter != useFilter {
             self.isUsingSoftlight = useSoftlight
+            self.useFilter = useFilter
             
-            if self.isUsingSoftlight && useFilter {
+            if self.isUsingSoftlight && self.useFilter {
                 self.compositingFilter = "softLightBlendMode"
             } else {
                 self.compositingFilter = nil
@@ -741,6 +743,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     private var gradientBackgroundNode: GradientBackgroundNode?
     private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
     private let patternImageLayer: EffectImageLayer
+    private let dimLayer: SimpleLayer
     private var isGeneratingPatternImage: Bool = false
 
     private let bakedBackgroundView: UIImageView
@@ -842,10 +845,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     }
     private static var cachedSharedPattern: (PatternKey, UIImage)?
     
-    //private var inlineAnimationNodes: [(AnimatedStickerNode, CGPoint)] = []
-    //private let hierarchyTrackingLayer = HierarchyTrackingLayer()
-    //private var activateInlineAnimationTimer: SwiftSignalKit.Timer?
-
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
@@ -863,6 +862,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         self.bakedBackgroundView = UIImageView()
         self.bakedBackgroundView.isHidden = true
+        
+        self.dimLayer = SimpleLayer()
+        self.dimLayer.opacity = 0.0
+        self.dimLayer.backgroundColor = UIColor.black.cgColor
         
         super.init()
         
@@ -887,12 +890,38 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
         self.layer.addSublayer(self.patternImageLayer)
+        
+        self.layer.addSublayer(self.dimLayer)
     }
 
     deinit {
         self.patternImageDisposable.dispose()
         self.wallpaperDisposable.dispose()
         self.imageDisposable.dispose()
+    }
+    
+    private func updateDimming() {
+        guard let wallpaper = self.wallpaper, let theme = self.bubbleTheme else {
+            return
+        }
+        var dimAlpha: Float = 0.0
+        if theme.overallDarkAppearance == true {
+            var intensity: Int32?
+            switch wallpaper {
+            case let .image(_, settings):
+                intensity = settings.intensity
+            case let .file(file):
+                if !file.isPattern {
+                    intensity = file.settings.intensity
+                }
+            default:
+                break
+            }
+            if let intensity, intensity > 0 {
+                dimAlpha = max(0.0, min(1.0, Float(intensity) / 100.0))
+            }
+        }
+        self.dimLayer.opacity = dimAlpha
     }
 
     func update(wallpaper: TelegramWallpaper) {
@@ -917,7 +946,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             gradientColors = file.settings.colors
             gradientAngle = file.settings.rotation ?? 0
         }
-
+        
         var scheduleLoopingEvent = false
         if gradientColors.count >= 3 {
             let mappedColors = gradientColors.map { color -> UIColor in
@@ -1001,6 +1030,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         } else {
                             strongSelf.blurredBackgroundContents = nil
                         }
+                        strongSelf.updateBubbles()
                         strongSelf._isReady.set(true)
                     }))
                 }
@@ -1028,12 +1058,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         if let (size, displayMode) = self.validLayout {
             self.updateLayout(size: size, displayMode: displayMode, transition: .immediate)
-            self.updateBubbles()
             
             if scheduleLoopingEvent {
                 self.animateEvent(transition: .animated(duration: 0.7, curve: .linear), extendAnimation: false)
             }
         }
+        self.updateBubbles()
+        
+        self.updateDimming()
     }
 
     func _internalUpdateIsSettingUpWallpaper() {
@@ -1306,15 +1338,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             transition.updateFrame(node: outgoingBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
             outgoingBackgroundNode.update(rect: CGRect(origin: CGPoint(), size: size), within: size, transition: transition)
         }
+        
+        transition.updateFrame(layer: self.dimLayer, frame: CGRect(origin: CGPoint(), size: size))
 
         self.loadPatternForSizeIfNeeded(size: size, displayMode: displayMode, transition: transition)
-        
-        /*for (animationNode, relativePosition) in self.inlineAnimationNodes {
-            let sizeNorm = CGSize(width: 1440, height: 2960)
-            let animationSize = CGSize(width: 512.0 / sizeNorm.width * size.width, height: 512.0 / sizeNorm.height * size.height)
-            animationNode.frame = CGRect(origin: CGPoint(x: relativePosition.x / sizeNorm.width * size.width, y: relativePosition.y / sizeNorm.height * size.height), size: animationSize)
-            animationNode.updateLayout(size: animationNode.frame.size)
-        }*/
                 
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
@@ -1387,6 +1414,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             }
 
             self.updateBubbles()
+            self.updateDimming()
         }
     }
 

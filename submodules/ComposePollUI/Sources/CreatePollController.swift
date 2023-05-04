@@ -427,7 +427,7 @@ private struct CreatePollControllerState: Equatable {
     var isEditingSolution: Bool = false
 }
 
-private func createPollControllerEntries(presentationData: PresentationData, peer: EnginePeer, state: CreatePollControllerState, limitsConfiguration: EngineConfiguration.Limits, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
+private func createPollControllerEntries(presentationData: PresentationData, peer: EnginePeer, state: CreatePollControllerState, limitsConfiguration: EngineConfiguration.UserLimits, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
     var entries: [CreatePollEntry] = []
     
     var textLimitText = ItemListSectionHeaderAccessoryText(value: "", color: .generic)
@@ -436,7 +436,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
         textLimitText = ItemListSectionHeaderAccessoryText(value: "\(remainingCount)", color: remainingCount < 0 ? .destructive : .generic)
     }
     entries.append(.textHeader(presentationData.strings.CreatePoll_TextHeader, textLimitText))
-    entries.append(.text(presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxMediaCaptionLength)))
+    entries.append(.text(presentationData.strings.CreatePoll_TextPlaceholder, state.text, Int(limitsConfiguration.maxCaptionLength)))
     let optionsHeaderTitle: String
     if let defaultIsQuiz = defaultIsQuiz, defaultIsQuiz {
         optionsHeaderTitle = presentationData.strings.CreatePoll_QuizOptionsHeader
@@ -866,14 +866,13 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     let signal = combineLatest(queue: .mainQueue(),
         presentationData,
         statePromise.get(),
-        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.Limits())
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false))
     )
     |> map { presentationData, state, limitsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
-        if presentationData.theme.list.blocksBackgroundColor.rgb == presentationData.theme.list.plainBackgroundColor.rgb {
-            let updatedTheme = presentationData.theme.withModalBlocksBackground()
-            presentationData = presentationData.withUpdated(theme: updatedTheme)
-        }
+        
+        let updatedTheme = presentationData.theme.withModalBlocksBackground()
+        presentationData = presentationData.withUpdated(theme: updatedTheme)
         
         var enabled = true
         if processPollText(state.text).isEmpty {

@@ -826,8 +826,12 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
+                                                let sendMediaRights = banSendMediaSubList().map { $0.0 }
                                                 for (rights, _) in allGroupPermissionList(peer: .channel(channel), expandMedia: true) {
                                                     if banInfo.rights.flags.contains(rights) {
+                                                        if banInfo.rights.flags.contains(.banSendMedia) && sendMediaRights.contains(rights) {
+                                                            continue
+                                                        }
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
                                                         }
@@ -1086,8 +1090,12 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo {
                                                 var exceptionsString = ""
+                                                let sendMediaRights = banSendMediaSubList().map { $0.0 }
                                                 for (rights, _) in allGroupPermissionList(peer: .legacyGroup(group), expandMedia: true) {
                                                     if banInfo.rights.flags.contains(rights) {
+                                                        if banInfo.rights.flags.contains(.banSendMedia) && sendMediaRights.contains(rights) {
+                                                            continue
+                                                        }
                                                         if !exceptionsString.isEmpty {
                                                             exceptionsString.append(", ")
                                                         }

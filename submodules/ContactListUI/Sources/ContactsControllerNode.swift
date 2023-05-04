@@ -118,7 +118,7 @@ final class ContactsControllerNode: ASDisplayNode {
                 
                 strongSelf.presentationData = presentationData
                 
-                if previousStrings !== presentationData.strings {
+                if previousStrings.baseLanguageCode != presentationData.strings.baseLanguageCode {
                     strongSelf.stringsPromise.set(.single(presentationData.strings))
                 }
                 
@@ -143,7 +143,7 @@ final class ContactsControllerNode: ASDisplayNode {
         unavailableImpl = { [weak self] in
             if let strongSelf = self {
                 strongSelf.contactListNode.listNode.clearHighlightAnimated(true)
-                let controller = UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.FunctionalityUnavailableForHidableAccounts), elevatedLayout: false, action: { _ in return false })
+                let controller = UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.FunctionalityUnavailableForHidableAccounts, timeout: nil), elevatedLayout: false, action: { _ in return false })
                 strongSelf.controller?.present(controller, in: .current)
             }
         }

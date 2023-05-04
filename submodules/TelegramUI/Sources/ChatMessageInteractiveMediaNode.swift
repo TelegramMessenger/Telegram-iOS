@@ -733,7 +733,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else {
                             unboundSize = CGSize(width: 54.0, height: 54.0)
                         }
-                    case .themeSettings:
+                    case .themeSettings, .image:
                         unboundSize = CGSize(width: 160.0, height: 240.0).fitted(CGSize(width: 240.0, height: 240.0))
                     case .color, .gradient:
                         unboundSize = CGSize(width: 128.0, height: 128.0)
@@ -1116,6 +1116,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                                 return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                             }
                                         }
+                                    case let .image(representations):
+                                        return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: nil, representations: representations.map({ ImageRepresentationWithReference(representation: $0, reference: .standalone(resource: $0.resource)) }), alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
                                     case let .themeSettings(settings):
                                         return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .settings(settings))
                                     case let .color(color):
@@ -1182,7 +1184,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                         return (resourceStatus, nil)
                                     }
-                                case .themeSettings, .color, .gradient:
+                                case .themeSettings, .color, .gradient, .image:
                                     updatedStatusSignal = .single((.Local, nil))
                             }
                         }
@@ -1315,7 +1317,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     strongSelf.animatedStickerNode = animatedStickerNode
                                     let dimensions = updatedAnimatedStickerFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: updatedAnimatedStickerFile.resource, isVideo: updatedAnimatedStickerFile.isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: updatedAnimatedStickerFile.resource, isVideo: updatedAnimatedStickerFile.isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
                                     strongSelf.pinchContainerNode.contentNode.insertSubnode(animatedStickerNode, aboveSubnode: strongSelf.imageNode)
                                     animatedStickerNode.visibility = strongSelf.visibility
                                 }
@@ -1687,8 +1689,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             state = .none
                             badgeContent = nil
                         } else if wideLayout {
-                            if let size = file.size {
-                                 let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
+                            if let size = file.size, size > 0 && size != .max {
+                                let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
                                     let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     if isMediaStreamable(message: message, media: file) {
@@ -1721,8 +1723,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 state = automaticPlayback ? .none : state
                             }
                         } else {
-                            if isMediaStreamable(message: message, media: file), let size = file.size {
-                                let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
+                            if isMediaStreamable(message: message, media: file), let fileSize = file.size, fileSize > 0 && fileSize != .max {
+                                let sizeString = "\(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(fileSize, forceDecimal: true, formatting: formatting))"
                                 
                                 if message.flags.contains(.Unsent), let duration = file.duration {
                                     let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
@@ -1749,8 +1751,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 if let duration = file.duration, !file.isAnimated {
                                     let durationString = stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                                     
-                                    if automaticPlayback, let size = file.size {
-                                        let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
+                                    if automaticPlayback, let fileSize = file.size, fileSize > 0 && fileSize != .max {
+                                        let sizeString = "\(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(fileSize, forceDecimal: true, formatting: formatting))"
                                         mediaDownloadState = .fetching(progress: progress)
                                         badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: active ? sizeString : nil, muted: muted, active: active)
                                     } else {
@@ -1800,9 +1802,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         do {
                             let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                             if wideLayout {
-                                if isMediaStreamable(message: message, media: file) {
+                                if isMediaStreamable(message: message, media: file), let fileSize = file.size, fileSize > 0 && fileSize != .max {
                                     state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
-                                    badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(file.size ?? 0, formatting: formatting), muted: muted, active: true)
+                                    badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(fileSize, formatting: formatting), muted: muted, active: true)
                                     mediaDownloadState = .remote
                                 } else {
                                     state = automaticPlayback ? .none : state

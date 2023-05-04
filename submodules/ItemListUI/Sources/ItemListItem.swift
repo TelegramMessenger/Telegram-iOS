@@ -37,6 +37,7 @@ public protocol ItemListItemNode {
 
 public protocol ItemListItemFocusableNode {
     func focus()
+    func selectAll()
 }
 
 public enum ItemListInsetWithOtherSection {

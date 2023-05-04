@@ -160,11 +160,10 @@ private final class BadgeNode: ASDisplayNode {
 
 public final class SolidRoundedButtonNode: ASDisplayNode {
     private var theme: SolidRoundedButtonTheme
-    private var font: SolidRoundedButtonFont
     private var fontSize: CGFloat
     private let gloss: Bool
     
-    private let buttonBackgroundNode: ASImageNode
+    public let buttonBackgroundNode: ASImageNode
     private var buttonBackgroundAnimationView: UIImageView?
     
     private var shimmerView: ShimmerEffectForegroundView?
@@ -173,7 +172,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var borderShimmerView: ShimmerEffectForegroundView?
         
     private let buttonNode: HighlightTrackingButtonNode
-    private let titleNode: ImmediateTextNode
+    public let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: SimpleAnimationNode?
@@ -181,7 +180,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var badgeNode: BadgeNode?
     
     private let buttonHeight: CGFloat
-    private let buttonCornerRadius: CGFloat
+    public let buttonCornerRadius: CGFloat
     
     public var pressed: (() -> Void)?
     public var validLayout: CGFloat?
@@ -198,6 +197,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     public var title: String? {
         didSet {
             self.updateAccessibilityLabels()
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
+    
+    public var font: SolidRoundedButtonFont {
+        didSet {
             if let width = self.validLayout {
                 _ = self.updateLayout(width: width, transition: .immediate)
             }
@@ -309,6 +316,23 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     public var progressType: SolidRoundedButtonProgressType = .fullSize
         
+    public var highlightEnabled = true {
+        didSet {
+            if !self.highlightEnabled {
+                self.buttonBackgroundNode.alpha = 1.0
+                self.titleNode.alpha = 1.0
+                self.subtitleNode.alpha = 1.0
+                self.iconNode.alpha = 1.0
+                self.animationNode?.alpha = 1.0
+                self.buttonBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                self.titleNode.layer.removeAnimation(forKey: "opacity")
+                self.subtitleNode.layer.removeAnimation(forKey: "opacity")
+                self.iconNode.layer.removeAnimation(forKey: "opacity")
+                self.animationNode?.layer.removeAnimation(forKey: "opacity")
+            }
+        }
+    }
+    
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
@@ -366,7 +390,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self, strongSelf.isEnabled {
+            if let strongSelf = self, strongSelf.isEnabled && strongSelf.highlightEnabled {
                 if highlighted {
                     strongSelf.buttonBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonBackgroundNode.alpha = 0.55
@@ -823,6 +847,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.subtitleNode.alpha = 0.0
         self.subtitleNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
         
+        self.badgeNode?.alpha = 0.0
+        self.badgeNode?.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
+        
         self.shimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.borderShimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
@@ -855,6 +882,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.subtitleNode.alpha = 1.0
         self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.badgeNode?.alpha = 1.0
+        self.badgeNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         self.shimmerView?.layer.removeAllAnimations()
         self.shimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1265,6 +1295,9 @@ public final class SolidRoundedButtonView: UIView {
         self.subtitleNode.alpha = 0.0
         self.subtitleNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
         
+        self.badgeNode?.alpha = 0.0
+        self.badgeNode?.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
+        
         self.shimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.borderShimmerView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
@@ -1297,6 +1330,9 @@ public final class SolidRoundedButtonView: UIView {
         
         self.subtitleNode.alpha = 1.0
         self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        self.badgeNode?.alpha = 1.0
+        self.badgeNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         self.shimmerView?.layer.removeAllAnimations()
         self.shimmerView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1458,6 +1494,7 @@ public final class SolidRoundedButtonView: UIView {
                 badgeNode = current
             } else {
                 badgeNode = BadgeNode(fillColor: self.theme.foregroundColor, strokeColor: .clear, textColor: self.theme.backgroundColor)
+                badgeNode.alpha = self.titleNode.alpha == 0.0 ? 0.0 : 1.0
                 self.badgeNode = badgeNode
                 self.addSubnode(badgeNode)
             }

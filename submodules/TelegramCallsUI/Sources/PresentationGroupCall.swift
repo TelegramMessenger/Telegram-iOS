@@ -116,12 +116,12 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
             activeSpeakers: Set(),
             groupCall: nil
         )))*/
-
+        
         let state = engine.calls.getGroupCallParticipants(callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
-                return .single(nil)
-            }
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
+            return .single(nil)
+        }
         
         self.disposable = (combineLatest(queue: .mainQueue(),
             state,
@@ -139,7 +139,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 state: state,
                 previousServiceState: nil
             )
-                        
+            
             strongSelf.participantsContext = context
             strongSelf.panelDataPromise.set(combineLatest(queue: .mainQueue(),
                 context.state,
@@ -290,11 +290,11 @@ private extension CurrentImpl {
         case .mediaStream:
             let ssrcId = UInt32.random(in: 0 ..< UInt32(Int32.max - 1))
             let dict: [String: Any] = [
-                "fingerprints": [],
+                "fingerprints": [] as [Any],
                 "ufrag": "",
                 "pwd": "",
                 "ssrc": Int32(bitPattern: ssrcId),
-                "ssrc-groups": []
+                "ssrc-groups": [] as [Any]
             ]
             guard let jsonString = (try? JSONSerialization.data(withJSONObject: dict, options: [])).flatMap({ String(data: $0, encoding: .utf8) }) else {
                 return .never()

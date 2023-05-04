@@ -142,7 +142,7 @@ public final class ThemePreviewController: ViewController {
         let titleView = CounterContollerTitleView(theme: self.previewTheme)
         titleView.title = CounterContollerTitle(title: themeName, counter: hasInstallsCount ? " " : "")
         self.navigationItem.titleView = titleView
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
@@ -177,6 +177,10 @@ public final class ThemePreviewController: ViewController {
         self.presentationDataDisposable?.dispose()
         self.disposable?.dispose()
         self.applyDisposable.dispose()
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss(animated: true)
     }
     
     override public func viewDidAppear(_ animated: Bool) {

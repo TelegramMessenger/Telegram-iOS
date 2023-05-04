@@ -268,19 +268,16 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 } else if item.messages[0].id.peerId.namespace == Namespaces.Peer.CloudGroup {
                     isGroup = true
                 }
+                title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                 if isChannel {
                     switch kind {
                         case .image:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count))
                         case .video:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count))
                         case .file:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_DOCS_TEXT(Int32(item.messages.count))
                         default:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGES_TEXT(Int32(item.messages.count))
                     }
                 } else if isGroup, var author = item.messages[0].author {
@@ -289,31 +286,23 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     }
                     switch kind {
                         case .image:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHAT_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                         case .video:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHAT_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                         case .file:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHAT_MESSAGE_DOCS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                         default:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHAT_MESSAGES_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                     }
                 } else {
                     switch kind {
                         case .image:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count))
                         case .video:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count))
                         case .file:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGE_FILES_TEXT(Int32(item.messages.count))
                         default:
-                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGES_TEXT(Int32(item.messages.count))
                     }
                 }
@@ -328,6 +317,19 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             title = presentationData.strings.ScheduledMessages_ReminderNotification
         } else if isScheduled, let currentTitle = title {
             title = "📅 \(currentTitle)"
+        }
+        
+        if let message = item.messages.first, let attribute = message.attributes.first(where: { $0 is NotificationInfoMessageAttribute }) as? NotificationInfoMessageAttribute, attribute.flags.contains(.muted), let currentTitle = title {
+            var isAction = false
+            for media in message.media {
+                if media is TelegramMediaAction {
+                    isAction = true
+                    break
+                }
+            }
+            if !isAction {
+                title = "\(currentTitle) 🔕"
+            }
         }
         
         let textFont = compact ? Font.regular(15.0) : Font.regular(16.0)

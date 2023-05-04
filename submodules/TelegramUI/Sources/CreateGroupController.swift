@@ -553,6 +553,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     var endEditingImpl: (() -> Void)?
     var ensureItemVisibleImpl: ((CreateGroupEntryTag, Bool) -> Void)?
     var findAutoremoveReferenceNode: (() -> ItemListDisclosureItemNode?)?
+    var selectTitleImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -563,6 +564,50 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     var uploadedVideoAvatar: (Promise<UploadedPeerPhotoData?>, Double?)? = nil
+    
+    if initialTitle == nil && peerIds.count > 0 && peerIds.count < 5 {
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+            EngineDataList(
+                peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+            )
+        )
+        |> deliverOnMainQueue).start(next: { accountPeer, peers in
+            var allNames: [String] = []
+            if case let .user(user) = accountPeer, let firstName = user.firstName, !firstName.isEmpty {
+                allNames.append(firstName)
+            }
+            for peer in peers {
+                if case let .user(user) = peer, let firstName = user.firstName, !firstName.isEmpty {
+                    allNames.append(firstName)
+                }
+            }
+            
+            if allNames.count > 1 {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                var title: String = ""
+                for i in 0 ..< allNames.count {
+                    if i == 0 {
+                    } else if i < allNames.count - 1 {
+                        title.append(presentationData.strings.CreateGroup_PeersTitleDelimeter)
+                    } else {
+                        title.append(presentationData.strings.CreateGroup_PeersTitleLastDelimeter)
+                    }
+                    title.append(allNames[i])
+                }
+                
+                updateState { current in
+                    var current = current
+                    current.editingName = .title(title: title, type: .group)
+                    return current
+                }
+                
+                Queue.mainQueue().after(0.3) {
+                    selectTitleImpl?()
+                }
+            }
+        })
+    }
     
     let addressPromise = Promise<String?>(nil)
     let venuesPromise = Promise<[TelegramMediaMap]?>(nil)
@@ -1339,6 +1384,14 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         } else {
             return nil
         }
+    }
+    
+    selectTitleImpl = { [weak controller] in
+        controller?.forEachItemNode({ itemNode in
+            if let itemNode = itemNode as? ItemListAvatarAndNameInfoItemNode {
+                itemNode.selectAll()
+            }
+        })
     }
     
     return controller

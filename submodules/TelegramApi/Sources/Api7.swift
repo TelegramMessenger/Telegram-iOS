@@ -437,6 +437,42 @@ public extension Api {
     }
 }
 public extension Api {
+    enum InputChatlist: TypeConstructorDescription {
+        case inputChatlistDialogFilter(filterId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputChatlistDialogFilter(let filterId):
+                    if boxed {
+                        buffer.appendInt32(-203367885)
+                    }
+                    serializeInt32(filterId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputChatlistDialogFilter(let filterId):
+                return ("inputChatlistDialogFilter", [("filterId", filterId as Any)])
+    }
+    }
+    
+        public static func parse_inputChatlistDialogFilter(_ reader: BufferReader) -> InputChatlist? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputChatlist.inputChatlistDialogFilter(filterId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputCheckPasswordSRP: TypeConstructorDescription {
         case inputCheckPasswordEmpty
         case inputCheckPasswordSRP(srpId: Int64, A: Buffer, M1: Buffer)

@@ -618,7 +618,7 @@ public class ContactsController: ViewController {
     @objc func addPressed() {
         if self.context.immediateIsHidable {
             // the add button is shown anyway, so it can not be peeped that account is hidable
-            let controller = UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.FunctionalityUnavailableForHidableAccounts), elevatedLayout: false, action: { _ in return false })
+            let controller = UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.FunctionalityUnavailableForHidableAccounts, timeout: nil), elevatedLayout: false, action: { _ in return false })
             self.present(controller, in: .current)
             return
         }

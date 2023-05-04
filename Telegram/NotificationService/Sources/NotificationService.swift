@@ -19,6 +19,7 @@ import PersistentStringHash
 import CallKit
 import AppLockState
 import NotificationsPresentationData
+import RangeSet
 
 private let queue = Queue()
 
@@ -697,7 +698,7 @@ private final class NotificationServiceHandler {
         Logger.shared.logToConsole = loggingSettings.logToConsole
         Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
 
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: false)
         
         let isLockedMessage: String?
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
@@ -1125,7 +1126,12 @@ private final class NotificationServiceHandler {
                             }
 
                             if let category = aps["category"] as? String {
-                                content.category = category
+                                if peerId.isGroupOrChannel && ["r", "m"].contains(category) {
+                                    content.category = "g\(category)"
+                                } else {
+                                    content.category = category
+                                }
+
 
                                 let _ = messageId
 
@@ -1257,7 +1263,7 @@ private final class NotificationServiceHandler {
                                                     fetchMediaSignal = Signal { subscriber in
                                                         final class DataValue {
                                                             var data = Data()
-                                                            var totalSize: Int64?
+                                                            var missingRanges = RangeSet<Int64>(0 ..< Int64.max)
                                                         }
                                                         
                                                         let collectedData = Atomic<DataValue>(value: DataValue())
@@ -1287,12 +1293,22 @@ private final class NotificationServiceHandler {
                                                             useMainConnection: true
                                                         ).start(next: { result in
                                                             switch result {
-                                                            case let .dataPart(_, data, _, _):
+                                                            case let .dataPart(offset, data, dataRange, _):
                                                                 var isCompleted = false
                                                                 let _ = collectedData.modify { current in
                                                                     let current = current
-                                                                    current.data.append(data)
-                                                                    if let totalSize = current.totalSize, Int64(current.data.count) >= totalSize {
+                                                                    
+                                                                    let fillRange = Int(offset) ..< (Int(offset) + data.count)
+                                                                    if current.data.count < fillRange.upperBound {
+                                                                        current.data.count = fillRange.upperBound
+                                                                    }
+                                                                    current.data.withUnsafeMutableBytes { buffer -> Void in
+                                                                        let bytes = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                                                        data.copyBytes(to: bytes.advanced(by: Int(offset)), from: Int(dataRange.lowerBound) ..< Int(dataRange.upperBound))
+                                                                    }
+                                                                    current.missingRanges.remove(contentsOf: Int64(fillRange.lowerBound) ..< Int64(fillRange.upperBound))
+                                                                    
+                                                                    if current.missingRanges.isEmpty {
                                                                         isCompleted = true
                                                                     }
                                                                     return current
@@ -1305,8 +1321,8 @@ private final class NotificationServiceHandler {
                                                                 var isCompleted = false
                                                                 let _ = collectedData.modify { current in
                                                                     let current = current
-                                                                    current.totalSize = size
-                                                                    if Int64(current.data.count) >= size {
+                                                                    current.missingRanges.remove(contentsOf: size ..< Int64.max)
+                                                                    if current.missingRanges.isEmpty {
                                                                         isCompleted = true
                                                                     }
                                                                     return current

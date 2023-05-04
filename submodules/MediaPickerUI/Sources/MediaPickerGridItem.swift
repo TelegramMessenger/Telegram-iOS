@@ -25,14 +25,16 @@ final class MediaPickerGridItem: GridItem {
     let content: MediaPickerGridItemContent
     let interaction: MediaPickerInteraction
     let theme: PresentationTheme
+    let selectable: Bool
     let enableAnimations: Bool
     
     let section: GridSection? = nil
     
-    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, enableAnimations: Bool) {
+    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
         self.content = content
         self.interaction = interaction
         self.theme = theme
+        self.selectable = selectable
         self.enableAnimations = enableAnimations
     }
     
@@ -40,11 +42,11 @@ final class MediaPickerGridItem: GridItem {
         switch self.content {
         case let .asset(fetchResult, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
             return node
         case let .media(media, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
             return node
         }
     }
@@ -56,13 +58,13 @@ final class MediaPickerGridItem: GridItem {
                 assertionFailure()
                 return
             }
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
         case let .media(media, index):
             guard let node = node as? MediaPickerGridItemNode else {
                 assertionFailure()
                 return
             }
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
         }
     }
 }
@@ -84,6 +86,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     var currentMediaState: (TGMediaSelectableItem, Int)?
     var currentState: (PHFetchResult<PHAsset>, Int)?
     var enableAnimations: Bool = true
+    private var selectable: Bool = false
     
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
@@ -154,19 +157,24 @@ final class MediaPickerGridItemNode: GridItemNode {
     
     var _cachedTag: Int32?
     var tag: Int32? {
-//        if let tag = self._cachedTag {
-//            return tag
-//        } else if let asset = self.asset, let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
-//            let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
-//            self._cachedTag = tag
-//            return tag
-//        } else {
+        if let tag = self._cachedTag {
+            return tag
+        } else if let (fetchResult, index) = self.currentState {
+            let asset = fetchResult.object(at: index)
+            if let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
+                let tag = Month(localTimestamp: Int32(exactly: floor(localTimestamp)) ?? 0).packedValue
+                self._cachedTag = tag
+                return tag
+            } else {
+                return nil
+            }
+        } else {
             return nil
-//        }
+        }
     }
     
     func updateSelectionState(animated: Bool = false) {
-        if self.checkNode == nil, let _ = self.interaction?.selectionState, let theme = self.theme {
+        if self.checkNode == nil, let _ = self.interaction?.selectionState, self.selectable, let theme = self.theme {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
                 if let strongSelf = self, let interaction = strongSelf.interaction, let selectableItem = strongSelf.selectableItem {
@@ -218,66 +226,15 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
         self.interaction = interaction
         self.theme = theme
+        self.selectable = selectable
         self.enableAnimations = enableAnimations
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
         if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentState!.1 != index {
-//            let editingContext = interaction.editingState
-//            let asset = media.asset as? TGMediaEditableItem
-//
-//            let editedSignal = Signal<UIImage?, NoError> { subscriber in
-//                if let signal = editingContext.thumbnailImageSignal(forIdentifier: media.identifier) {
-//                    let disposable = signal.start(next: { next in
-//                        if let image = next as? UIImage {
-//                            subscriber.putNext(image)
-//                        } else {
-//                            subscriber.putNext(nil)
-//                        }
-//                    }, error: { _ in
-//                    }, completed: nil)!
-//
-//                    return ActionDisposable {
-//                        disposable.dispose()
-//                    }
-//                } else {
-//                    return EmptyDisposable
-//                }
-//            }
-//
-//            let originalImageSignal = Signal<UIImage?, NoError> { subscriber in
-//                if let signal = asset?.thumbnailImageSignal?()
-//            }
-//
-//            let scale = min(2.0, UIScreenScale)
-//            let targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
-//            let originalSignal: Signal<UIImage, NoError> = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false)
-//            let imageSignal: Signal<UIImage?, NoError> = editedSignal
-//            |> mapToSignal { result in
-//                if let result = result {
-//                    return .single(result)
-//                } else {
-//                    return originalSignal
-//                }
-//            }
-//            self.imageNode.setSignal(imageSignal)
-//
-//            if case .video = media, let asset = media.asset as? TGCameraCapturedVideo {
-//                self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
-//
-//                if self.typeIconNode.supernode == nil {
-//                    self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(asset.videoDuration)), font: Font.semibold(12.0), textColor: .white)
-//
-//                    self.addSubnode(self.gradientNode)
-//                    self.addSubnode(self.typeIconNode)
-//                    self.addSubnode(self.durationNode)
-//                    self.setNeedsLayout()
-//                }
-//            }
-//
             self.currentMediaState = (media.asset, index)
             self.setNeedsLayout()
         }
@@ -286,9 +243,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
         
-    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
         self.interaction = interaction
         self.theme = theme
+        self.selectable = selectable
         self.enableAnimations = enableAnimations
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
@@ -319,10 +277,17 @@ final class MediaPickerGridItemNode: GridItemNode {
                     return EmptyDisposable
                 }
             }
-
+            
             let scale = min(2.0, UIScreenScale)
             let targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
-            let originalSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false)
+            
+            let assetImageSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .fastFormat, synchronous: true)
+            |> then(
+                assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .highQualityFormat, synchronous: false)
+                |> delay(0.03, queue: Queue.concurrentDefaultQueue())
+            )
+
+            let originalSignal = assetImageSignal //assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, synchronous: true)
             let imageSignal: Signal<UIImage?, NoError> = editedSignal
             |> mapToSignal { result in
                 if let result = result {
@@ -358,7 +323,14 @@ final class MediaPickerGridItemNode: GridItemNode {
                 strongSelf.updateHasSpoiler(hasSpoiler)
             }))
             
-            if asset.mediaType == .video {
+            if asset.isFavorite {
+                self.typeIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Grid/Favorite"), color: .white)
+                if self.typeIconNode.supernode == nil {
+                    self.addSubnode(self.gradientNode)
+                    self.addSubnode(self.typeIconNode)
+                    self.setNeedsLayout()
+                }
+            } else if asset.mediaType == .video {
                 if asset.mediaSubtypes.contains(.videoHighFrameRate) {
                     self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaSlomo")
                 } else if asset.mediaSubtypes.contains(.videoTimelapse) {

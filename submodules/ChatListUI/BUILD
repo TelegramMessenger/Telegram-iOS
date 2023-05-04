@@ -91,6 +91,11 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatListTitleView",
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/AvatarVideoNode:AvatarVideoNode",
+        "//submodules/InviteLinksUI",
+        "//submodules/TelegramUI/Components/ChatFolderLinkPreviewScreen",
+        "//submodules/ItemListUI",
+        "//submodules/QrCodeUI",
+        "//submodules/TelegramUI/Components/ActionPanelComponent",
     ],
     visibility = [
         "//visibility:public",

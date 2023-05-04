@@ -230,7 +230,7 @@ func countMeaningfulCallListEntries(_ entries: [CallListNodeEntry]) -> Int {
     var count: Int = 0
     for entry in entries {
         switch entry.stableId {
-        case .setting, .groupCall:
+        case .setting:
             break
         default:
             count += 1

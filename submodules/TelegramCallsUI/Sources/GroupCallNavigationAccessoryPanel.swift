@@ -64,6 +64,18 @@ public final class GroupCallPanelData {
         self.activeSpeakers = activeSpeakers
         self.groupCall = groupCall
     }
+    
+    public func withInfo(_ info: GroupCallInfo) -> GroupCallPanelData {
+        return GroupCallPanelData(
+            peerId: self.peerId,
+            isChannel: self.isChannel,
+            info: info,
+            topParticipants: self.topParticipants,
+            participantCount: self.participantCount,
+            activeSpeakers: self.activeSpeakers,
+            groupCall: self.groupCall
+        )
+    }
 }
 
 private final class FakeAudioLevelGenerator {

@@ -177,12 +177,13 @@ private func generateMaskImage() -> UIImage? {
 public class AttachmentController: ViewController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    private let chatLocation: ChatLocation
+    private let chatLocation: ChatLocation?
     private let buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     private let hasTextInput: Bool
     private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+    public var animateAppearance: Bool = false
     
     public var willDismiss: () -> Void = {}
     public var didDismiss: () -> Void = {}
@@ -621,14 +622,26 @@ public class AttachmentController: ViewController {
         
         private var animating = false
         func animateIn() {
-            guard let layout = self.validLayout else {
+            guard let layout = self.validLayout, let controller = self.controller else {
                 return
             }
             
             self.animating = true
             if case .regular = layout.metrics.widthClass {
-                self.animating = false
-                
+                if controller.animateAppearance {
+                    let targetPosition = self.position
+                    let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
+                    
+                    self.position = startPosition
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    transition.animateView(allowUserInteraction: true, {
+                        self.position = targetPosition
+                    }, completion: { _ in
+                        self.animating = false
+                    })
+                } else {
+                    self.animating = false
+                }
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 0.1)
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
@@ -890,7 +903,7 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation

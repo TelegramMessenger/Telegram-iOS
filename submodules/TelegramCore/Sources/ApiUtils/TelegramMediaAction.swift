@@ -85,8 +85,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .joinedByRequest)
     case let .messageActionWebViewDataSentMe(text, _), let .messageActionWebViewDataSent(text):
         return TelegramMediaAction(action: .webViewData(text))
-    case let .messageActionGiftPremium(currency, amount, months):
-        return TelegramMediaAction(action: .giftPremium(currency: currency, amount: amount, months: months))
+    case let .messageActionGiftPremium(_, currency, amount, months, cryptoCurrency, cryptoAmount):
+        return TelegramMediaAction(action: .giftPremium(currency: currency, amount: amount, months: months, cryptoCurrency: cryptoCurrency, cryptoAmount: cryptoAmount))
     case let .messageActionTopicCreate(_, title, iconColor, iconEmojiId):
         return TelegramMediaAction(action: .topicCreated(title: title, iconColor: iconColor, iconFileId: iconEmojiId))
     case let .messageActionTopicEdit(flags, title, iconEmojiId, closed, hidden):
@@ -104,10 +104,14 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             components.append(.isHidden(hidden == .boolTrue))
         }
         return TelegramMediaAction(action: .topicEdited(components: components))
-    case let.messageActionSuggestProfilePhoto(photo):
+    case let .messageActionSuggestProfilePhoto(photo):
         return TelegramMediaAction(action: .suggestedProfilePhoto(image: telegramMediaImageFromApiPhoto(photo)))
     case let .messageActionRequestedPeer(buttonId, peer):
         return TelegramMediaAction(action: .requestedPeer(buttonId: buttonId, peerId: peer.peerId))
+    case let .messageActionSetChatWallPaper(wallpaper):
+        return TelegramMediaAction(action: .setChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper)))
+    case let .messageActionSetSameChatWallPaper(wallpaper):
+        return TelegramMediaAction(action: .setSameChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper)))
     }
 }
 

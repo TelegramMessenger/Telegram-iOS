@@ -1026,7 +1026,7 @@ public final class AccountStateManager {
                 }
                 
                 let _ = (signal
-                         |> deliverOn(self.queue)).start(next: { [weak self] messages in
+                |> deliverOn(self.queue)).start(next: { [weak self] messages in
                     if let strongSelf = self {
                         strongSelf.notificationMessagesPipe.putNext(messages)
                     }
@@ -1953,6 +1953,9 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     }
     
     if let channel = message.peers[message.id.peerId] as? TelegramChannel {
+        if !channel.flags.contains(.isForum) {
+            threadData = nil
+        }
         switch channel.participationStatus {
         case .kicked, .left:
             return ([], false, sound, false, threadData)

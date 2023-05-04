@@ -60,7 +60,7 @@ final class WatchChatListHandler: WatchRequestHandler {
                             users = users.merging(chatUsers, uniquingKeysWith: { (_, last) in last })
                         }
                     }
-                    subscriber.putNext([ TGBridgeChatsArrayKey: chats, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeChatsArrayKey: chats, TGBridgeUsersDictionaryKey: users ] as [String: Any])
                 })
                 
                 return SBlockDisposable {
@@ -108,7 +108,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                             users = users.merging(messageUsers, uniquingKeysWith: { (_, last) in last })
                         }
                     }
-                    subscriber.putNext([ TGBridgeMessagesArrayKey: messages, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeMessagesArrayKey: messages, TGBridgeUsersDictionaryKey: users ] as [String: Any])
                 })
                 
                 return SBlockDisposable {
@@ -295,7 +295,7 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
                 })
                 let disposable = signal.start(next: { view in
                     let (chat, users) = makeBridgeChat(peerViewMainPeer(view), view: view)
-                    subscriber.putNext([ TGBridgeChatKey: chat, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeChatKey: chat, TGBridgeUsersDictionaryKey: users ] as [String: Any])
                 })
             
                 return SBlockDisposable {

@@ -125,6 +125,7 @@ public final class ChatPanelInterfaceInteraction {
     public let beginCall: (Bool) -> Void
     public let toggleMessageStickerStarred: (MessageId) -> Void
     public let presentController: (ViewController, Any?) -> Void
+    public let presentControllerInCurrent: (ViewController, Any?) -> Void
     public let getNavigationController: () -> NavigationController?
     public let presentGlobalOverlayController: (ViewController, Any?) -> Void
     public let navigateFeed: () -> Void
@@ -228,6 +229,7 @@ public final class ChatPanelInterfaceInteraction {
         beginCall: @escaping (Bool) -> Void,
         toggleMessageStickerStarred: @escaping (MessageId) -> Void,
         presentController: @escaping (ViewController, Any?) -> Void,
+        presentControllerInCurrent: @escaping (ViewController, Any?) -> Void,
         getNavigationController: @escaping () -> NavigationController?,
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
         navigateFeed: @escaping () -> Void,
@@ -330,6 +332,7 @@ public final class ChatPanelInterfaceInteraction {
         self.beginCall = beginCall
         self.toggleMessageStickerStarred = toggleMessageStickerStarred
         self.presentController = presentController
+        self.presentControllerInCurrent = presentControllerInCurrent
         self.getNavigationController = getNavigationController
         self.presentGlobalOverlayController = presentGlobalOverlayController
         self.navigateFeed = navigateFeed
@@ -440,6 +443,7 @@ public final class ChatPanelInterfaceInteraction {
         }, beginCall: { _ in
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
+        }, presentControllerInCurrent: { _, _ in
         }, getNavigationController: {
             return nil
         }, presentGlobalOverlayController: { _, _ in

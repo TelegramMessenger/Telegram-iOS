@@ -1215,7 +1215,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     strongSelf.currentIconImage = iconImage
                                 
                     if let updateIconImageSignal, let iconImage, case .albumArt = iconImage {
-                        strongSelf.iconStatusNode.setBackgroundImage(updateIconImageSignal)
+                        strongSelf.iconStatusNode.setBackgroundImage(updateIconImageSignal, size: CGSize(width: 40.0, height: 40.0))
                     }
                     
                     if let iconImageApply = iconImageApply {

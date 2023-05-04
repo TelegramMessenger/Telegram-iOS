@@ -471,7 +471,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     let host: String? = concealed ? urlString : parsedUrl?.host
                                     if let url = parsedUrl, let host = host {
                                         primaryUrl = urlString
-                                        title = NSAttributedString(string: tempTitleString as String, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
+                                        title = NSAttributedString(string: (tempTitleString as String).capitalized, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                                         if url.path.hasPrefix("/addstickers/") {
                                             iconText = NSAttributedString(string: "S", font: iconFont, textColor: UIColor.white)
                                         } else if url.path.hasPrefix("/addemoji/") {

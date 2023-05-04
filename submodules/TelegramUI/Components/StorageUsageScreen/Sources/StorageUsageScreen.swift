@@ -2214,7 +2214,7 @@ final class StorageUsageScreenComponent: Component {
                 
                 let clearingSize = CGSize(width: availableSize.width, height: availableSize.height)
                 clearingNode.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - clearingSize.width) / 2.0), y: floor((availableSize.height - clearingSize.height) / 2.0)), size: clearingSize)
-                clearingNode.updateLayout(size: clearingSize, transition: .immediate)
+                clearingNode.updateLayout(size: clearingSize, bottomInset: environment.safeInsets.bottom, transition: .immediate)
                 
                 if animateIn {
                     clearingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.4)
@@ -2793,11 +2793,8 @@ final class StorageUsageScreenComponent: Component {
                         return
                     }
                     let _ = self
-                }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
-                    guard let self else {
-                        return
-                    }
-                    let _ = self
+                }, editMedia: { _, _, _ in
+                }, updateCanReadHistory: { _ in
                 }),
                 centralItemUpdated: { [weak self] messageId in
                     //let _ = self?.paneContainerNode.requestExpandTabs?()
@@ -3497,7 +3494,7 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
     
     private let progressDisposable = MetaDisposable()
     
-    private var validLayout: CGSize?
+    private var validLayout: (CGSize, CGFloat)?
     
     init(presentationData: PresentationData) {
         self.presentationData = presentationData
@@ -3550,13 +3547,13 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
     func setProgress(_ progress: Float) {
         self.progress = progress
         
-        if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .animated(duration: 0.5, curve: .linear))
+        if let (size, bottomInset) = self.validLayout {
+            self.updateLayout(size: size, bottomInset: bottomInset, transition: .animated(duration: 0.5, curve: .linear))
         }
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, bottomInset)
         
         transition.updateFrame(view: self.blurredView, frame: CGRect(origin: CGPoint(), size: size))
         self.blurredView.update(size: size, transition: transition)
@@ -3572,9 +3569,14 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode {
         self.animationNode.frame = animationFrame
         self.animationNode.updateLayout(size: imageSize)
         
-        let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
+        var bottomInset = bottomInset
+        if bottomInset.isZero {
+            bottomInset = inset
+        }
+        
+        let progressFrame = CGRect(x: inset, y: size.height - bottomInset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
         self.progressBackgroundNode.frame = progressFrame
-        let progressForegroundFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
+        let progressForegroundFrame = CGRect(x: inset, y: size.height - bottomInset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
         if !self.progressForegroundNode.frame.origin.x.isZero {
             transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame, beginWithCurrentState: true)
         } else {

@@ -138,6 +138,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     private var _color: UIColor
 
     private var enableBlur: Bool
+    private var enableSaturation: Bool
 
     public var effectView: UIVisualEffectView?
     private let backgroundNode: ASDisplayNode
@@ -152,9 +153,10 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
     }
 
-    public init(color: UIColor, enableBlur: Bool = true) {
+    public init(color: UIColor, enableBlur: Bool = true, enableSaturation: Bool = true) {
         self._color = .clear
         self.enableBlur = enableBlur
+        self.enableSaturation = enableSaturation
 
         self.backgroundNode = ASDisplayNode()
 
@@ -195,10 +197,12 @@ public final class NavigationBackgroundNode: ASDisplayNode {
                 if let sublayer = effectView.layer.sublayers?[0], let filters = sublayer.filters {
                     sublayer.backgroundColor = nil
                     sublayer.isOpaque = false
-                    let allowedKeys: [String] = [
-                        "colorSaturate",
+                    var allowedKeys: [String] = [
                         "gaussianBlur"
                     ]
+                    if self.enableSaturation {
+                        allowedKeys.append("colorSaturate")
+                    }
                     sublayer.filters = filters.filter { filter in
                         guard let filter = filter as? NSObject else {
                             return true
@@ -225,14 +229,16 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func updateColor(color: UIColor, enableBlur: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
+    public func updateColor(color: UIColor, enableBlur: Bool? = nil, enableSaturation: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
         let effectiveEnableBlur = enableBlur ?? self.enableBlur
-
-        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur {
+        let effectiveEnableSaturation = enableSaturation ?? self.enableSaturation
+        
+        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur && self.enableSaturation == effectiveEnableSaturation {
             return
         }
         self._color = color
         self.enableBlur = effectiveEnableBlur
+        self.enableSaturation = effectiveEnableSaturation
 
         if sharedIsReduceTransparencyEnabled {
             transition.updateBackgroundColor(node: self.backgroundNode, color: self._color.withAlphaComponent(1.0))

@@ -86,7 +86,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
     }
     
-    if chatPresentationInterfaceState.peerIsBlocked {
+    if chatPresentationInterfaceState.peerIsBlocked, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo == nil {
         if let currentPanel = (currentPanel as? ChatUnblockInputPanelNode) ?? (currentSecondaryPanel as? ChatUnblockInputPanelNode) {
             currentPanel.interfaceInteraction = interfaceInteraction
             currentPanel.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
@@ -182,7 +182,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             }
                         }
                     }
-                } else if let isGeneralThreadClosed = chatPresentationInterfaceState.isGeneralThreadClosed, isGeneralThreadClosed {
+                } else if let isGeneralThreadClosed = chatPresentationInterfaceState.isGeneralThreadClosed, isGeneralThreadClosed && chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
                     if !canManage {
                         if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                             return (currentPanel, nil)
@@ -311,7 +311,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             }
         }
         
-        if displayBotStartPanel {
+        if displayBotStartPanel, !"".isEmpty {
             if let currentPanel = (currentPanel as? ChatBotStartInputPanelNode) ?? (currentSecondaryPanel as? ChatBotStartInputPanelNode) {
                 currentPanel.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 return (currentPanel, nil)

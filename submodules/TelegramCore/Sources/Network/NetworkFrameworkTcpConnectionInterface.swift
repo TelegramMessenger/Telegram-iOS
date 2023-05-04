@@ -222,9 +222,10 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
                 self.currentReadRequest = nil
                 
                 weak var delegate = self.delegate
+                let currentInterfaceIsWifi = self.currentInterfaceIsWifi
                 self.delegateQueue.async {
                     if let delegate = delegate {
-                        delegate.connectionInterfaceDidRead(currentReadRequest.data, withTag: currentReadRequest.request.tag)
+                        delegate.connectionInterfaceDidRead(currentReadRequest.data, withTag: currentReadRequest.request.tag, networkType: currentInterfaceIsWifi ? 0 : 1)
                     }
                 }
                 
@@ -239,7 +240,7 @@ final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInt
                         
                         if data.count != 0 && data.count <= currentReadRequest.request.length - currentReadRequest.readyLength {
                             currentReadRequest.data.withUnsafeMutableBytes { currentBuffer in
-                                guard let currentBytes = currentBuffer.assumingMemoryBound(to: UInt8.self).baseAddress else {
+                                guard let currentBytes = currentBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                                     return
                                 }
                                 data.copyBytes(to: currentBytes.advanced(by: currentReadRequest.readyLength), count: data.count)

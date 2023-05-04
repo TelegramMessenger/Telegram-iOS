@@ -58,13 +58,13 @@ private final class ThemeSettingsControllerArguments {
     let openBubbleSettings: () -> Void
     let openPowerSavingSettings: () -> Void
     let openStickersAndEmoji: () -> Void
-    let disableAnimations: (Bool) -> Void
+    let toggleShowNextMediaOnTap: (Bool) -> Void
     let selectAppIcon: (PresentationAppIcon) -> Void
     let editTheme: (PresentationCloudTheme) -> Void
     let themeContextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
     let colorContextAction: (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, openThemeSettings: @escaping () -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void, toggleNightTheme: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, openBubbleSettings: @escaping () -> Void, openPowerSavingSettings: @escaping () -> Void, openStickersAndEmoji: @escaping () -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (PresentationAppIcon) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void, colorContextAction: @escaping (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, openThemeSettings: @escaping () -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void, toggleNightTheme: @escaping (Bool) -> Void, openAutoNightTheme: @escaping () -> Void, openTextSize: @escaping () -> Void, openBubbleSettings: @escaping () -> Void, openPowerSavingSettings: @escaping () -> Void, openStickersAndEmoji: @escaping () -> Void, toggleShowNextMediaOnTap: @escaping (Bool) -> Void, selectAppIcon: @escaping (PresentationAppIcon) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void, colorContextAction: @escaping (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.openThemeSettings = openThemeSettings
@@ -77,7 +77,7 @@ private final class ThemeSettingsControllerArguments {
         self.openBubbleSettings = openBubbleSettings
         self.openPowerSavingSettings = openPowerSavingSettings
         self.openStickersAndEmoji = openStickersAndEmoji
-        self.disableAnimations = disableAnimations
+        self.toggleShowNextMediaOnTap = toggleShowNextMediaOnTap
         self.selectAppIcon = selectAppIcon
         self.editTheme = editTheme
         self.themeContextAction = themeContextAction
@@ -128,8 +128,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case powerSaving
     case stickersAndEmoji
     case otherHeader(PresentationTheme, String)
-    case animations(PresentationTheme, String, Bool)
-    case animationsInfo(PresentationTheme, String)
+    case showNextMediaOnTap(PresentationTheme, String, Bool)
+    case showNextMediaOnTapInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -143,7 +143,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsControllerSection.icon.rawValue
             case .powerSaving, .stickersAndEmoji:
                 return ThemeSettingsControllerSection.message.rawValue
-            case .otherHeader, .animations, .animationsInfo:
+            case .otherHeader, .showNextMediaOnTap, .showNextMediaOnTapInfo:
                 return ThemeSettingsControllerSection.other.rawValue
         }
     }
@@ -178,9 +178,9 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return 12
             case .otherHeader:
                 return 13
-            case .animations:
+            case .showNextMediaOnTap:
                 return 14
-            case .animationsInfo:
+            case .showNextMediaOnTapInfo:
                 return 15
         }
     }
@@ -271,14 +271,14 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .animations(lhsTheme, lhsTitle, lhsValue):
-                if case let .animations(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+            case let .showNextMediaOnTap(lhsTheme, lhsTitle, lhsValue):
+                if case let .showNextMediaOnTap(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
                 }
-            case let .animationsInfo(lhsTheme, lhsText):
-                if case let .animationsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .showNextMediaOnTapInfo(lhsTheme, lhsText):
+                if case let .showNextMediaOnTapInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -343,17 +343,17 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .otherHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .animations(_, title, value):
+            case let .showNextMediaOnTap(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.disableAnimations(value)
+                    arguments.toggleShowNextMediaOnTap(value)
                 }, tag: ThemeSettingsEntryTag.animations)
-            case let .animationsInfo(_, text):
+            case let .showNextMediaOnTapInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, themeReference: PresentationThemeReference, availableThemes: [PresentationThemeReference], availableAppIcons: [PresentationAppIcon], currentAppIconName: String?, isPremium: Bool, chatThemes: [PresentationThemeReference], animatedEmojiStickers: [String: [StickerPackItem]]) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, mediaSettings: MediaDisplaySettings, themeReference: PresentationThemeReference, availableThemes: [PresentationThemeReference], availableAppIcons: [PresentationAppIcon], currentAppIconName: String?, isPremium: Bool, chatThemes: [PresentationThemeReference], animatedEmojiStickers: [String: [StickerPackItem]]) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
     let strings = presentationData.strings
@@ -404,8 +404,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     
     entries.append(.otherHeader(presentationData.theme, strings.Appearance_Other.uppercased()))
-    entries.append(.animations(presentationData.theme, strings.Appearance_ReduceMotion, presentationData.reduceMotion))
-    entries.append(.animationsInfo(presentationData.theme, strings.Appearance_ReduceMotionInfo))
+    entries.append(.showNextMediaOnTap(presentationData.theme, strings.Appearance_ShowNextMediaOnTap, mediaSettings.showNextMediaOnTap))
+    entries.append(.showNextMediaOnTapInfo(presentationData.theme, strings.Appearance_ShowNextMediaOnTapInfo))
     
     return entries
 }
@@ -522,9 +522,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             pushControllerImpl?(installedStickerPacksController(context: context, mode: .general, archivedPacks: archivedStickerPacks, updatedPacks: { _ in
             }))
         })
-    }, disableAnimations: { reduceMotion in
-        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current.withUpdatedReduceMotion(reduceMotion)
+    }, toggleShowNextMediaOnTap: { value in
+        let _ = updateMediaDisplaySettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+            return current.withUpdatedShowNextMediaOnTap(value)
         }).start()
     }, selectAppIcon: { icon in
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
@@ -1000,10 +1000,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         })
     })
 
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings, SharedDataKeys.chatThemes]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), removedThemeIndexesPromise.get(), animatedEmojiStickers, context.account.postbox.peerView(id: context.account.peerId))
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings, SharedDataKeys.chatThemes, ApplicationSpecificSharedDataKeys.mediaDisplaySettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), removedThemeIndexesPromise.get(), animatedEmojiStickers, context.account.postbox.peerView(id: context.account.peerId))
     |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, removedThemeIndexes, animatedEmojiStickers, peerView -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
-    
+        let mediaSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaDisplaySettings]?.get(MediaDisplaySettings.self) ?? MediaDisplaySettings.defaultSettings
+        
         let isPremium = peerView.peers[peerView.peerId]?.isPremium ?? false
         
         let themeReference: PresentationThemeReference
@@ -1041,7 +1042,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         chatThemes.insert(.builtin(.dayClassic), at: 0)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -1292,9 +1293,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
     
     public init(view: UIView? = nil, topOffset: CGFloat? = nil, bottomOffset: CGFloat? = nil, leftOffset: CGFloat? = nil, sideInset: CGFloat = 0.0) {
         if let view = view {
-            if var leftOffset = leftOffset {
-                leftOffset += UIScreenPixel
-                
+            if let leftOffset = leftOffset {
                 if let view = view.snapshotView(afterScreenUpdates: false) {
                     let clipView = UIView()
                     clipView.clipsToBounds = true
@@ -1306,13 +1305,13 @@ public final class ThemeSettingsCrossfadeController: ViewController {
                     if let topOffset = topOffset, let bottomOffset = bottomOffset {
                         var frame = view.frame
                         frame.origin.y = topOffset
-                        frame.size.width = leftOffset
+                        frame.size.width = leftOffset + sideInset
                         frame.size.height = bottomOffset - topOffset
                         clipView.frame = frame
                         
                         frame = view.frame
                         frame.origin.y = -topOffset
-                        frame.size.width = leftOffset
+                        frame.size.width = leftOffset + sideInset
                         frame.size.height = bottomOffset
                         view.frame = frame
                     }
@@ -1322,7 +1321,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
             }
             
             if sideInset > 0.0 {
-                if let view = view.snapshotView(afterScreenUpdates: false) {
+                if let view = view.snapshotView(afterScreenUpdates: false), leftOffset == nil {
                     let clipView = UIView()
                     clipView.clipsToBounds = true
                     clipView.addSubview(view)

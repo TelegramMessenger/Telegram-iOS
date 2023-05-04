@@ -29,6 +29,7 @@ import WebUI
 import BotPaymentsUI
 import PremiumUI
 import AuthorizationUI
+import ChatFolderLinkPreviewScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -323,7 +324,14 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         }
                     })
                 } else {
-                    let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
+                    let _ = (context.engine.peers.resolvePeerByPhone(phone: to)
+                    |> deliverOnMainQueue).start(next: { peer in
+                        if let peer = peer {
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            continueWithPeer(peer.id)
+                        }
+                    })
+                    /*let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
                     let _ = (context.account.postbox.searchContacts(query: query)
                     |> deliverOnMainQueue).start(next: { (peers, _) in
                         for case let peer as TelegramUser in peers {
@@ -333,7 +341,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                 break
                             }
                         }
-                    })
+                    })*/
                 }
             } else {
                 if let url = url, !url.isEmpty {
@@ -384,7 +392,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
                 controller?.dismiss()
                 let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, colors, intensity, rotation, nil))
-                present(galleryController, nil)
+                navigationController?.pushViewController(galleryController)
             }, error: { [weak controller] error in
                 controller?.dismiss()
             })
@@ -596,7 +604,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .startAttach(peerId, payload, choose):
             let presentError: (String) -> Void = { errorText in
-                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText, timeout: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
                     return true
                 }), nil)
             }
@@ -753,6 +761,51 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             } else {
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            }
+        case let .chatFolder(slug):
+            if let navigationController = navigationController {
+                let signal = context.engine.peers.checkChatFolderLink(slug: slug)
+                
+                var cancelImpl: (() -> Void)?
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    present(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.35, queue: Queue.mainQueue())
+                
+                let disposable = MetaDisposable()
+                let progressDisposable = progressSignal.start()
+                cancelImpl = {
+                    disposable.set(nil)
+                }
+                disposable.set((signal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak navigationController] result in
+                    guard let navigationController else {
+                        return
+                    }
+                    navigationController.pushViewController(ChatFolderLinkPreviewScreen(context: context, subject: .slug(slug), contents: result))
+                }, error: { error in
+                    let errorText: String
+                    switch error {
+                    case .generic:
+                        errorText = "The folder link has expired."
+                    }
+                    present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }))
+                dismissInput()
             }
     }
 }

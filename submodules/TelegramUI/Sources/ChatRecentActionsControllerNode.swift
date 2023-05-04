@@ -164,7 +164,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                                     return true
                                 }
-                        case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite), let .participantJoinByRequest(invite, _):
+                            case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite, _), let .participantJoinByRequest(invite, _):
                                 if let inviteLink = invite.link, !inviteLink.hasSuffix("...") {
                                     if invite.isPermanent {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
@@ -274,7 +274,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { _, _, _ in
-        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
+        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -283,7 +283,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self{
                 openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
-                    self?.presentController(c, .window(.root), a)
+                    self?.pushController(c)
                 })
             }
         }, openTheme: { _ in      
@@ -1021,6 +1021,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         } else {
                             strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                         }
+                    case .chatFolder:
+                        break
                     case let .instantView(webpage, anchor):
                         strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .peer(strongSelf.peer.id), peerType: .channel), anchor: anchor))
                     case let .join(link):

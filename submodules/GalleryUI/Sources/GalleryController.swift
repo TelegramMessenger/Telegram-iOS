@@ -1156,6 +1156,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
         
         let completion = { [weak self] in
             if animatedOutNode && animatedOutInterface {
+                self?.actionInteraction?.updateCanReadHistory(true)
                 self?._hiddenMedia.set(.single(nil))
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
             }
@@ -1213,7 +1214,9 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 })
             }
         })
-        self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
+        
+        let disableTapNavigation = !(self.context.sharedContext.currentMediaDisplaySettings.with { $0 }.showNextMediaOnTap)
+        self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction, disableTapNavigation: disableTapNavigation)
         self.displayNodeDidLoad()
         
         self.galleryNode.statusBar = self.statusBar
@@ -1231,12 +1234,14 @@ public class GalleryController: ViewController, StandalonePresentableController,
             return nil
         }
         self.galleryNode.dismiss = { [weak self] in
+            self?.actionInteraction?.updateCanReadHistory(true)
             self?._hiddenMedia.set(.single(nil))
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
         self.galleryNode.beginCustomDismiss = { [weak self] simpleAnimation in
             if let strongSelf = self {
+                strongSelf.actionInteraction?.updateCanReadHistory(true)
                 strongSelf._hiddenMedia.set(.single(nil))
                 
                 let animatedOutNode = !simpleAnimation
@@ -1516,6 +1521,8 @@ public class GalleryController: ViewController, StandalonePresentableController,
         }
         
         self.accountInUseDisposable.set(self.context.sharedContext.setAccountUserInterfaceInUse(self.context.account.id))
+        
+        self.actionInteraction?.updateCanReadHistory(false)
     }
     
     override public func didAppearInContextPreview() {

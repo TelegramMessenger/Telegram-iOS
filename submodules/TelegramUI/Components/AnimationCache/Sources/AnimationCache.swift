@@ -605,10 +605,10 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
                 
                     let metadataPosition = file.position()
                     let contentLength = Int(metadataPosition) - contentLengthOffset - 4
-                    file.seek(position: Int64(contentLengthOffset))
+                    let _ = file.seek(position: Int64(contentLengthOffset))
                     file.write(UInt32(contentLength))
                     
-                    file.seek(position: metadataPosition)
+                    let _ = file.seek(position: metadataPosition)
                     file.write(UInt32(self.frames.count))
                     for frame in self.frames {
                         file.write(Float32(frame.duration))

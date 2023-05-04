@@ -185,6 +185,14 @@ API_AVAILABLE(ios(10))
     return @(APP_SPECIFIC_URL_SCHEME);
 }
 
+- (bool)isICloudEnabled {
+    return APP_CONFIG_IS_ICLOUD_ENABLED;
+}
+
+- (bool)isSiriEnabled {
+    return APP_CONFIG_IS_SIRI_ENABLED;
+}
+
 + (NSString * _Nullable)bundleSeedId {
     NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
        (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,
@@ -482,14 +490,6 @@ API_AVAILABLE(ios(10))
         NSData *result = [privateKey decrypt:secret cancelled:&cancelled];
         completion(result, cancelled);
     });
-}
-
-+ (bool)iCloudEnabled {
-    return APP_CONFIG_ICLOUD_ENABLED;
-}
-
-+ (bool)siriEnabled {
-    return APP_CONFIG_SIRI_ENABLED;
 }
 
 @end
