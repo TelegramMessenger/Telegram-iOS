@@ -37,7 +37,9 @@ public func suspendAwareDelay<T, E>(_ timeout: Double, granularity: Double = 4.0
                 
                 let startFinalTimer: () -> Void = {
                     let finalTimeout = beginTimestamp + timeout - CFAbsoluteTimeGetCurrent()
-                    let timer = Timer(timeout: max(0.0, finalTimeout), repeat: false, completion: {
+                    // when app restored from suspended state, many timers may trigger immediately
+                    // since we may need to quickly hide some secrets, delay these tasks for 0.5 seconds
+                    let timer = Timer(timeout: max(0.5, finalTimeout), repeat: false, completion: {
                         disposable.set(signal.start(next: { next in
                             subscriber.putNext(next)
                         }, error: { error in

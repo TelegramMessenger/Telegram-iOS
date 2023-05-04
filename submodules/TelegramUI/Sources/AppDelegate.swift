@@ -1824,7 +1824,10 @@ extension UserDefaults {
             }
         }
         
-        self.runForegroundTasks()
+        // since we may need to quickly hide some secrets, delay these tasks for 0.5 seconds
+        Queue.mainQueue().after(0.5, {
+            self.runForegroundTasks()
+        })
         
         SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
     }
