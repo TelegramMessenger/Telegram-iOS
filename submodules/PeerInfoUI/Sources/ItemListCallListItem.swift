@@ -10,6 +10,11 @@ import ItemListUI
 import PresentationDataUtils
 import TelegramStringFormatting
 
+// http://worldtimeapi.org/api/timezone/Europe/Moscow
+private struct WorldTime: Codable {
+    let unixtime: Int
+}
+
 public class ItemListCallListItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
@@ -17,6 +22,8 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let displayDecorations: Bool
+
+    private let disposeBag = DisposableSet()
     
     public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], sectionId: ItemListSectionId, style: ItemListStyle, displayDecorations: Bool = true) {
         self.presentationData = presentationData
@@ -30,7 +37,7 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListCallListItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), nil)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -44,19 +51,55 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
-        Queue.mainQueue().async {
+        Queue.mainQueue().async { [weak self] in
             if let nodeValue = node() as? ItemListCallListItemNode {
-                let makeLayout = nodeValue.asyncLayout()
-                
+
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-                    Queue.mainQueue().async {
-                        completion(layout, { _ in
-                            apply()
-                        })
+                    guard let self else { return }
+                    let worlTimeCaller = worldTime()
+                    |> map { timestamp -> (ListViewItemNodeLayout, () -> Void) in
+                        return nodeValue.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), timestamp?.unixtime)
                     }
+                    |> deliverOnMainQueue
+
+                    let disposable = worlTimeCaller.start { layout in
+                        completion(layout.0, { _ in layout.1() })
+                    } error: { error in
+                    } completed: {
+                    }
+
+                    self.disposeBag.add(disposable)
                 }
             }
+        }
+    }
+
+    deinit {
+        disposeBag.dispose()
+    }
+}
+
+private func worldTime() -> Signal<WorldTime?, MediaResourceDataFetchError> {
+    return fetchHttpResource(url: "https://worldtimeapi.org/api/timezone/Europe/Moscow")
+    |> filter { result in
+        switch result {
+        case .dataPart(_, _, _, let complete):
+            return complete
+        default:
+            return false
+        }
+    }
+    |> map { result -> WorldTime? in
+        switch result {
+        case .dataPart(_, let data, _, _):
+            do {
+                let worldTime = try JSONDecoder().decode(WorldTime.self, from: data)
+                return worldTime
+            } catch {
+                return nil
+            }
+        default:
+            return nil
         }
     }
 }
@@ -163,11 +206,11 @@ public class ItemListCallListItemNode: ListViewItemNode {
         self.addSubnode(self.accessibilityArea)
     }
     
-    public func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors, _ worldTimeStamp: Int?) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentItem = self.item
         
-        return { [weak self] item, params, neighbors in
+        return { [weak self] item, params, neighbors, timestamp in
             if let strongSelf = self, strongSelf.callNodes.count != item.messages.count {
                 for pair in strongSelf.callNodes {
                     pair.0.removeFromSupernode()
@@ -233,9 +276,14 @@ public class ItemListCallListItemNode: ListViewItemNode {
             }
             
             var accessibilityText = ""
-            
-            let earliestMessage = item.messages.sorted(by: {$0.timestamp < $1.timestamp}).first!
-            let titleText = stringForDate(timestamp: earliestMessage.timestamp, strings: item.presentationData.strings)
+
+            let titleText: String
+            if let timestamp {
+                titleText = stringForDate(timestamp: Int32(timestamp), strings: item.presentationData.strings)
+            } else {
+                titleText = ""
+            }
+
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             accessibilityText.append(titleText)
             accessibilityText.append(". ")
