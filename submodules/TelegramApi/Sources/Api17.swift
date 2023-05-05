@@ -714,6 +714,7 @@ public extension Api {
 }
 public extension Api {
     enum PrivacyKey: TypeConstructorDescription {
+        case privacyKeyAbout
         case privacyKeyAddedByPhone
         case privacyKeyChatInvite
         case privacyKeyForwards
@@ -726,6 +727,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .privacyKeyAbout:
+                    if boxed {
+                        buffer.appendInt32(-1534675103)
+                    }
+                    
+                    break
                 case .privacyKeyAddedByPhone:
                     if boxed {
                         buffer.appendInt32(1124062251)
@@ -785,6 +792,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .privacyKeyAbout:
+                return ("privacyKeyAbout", [])
                 case .privacyKeyAddedByPhone:
                 return ("privacyKeyAddedByPhone", [])
                 case .privacyKeyChatInvite:
@@ -806,6 +815,9 @@ public extension Api {
     }
     }
     
+        public static func parse_privacyKeyAbout(_ reader: BufferReader) -> PrivacyKey? {
+            return Api.PrivacyKey.privacyKeyAbout
+        }
         public static func parse_privacyKeyAddedByPhone(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyAddedByPhone
         }
@@ -840,6 +852,7 @@ public extension Api {
     enum PrivacyRule: TypeConstructorDescription {
         case privacyValueAllowAll
         case privacyValueAllowChatParticipants(chats: [Int64])
+        case privacyValueAllowCloseFriends
         case privacyValueAllowContacts
         case privacyValueAllowUsers(users: [Int64])
         case privacyValueDisallowAll
@@ -864,6 +877,12 @@ public extension Api {
                     for item in chats {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
+                    break
+                case .privacyValueAllowCloseFriends:
+                    if boxed {
+                        buffer.appendInt32(-135735141)
+                    }
+                    
                     break
                 case .privacyValueAllowContacts:
                     if boxed {
@@ -922,6 +941,8 @@ public extension Api {
                 return ("privacyValueAllowAll", [])
                 case .privacyValueAllowChatParticipants(let chats):
                 return ("privacyValueAllowChatParticipants", [("chats", chats as Any)])
+                case .privacyValueAllowCloseFriends:
+                return ("privacyValueAllowCloseFriends", [])
                 case .privacyValueAllowContacts:
                 return ("privacyValueAllowContacts", [])
                 case .privacyValueAllowUsers(let users):
@@ -952,6 +973,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_privacyValueAllowCloseFriends(_ reader: BufferReader) -> PrivacyRule? {
+            return Api.PrivacyRule.privacyValueAllowCloseFriends
         }
         public static func parse_privacyValueAllowContacts(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueAllowContacts

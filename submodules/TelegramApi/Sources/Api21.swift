@@ -328,18 +328,36 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
-        case storyItem(id: Int64, date: Int32, media: Api.MessageMedia)
+        case storyItem(flags: Int32, id: Int64, date: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, recentViewers: [Int64]?, viewsCount: Int32?)
         case storyItemDeleted(id: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .storyItem(let id, let date, let media):
+                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let recentViewers, let viewsCount):
                     if boxed {
-                        buffer.appendInt32(-1230510430)
+                        buffer.appendInt32(271121336)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(caption!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
                     media.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(privacy!.count))
+                    for item in privacy! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentViewers!.count))
+                    for item in recentViewers! {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(viewsCount!, buffer: buffer, boxed: false)}
                     break
                 case .storyItemDeleted(let id):
                     if boxed {
@@ -352,27 +370,51 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .storyItem(let id, let date, let media):
-                return ("storyItem", [("id", id as Any), ("date", date as Any), ("media", media as Any)])
+                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let recentViewers, let viewsCount):
+                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("recentViewers", recentViewers as Any), ("viewsCount", viewsCount as Any)])
                 case .storyItemDeleted(let id):
                 return ("storyItemDeleted", [("id", id as Any)])
     }
     }
     
         public static func parse_storyItem(_ reader: BufferReader) -> StoryItem? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Api.MessageMedia?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            var _5: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            var _6: Api.MessageMedia?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                _6 = Api.parse(reader, signature: signature) as? Api.MessageMedia
             }
+            var _7: [Api.PrivacyRule]?
+            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
+            } }
+            var _8: [Int64]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _8 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            } }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_9 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.StoryItem.storyItem(id: _1!, date: _2!, media: _3!)
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 3) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, caption: _4, entities: _5, media: _6!, privacy: _7, recentViewers: _8, viewsCount: _9)
             }
             else {
                 return nil
@@ -384,6 +426,46 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.StoryItem.storyItemDeleted(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum StoryView: TypeConstructorDescription {
+        case storyView(userId: Int64, date: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyView(let userId, let date):
+                    if boxed {
+                        buffer.appendInt32(90474706)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt64(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyView(let userId, let date):
+                return ("storyView", [("userId", userId as Any), ("date", date as Any)])
+    }
+    }
+    
+        public static func parse_storyView(_ reader: BufferReader) -> StoryView? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StoryView.storyView(userId: _1!, date: _2!)
             }
             else {
                 return nil
@@ -881,6 +963,7 @@ public extension Api {
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
         case updateReadMessagesContents(messages: [Int32], pts: Int32, ptsCount: Int32)
+        case updateReadStories(userId: Int64, id: [Int64])
         case updateRecentEmojiStatuses
         case updateRecentReactions
         case updateRecentStickers
@@ -1720,6 +1803,17 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
+                case .updateReadStories(let userId, let id):
+                    if boxed {
+                        buffer.appendInt32(-1653870963)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(id.count))
+                    for item in id {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    break
                 case .updateRecentEmojiStatuses:
                     if boxed {
                         buffer.appendInt32(821314523)
@@ -2056,6 +2150,8 @@ public extension Api {
                 return ("updateReadHistoryOutbox", [("peer", peer as Any), ("maxId", maxId as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateReadMessagesContents(let messages, let pts, let ptsCount):
                 return ("updateReadMessagesContents", [("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
+                case .updateReadStories(let userId, let id):
+                return ("updateReadStories", [("userId", userId as Any), ("id", id as Any)])
                 case .updateRecentEmojiStatuses:
                 return ("updateRecentEmojiStatuses", [])
                 case .updateRecentReactions:
@@ -3770,6 +3866,22 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateReadMessagesContents(messages: _1!, pts: _2!, ptsCount: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateReadStories(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Int64]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateReadStories(userId: _1!, id: _2!)
             }
             else {
                 return nil

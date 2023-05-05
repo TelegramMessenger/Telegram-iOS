@@ -55,7 +55,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia) -> Si
             case let .content(content):
                 switch content.content {
                 case let .media(inputMedia, _):
-                    return account.network.request(Api.functions.stories.sendStory(media: inputMedia, privacyRules: [.inputPrivacyValueAllowAll]))
+                    return account.network.request(Api.functions.stories.sendStory(flags: 0, media: inputMedia, caption: nil, entities: nil, privacyRules: [.inputPrivacyValueAllowAll]))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                         return .single(nil)
@@ -68,7 +68,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia) -> Si
                                     case .userStories(let userId, let apiStories), .userStoriesShort(let userId, let apiStories, _):
                                         if PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)) == account.peerId, apiStories.count == 1 {
                                             switch apiStories[0] {
-                                            case let .storyItem(_, _, media):
+                                            case let .storyItem(_, _, _, _, _, media, _, _, _):
                                                 let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                                 if let parsedMedia = parsedMedia {
                                                     applyMediaResourceChanges(from: imageMedia, to: parsedMedia, postbox: account.postbox, force: false)
@@ -103,5 +103,24 @@ func _internal_deleteStory(account: Account, id: Int64) -> Signal<Never, NoError
     }
     |> mapToSignal { _ -> Signal<Never, NoError> in
         return .complete()
+    }
+}
+
+func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int64) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(peerId).flatMap(apiInputUser)
+    }
+    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+        guard let inputUser = inputUser else {
+            return .complete()
+        }
+        
+        account.stateManager.injectStoryUpdates(updates: [.read([id])])
+        
+        return account.network.request(Api.functions.stories.readStories(userId: inputUser, id: [id]))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
     }
 }

@@ -416,11 +416,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y -= navigationLayout.defaultContentHeight
                 navigationBarFrame.size.height += contentNode.height + navigationLayout.defaultContentHeight + statusBarHeight
-                //navigationBarFrame.origin.y += contentNode.height + statusBarHeight
             }
             if let _ = navigationBar.contentNode, let _ = navigationBar.secondaryContentNode, !self.displayNavigationBar {
-                navigationBarFrame.size.height += NavigationBar.defaultSecondaryContentHeight
-                //navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
+                navigationBarFrame.size.height += navigationBar.secondaryContentHeight
             }
             
             navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)

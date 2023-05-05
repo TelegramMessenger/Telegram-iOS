@@ -1630,6 +1630,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateExtendedMedia(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), extendedMedia: extendedMedia)
             case let .updateStories(stories):
                 updatedState.updateStories(stories: stories)
+            case let .updateReadStories(userId, id):
+                updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), ids: id)
             default:
                 break
         }
@@ -3002,7 +3004,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStories:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStories, .UpdateReadStories:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -4334,14 +4336,32 @@ func replayFinalState(
                         switch storyItem {
                         case let .storyItemDeleted(id):
                             storyUpdates.append(InternalStoryUpdate.deleted(id))
-                        case let .storyItem(id, date, media):
+                        case let .storyItem(flags, id, date, _, _, media, _, recentViewers, viewCount):
                             let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                             if let parsedMedia = parsedMedia {
-                                storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: StoryListContext.Item(id: id, timestamp: date, media: EngineMedia(parsedMedia))))
+                                var seenPeers: [EnginePeer] = []
+                                if let recentViewers = recentViewers {
+                                    for id in recentViewers {
+                                        if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))) {
+                                            seenPeers.append(EnginePeer(peer))
+                                        }
+                                    }
+                                }
+                                storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: StoryListContext.Item(
+                                    id: id,
+                                    timestamp: date,
+                                    media: EngineMedia(parsedMedia),
+                                    isSeen: (flags & (1 << 4)) == 0,
+                                    seenCount: viewCount.flatMap(Int.init) ?? 0,
+                                    seenPeers: seenPeers
+                                )))
                             }
                         }
                     }
                 }
+            case let .UpdateReadStories(peerId, ids):
+                let _ = peerId
+                storyUpdates.append(InternalStoryUpdate.read(ids))
         }
     }
     

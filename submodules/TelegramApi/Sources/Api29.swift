@@ -418,6 +418,62 @@ public extension Api.stories {
     
     }
 }
+public extension Api.stories {
+    enum StoryViewsList: TypeConstructorDescription {
+        case storyViewsList(count: Int32, views: [Api.StoryView], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyViewsList(let count, let views, let users):
+                    if boxed {
+                        buffer.appendInt32(-79726676)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(views.count))
+                    for item in views {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyViewsList(let count, let views, let users):
+                return ("storyViewsList", [("count", count as Any), ("views", views as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_storyViewsList(_ reader: BufferReader) -> StoryViewsList? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.StoryView]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryView.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.stories.StoryViewsList.storyViewsList(count: _1!, views: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
 public extension Api.updates {
     enum ChannelDifference: TypeConstructorDescription {
         case channelDifference(flags: Int32, pts: Int32, timeout: Int32?, newMessages: [Api.Message], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User])

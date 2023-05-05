@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "StoryFooterPanelComponent",
-    module_name = "StoryFooterPanelComponent",
+    name = "StoryPeerListComponent",
+    module_name = "StoryPeerListComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -14,10 +14,11 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/AppBundle",
         "//submodules/Components/BundleIconComponent",
-        "//submodules/TelegramUI/Components/ChatListHeaderComponent",
-        "//submodules/AnimatedAvatarSetNode",
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/TelegramPresentationData",
+        "//submodules/AvatarNode",
     ],
     visibility = [
         "//visibility:public",

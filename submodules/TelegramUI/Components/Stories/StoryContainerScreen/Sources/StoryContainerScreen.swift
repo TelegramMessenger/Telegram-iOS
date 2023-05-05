@@ -56,15 +56,18 @@ private final class StoryContainerScreenComponent: Component {
     let context: AccountContext
     let initialFocusedId: AnyHashable?
     let initialContent: [StoryContentItemSlice]
+    let transitionIn: StoryContainerScreen.TransitionIn?
     
     init(
         context: AccountContext,
         initialFocusedId: AnyHashable?,
-        initialContent: [StoryContentItemSlice]
+        initialContent: [StoryContentItemSlice],
+        transitionIn: StoryContainerScreen.TransitionIn?
     ) {
         self.context = context
         self.initialFocusedId = initialFocusedId
         self.initialContent = initialContent
+        self.transitionIn = transitionIn
     }
     
     static func ==(lhs: StoryContainerScreenComponent, rhs: StoryContainerScreenComponent) -> Bool {
@@ -78,24 +81,121 @@ private final class StoryContainerScreenComponent: Component {
         let view = ComponentView<Empty>()
         let externalState = StoryItemSetContainerComponent.ExternalState()
         
+        let tintLayer = SimpleGradientLayer()
+        
+        var rotationFraction: CGFloat?
+        
         override static var layerClass: AnyClass {
             return CATransformLayer.self
         }
         
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.tintLayer.opacity = 0.0
+            
+            let colors: [CGColor] = [
+                UIColor.black.withAlphaComponent(1.0).cgColor,
+                UIColor.black.withAlphaComponent(0.8).cgColor,
+                UIColor.black.withAlphaComponent(0.5).cgColor
+            ]
+            
+            self.tintLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+            self.tintLayer.endPoint = CGPoint(x: 1.0, y: 0.0)
+            self.tintLayer.colors = colors
+            self.tintLayer.type = .axial
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let componentView = self.view.view else {
+                return nil
+            }
+            return componentView.hitTest(point, with: event)
+        }
     }
     
     private struct ItemSetPanState: Equatable {
         var fraction: CGFloat
+        var didBegin: Bool
         
-        init(fraction: CGFloat) {
+        init(fraction: CGFloat, didBegin: Bool) {
             self.fraction = fraction
+            self.didBegin = didBegin
+        }
+    }
+    
+    private final class StoryPanRecognizer: UIPanGestureRecognizer {
+        private let updateIsActive: (Bool) -> Void
+        private var isActive: Bool = false
+        private var timer: Foundation.Timer?
+        
+        init(target: Any?, action: Selector?, updateIsActive: @escaping (Bool) -> Void) {
+            self.updateIsActive = updateIsActive
+            
+            super.init(target: target, action: action)
+        }
+        
+        override func reset() {
+            super.reset()
+            
+            self.isActive = false
+            self.timer?.invalidate()
+            self.timer = nil
+        }
+        
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            super.touchesBegan(touches, with: event)
+            
+            if !self.isActive {
+                if self.timer == nil {
+                    self.timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false, block: { [weak self] timer in
+                        guard let self, self.timer === timer else {
+                            return
+                        }
+                        self.timer = nil
+                        if !self.isActive {
+                            self.isActive = true
+                            self.updateIsActive(true)
+                        }
+                    })
+                }
+            }
+        }
+        
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+            if self.isActive {
+                self.isActive = false
+                self.updateIsActive(false)
+                
+                for touch in touches {
+                    if let gestureRecognizers = touch.gestureRecognizers {
+                        for gestureRecognizer in gestureRecognizers {
+                            if gestureRecognizer is UITapGestureRecognizer {
+                                gestureRecognizer.state = .cancelled
+                            }
+                        }
+                    }
+                }
+            }
+            self.timer?.invalidate()
+            self.timer = nil
+            
+            super.touchesEnded(touches, with: event)
+        }
+        
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+            super.touchesCancelled(touches, with: event)
+            
+            if self.isActive {
+                self.isActive = false
+                self.updateIsActive(false)
+            }
+            self.timer?.invalidate()
+            self.timer = nil
         }
     }
     
@@ -129,7 +229,22 @@ private final class StoryContainerScreenComponent: Component {
             
             self.backgroundColor = .black
             
-            self.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+            self.addGestureRecognizer(StoryPanRecognizer(target: self, action: #selector(self.panGesture(_:)), updateIsActive: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                if value {
+                    if self.itemSetPanState == nil {
+                        self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: false)
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    }
+                } else {
+                    if let itemSetPanState = self.itemSetPanState, !itemSetPanState.didBegin {
+                        self.itemSetPanState = nil
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    }
+                }
+            }))
             
             self.audioRecorderDisposable = (self.audioRecorder.get()
             |> deliverOnMainQueue).start(next: { [weak self] audioRecorder in
@@ -247,14 +362,34 @@ private final class StoryContainerScreenComponent: Component {
             case .began:
                 self.layer.removeAnimation(forKey: "panState")
                 
-                self.itemSetPanState = ItemSetPanState(fraction: 0.0)
-                self.state?.updated(transition: .immediate)
+                if let itemSetPanState = self.itemSetPanState, !itemSetPanState.didBegin {
+                    self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                } else {
+                    self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
+                    self.state?.updated(transition: .immediate)
+                }
             case .changed:
-                if var itemSetPanState = self.itemSetPanState, self.bounds.width > 0.0 {
-                    let translation = recognizer.translation(in: self)
+                if var itemSetPanState = self.itemSetPanState, self.bounds.width > 0.0, let focusedItemSet = self.focusedItemSet, let focusedIndex = self.itemSets.firstIndex(where: { $0.id == focusedItemSet }) {
+                    var translation = recognizer.translation(in: self)
                     
-                    let fraction = translation.x / self.bounds.width
-                    itemSetPanState.fraction = -max(-1.0, min(1.0, fraction))
+                    func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
+                        let bandedOffset = offset - bandingStart
+                        let range: CGFloat = 600.0
+                        let coefficient: CGFloat = 0.4
+                        return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
+                    }
+                    
+                    if translation.x > 0.0 && focusedIndex == 0 {
+                        translation.x = rubberBandingOffset(offset: translation.x, bandingStart: 0.0)
+                    } else if translation.x < 0.0 && focusedIndex == self.itemSets.count - 1 {
+                        translation.x = -rubberBandingOffset(offset: -translation.x, bandingStart: 0.0)
+                    }
+                    
+                    var fraction = translation.x / self.bounds.width
+                    fraction = -max(-1.0, min(1.0, fraction))
+                    
+                    itemSetPanState.fraction = fraction
                     self.itemSetPanState = itemSetPanState
                     
                     self.state?.updated(transition: .immediate)
@@ -306,14 +441,40 @@ private final class StoryContainerScreenComponent: Component {
             }
         }
         
-        func animateIn() {
-            self.layer.allowsGroupOpacity = true
-            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { [weak self] _ in
-                guard let self else {
-                    return
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            for subview in self.subviews.reversed() {
+                if !subview.isUserInteractionEnabled || subview.isHidden || subview.alpha == 0.0 {
+                    continue
                 }
-                self.layer.allowsGroupOpacity = false
-            })
+                if subview is ItemSetView {
+                    if let result = subview.hitTest(point, with: event) {
+                        return result
+                    }
+                } else {
+                    if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
+                        return result
+                    }
+                }
+            }
+            
+            return nil
+        }
+        
+        func animateIn() {
+            if let transitionIn = self.component?.transitionIn, transitionIn.sourceView != nil {
+                self.layer.animate(from: UIColor.black.withAlphaComponent(0.0).cgColor, to: self.layer.backgroundColor ?? UIColor.black.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.28)
+                
+                if let transitionIn = self.component?.transitionIn, let focusedItemSet = self.focusedItemSet, let itemSetView = self.visibleItemSetViews[focusedItemSet] {
+                    if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        itemSetComponentView.animateIn(transitionIn: transitionIn)
+                    }
+                }
+            } else {
+                self.layer.allowsGroupOpacity = true
+                self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] _ in
+                    self?.layer.allowsGroupOpacity = false
+                })
+            }
         }
         
         func animateOut(completion: @escaping () -> Void) {
@@ -2088,6 +2249,7 @@ private final class StoryContainerScreenComponent: Component {
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
                                 audioRecorder: i == focusedIndex ? self.audioRecorderValue : nil,
                                 videoRecorder: i == focusedIndex ? self.videoRecorderValue : nil,
+                                hideUI: i == focusedIndex && self.itemSetPanState?.didBegin == false,
                                 presentController: { [weak self] c in
                                     guard let self, let environment = self.environment else {
                                         return
@@ -2141,18 +2303,15 @@ private final class StoryContainerScreenComponent: Component {
                             contentDerivedBottomInset = itemSetView.externalState.derivedBottomInset
                         }
                         
-                        var itemFrame = CGRect(origin: CGPoint(), size: availableSize)
-                        itemFrame.origin.x += CGFloat(i - focusedIndex) * (availableSize.width + 10.0)
-                        if let itemSetPanState = self.itemSetPanState {
-                            itemFrame.origin.x += -itemSetPanState.fraction * (availableSize.width + 10.0)
-                        }
+                        let itemFrame = CGRect(origin: CGPoint(), size: availableSize)
                         if let itemSetComponentView = itemSetView.view.view {
                             if itemSetView.superview == nil {
                                 self.addSubview(itemSetView)
                             }
                             if itemSetComponentView.superview == nil {
-                                //itemSetComponentView.layer.zPosition = availableSize.width * 0.5
+                                itemSetComponentView.layer.isDoubleSided = false
                                 itemSetView.addSubview(itemSetComponentView)
+                                itemSetView.layer.addSublayer(itemSetView.tintLayer)
                             }
                             
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center)
@@ -2161,35 +2320,101 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
-                            /*var cubeTransform: CATransform3D
-                            cubeTransform = CATransform3DIdentity
+                            itemSetTransition.setPosition(layer: itemSetView.tintLayer, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
+                            itemSetTransition.setBounds(layer: itemSetView.tintLayer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
-                            var perspectiveTransform: CATransform3D = CATransform3DIdentity
-                            let perspectiveDistance: CGFloat = 500.0
-                            perspectiveTransform.m34 = -1.0 / perspectiveDistance
-                            let _ = perspectiveTransform
-                            //itemSetView.layer.sublayerTransform = perspectiveTransform
+                            let perspectiveConstant: CGFloat = 500.0
+                            let width = itemFrame.width
                             
-                            let yRotation: CGFloat = (self.itemSetPanState?.fraction ?? 0.0) * CGFloat.pi * 0.5
+                            let sideDistance: CGFloat = 40.0
                             
-                            let rotationTransform = CATransform3DMakeRotation(yRotation, 0.0, 1.0, 0.0)
-                            cubeTransform = CATransform3DConcat(cubeTransform, rotationTransform)
-                            cubeTransform = CATransform3DTranslate(cubeTransform, (self.itemSetPanState?.fraction ?? 0.0) * availableSize.width * 0.5, 0.0, -availableSize.width * 0.5)
+                            let sideAngle_d: CGFloat = -pow(perspectiveConstant, 2)*pow(sideDistance, 2)
+                            let sideAngle_e: CGFloat = pow(perspectiveConstant, 2)*pow(width, 2)
+                            let sideAngle_f: CGFloat = pow(sideDistance, 2)*pow(width, 2)
+                            let sideAngle_c: CGFloat = sqrt(sideAngle_d + sideAngle_e + sideAngle_f + sideDistance*pow(width, 3) + 0.25*pow(width, 4))
+                            let sideAngle_a: CGFloat = (2.0*perspectiveConstant*width - 2.0*sideAngle_c)
+                            let sideAngle_b: CGFloat = (-2.0*perspectiveConstant*sideDistance + 2.0*sideDistance*width + pow(width, 2))
                             
-                            //let transform = CATransform3DTranslate(CATransform3DIdentity, 0.0, 0.0, availableSize.width * 0.5)
+                            let sideAngle: CGFloat = 2.0*atan(sideAngle_a / sideAngle_b)
                             
-                            /*let perspectiveDistance: CGFloat = 500.0
-                            transform.m34 = -1.0 / perspectiveDistance
-                            let cubeSize: CGFloat = availableSize.width
+                            let faceTransform = CATransform3DMakeTranslation(0, 0, itemFrame.width * 0.5)
                             
-                            // Translate the cube to its original position.
-                            let halfSize = cubeSize / 2.0
-                            let translationTransform = CATransform3DMakeTranslation(0, 0, halfSize)
+                            func calculateCubeTransform(rotationFraction: CGFloat, sideAngle: CGFloat, cubeSize: CGSize) -> CATransform3D {
+                                let t = rotationFraction
+                                let absT = abs(rotationFraction)
+                                let currentAngle = t * (CGFloat.pi * 0.5 + sideAngle)
+                                let width = cubeSize.width
+                                
+                                let cubeDistance_a: CGFloat = -1.4142135623731*absT*cos(sideAngle + 0.785398163397448)
+                                let cubeDistance_b: CGFloat = sin(sideAngle*absT + 1.5707963267949*absT + 0.785398163397448)
+                                var cubeDistance: CGFloat = 0.5*width*(cubeDistance_a + absT + 1.4142135623731*cubeDistance_b - 1.0)
+                                cubeDistance *= 1.0
+                                
+                                let backDistance_a = sqrt(pow(width, 2.0))
+                                let backDistance_b = tan(sideAngle) / 2.0
+                                let backDistance_c = sqrt(pow(width, 2.0))
+                                let backDistance_d = (2*cos(sideAngle))
+                                let backDistance: CGFloat = width / 2.0 + backDistance_a * backDistance_b - backDistance_c / backDistance_d
+                                
+                                var perspective = CATransform3DIdentity
+                                perspective.m34 = -1 / perspectiveConstant
+                                let initialCubeTransform = CATransform3DTranslate(perspective, 0.0, 0.0, -cubeSize.width * 0.5)
+                                
+                                var targetTransform = initialCubeTransform
+                                targetTransform = CATransform3DTranslate(targetTransform, 0.0, 0.0, -cubeDistance + backDistance)
+                                targetTransform = CATransform3DConcat(CATransform3DMakeRotation(currentAngle, 0, 1, 0), targetTransform)
+                                targetTransform = CATransform3DTranslate(targetTransform, 0.0, 0.0, -backDistance)
+                                
+                                return targetTransform
+                            }
                             
-                            // Apply the translation transformation.
-                            transform = CATransform3DConcat(transform, translationTransform)*/
-                            //itemSetTransition.setTransform(view: itemSetComponentView, transform: transform)
-                            itemSetTransition.setTransform(view: itemSetView, transform: cubeTransform)*/
+                            let cubeAdditionalRotationFraction: CGFloat
+                            if i == focusedIndex {
+                                cubeAdditionalRotationFraction = 0.0
+                            } else if i < focusedIndex {
+                                cubeAdditionalRotationFraction = -1.0
+                            } else {
+                                cubeAdditionalRotationFraction = 1.0
+                            }
+                            
+                            var panFraction: CGFloat = 0.0
+                            if let itemSetPanState = self.itemSetPanState {
+                                panFraction = -itemSetPanState.fraction
+                            }
+                            
+                            Transition.immediate.setTransform(view: itemSetComponentView, transform: faceTransform)
+                            Transition.immediate.setTransform(layer: itemSetView.tintLayer, transform: faceTransform)
+                            
+                            if let previousRotationFraction = itemSetView.rotationFraction, "".isEmpty {
+                                let fromT = previousRotationFraction
+                                let toT = panFraction
+                                itemSetTransition.setTransformAsKeyframes(view: itemSetView, transform: { sourceT in
+                                    let t = fromT * (1.0 - sourceT) + toT * sourceT
+                                    
+                                    return calculateCubeTransform(rotationFraction: t + cubeAdditionalRotationFraction, sideAngle: sideAngle, cubeSize: itemFrame.size)
+                                })
+                            } else {
+                                itemSetTransition.setTransform(view: itemSetView, transform: calculateCubeTransform(rotationFraction: panFraction + cubeAdditionalRotationFraction, sideAngle: sideAngle, cubeSize: itemFrame.size))
+                            }
+                            itemSetView.rotationFraction = panFraction
+                            
+                            var alphaFraction = panFraction + cubeAdditionalRotationFraction
+                            
+                            if alphaFraction != 0.0 {
+                                if alphaFraction < 0.0 {
+                                    itemSetView.tintLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
+                                    itemSetView.tintLayer.endPoint = CGPoint(x: 1.0, y: 0.0)
+                                } else {
+                                    itemSetView.tintLayer.startPoint = CGPoint(x: 1.0, y: 0.0)
+                                    itemSetView.tintLayer.endPoint = CGPoint(x: 0.0, y: 0.0)
+                                }
+                            }
+                            
+                            alphaFraction *= 1.3
+                            alphaFraction = max(-1.0, min(1.0, alphaFraction))
+                            alphaFraction = abs(alphaFraction)
+                            
+                            itemSetTransition.setAlpha(layer: itemSetView.tintLayer, alpha: alphaFraction)
                         }
                     }
                 }
@@ -2235,20 +2460,38 @@ private final class StoryContainerScreenComponent: Component {
 }
 
 public class StoryContainerScreen: ViewControllerComponentContainer {
+    public final class TransitionIn {
+        public weak var sourceView: UIView?
+        public let sourceRect: CGRect
+        public let sourceCornerRadius: CGFloat
+        
+        public init(
+            sourceView: UIView,
+            sourceRect: CGRect,
+            sourceCornerRadius: CGFloat
+        ) {
+            self.sourceView = sourceView
+            self.sourceRect = sourceRect
+            self.sourceCornerRadius = sourceCornerRadius
+        }
+    }
+    
     private let context: AccountContext
     private var isDismissed: Bool = false
     
     public init(
         context: AccountContext,
         initialFocusedId: AnyHashable?,
-        initialContent: [StoryContentItemSlice]
+        initialContent: [StoryContentItemSlice],
+        transitionIn: TransitionIn?
     ) {
         self.context = context
         
         super.init(context: context, component: StoryContainerScreenComponent(
             context: context,
             initialFocusedId: initialFocusedId,
-            initialContent: initialContent
+            initialContent: initialContent,
+            transitionIn: transitionIn
         ), navigationBarAppearance: .none, theme: .dark)
         
         self.statusBar.statusBarStyle = .White

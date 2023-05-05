@@ -54,7 +54,8 @@ final class StoryAvatarInfoComponent: Component {
             self.avatarNode.setPeer(
                 context: component.context,
                 theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
-                peer: component.peer
+                peer: component.peer,
+                synchronousLoad: true
             )
             
             return size

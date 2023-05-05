@@ -39,6 +39,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let isProgressPaused: Bool
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecorder: InstantVideoController?
+    public let hideUI: Bool
     public let presentController: (ViewController) -> Void
     public let close: () -> Void
     public let navigateToItemSet: (NavigationDirection) -> Void
@@ -56,6 +57,7 @@ public final class StoryItemSetContainerComponent: Component {
         isProgressPaused: Bool,
         audioRecorder: ManagedAudioRecorder?,
         videoRecorder: InstantVideoController?,
+        hideUI: Bool,
         presentController: @escaping (ViewController) -> Void,
         close: @escaping () -> Void,
         navigateToItemSet: @escaping (NavigationDirection) -> Void,
@@ -72,6 +74,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.isProgressPaused = isProgressPaused
         self.audioRecorder = audioRecorder
         self.videoRecorder = videoRecorder
+        self.hideUI = hideUI
         self.presentController = presentController
         self.close = close
         self.navigateToItemSet = navigateToItemSet
@@ -107,6 +110,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.videoRecorder !== rhs.videoRecorder {
+            return false
+        }
+        if lhs.hideUI != rhs.hideUI {
             return false
         }
         return true
@@ -149,7 +155,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
     }
     
-    public final class View: UIView, UIScrollViewDelegate {
+    public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         private let scrollView: ScrollView
         
         private let contentContainerView: UIView
@@ -205,8 +211,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             super.init(frame: frame)
             
-            self.backgroundColor = .black
-            
             self.scrollView.delaysContentTouches = false
             self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
@@ -225,17 +229,17 @@ public final class StoryItemSetContainerComponent: Component {
             self.scrollView.clipsToBounds = true
             
             self.addSubview(self.contentContainerView)
-            self.layer.addSublayer(self.contentDimLayer)
-            self.layer.addSublayer(self.topContentGradientLayer)
+            self.contentContainerView.layer.addSublayer(self.contentDimLayer)
+            self.contentContainerView.layer.addSublayer(self.topContentGradientLayer)
             self.layer.addSublayer(self.bottomContentGradientLayer)
             
             self.closeButton.addSubview(self.closeButtonIconView)
-            self.addSubview(self.closeButton)
+            self.contentContainerView.addSubview(self.closeButton)
             self.closeButton.addTarget(self, action: #selector(self.closePressed), for: .touchUpInside)
             
-            self.contentContainerView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-            
-            
+            let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            tapRecognizer.delegate = self
+            self.contentContainerView.addGestureRecognizer(tapRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -244,6 +248,13 @@ public final class StoryItemSetContainerComponent: Component {
         
         deinit {
             self.currentSliceDisposable?.dispose()
+        }
+        
+        @objc public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if otherGestureRecognizer is UIPanGestureRecognizer {
+                return true
+            }
+            return false
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -267,6 +278,9 @@ public final class StoryItemSetContainerComponent: Component {
                     if nextIndex != currentIndex {
                         let focusedItemId = currentSlice.items[nextIndex].id
                         self.focusedItemId = focusedItemId
+                        
+                        currentSlice.items[nextIndex].markAsSeen?()
+                        
                         self.state?.updated(transition: .immediate)
                         
                         self.currentSliceDisposable?.dispose()
@@ -358,6 +372,9 @@ public final class StoryItemSetContainerComponent: Component {
                                         if nextIndex != currentIndex {
                                             let focusedItemId = currentSlice.items[nextIndex].id
                                             self.focusedItemId = focusedItemId
+                                            
+                                            currentSlice.items[nextIndex].markAsSeen?()
+                                            
                                             self.state?.updated(transition: .immediate)
                                             
                                             self.currentSliceDisposable?.dispose()
@@ -385,7 +402,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let view = visibleItem.view.view {
                     if view.superview == nil {
                         view.isUserInteractionEnabled = false
-                        self.contentContainerView.addSubview(view)
+                        self.contentContainerView.insertSubview(view, at: 0)
                     }
                     itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
                     
@@ -422,6 +439,69 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
+        func animateIn(transitionIn: StoryContainerScreen.TransitionIn) {
+            self.closeButton.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2, delay: 0.12, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            if let inputPanelView = self.inputPanel.view {
+                inputPanelView.layer.animatePosition(
+                    from: CGPoint(x: 0.0, y: self.bounds.height - inputPanelView.frame.minY),
+                    to: CGPoint(),
+                    duration: 0.48,
+                    timingFunction: kCAMediaTimingFunctionSpring,
+                    additive: true
+                )
+                inputPanelView.layer.animateAlpha(from: 0.0, to: inputPanelView.alpha, duration: 0.28)
+            }
+            if let footerPanelView = self.footerPanel.view {
+                footerPanelView.layer.animatePosition(
+                    from: CGPoint(x: 0.0, y: self.bounds.height - footerPanelView.frame.minY),
+                    to: CGPoint(),
+                    duration: 0.3,
+                    timingFunction: kCAMediaTimingFunctionSpring,
+                    additive: true
+                )
+                footerPanelView.layer.animateAlpha(from: 0.0, to: footerPanelView.alpha, duration: 0.28)
+            }
+            
+            if let sourceView = transitionIn.sourceView {
+                let sourceLocalFrame = sourceView.convert(transitionIn.sourceRect, to: self)
+                let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - self.contentContainerView.frame.minX, y: sourceLocalFrame.minY - self.contentContainerView.frame.minY), size: sourceLocalFrame.size)
+                
+                if let rightInfoView = self.rightInfoItem?.view.view {
+                    rightInfoView.layer.animatePosition(from: CGPoint(x: innerSourceLocalFrame.center.x - rightInfoView.layer.position.x, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    rightInfoView.layer.animatePosition(from: CGPoint(x: 0.0, y: innerSourceLocalFrame.center.y - rightInfoView.layer.position.y), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    
+                    rightInfoView.layer.animateScale(from: innerSourceLocalFrame.width / rightInfoView.bounds.width, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                }
+                
+                self.contentContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.contentContainerView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.contentContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), to: self.contentContainerView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.contentContainerView.layer.animate(
+                    from: transitionIn.sourceCornerRadius as NSNumber,
+                    to: self.contentContainerView.layer.cornerRadius as NSNumber,
+                    keyPath: "cornerRadius",
+                    timingFunction: kCAMediaTimingFunctionSpring,
+                    duration: 0.3
+                )
+                
+                if let focusedItemId = self.focusedItemId, let visibleItemView = self.visibleItems[focusedItemId]?.view.view {
+                    let innerScale = innerSourceLocalFrame.width / visibleItemView.bounds.width
+                    let innerFromFrame = CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: CGSize(width: innerSourceLocalFrame.width, height: visibleItemView.bounds.height * innerScale))
+                    
+                    visibleItemView.layer.animatePosition(
+                        from: CGPoint(
+                            x: innerFromFrame.midX,
+                            y: innerFromFrame.midY
+                        ),
+                        to: visibleItemView.layer.position,
+                        duration: 0.3,
+                        timingFunction: kCAMediaTimingFunctionSpring
+                    )
+                    visibleItemView.layer.animateScale(from: innerScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                }
+            }
+        }
+        
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
             
@@ -431,6 +511,10 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 self.currentSliceDisposable?.dispose()
                 if let focusedItemId = self.focusedItemId {
+                    if let item = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) {
+                        item.markAsSeen?()
+                    }
+                    
                     self.currentSliceDisposable = (component.initialItemSlice.update(
                         component.initialItemSlice,
                         focusedItemId
@@ -490,6 +574,8 @@ public final class StoryItemSetContainerComponent: Component {
                 if let currentSlice = self.currentSlice {
                     if !currentSlice.items.contains(where: { $0.id == focusedItemId }) {
                         self.focusedItemId = currentSlice.items.first?.id
+                        
+                        currentSlice.items.first?.markAsSeen?()
                     }
                 } else {
                     self.focusedItemId = nil
@@ -572,9 +658,16 @@ public final class StoryItemSetContainerComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: 200.0)
             )
             
+            var currentItem: StoryContentItem?
+            if let focusedItemId = self.focusedItemId, let currentSlice = self.currentSlice, let item = currentSlice.items.first(where: { $0.id == focusedItemId }) {
+                currentItem = item
+            }
+            
             let footerPanelSize = self.footerPanel.update(
                 transition: transition,
                 component: AnyComponent(StoryFooterPanelComponent(
+                    context: component.context,
+                    storyItem: currentItem?.storyItem,
                     deleteAction: { [weak self] in
                         guard let self, let component = self.component, let focusedItemId = self.focusedItemId else {
                             return
@@ -603,6 +696,8 @@ public final class StoryItemSetContainerComponent: Component {
                                                 nextIndex = currentSlice.items.count - 1
                                             }
                                             self.focusedItemId = currentSlice.items[nextIndex].id
+                                            
+                                            currentSlice.items[nextIndex].markAsSeen?()
                                             
                                             /*var updatedItems: [StoryContentItem] = []
                                             for item in currentSlice.items {
@@ -744,9 +839,10 @@ public final class StoryItemSetContainerComponent: Component {
                 self.closeButtonIconView.tintColor = .white
             }
             if let image = self.closeButtonIconView.image {
-                let closeButtonFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: 50.0, height: 64.0))
+                let closeButtonFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 50.0, height: 64.0))
                 transition.setFrame(view: self.closeButton, frame: closeButtonFrame)
                 transition.setFrame(view: self.closeButtonIconView, frame: CGRect(origin: CGPoint(x: floor((closeButtonFrame.width - image.size.width) * 0.5), y: floor((closeButtonFrame.height - image.size.height) * 0.5)), size: image.size))
+                transition.setAlpha(view: self.closeButton, alpha: component.hideUI ? 0.0 : 1.0)
             }
             
             var focusedItem: StoryContentItem?
@@ -808,15 +904,17 @@ public final class StoryItemSetContainerComponent: Component {
                 if let view = currentRightInfoItem.view.view {
                     var animateIn = false
                     if view.superview == nil {
-                        self.addSubview(view)
+                        self.contentContainerView.addSubview(view)
                         animateIn = true
                     }
-                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 6.0 - rightInfoItemSize.width, y: contentFrame.minY + 14.0), size: rightInfoItemSize))
+                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: contentFrame.width - 6.0 - rightInfoItemSize.width, y: 14.0), size: rightInfoItemSize))
                     
                     if animateIn, !isFirstTime {
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         view.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     }
+                    
+                    transition.setAlpha(view: view, alpha: component.hideUI ? 0.0 : 1.0)
                 }
             }
             
@@ -833,19 +931,22 @@ public final class StoryItemSetContainerComponent: Component {
                     var animateIn = false
                     if view.superview == nil {
                         view.isUserInteractionEnabled = false
-                        self.addSubview(view)
+                        self.contentContainerView.addSubview(view)
                         animateIn = true
                     }
-                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY + 10.0), size: centerInfoItemSize))
+                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: centerInfoItemSize))
                     
                     if animateIn, !isFirstTime {
                         //view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
+                    
+                    transition.setAlpha(view: view, alpha: component.hideUI ? 0.0 : 1.0)
                 }
             }
             
             let gradientHeight: CGFloat = 74.0
-            transition.setFrame(layer: self.topContentGradientLayer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: gradientHeight)))
+            transition.setFrame(layer: self.topContentGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width, height: gradientHeight)))
+            transition.setAlpha(layer: self.topContentGradientLayer, alpha: component.hideUI ? 0.0 : 1.0)
             
             let itemLayout = ItemLayout(size: CGSize(width: contentFrame.width, height: availableSize.height - component.containerInsets.top - 44.0 - bottomContentInsetWithoutInput))
             self.itemLayout = itemLayout
@@ -971,7 +1072,7 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setFrame(layer: self.bottomContentGradientLayer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: availableSize.height - component.inputHeight - bottomGradientHeight), size: CGSize(width: contentFrame.width, height: bottomGradientHeight)))
             transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
             
-            transition.setFrame(layer: self.contentDimLayer, frame: contentFrame)
+            transition.setFrame(layer: self.contentDimLayer, frame: CGRect(origin: CGPoint(), size: contentFrame.size))
             transition.setAlpha(layer: self.contentDimLayer, alpha: (inputPanelIsOverlay || self.inputPanelExternalState.isEditing) ? 1.0 : 0.0)
             
             self.ignoreScrolling = true
@@ -1005,9 +1106,10 @@ public final class StoryItemSetContainerComponent: Component {
                 if let navigationStripView = self.navigationStrip.view {
                     if navigationStripView.superview == nil {
                         navigationStripView.isUserInteractionEnabled = false
-                        self.addSubview(navigationStripView)
+                        self.contentContainerView.addSubview(navigationStripView)
                     }
-                    transition.setFrame(view: navigationStripView, frame: CGRect(origin: CGPoint(x: contentFrame.minX + navigationStripSideInset, y: contentFrame.minY + navigationStripTopInset), size: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: 2.0)))
+                    transition.setFrame(view: navigationStripView, frame: CGRect(origin: CGPoint(x: navigationStripSideInset, y: navigationStripTopInset), size: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: 2.0)))
+                    transition.setAlpha(view: navigationStripView, alpha: component.hideUI ? 0.0 : 1.0)
                 }
                 
                 if let focusedItemId = self.focusedItemId, let focusedItem = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) {
@@ -1041,15 +1143,18 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                     if let inlineActionsView = self.inlineActions.view {
                         if inlineActionsView.superview == nil {
-                            self.addSubview(inlineActionsView)
+                            self.contentContainerView.addSubview(inlineActionsView)
                         }
-                        transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 10.0 - inlineActionsSize.width, y: contentFrame.maxY - 20.0 - inlineActionsSize.height), size: inlineActionsSize))
+                        transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.width - 10.0 - inlineActionsSize.width, y: contentFrame.height - 20.0 - inlineActionsSize.height), size: inlineActionsSize))
                         
                         var inlineActionsAlpha: CGFloat = inputPanelIsOverlay ? 0.0 : 1.0
                         if component.audioRecorder != nil || component.videoRecorder != nil {
                             inlineActionsAlpha = 0.0
                         }
                         if self.reactionItems != nil {
+                            inlineActionsAlpha = 0.0
+                        }
+                        if component.hideUI {
                             inlineActionsAlpha = 0.0
                         }
                         
