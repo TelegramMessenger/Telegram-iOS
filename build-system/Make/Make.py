@@ -560,8 +560,8 @@ def generate_project(bazel, arguments):
         disable_extensions = arguments.disableExtensions
     if arguments.disableProvisioningProfiles is not None:
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
-    if arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
-        disable_extensions = True
+#    if arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
+#        disable_extensions = True
     if arguments.generateDsym is not None:
         generate_dsym = arguments.generateDsym
     if arguments.target is not None:
