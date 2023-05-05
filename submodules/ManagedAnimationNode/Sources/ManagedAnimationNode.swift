@@ -190,22 +190,13 @@ open class ManagedAnimationNode: ASDisplayNode {
         
         self.addSubnode(self.imageNode)
         
+        var previousTimestamp = CACurrentMediaTime()
         displayLinkUpdate = { [weak self] in
             if let strongSelf = self {
-//                let timestamp = CACurrentMediaTime()
-//                var delta: Double
-//                if let previousTimestamp = strongSelf.previousTimestamp {
-//                    delta = min(timestamp - previousTimestamp, 1.0 / 60.0)
-//                    if let currentDelta = strongSelf.delta, currentDelta < delta {
-//                        delta = currentDelta
-//                    }
-//                } else {
-                let delta = 1.0 / 60.0
-//                }
-//                strongSelf.previousTimestamp = timestamp
-                strongSelf.delta = delta
-                
+                let currentTimestamp = CACurrentMediaTime()
+                strongSelf.delta = currentTimestamp - previousTimestamp
                 strongSelf.updateAnimation()
+                previousTimestamp = currentTimestamp
             }
         }
     }

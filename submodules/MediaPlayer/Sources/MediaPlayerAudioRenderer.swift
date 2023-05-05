@@ -245,7 +245,7 @@ private final class AudioPlayerRendererContext {
                     audioSessionControl.setOutputMode(self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system)
                 }
                 if let equalizerAudioUnit = self.equalizerAudioUnit, self.forAudioVideoMessage && !self.ambient {
-                    AudioUnitSetParameter(equalizerAudioUnit, kAUNBandEQParam_GlobalGain, kAudioUnitScope_Global, 0, self.forceAudioToSpeaker ? 0.0 : 12.0, 0)
+                    AudioUnitSetParameter(equalizerAudioUnit, kAUNBandEQParam_GlobalGain, kAudioUnitScope_Global, 0, self.forceAudioToSpeaker ? 0.0 : 5.0, 0)
                 }
             }
         }
