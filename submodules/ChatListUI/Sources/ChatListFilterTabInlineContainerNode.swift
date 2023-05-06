@@ -510,7 +510,6 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                 return
             }
             if let reorderingItemNodePair = strongSelf.itemNodePairs[reorderingItem], let (initial, _) = strongSelf.reorderingItemPosition, let reorderedItemIds = strongSelf.reorderedItemIds, let currentItemIndex = reorderedItemIds.firstIndex(of: reorderingItem) {
-                
                 for (id, itemNodePair) in strongSelf.itemNodePairs {
                     guard let itemIndex = reorderedItemIds.firstIndex(of: id) else {
                         continue

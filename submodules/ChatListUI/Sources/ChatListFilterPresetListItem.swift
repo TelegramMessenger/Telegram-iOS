@@ -125,6 +125,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
     private let titleNode: TextNode
     private let labelNode: TextNode
     private let arrowNode: ASImageNode
+    private let sharedIconNode: ASImageNode
     
     private let activateArea: AccessibilityAreaNode
     
@@ -169,6 +170,11 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         self.arrowNode.displaysAsynchronously = false
         self.arrowNode.isLayerBacked = true
         
+        self.sharedIconNode = ASImageNode()
+        self.sharedIconNode.displayWithoutProcessing = true
+        self.sharedIconNode.displaysAsynchronously = false
+        self.sharedIconNode.isLayerBacked = true
+        
         self.activateArea = AccessibilityAreaNode()
         
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -180,6 +186,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         self.containerNode.addSubnode(self.titleNode)
         self.containerNode.addSubnode(self.labelNode)
         self.containerNode.addSubnode(self.arrowNode)
+        self.containerNode.addSubnode(self.sharedIconNode)
         self.addSubnode(self.activateArea)
         
         self.activateArea.activate = { [weak self] in
@@ -199,6 +206,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
             var updateArrowImage: UIImage?
+            var updatedSharedIconImage: UIImage?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme || currentItem?.isDisabled != item.isDisabled {
                 updatedTheme = item.presentationData.theme
@@ -207,6 +215,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                 } else {
                     updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
                 }
+                updatedSharedIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat List/SharedFolderListIcon"), color: item.presentationData.theme.list.disclosureArrowColor)
             }
             
             let peerRevealOptions: [ItemListRevealOption]
@@ -379,9 +388,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     
                     transition.updateAlpha(node: strongSelf.labelNode, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
                     transition.updateAlpha(node: strongSelf.arrowNode, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
+                    transition.updateAlpha(node: strongSelf.sharedIconNode, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
                     
                     if let updateArrowImage = updateArrowImage {
                         strongSelf.arrowNode.image = updateArrowImage
+                    }
+                    if let updatedSharedIconImage {
+                        strongSelf.sharedIconNode.image = updatedSharedIconImage
                     }
                     
                     if let arrowImage = strongSelf.arrowNode.image {
@@ -392,6 +405,15 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + rightArrowInset + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
                     strongSelf.arrowNode.isHidden = item.isAllChats
+                    
+                    if let sharedIconImage = strongSelf.sharedIconNode.image {
+                        strongSelf.sharedIconNode.frame = CGRect(origin: CGPoint(x: strongSelf.arrowNode.frame.minX + 2.0 - sharedIconImage.size.width, y: floorToScreenPixels((layout.contentSize.height - sharedIconImage.size.height) / 2.0) + 1.0), size: sharedIconImage.size)
+                    }
+                    var isShared = false
+                    if case let .filter(_, _, _, data) = item.preset, data.isShared {
+                        isShared = true
+                    }
+                    strongSelf.sharedIconNode.isHidden = !isShared
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
                     
@@ -483,6 +505,10 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         var arrowFrame = self.arrowNode.frame
         arrowFrame.origin.x = params.width - params.rightInset - 7.0 - arrowFrame.width + revealOffset
         transition.updateFrame(node: self.arrowNode, frame: arrowFrame)
+        
+        var sharedIconFrame = self.sharedIconNode.frame
+        sharedIconFrame.origin.x = arrowFrame.minX + 2.0 - sharedIconFrame.width
+        transition.updateFrame(node: self.sharedIconNode, frame: sharedIconFrame)
     }
     
     override func revealOptionsInteractivelyOpened() {

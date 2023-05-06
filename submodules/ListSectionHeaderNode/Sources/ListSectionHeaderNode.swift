@@ -5,7 +5,7 @@ import Display
 import TelegramPresentationData
 
 private let titleFont = Font.bold(13.0)
-private let actionFont = Font.medium(13.0)
+private let actionFont = Font.regular(13.0)
 
 public enum ListSectionHeaderActionType {
     case generic
@@ -13,6 +13,7 @@ public enum ListSectionHeaderActionType {
 }
 
 public final class ListSectionHeaderNode: ASDisplayNode {
+    private let backgroundLayer: SimpleLayer
     private let label: ImmediateTextNode
     private var actionButtonLabel: ImmediateTextNode?
     private var actionButton: HighlightableButtonNode?
@@ -23,6 +24,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
     public var title: String? {
         didSet {
             self.label.attributedText = NSAttributedString(string: self.title ?? "", font: titleFont, textColor: self.theme.chatList.sectionHeaderTextColor)
+            self.label.accessibilityLabel = self.title
             
             if let (size, leftInset, rightInset) = self.validLayout {
                 self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
@@ -72,6 +74,8 @@ public final class ListSectionHeaderNode: ASDisplayNode {
                     actionColor = self.theme.list.itemDestructiveColor
             }
             self.actionButtonLabel?.attributedText = NSAttributedString(string: action, font: actionFont, textColor: actionColor)
+            self.actionButton?.accessibilityLabel = action
+            self.actionButton?.accessibilityTraits = [.button]
         }
         
         if let (size, leftInset, rightInset) = self.validLayout {
@@ -84,14 +88,29 @@ public final class ListSectionHeaderNode: ASDisplayNode {
     public init(theme: PresentationTheme) {
         self.theme = theme
         
+        self.backgroundLayer = SimpleLayer()
+        
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false
+        self.label.isAccessibilityElement = true
         
         super.init()
         
+        self.layer.addSublayer(self.backgroundLayer)
+        
         self.addSubnode(self.label)
         
-        self.backgroundColor = theme.chatList.sectionHeaderFillColor
+        self.backgroundLayer.backgroundColor = theme.chatList.sectionHeaderFillColor.cgColor
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let actionButton = self.actionButton {
+            if actionButton.frame.contains(point) {
+                return actionButton.view
+            }
+        }
+        
+        return super.hitTest(point, with: event)
     }
     
     public func updateTheme(theme: PresentationTheme) {
@@ -100,7 +119,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
             
             self.label.attributedText = NSAttributedString(string: self.title ?? "", font: titleFont, textColor: self.theme.chatList.sectionHeaderTextColor)
             
-            self.backgroundColor = theme.chatList.sectionHeaderFillColor
+            self.backgroundLayer.backgroundColor = theme.chatList.sectionHeaderFillColor.cgColor
             if let action = self.action {
                 self.actionButtonLabel?.attributedText = NSAttributedString(string: action, font: actionFont, textColor: self.theme.chatList.sectionHeaderTextColor)
             }
@@ -121,6 +140,8 @@ public final class ListSectionHeaderNode: ASDisplayNode {
             actionButtonLabel.frame = CGRect(origin: CGPoint(x: size.width - rightInset - 16.0 - buttonSize.width, y: 6.0 + UIScreenPixel), size: buttonSize)
             actionButton.frame = CGRect(origin: CGPoint(x: size.width - rightInset - 16.0 - buttonSize.width, y: 6.0 + UIScreenPixel), size: buttonSize)
         }
+        
+        self.backgroundLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: size.height + UIScreenPixel))
     }
     
     @objc private func actionButtonPressed() {

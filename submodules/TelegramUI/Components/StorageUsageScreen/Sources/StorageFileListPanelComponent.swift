@@ -151,6 +151,7 @@ private final class FileListItemComponent: Component {
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EngineMessage.Id) -> Void
+    let contextAction: (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
     
     init(
         context: AccountContext,
@@ -163,7 +164,8 @@ private final class FileListItemComponent: Component {
         sideInset: CGFloat,
         selectionState: SelectionState,
         hasNext: Bool,
-        action: @escaping (EngineMessage.Id) -> Void
+        action: @escaping (EngineMessage.Id) -> Void,
+        contextAction: @escaping (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -176,6 +178,7 @@ private final class FileListItemComponent: Component {
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: FileListItemComponent, rhs: FileListItemComponent) -> Bool {
@@ -212,7 +215,10 @@ private final class FileListItemComponent: Component {
         return true
     }
     
-    final class View: HighlightTrackingButton {
+    final class View: ContextControllerSourceView {
+        private let extractedContainerView: ContextExtractedContentContainingView
+        private let containerButton: HighlightTrackingButton
+        
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         private let label = ComponentView<Empty>()
@@ -227,19 +233,53 @@ private final class FileListItemComponent: Component {
         
         private var checkLayer: CheckLayer?
         
+        private var isExtractedToContextMenu: Bool = false
+        
         private var highlightBackgroundFrame: CGRect?
         private var highlightBackgroundLayer: SimpleLayer?
         
         private var component: FileListItemComponent?
+        private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
+            self.extractedContainerView = ContextExtractedContentContainingView()
+            self.containerButton = HighlightTrackingButton()
+            
             self.separatorLayer = SimpleLayer()
             
             super.init(frame: frame)
             
             self.layer.addSublayer(self.separatorLayer)
             
-            self.highligthedChanged = { [weak self] isHighlighted in
+            self.addSubview(self.extractedContainerView)
+            self.targetViewForActivationProgress = self.extractedContainerView.contentView
+            
+            self.extractedContainerView.contentView.addSubview(self.containerButton)
+            
+            self.extractedContainerView.isExtractedToContextPreviewUpdated = { [weak self] value in
+                guard let self, let component = self.component else {
+                    return
+                }
+                self.containerButton.clipsToBounds = value
+                self.containerButton.backgroundColor = value ? component.theme.list.plainBackgroundColor : nil
+                self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
+            }
+            self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
+                guard let self else {
+                    return
+                }
+                self.isExtractedToContextMenu = value
+                
+                let mappedTransition: Transition
+                if value {
+                    mappedTransition = Transition(transition)
+                } else {
+                    mappedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                }
+                self.state?.updated(transition: mappedTransition)
+            }
+            
+            self.containerButton.highligthedChanged = { [weak self] isHighlighted in
                 guard let self, let component = self.component, let highlightBackgroundFrame = self.highlightBackgroundFrame else {
                     return
                 }
@@ -267,7 +307,15 @@ private final class FileListItemComponent: Component {
                     }
                 }
             }
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    gesture.cancel()
+                    return
+                }
+                component.contextAction(component.messageId, self.extractedContainerView, gesture)
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -301,9 +349,13 @@ private final class FileListItemComponent: Component {
             }
             
             self.component = component
+            self.state = state
+            
+            let contextInset: CGFloat = self.isExtractedToContextMenu ? 12.0 : 0.0
             
             let spacing: CGFloat = 1.0
             let height: CGFloat = 52.0
+            let verticalInset: CGFloat = 1.0
             var leftInset: CGFloat = 62.0 + component.sideInset
             var iconLeftInset: CGFloat = component.sideInset
             
@@ -323,12 +375,12 @@ private final class FileListItemComponent: Component {
                 } else {
                     checkLayer = CheckLayer(theme: CheckNodeTheme(theme: component.theme, style: .plain))
                     self.checkLayer = checkLayer
-                    self.layer.addSublayer(checkLayer)
-                    checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
+                    self.containerButton.layer.addSublayer(checkLayer)
+                    checkLayer.frame = CGRect(origin: CGPoint(x: -checkSize, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize))
                     checkLayer.setSelected(isSelected, animated: false)
                     checkLayer.setNeedsDisplay()
                 }
-                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: component.sideInset + 20.0, y: floor((height - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
+                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: component.sideInset + 20.0, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
             } else {
                 if let checkLayer = self.checkLayer {
                     self.checkLayer = nil
@@ -338,7 +390,7 @@ private final class FileListItemComponent: Component {
                 }
             }
             
-            let rightInset: CGFloat = 16.0 + component.sideInset
+            let rightInset: CGFloat = contextInset * 2.0 + 16.0 + component.sideInset
             
             if case let .fileExtension(text) = component.icon {
                 let iconView: UIImageView
@@ -347,7 +399,7 @@ private final class FileListItemComponent: Component {
                 } else {
                     iconView = UIImageView()
                     self.iconView = iconView
-                    self.addSubview(iconView)
+                    self.containerButton.addSubview(iconView)
                 }
                 
                 let iconText: ComponentView<Empty>
@@ -362,7 +414,7 @@ private final class FileListItemComponent: Component {
                     iconView.image = extensionImage(fileExtension: "mp3")
                 }
                 if let image = iconView.image {
-                    let iconFrame = CGRect(origin: CGPoint(x: iconLeftInset + floor(( leftInset - iconLeftInset - image.size.width) / 2.0), y: floor((height - image.size.height) / 2.0)), size: image.size)
+                    let iconFrame = CGRect(origin: CGPoint(x: iconLeftInset + floor((leftInset - iconLeftInset - image.size.width) / 2.0), y: floor((height - verticalInset * 2.0 - image.size.height) / 2.0)), size: image.size)
                     transition.setFrame(view: iconView, frame: iconFrame)
                     
                     let iconTextSize = iconText.update(
@@ -377,7 +429,7 @@ private final class FileListItemComponent: Component {
                     )
                     if let iconTextView = iconText.view {
                         if iconTextView.superview == nil {
-                            self.addSubview(iconTextView)
+                            self.containerButton.addSubview(iconTextView)
                         }
                         transition.setFrame(view: iconTextView, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - iconTextSize.width) / 2.0), y: iconFrame.maxY - iconTextSize.height - 4.0), size: iconTextSize))
                     }
@@ -404,7 +456,7 @@ private final class FileListItemComponent: Component {
                     
                     iconImageNode = TransformImageNode()
                     self.iconImageNode = iconImageNode
-                    self.addSubview(iconImageNode.view)
+                    self.containerButton.addSubview(iconImageNode.view)
                 }
                 
                 let iconSize = CGSize(width: 40.0, height: 40.0)
@@ -429,7 +481,7 @@ private final class FileListItemComponent: Component {
                     }
                 }
                 
-                let iconFrame = CGRect(origin: CGPoint(x: iconLeftInset + floor((leftInset - iconLeftInset - iconSize.width) / 2.0), y: floor((height - iconSize.height) / 2.0)), size: iconSize)
+                let iconFrame = CGRect(origin: CGPoint(x: iconLeftInset + floor((leftInset - iconLeftInset - iconSize.width) / 2.0), y: floor((height - verticalInset * 2.0 - iconSize.height) / 2.0)), size: iconSize)
                 transition.setFrame(view: iconImageNode.view, frame: iconFrame)
                 
                 let iconImageLayout = iconImageNode.asyncLayout()
@@ -454,11 +506,11 @@ private final class FileListItemComponent: Component {
                 } else {
                     semanticStatusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white)
                     self.semanticStatusNode = semanticStatusNode
-                    self.addSubview(semanticStatusNode.view)
+                    self.containerButton.addSubview(semanticStatusNode.view)
                 }
                 
                 let iconSize = CGSize(width: 40.0, height: 40.0)
-                let iconFrame = CGRect(origin: CGPoint(x: iconLeftInset + floor((leftInset - iconLeftInset - iconSize.width) / 2.0), y: floor((height - iconSize.height) / 2.0)), size: iconSize)
+                let iconFrame = CGRect(origin: CGPoint(x: iconLeftInset + floor((leftInset - iconLeftInset - iconSize.width) / 2.0), y: floor((height - verticalInset * 2.0 - iconSize.height) / 2.0)), size: iconSize)
                 transition.setFrame(view: semanticStatusNode.view, frame: iconFrame)
                 
                 semanticStatusNode.backgroundNodeColor = component.theme.list.itemCheckColors.fillColor
@@ -483,7 +535,7 @@ private final class FileListItemComponent: Component {
             
             let previousTitleFrame = self.title.view?.frame
             var previousTitleContents: UIView?
-            if hasSelectionUpdated {
+            if hasSelectionUpdated && !"".isEmpty {
                 previousTitleContents = self.title.view?.snapshotView(afterScreenUpdates: false)
             }
             
@@ -507,13 +559,13 @@ private final class FileListItemComponent: Component {
             
             let contentHeight = titleSize.height + spacing + subtitleSize.height
             
-            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - contentHeight) / 2.0)), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - verticalInset * 2.0 - contentHeight) / 2.0)), size: titleSize)
             let subtitleFrame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + spacing), size: subtitleSize)
             
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
-                    self.addSubview(titleView)
+                    self.containerButton.addSubview(titleView)
                 }
                 titleView.frame = titleFrame
                 if let previousTitleFrame, previousTitleFrame.origin.x != titleFrame.origin.x {
@@ -522,7 +574,7 @@ private final class FileListItemComponent: Component {
                 
                 if let previousTitleFrame, let previousTitleContents, previousTitleFrame.size != titleSize {
                     previousTitleContents.frame = CGRect(origin: previousTitleFrame.origin, size: previousTitleFrame.size)
-                    self.addSubview(previousTitleContents)
+                    self.containerButton.addSubview(previousTitleContents)
                     
                     transition.setFrame(view: previousTitleContents, frame: CGRect(origin: titleFrame.origin, size: previousTitleFrame.size))
                     transition.setAlpha(view: previousTitleContents, alpha: 0.0, completion: { [weak previousTitleContents] _ in
@@ -534,14 +586,14 @@ private final class FileListItemComponent: Component {
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     subtitleView.isUserInteractionEnabled = false
-                    self.addSubview(subtitleView)
+                    self.containerButton.addSubview(subtitleView)
                 }
                 transition.setFrame(view: subtitleView, frame: subtitleFrame)
             }
             if let labelView = self.label.view {
                 if labelView.superview == nil {
                     labelView.isUserInteractionEnabled = false
-                    self.addSubview(labelView)
+                    self.containerButton.addSubview(labelView)
                 }
                 transition.setFrame(view: labelView, frame: CGRect(origin: CGPoint(x: availableSize.width - rightInset - labelSize.width, y: floor((height - labelSize.height) / 2.0)), size: labelSize))
             }
@@ -553,6 +605,14 @@ private final class FileListItemComponent: Component {
             self.separatorLayer.isHidden = !component.hasNext
             
             self.highlightBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height + ((component.hasNext) ? UIScreenPixel : 0.0)))
+            
+            let resultBounds = CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height))
+            transition.setFrame(view: self.extractedContainerView, frame: resultBounds)
+            transition.setFrame(view: self.extractedContainerView.contentView, frame: resultBounds)
+            self.extractedContainerView.contentRect = resultBounds
+            
+            let containerFrame = CGRect(origin: CGPoint(x: contextInset, y: verticalInset), size: CGSize(width: availableSize.width - contextInset * 2.0, height: height - verticalInset * 2.0))
+            transition.setFrame(view: self.containerButton, frame: containerFrame)
             
             return CGSize(width: availableSize.width, height: height)
         }
@@ -611,18 +671,21 @@ final class StorageFileListPanelComponent: Component {
     let context: AccountContext
     let items: Items?
     let selectionState: StorageUsageScreenComponent.SelectionState?
-    let peerAction: (EngineMessage.Id) -> Void
+    let action: (EngineMessage.Id) -> Void
+    let contextAction: (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
 
     init(
         context: AccountContext,
         items: Items?,
         selectionState: StorageUsageScreenComponent.SelectionState?,
-        peerAction: @escaping (EngineMessage.Id) -> Void
+        action: @escaping (EngineMessage.Id) -> Void,
+        contextAction: @escaping (EngineMessage.Id, ContextExtractedContentContainingView, ContextGesture) -> Void
     ) {
         self.context = context
         self.items = items
         self.selectionState = selectionState
-        self.peerAction = peerAction
+        self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: StorageFileListPanelComponent, rhs: StorageFileListPanelComponent) -> Bool {
@@ -681,8 +744,14 @@ final class StorageFileListPanelComponent: Component {
         }
     }
     
+    private final class ScrollViewImpl: UIScrollView {
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
+    }
+    
     class View: UIView, UIScrollViewDelegate {
-        private let scrollView: UIScrollView
+        private let scrollView: ScrollViewImpl
         
         private let measureItem = ComponentView<Empty>()
         private var visibleItems: [EngineMessage.Id: ComponentView<Empty>] = [:]
@@ -694,7 +763,7 @@ final class StorageFileListPanelComponent: Component {
         private var itemLayout: ItemLayout?
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
+            self.scrollView = ScrollViewImpl()
             
             super.init(frame: frame)
             
@@ -724,6 +793,10 @@ final class StorageFileListPanelComponent: Component {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
             }
+        }
+        
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            cancelContextGestures(view: scrollView)
         }
         
         private func updateScrolling(transition: Transition) {
@@ -898,7 +971,8 @@ final class StorageFileListPanelComponent: Component {
                             sideInset: environment.containerInsets.left,
                             selectionState: itemSelectionState,
                             hasNext: index != items.items.count - 1,
-                            action: component.peerAction
+                            action: component.action,
+                            contextAction: component.contextAction
                         )),
                         environment: {},
                         containerSize: CGSize(width: itemLayout.containerWidth, height: itemLayout.itemHeight)
@@ -949,6 +1023,8 @@ final class StorageFileListPanelComponent: Component {
                     selectionState: .none,
                     hasNext: false,
                     action: { _ in
+                    },
+                    contextAction: { _, _, _ in
                     }
                 )),
                 environment: {},

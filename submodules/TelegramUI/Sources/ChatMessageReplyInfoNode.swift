@@ -34,7 +34,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         let constrainedSize: CGSize
         let animationCache: AnimationCache?
         let animationRenderer: MultiAnimationRenderer?
-        
+        let associatedData: ChatMessageItemAssociatedData
+
         init(
             presentationData: ChatPresentationData,
             strings: PresentationStrings,
@@ -44,7 +45,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             parentMessage: Message,
             constrainedSize: CGSize,
             animationCache: AnimationCache?,
-            animationRenderer: MultiAnimationRenderer?
+            animationRenderer: MultiAnimationRenderer?,
+            associatedData: ChatMessageItemAssociatedData
         ) {
             self.presentationData = presentationData
             self.strings = strings
@@ -55,6 +57,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             self.constrainedSize = constrainedSize
             self.animationCache = animationCache
             self.animationRenderer = animationRenderer
+            self.associatedData = associatedData
         }
     }
     
@@ -115,7 +118,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             
             let message_ = arguments.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: arguments.message) : arguments.message
-            
+
             let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
             
             let placeholderColor: UIColor = arguments.message.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
@@ -169,8 +172,23 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let messageText: NSAttributedString
             if isText {
-                let entities = (message_.textEntitiesAttribute?.entities ?? []).filter { entity in
-                    if case .Spoiler = entity.type {
+                var text = arguments.message.text
+                var messageEntities = arguments.message.textEntitiesAttribute?.entities ?? []
+
+                if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty {
+                    for attribute in arguments.message.attributes {
+                        if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
+                            text = attribute.text
+                            messageEntities = attribute.entities
+                            break
+                        }
+                    }
+                }
+
+                let entities = messageEntities.filter { entity in
+                    if case .Strikethrough = entity.type {
+                        return true
+                    } else if case .Spoiler = entity.type {
                         return true
                     } else if case .CustomEmoji = entity.type {
                         return true
@@ -179,9 +197,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(trimToLineCount(message_.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: arguments.message)
+                    messageText = stringWithAppliedEntities(trimToLineCount(text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: arguments.message)
                 } else {
-                    messageText = NSAttributedString(string: textString.string, font: textFont, textColor: textColor)
+                    messageText = NSAttributedString(string: text, font: textFont, textColor: textColor)
                 }
             } else {
                 messageText = NSAttributedString(string: textString.string, font: textFont, textColor: textColor)
@@ -332,7 +350,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     if let current = node.dustNode {
                         dustNode = current
                     } else {
-                        dustNode = InvisibleInkDustNode(textNode: nil)
+                        dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: arguments.context.sharedContext.energyUsageSettings.fullTranslucency)
                         dustNode.isUserInteractionEnabled = false
                         node.dustNode = dustNode
                         node.contentNode.insertSubnode(dustNode, aboveSubnode: textNode.textNode)

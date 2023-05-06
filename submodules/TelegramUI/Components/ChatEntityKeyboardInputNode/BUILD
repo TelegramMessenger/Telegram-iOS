@@ -38,6 +38,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiplexedVideoNode:MultiplexedVideoNode",
         "//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteraction",
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
+        "//submodules/StickerPackPreviewUI",
     ],
     visibility = [
         "//visibility:public",

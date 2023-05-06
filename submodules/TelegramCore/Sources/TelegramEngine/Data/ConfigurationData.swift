@@ -5,45 +5,30 @@ public enum EngineConfiguration {
     public struct Limits: Equatable {
         public static let timeIntervalForever: Int32 = 0x7fffffff
         
-        public var maxPinnedChatCount: Int32
-        public var maxArchivedPinnedChatCount: Int32
         public var maxGroupMemberCount: Int32
         public var maxSupergroupMemberCount: Int32
         public var maxMessageForwardBatchSize: Int32
-        public var maxSavedGifCount: Int32
-        public var maxFavedStickerCount: Int32
         public var maxRecentStickerCount: Int32
         public var maxMessageEditingInterval: Int32
-        public var maxMediaCaptionLength: Int32
         public var canRemoveIncomingMessagesInPrivateChats: Bool
         public var maxMessageRevokeInterval: Int32
         public var maxMessageRevokeIntervalInPrivateChats: Int32
 
         public init(
-            maxPinnedChatCount: Int32,
-            maxArchivedPinnedChatCount: Int32,
             maxGroupMemberCount: Int32,
             maxSupergroupMemberCount: Int32,
             maxMessageForwardBatchSize: Int32,
-            maxSavedGifCount: Int32,
-            maxFavedStickerCount: Int32,
             maxRecentStickerCount: Int32,
             maxMessageEditingInterval: Int32,
-            maxMediaCaptionLength: Int32,
             canRemoveIncomingMessagesInPrivateChats: Bool,
             maxMessageRevokeInterval: Int32,
             maxMessageRevokeIntervalInPrivateChats: Int32
         ) {
-            self.maxPinnedChatCount = maxPinnedChatCount
-            self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
             self.maxGroupMemberCount = maxGroupMemberCount
             self.maxSupergroupMemberCount = maxSupergroupMemberCount
             self.maxMessageForwardBatchSize = maxMessageForwardBatchSize
-            self.maxSavedGifCount = maxSavedGifCount
-            self.maxFavedStickerCount = maxFavedStickerCount
             self.maxRecentStickerCount = maxRecentStickerCount
             self.maxMessageEditingInterval = maxMessageEditingInterval
-            self.maxMediaCaptionLength = maxMediaCaptionLength
             self.canRemoveIncomingMessagesInPrivateChats = canRemoveIncomingMessagesInPrivateChats
             self.maxMessageRevokeInterval = maxMessageRevokeInterval
             self.maxMessageRevokeIntervalInPrivateChats = maxMessageRevokeIntervalInPrivateChats
@@ -52,6 +37,7 @@ public enum EngineConfiguration {
     
     public struct UserLimits: Equatable {
         public let maxPinnedChatCount: Int32
+        public let maxArchivedPinnedChatCount: Int32
         public let maxChannelsCount: Int32
         public let maxPublicLinksCount: Int32
         public let maxSavedGifCount: Int32
@@ -63,6 +49,8 @@ public enum EngineConfiguration {
         public let maxAboutLength: Int32
         public let maxAnimatedEmojisInText: Int32
         public let maxReactionsPerMessage: Int32
+        public let maxSharedFolderInviteLinks: Int32
+        public let maxSharedFolderJoin: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -70,6 +58,7 @@ public enum EngineConfiguration {
 
         public init(
             maxPinnedChatCount: Int32,
+            maxArchivedPinnedChatCount: Int32,
             maxChannelsCount: Int32,
             maxPublicLinksCount: Int32,
             maxSavedGifCount: Int32,
@@ -80,9 +69,12 @@ public enum EngineConfiguration {
             maxUploadFileParts: Int32,
             maxAboutLength: Int32,
             maxAnimatedEmojisInText: Int32,
-            maxReactionsPerMessage: Int32
+            maxReactionsPerMessage: Int32,
+            maxSharedFolderInviteLinks: Int32,
+            maxSharedFolderJoin: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
+            self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
             self.maxChannelsCount = maxChannelsCount
             self.maxPublicLinksCount = maxPublicLinksCount
             self.maxSavedGifCount = maxSavedGifCount
@@ -94,6 +86,8 @@ public enum EngineConfiguration {
             self.maxAboutLength = maxAboutLength
             self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
             self.maxReactionsPerMessage = maxReactionsPerMessage
+            self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
+            self.maxSharedFolderJoin = maxSharedFolderJoin
         }
     }
 }
@@ -103,16 +97,11 @@ public typealias EngineContentSettings = ContentSettings
 public extension EngineConfiguration.Limits {
     init(_ limitsConfiguration: LimitsConfiguration) {
         self.init(
-            maxPinnedChatCount: limitsConfiguration.maxPinnedChatCount,
-            maxArchivedPinnedChatCount: limitsConfiguration.maxArchivedPinnedChatCount,
             maxGroupMemberCount: limitsConfiguration.maxGroupMemberCount,
             maxSupergroupMemberCount: limitsConfiguration.maxSupergroupMemberCount,
             maxMessageForwardBatchSize: limitsConfiguration.maxMessageForwardBatchSize,
-            maxSavedGifCount: limitsConfiguration.maxSavedGifCount,
-            maxFavedStickerCount: limitsConfiguration.maxFavedStickerCount,
             maxRecentStickerCount: limitsConfiguration.maxRecentStickerCount,
             maxMessageEditingInterval: limitsConfiguration.maxMessageEditingInterval,
-            maxMediaCaptionLength: limitsConfiguration.maxMediaCaptionLength,
             canRemoveIncomingMessagesInPrivateChats: limitsConfiguration.canRemoveIncomingMessagesInPrivateChats,
             maxMessageRevokeInterval: limitsConfiguration.maxMessageRevokeInterval,
             maxMessageRevokeIntervalInPrivateChats: limitsConfiguration.maxMessageRevokeIntervalInPrivateChats
@@ -121,16 +110,11 @@ public extension EngineConfiguration.Limits {
     
     func _asLimits() -> LimitsConfiguration {
         return LimitsConfiguration(
-            maxPinnedChatCount: self.maxPinnedChatCount,
-            maxArchivedPinnedChatCount: self.maxArchivedPinnedChatCount,
             maxGroupMemberCount: self.maxGroupMemberCount,
             maxSupergroupMemberCount: self.maxSupergroupMemberCount,
             maxMessageForwardBatchSize: self.maxMessageForwardBatchSize,
-            maxSavedGifCount: self.maxSavedGifCount,
             maxRecentStickerCount: self.maxRecentStickerCount,
-            maxFavedStickerCount: self.maxFavedStickerCount,
             maxMessageEditingInterval: self.maxMessageEditingInterval,
-            maxMediaCaptionLength: self.maxMediaCaptionLength,
             canRemoveIncomingMessagesInPrivateChats: self.canRemoveIncomingMessagesInPrivateChats,
             maxMessageRevokeInterval: self.maxMessageRevokeInterval,
             maxMessageRevokeIntervalInPrivateChats: self.maxMessageRevokeIntervalInPrivateChats
@@ -142,6 +126,7 @@ public extension EngineConfiguration.UserLimits {
     init(_ userLimitsConfiguration: UserLimitsConfiguration) {
         self.init(
             maxPinnedChatCount: userLimitsConfiguration.maxPinnedChatCount,
+            maxArchivedPinnedChatCount: userLimitsConfiguration.maxArchivedPinnedChatCount,
             maxChannelsCount: userLimitsConfiguration.maxChannelsCount,
             maxPublicLinksCount: userLimitsConfiguration.maxPublicLinksCount,
             maxSavedGifCount: userLimitsConfiguration.maxSavedGifCount,
@@ -152,7 +137,9 @@ public extension EngineConfiguration.UserLimits {
             maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts,
             maxAboutLength: userLimitsConfiguration.maxAboutLength,
             maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText,
-            maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage
+            maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage,
+            maxSharedFolderInviteLinks: userLimitsConfiguration.maxSharedFolderInviteLinks,
+            maxSharedFolderJoin: userLimitsConfiguration.maxSharedFolderJoin
         )
     }
 }
@@ -181,6 +168,26 @@ public extension EngineConfiguration.SearchBots {
             imageBotUsername: configuration.imageBotUsername,
             gifBotUsername: configuration.gifBotUsername,
             venueBotUsername: configuration.venueBotUsername
+        )
+    }
+}
+
+public extension EngineConfiguration {
+    struct Links {
+        public var autologinToken: String?
+
+        public init(
+            autologinToken: String?
+        ) {
+            self.autologinToken = autologinToken
+        }
+    }
+}
+
+public extension EngineConfiguration.Links {
+    init(_ configuration: LinksConfiguration) {
+        self.init(
+            autologinToken: configuration.autologinToken
         )
     }
 }
@@ -398,6 +405,27 @@ public extension TelegramEngine.EngineData.Item {
                     return GlobalMessageAutoremoveTimeoutSettings.default.messageAutoremoveTimeout
                 }
                 return settings.messageAutoremoveTimeout
+            }
+        }
+        
+        public struct Links: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineConfiguration.Links
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.linksConfiguration]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.linksConfiguration]?.get(LinksConfiguration.self) else {
+                    return EngineConfiguration.Links(LinksConfiguration.defaultValue)
+                }
+                return EngineConfiguration.Links(value)
             }
         }
     }

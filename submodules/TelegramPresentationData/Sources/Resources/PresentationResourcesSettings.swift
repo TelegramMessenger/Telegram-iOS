@@ -38,6 +38,8 @@ public struct PresentationResourcesSettings {
     
     public static let deleteAccount = renderIcon(name: "Chat/Info/GroupRemovedIcon")
     
+    public static let powerSaving = renderIcon(name: "Settings/Menu/PowerSaving")
+    
     public static let premium = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)

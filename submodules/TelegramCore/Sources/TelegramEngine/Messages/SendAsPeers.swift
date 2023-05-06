@@ -98,12 +98,22 @@ func _internal_cachedPeerSendAsAvailablePeers(account: Account, peerId: PeerId) 
 
 
 func _internal_peerSendAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[SendAsPeer], NoError> {
-    return postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(peerId).flatMap(apiInputPeer)
-    } |> mapToSignal { inputPeer in
-        guard let inputPeer = inputPeer else {
-            return .complete()
+    return postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
+    }
+    |> mapToSignal { peer -> Signal<[SendAsPeer], NoError> in
+        guard let peer = peer else {
+            return .single([])
         }
+        guard let inputPeer = apiInputPeer(peer) else {
+            return .single([])
+        }
+        
+        if let channel = peer as? TelegramChannel, case .group = channel.info {
+        } else {
+            return .single([])
+        }
+        
         return network.request(Api.functions.channels.getSendAs(peer: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.channels.SendAsPeers?, NoError> in

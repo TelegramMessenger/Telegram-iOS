@@ -179,29 +179,11 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            var authorNameCenter: CGFloat?
+            let attributedMeasureText = NSAttributedString(string: item.peerName, font: Font.regular(13.0), textColor: .black)
+            let (authorNameLayout, _) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedMeasureText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
-            let forwardedString = item.strings.Message_ForwardedMessageShort("").string
-            var fromString: String?
-            if let newlineRange = forwardedString.range(of: "\n") {
-                let from = forwardedString[newlineRange.upperBound...]
-                if !from.isEmpty {
-                    fromString = String(from)
-                }
-            }
-            let authorString = item.peerName
-            
-            if let fromString = fromString {
-                var attributedMeasureText = NSAttributedString(string: fromString, font: Font.regular(13.0), textColor: .black)
-                let (fromTextLayout, _) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedMeasureText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-                
-                let fromWidth = fromTextLayout.size.width
-                attributedMeasureText = NSAttributedString(string: authorString, font: Font.regular(13.0), textColor: .black)
-                let (authorNameLayout, _) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedMeasureText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
-                
-                let authorNameWidth = authorNameLayout.size.width
-                authorNameCenter = fromWidth + authorNameWidth / 2.0 + 3.0
-            }
+            let authorNameWidth = authorNameLayout.size.width
+            let authorNameCenter = authorNameWidth / 2.0 + 3.0
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
@@ -264,11 +246,26 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     
                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
 
+                    let displayMode: WallpaperDisplayMode
+                    if abs(params.availableHeight - params.width) < 100.0, params.availableHeight > 700.0 {
+                        displayMode = .halfAspectFill
+                    } else {
+                        if backgroundFrame.width > backgroundFrame.height * 4.0 {
+                            if params.availableHeight < 700.0 {
+                                displayMode = .halfAspectFill
+                            } else {
+                                displayMode = .aspectFill
+                            }
+                        } else {
+                            displayMode = .aspectFill
+                        }
+                    }
+                    
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
                         backgroundNode.update(wallpaper: item.wallpaper)
                         backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
-                        backgroundNode.updateLayout(size: backgroundNode.bounds.size, transition: .immediate)
+                        backgroundNode.updateLayout(size: backgroundNode.bounds.size, displayMode: displayMode, transition: .immediate)
                     }
 
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -285,10 +282,8 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     var sourceRect: CGRect
                     if let messageNode = strongSelf.messageNode as? ChatMessagePreviewItemNode, let forwardInfoNode = messageNode.forwardInfoReferenceNode {
                         sourceRect = forwardInfoNode.convert(forwardInfoNode.bounds, to: strongSelf)
-                        if let authorNameCenter = authorNameCenter {
-                            sourceRect.origin = CGPoint(x: sourceRect.minX + authorNameCenter, y: sourceRect.minY)
-                            sourceRect.size.width = 0.0
-                        }
+                        sourceRect.origin = CGPoint(x: sourceRect.minX + authorNameCenter, y: sourceRect.minY)
+                        sourceRect.size.width = 0.0
                     } else {
                         sourceRect = CGRect(origin: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0), size: CGSize())
                     }

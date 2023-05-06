@@ -22,7 +22,7 @@ final class InstantPageSlideshowItem: InstantPageItem {
     }
     
     func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
-        return InstantPageSlideshowNode(context: context, sourceLocation: sourceLocation, theme: theme, webPage: webPage, medias: self.medias, openMedia: openMedia, longPressMedia: longPressMedia)
+        return InstantPageSlideshowNode(context: context, sourceLocation: sourceLocation, theme: theme, webPage: webPage, medias: self.medias, openMedia: openMedia, longPressMedia: longPressMedia, activatePinchPreview: activatePinchPreview, pinchPreviewFinished: pinchPreviewFinished)
     }
     
     func matchesAnchor(_ anchor: String) -> Bool {

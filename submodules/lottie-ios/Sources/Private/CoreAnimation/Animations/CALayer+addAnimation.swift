@@ -78,12 +78,6 @@ extension CALayer {
       let animation = CABasicAnimation(keyPath: property.caLayerKeypath)
       animation.fromValue = keyframeValue
       animation.toValue = keyframeValue
-      if #available(iOS 15.0, *) {
-        let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
-        if maxFps > 61.0 {
-          animation.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
-        }
-      }
       return animation
     }
 
@@ -141,12 +135,6 @@ extension CALayer {
     let calculationMode = try self.calculationMode(for: keyframes, context: context)
 
     let animation = CAKeyframeAnimation(keyPath: property.caLayerKeypath)
-    if #available(iOS 15.0, *) {
-      let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
-      if maxFps > 61.0 {
-        animation.preferredFrameRateRange = CAFrameRateRange(minimum: maxFps, maximum: maxFps, preferred: maxFps)
-      }
-    }
 
     // Position animations define a `CGPath` curve that should be followed,
     // instead of animating directly between keyframe point values.

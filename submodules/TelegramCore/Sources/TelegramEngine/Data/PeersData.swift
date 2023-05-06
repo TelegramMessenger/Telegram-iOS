@@ -838,6 +838,38 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct TranslationHidden: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Bool
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.flags.contains(.translationHidden)
+                } else if let cachedData = view.cachedPeerData as? CachedGroupData {
+                    return cachedData.flags.contains(.translationHidden)
+                } else if let cachedData = view.cachedPeerData as? CachedChannelData {
+                    return cachedData.flags.contains(.translationHidden)
+                } else {
+                    return false
+                }
+            }
+        }
+        
         public struct LegacyGroupParticipants: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = EnginePeerCachedInfoItem<[EngineLegacyGroupParticipant]>
 

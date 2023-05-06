@@ -166,7 +166,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             backgroundMaskNodeFrame = backgroundMaskNodeFrame.offsetBy(dx: 0.0, dy: (updatedHeight - backgroundMaskNodeFrame.height) * 0.5)
         }
         
-        transition.updateCornerRadius(layer: self.backgroundClippingLayer, cornerRadius: 46.0 / 2.0)
+        transition.updateCornerRadius(layer: self.backgroundClippingLayer, cornerRadius: min(46.0 / 2.0, backgroundFrame.height / 2.0))
         
         let largeCircleFrame: CGRect
         let smallCircleFrame: CGRect

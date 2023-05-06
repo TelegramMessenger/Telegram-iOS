@@ -65,18 +65,30 @@ public struct ContextMenuActionItemIconSource {
     }
 }
 
+public enum ContextMenuActionItemIconPosition {
+    case left
+    case right
+}
+
 public enum ContextMenuActionBadgeColor {
     case accent
     case inactive
 }
 
-public struct ContextMenuActionBadge {
+public struct ContextMenuActionBadge: Equatable {
+    public enum Style {
+        case badge
+        case label
+    }
+    
     public var value: String
     public var color: ContextMenuActionBadgeColor
+    public var style: Style
     
-    public init(value: String, color: ContextMenuActionBadgeColor) {
+    public init(value: String, color: ContextMenuActionBadgeColor, style: Style = .badge) {
         self.value = value
         self.color = color
+        self.style = style
     }
 }
 
@@ -102,6 +114,7 @@ public final class ContextMenuActionItem {
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
+    public let iconPosition: ContextMenuActionItemIconPosition
     public let animationName: String?
     public let textIcon: (PresentationTheme) -> UIImage?
     public let textLinkAction: () -> Void
@@ -117,6 +130,7 @@ public final class ContextMenuActionItem {
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
+        iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
@@ -132,6 +146,7 @@ public final class ContextMenuActionItem {
             badge: badge,
             icon: icon,
             iconSource: iconSource,
+            iconPosition: iconPosition,
             animationName: animationName,
             textIcon: textIcon,
             textLinkAction: textLinkAction,
@@ -153,6 +168,7 @@ public final class ContextMenuActionItem {
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
+        iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
@@ -167,6 +183,7 @@ public final class ContextMenuActionItem {
         self.badge = badge
         self.icon = icon
         self.iconSource = iconSource
+        self.iconPosition = iconPosition
         self.animationName = animationName
         self.textIcon = textIcon
         self.textLinkAction = textLinkAction
@@ -984,15 +1001,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let _ = self.presentationNode {
             self.currentPresentationStateTransition = .animateOut(result: initialResult, completion: completion)
             if let validLayout = self.validLayout {
-                if case .custom = initialResult {
+                if case let .custom(transition) = initialResult {
                     self.delayLayoutUpdate = true
-                    Queue.mainQueue().after(0.05) {
+                    Queue.mainQueue().after(0.1) {
                         self.delayLayoutUpdate = false
                         self.updateLayout(
                             layout: validLayout,
-                            transition: .animated(duration: 0.35, curve: .easeInOut),
+                            transition: transition,
                             previousActionsContainerNode: nil
                         )
+                        self.isAnimatingOut = true
                     }
                 } else {
                     self.updateLayout(
@@ -2191,26 +2209,38 @@ public extension ContextLocationContentSource {
 }
 
 public final class ContextControllerReferenceViewInfo {
+    public enum ActionsPosition {
+        case bottom
+        case top
+    }
     public let referenceView: UIView
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
+    public let actionsPosition: ActionsPosition
     
-    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil, actionsPosition: ActionsPosition = .bottom) {
         self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
         self.customPosition = customPosition
+        self.actionsPosition = actionsPosition
     }
 }
 
 public protocol ContextReferenceContentSource: AnyObject {
+    var keepInPlace: Bool { get }
+    
     var shouldBeDismissed: Signal<Bool, NoError> { get }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo?
 }
 
 public extension ContextReferenceContentSource {
+    var keepInPlace: Bool {
+        return false
+    }
+    
     var shouldBeDismissed: Signal<Bool, NoError> {
         return .single(false)
     }
@@ -2321,6 +2351,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public struct Items {
         public enum Content {
             case list([ContextMenuItem])
+            case twoLists([ContextMenuItem], [ContextMenuItem])
             case custom(ContextControllerItemsContent)
         }
         

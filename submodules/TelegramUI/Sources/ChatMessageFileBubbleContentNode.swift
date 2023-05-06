@@ -102,7 +102,10 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            if case .forwardedMessages = item.associatedData.subject {
+                incoming = false
+            }
             let statusType: ChatMessageDateAndStatusType?
             switch preparePosition {
             case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
@@ -135,7 +138,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 forcedIsEdited: item.isItemEdited,
                 file: selectedFile!,
                 automaticDownload: automaticDownload,
-                incoming: item.message.effectivelyIncoming(item.context.account.peerId),
+                incoming: incoming,
                 isRecentActions: item.associatedData.isRecentActions,
                 forcedResourceStatus: item.associatedData.forcedResourceStatus,
                 dateAndStatusType: statusType,

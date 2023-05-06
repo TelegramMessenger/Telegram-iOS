@@ -23,6 +23,14 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     
+    var hasExpandedAudioTranscription: Bool {
+        if case .expanded = self.audioTranscriptionState {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             var wasVisible = false
@@ -62,7 +70,6 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         self.maskForeground.masksToBounds = true
         self.maskLayer.addSublayer(self.maskForeground)
             
-        self.addSubnode(self.interactiveFileNode)
         self.addSubnode(self.interactiveVideoNode)
                 
         self.interactiveVideoNode.requestUpdateLayout = { [weak self] _ in
@@ -241,7 +248,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             
             let videoFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: videoLayout.contentSize)
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? nil : CGPoint(x: displaySize.width + 4.0, y: -25.0), hidesHeaders: !isExpanded, avatarOffset: !isExpanded && isPlaying ? -100.0 : 0.0)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? nil : CGPoint(x: avatarInset + displaySize.width + 4.0, y: -25.0), hidesHeaders: !isExpanded, avatarOffset: !isExpanded && isPlaying ? -100.0 : 0.0)
             
             let videoFrameWidth = videoFrame.width + 2.0
             
@@ -277,13 +284,8 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     return (finalSize, { [weak self] animation, synchronousLoads, applyInfo in
                         if let strongSelf = self {
-                            let firstTime = strongSelf.item == nil
                             strongSelf.item = item
                             strongSelf.isExpanded = isExpanded
-                            
-                            if firstTime {
-                                strongSelf.interactiveFileNode.isHidden = true
-                            }
                             
                             strongSelf.bubbleBackgroundNode?.layer.mask = strongSelf.maskLayer
                             if let bubbleBackdropNode = strongSelf.bubbleBackdropNode, bubbleBackdropNode.hasImage && strongSelf.backdropMaskForeground.superlayer == nil {
@@ -331,12 +333,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             )
                             animation.animator.updateFrame(layer: strongSelf.backdropMaskForeground, frame: backdropMaskFrame, completion: nil)
                                                         
-                            let videoLayoutData: ChatMessageInstantVideoItemLayoutData
-                            if incoming {
-                                videoLayoutData = .constrained(left: 0.0, right: 0.0) //max(0.0, availableContentWidth - videoFrame.width))
-                            } else {
-                                videoLayoutData = .constrained(left: 0.0, right: 0.0)
-                            }
+                            let videoLayoutData: ChatMessageInstantVideoItemLayoutData = .constrained(left: 0.0, right: 0.0)
                             
                             var videoAnimation = animation
                             var fileAnimation = animation
@@ -388,11 +385,11 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
-//        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
+        self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
     }
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
-//        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
+        self.interactiveFileNode.updateIsExtractedToContextPreview(value)
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {

@@ -285,7 +285,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
         bottomInset = 37.0
         
         self.chatBackgroundNode.frame = chatFrame
-        self.chatBackgroundNode.updateLayout(size: chatFrame.size, transition: transition)
+        self.chatBackgroundNode.updateLayout(size: chatFrame.size, displayMode: .aspectFill, transition: transition)
         self.messagesContainerNode.frame = chatFrame
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))
@@ -429,6 +429,9 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
         
         super.init()
         
+        self.cancelButton.accessibilityTraits = [.button]
+        self.doneButton.accessibilityTraits = [.button]
+        
         self.addSubnode(self.switchItemNode)
         self.addSubnode(self.cornerRadiusItemNode)
         self.addSubnode(self.cancelButton)
@@ -482,6 +485,9 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
         
         self.cancelButton.setTitle(presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
         self.doneButton.setTitle(presentationData.strings.Wallpaper_Set, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
+        
+        self.cancelButton.accessibilityLabel = presentationData.strings.Common_Cancel
+        self.doneButton.accessibilityLabel = presentationData.strings.Wallpaper_Set
     }
     
     func updatePresentationThemeSettings(presentationThemeSettings: PresentationThemeSettings) {

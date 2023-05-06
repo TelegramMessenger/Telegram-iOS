@@ -198,7 +198,6 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.countryCodeField.textField.returnKeyType = .next
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.countryCodeField.textField.keyboardType = .asciiCapableNumberPad
-//            self.countryCodeField.textField.textContentType = .telephoneNumber
         } else {
             self.countryCodeField.textField.keyboardType = .numberPad
         }
@@ -209,7 +208,6 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         self.numberField.textField.font = font
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.numberField.textField.keyboardType = .asciiCapableNumberPad
-//            self.numberField.textField.textContentType = .telephoneNumber
         } else {
             self.numberField.textField.keyboardType = .numberPad
         }

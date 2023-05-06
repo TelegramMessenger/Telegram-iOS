@@ -452,7 +452,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)tcpConnectionReceivedData:(MTTcpConnection *)connection data:(NSData *)data
+- (void)tcpConnectionReceivedData:(MTTcpConnection *)connection networkType:(int32_t)networkType data:(NSData *)data
 {
     MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
@@ -464,7 +464,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [self startActualizationPingResendTimer];
         
         __weak MTTcpTransport *weakSelf = self;
-        [self _processIncomingData:data scheme:connection.scheme transactionId:connection.internalId requestTransactionAfterProcessing:false decodeResult:^(id transactionId, bool success)
+        [self _processIncomingData:data scheme:connection.scheme networkType:networkType transactionId:connection.internalId requestTransactionAfterProcessing:false decodeResult:^(id transactionId, bool success)
         {
             if (success)
             {
@@ -548,6 +548,19 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportUpdatedDataReceiveProgress:progressToken:packetLength:progress:)])
             [delegate transportUpdatedDataReceiveProgress:self progressToken:packetProgressToken packetLength:packetLength progress:progress];
+    }];
+}
+
+- (void)tcpConnectionDownloadActivityUpdated:(MTTcpConnection *)connection {
+    MTTcpTransportContext *transportContext = _transportContext;
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        if (transportContext.connection != connection)
+            return;
+        
+        id<MTTransportDelegate> delegate = self.delegate;
+        if ([delegate respondsToSelector:@selector(transportUpdatedDataReceiveProgress:progressToken:packetLength:progress:)])
+            [delegate transportActivityUpdated:self];
     }];
 }
 
@@ -747,7 +760,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
+- (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector networkType:(int32_t)networkType
 {
     if ([incomingMessage.body isKindOfClass:[MTPongMessage class]])
     {
@@ -800,6 +813,20 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         }
         if (reset) {
             [transportContext.connectionBehaviour requestConnection];
+        }
+    }];
+}
+
+- (void)simulateDisconnection {
+    MTTcpTransportContext *transportContext = _transportContext;
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^ {
+        if (transportContext.connection.scheme != nil) {
+            MTTransportScheme *scheme = transportContext.connection.scheme;
+            __weak MTTcpTransport *weakSelf = self;
+            dispatch_async([MTTcpTransport tcpTransportQueue].nativeQueue, ^{
+                __strong MTTcpTransport *strongSelf = weakSelf;
+                [strongSelf connectionWatchdogTimeout:scheme];
+            });
         }
     }];
 }

@@ -83,6 +83,15 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     
     private let hierarchyTrackingNode: HierarchyTrackingNode
     private var isCurrentlyInHierarchy = true
+    
+    var animationsEnabled: Bool = false {
+        didSet {
+            self.updateAnimations()
+            if !self.animationsEnabled {
+                self.maskCurveView.disableCurves()
+            }
+        }
+    }
 
     override init() {
         self.foregroundView = UIView()
@@ -137,42 +146,11 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         CATransaction.commit()
     }
     
-    private func setupGradientAnimations() {
-        /*if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
-        } else {
-            let previousValue = self.foregroundGradientLayer.startPoint
-            let newValue: CGPoint
-            if self.maskCurveView.presentationAudioLevel > 0.1 {
-                newValue = CGPoint(x: CGFloat.random(in: 1.0 ..< 1.3), y: 0.5)
-            } else {
-                newValue = CGPoint(x: CGFloat.random(in: 0.85 ..< 1.2), y: 0.5)
-            }
-            self.foregroundGradientLayer.startPoint = newValue
-            
-            CATransaction.begin()
-            
-            let animation = CABasicAnimation(keyPath: "endPoint")
-            animation.duration = Double.random(in: 0.8 ..< 1.4)
-            animation.fromValue = previousValue
-            animation.toValue = newValue
-            
-            CATransaction.setCompletionBlock { [weak self] in
-                self?.setupGradientAnimations()
-            }
-            
-            self.foregroundGradientLayer.add(animation, forKey: "movement")
-            CATransaction.commit()
-        }*/
-    }
-    
     func updateAnimations() {
-        if !isCurrentlyInHierarchy {
+        if !self.isCurrentlyInHierarchy || !self.animationsEnabled {
             self.foregroundGradientLayer.removeAllAnimations()
             self.maskCurveView.stopAnimating()
-            return
-        }
-        self.setupGradientAnimations()
-        if isCurrentlyInHierarchy {
+        } else {
             self.maskCurveView.startAnimating()
         }
     }
@@ -182,6 +160,13 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     public enum Content {
         case call(SharedAccountContext, Account, PresentationCall)
         case groupCall(SharedAccountContext, Account, PresentationGroupCall)
+        
+        var sharedContext: SharedAccountContext {
+            switch self {
+            case let .call(sharedContext, _, _), let .groupCall(sharedContext, _, _):
+                return sharedContext
+            }
+        }
     }
     
     private let backgroundNode: CallStatusBarBackgroundNode
@@ -252,6 +237,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     
     public func update(content: Content) {
         self.currentContent = content
+        self.backgroundNode.animationsEnabled = content.sharedContext.energyUsageSettings.fullTranslucency
         if self.isCurrentlyInHierarchy {
             self.update()
         }
@@ -553,6 +539,7 @@ private final class VoiceCurveView: UIView {
     private let smallCurve: CurveView
     private let mediumCurve: CurveView
     private let bigCurve: CurveView
+    private var solidView: UIView?
     
     private let maxLevel: CGFloat
     
@@ -604,11 +591,11 @@ private final class VoiceCurveView: UIView {
         
         super.init(frame: frame)
         
-        addSubview(bigCurve)
-        addSubview(mediumCurve)
-        addSubview(smallCurve)
+        self.addSubview(self.bigCurve)
+        self.addSubview(self.mediumCurve)
+        self.addSubview(self.smallCurve)
         
-        displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
+        self.displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
             
             strongSelf.presentationAudioLevel = strongSelf.presentationAudioLevel * 0.9 + strongSelf.audioLevel * 0.1
@@ -624,28 +611,33 @@ private final class VoiceCurveView: UIView {
     }
     
     public func setColor(_ color: UIColor) {
-        smallCurve.setColor(color.withAlphaComponent(1.0))
-        mediumCurve.setColor(color.withAlphaComponent(0.55))
-        bigCurve.setColor(color.withAlphaComponent(0.35))
+        self.smallCurve.setColor(color.withAlphaComponent(1.0))
+        self.mediumCurve.setColor(color.withAlphaComponent(0.55))
+        self.bigCurve.setColor(color.withAlphaComponent(0.35))
     }
     
     public func updateLevel(_ level: CGFloat) {
-        let normalizedLevel = min(1, max(level / maxLevel, 0))
+        let normalizedLevel = min(1, max(level / self.maxLevel, 0))
         
-        smallCurve.updateSpeedLevel(to: normalizedLevel)
-        mediumCurve.updateSpeedLevel(to: normalizedLevel)
-        bigCurve.updateSpeedLevel(to: normalizedLevel)
+        self.smallCurve.updateSpeedLevel(to: normalizedLevel)
+        self.mediumCurve.updateSpeedLevel(to: normalizedLevel)
+        self.bigCurve.updateSpeedLevel(to: normalizedLevel)
         
-        audioLevel = normalizedLevel
+        self.audioLevel = normalizedLevel
     }
     
     public func startAnimating() {
-        guard !isAnimating else { return }
-        isAnimating = true
+        guard !self.isAnimating else { return }
+        self.isAnimating = true
         
-        updateCurvesState()
+        if let solidView = self.solidView {
+            solidView.removeFromSuperview()
+            self.solidView = nil
+        }
         
-        displayLinkAnimator?.isPaused = false
+        self.updateCurvesState()
+        
+        self.displayLinkAnimator?.isPaused = false
     }
     
     public func stopAnimating() {
@@ -653,36 +645,48 @@ private final class VoiceCurveView: UIView {
     }
     
     public func stopAnimating(duration: Double) {
-        guard isAnimating else { return }
-        isAnimating = false
+        guard self.isAnimating else { return }
+        self.isAnimating = false
         
-        updateCurvesState()
+        self.updateCurvesState()
         
-        displayLinkAnimator?.isPaused = true
+        self.displayLinkAnimator?.isPaused = true
+    }
+    
+    func disableCurves() {
+        self.smallCurve.isHidden = true
+        self.mediumCurve.isHidden = true
+        self.bigCurve.isHidden = true
+        
+        let view = UIView(frame: .zero)
+        view.backgroundColor = .white
+        self.addSubview(view)
+        self.solidView = view
     }
     
     private func updateCurvesState() {
-        if isAnimating {
-            if smallCurve.frame.size != .zero {
-                smallCurve.startAnimating()
-                mediumCurve.startAnimating()
-                bigCurve.startAnimating()
+        if self.isAnimating {
+            if self.smallCurve.frame.size != .zero {
+                self.smallCurve.startAnimating()
+                self.mediumCurve.startAnimating()
+                self.bigCurve.startAnimating()
             }
         } else {
-            smallCurve.stopAnimating()
-            mediumCurve.stopAnimating()
-            bigCurve.stopAnimating()
+            self.smallCurve.stopAnimating()
+            self.mediumCurve.stopAnimating()
+            self.bigCurve.stopAnimating()
         }
     }
     
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        smallCurve.frame = bounds
-        mediumCurve.frame = bounds
-        bigCurve.frame = bounds
+        self.smallCurve.frame = self.bounds
+        self.mediumCurve.frame = self.bounds
+        self.bigCurve.frame = self.bounds
+        self.solidView?.frame = CGRect(origin: .zero, size: CGSize(width: self.bounds.width, height: self.bounds.height - 18.0))
         
-        updateCurvesState()
+        self.updateCurvesState()
     }
 }
 
@@ -720,7 +724,6 @@ final class CurveView: UIView {
         layer.strokeColor = nil
         return layer
     }()
-    
     
     override var frame: CGRect {
         didSet {
@@ -764,11 +767,7 @@ final class CurveView: UIView {
     }
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
-        speedLevel = max(speedLevel, newSpeedLevel)
-        
-//        if abs(lastSpeedLevel - newSpeedLevel) > 0.45 {
-//            animateToNewShape()
-//        }
+        self.speedLevel = max(self.speedLevel, newSpeedLevel)
     }
     
     func startAnimating() {

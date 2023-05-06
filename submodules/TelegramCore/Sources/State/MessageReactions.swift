@@ -322,7 +322,7 @@ private func synchronizeMessageReactions(transaction: Transaction, postbox: Post
 }
 
 public extension EngineMessageReactionListContext.State {
-    init(message: EngineMessage, reaction: MessageReaction.Reaction?) {
+    init(message: EngineMessage, readStats: MessageReadStats?, reaction: MessageReaction.Reaction?) {
         var totalCount = 0
         var hasOutgoingReaction = false
         var items: [EngineMessageReactionListContext.Item] = []
@@ -338,7 +338,7 @@ public extension EngineMessageReactionListContext.State {
             for recentPeer in reactionsAttribute.recentPeers {
                 if let peer = message.peers[recentPeer.peerId] {
                     if reaction == nil || recentPeer.value == reaction {
-                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value))
+                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value, timestamp: recentPeer.timestamp ?? readStats?.readTimestamps[peer.id], timestampIsReaction: recentPeer.timestamp != nil))
                     }
                 }
             }
@@ -359,13 +359,19 @@ public final class EngineMessageReactionListContext {
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let reaction: MessageReaction.Reaction?
+        public let timestamp: Int32?
+        public let timestampIsReaction: Bool
         
         public init(
             peer: EnginePeer,
-            reaction: MessageReaction.Reaction?
+            reaction: MessageReaction.Reaction?,
+            timestamp: Int32?,
+            timestampIsReaction: Bool
         ) {
             self.peer = peer
             self.reaction = reaction
+            self.timestamp = timestamp
+            self.timestampIsReaction = timestampIsReaction
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -373,6 +379,12 @@ public final class EngineMessageReactionListContext {
                 return false
             }
             if lhs.reaction != rhs.reaction {
+                return false
+            }
+            if lhs.timestamp != rhs.timestamp {
+                return false
+            }
+            if lhs.timestampIsReaction != rhs.timestampIsReaction {
                 return false
             }
             return true
@@ -420,14 +432,14 @@ public final class EngineMessageReactionListContext {
         
         var isLoadingMore: Bool = false
         
-        init(queue: Queue, account: Account, message: EngineMessage, reaction: MessageReaction.Reaction?) {
+        init(queue: Queue, account: Account, message: EngineMessage, readStats: MessageReadStats?, reaction: MessageReaction.Reaction?) {
             self.queue = queue
             self.account = account
             self.message = message
             self.reaction = reaction
             
-            let initialState = EngineMessageReactionListContext.State(message: message, reaction: reaction)
-            self.state = InternalState(hasOutgoingReaction: initialState.hasOutgoingReaction, totalCount: initialState.totalCount, items: initialState.items, canLoadMore: true, nextOffset: nil)
+            let initialState = EngineMessageReactionListContext.State(message: message, readStats: readStats, reaction: reaction)
+            self.state = InternalState(hasOutgoingReaction: initialState.hasOutgoingReaction, totalCount: initialState.totalCount, items: initialState.items, canLoadMore: initialState.canLoadMore, nextOffset: nil)
             
             if initialState.canLoadMore {
                 self.loadMore()
@@ -501,9 +513,9 @@ public final class EngineMessageReactionListContext {
                             var items: [EngineMessageReactionListContext.Item] = []
                             for reaction in reactions {
                                 switch reaction {
-                                case let .messagePeerReaction(_, peer, reaction):
+                                case let .messagePeerReaction(_, peer, date, reaction):
                                     if let peer = transaction.getPeer(peer.peerId), let reaction = MessageReaction.Reaction(apiReaction: reaction) {
-                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction))
+                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction, timestamp: date, timestampIsReaction: true))
                                     }
                                 }
                             }
@@ -573,11 +585,11 @@ public final class EngineMessageReactionListContext {
         }
     }
     
-    init(account: Account, message: EngineMessage, reaction: MessageReaction.Reaction?) {
+    init(account: Account, message: EngineMessage, readStats: MessageReadStats?, reaction: MessageReaction.Reaction?) {
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, message: message, reaction: reaction)
+            return Impl(queue: queue, account: account, message: message, readStats: readStats, reaction: reaction)
         })
     }
     

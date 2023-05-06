@@ -35,6 +35,8 @@ swift_library(
         "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/Components/AnimatedStickerComponent:AnimatedStickerComponent",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",

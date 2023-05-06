@@ -628,7 +628,7 @@ public final class RollingText: Component {
                     
                     self.containerView.layer.removeAnimation(forKey: "opacity")
                 }
-                if let snapshotView = self.containerView.snapshotView(afterScreenUpdates: true) {
+                if let snapshotView = self.containerView.snapshotContentTree() {
                     let horizontalOffset = boundingRect.width - snapshotView.frame.width
                     let verticalOffset: CGFloat = 12.0
                     
@@ -759,7 +759,7 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
             let date = context.component.date
             
             let components = date.0.components(separatedBy: " ")
-            let month = components.first ?? ""
+            let month = String(components.prefix(upTo: components.count - 1).joined(separator: " "))
             let year = components.last ?? ""
             
             var monthAnimation: RollingText.AnimationDirection?
@@ -948,6 +948,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private var activityTimer: SwiftSignalKit.Timer?
 
     public var beginScrolling: (() -> UIScrollView?)?
+    public var finishedScrolling: (() -> Void)?
     public var setContentOffset: ((CGPoint) -> Void)?
     public var openCurrentDate: (() -> Void)?
 
@@ -1059,6 +1060,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 strongSelf.updateLineIndicator(transition: transition)
 
                 strongSelf.updateActivityTimer(isScrolling: false)
+                
+                strongSelf.finishedScrolling?()
             },
             moved: { [weak self] relativeOffset in
                 guard let strongSelf = self else {

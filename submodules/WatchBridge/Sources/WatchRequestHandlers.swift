@@ -60,7 +60,7 @@ final class WatchChatListHandler: WatchRequestHandler {
                             users = users.merging(chatUsers, uniquingKeysWith: { (_, last) in last })
                         }
                     }
-                    subscriber.putNext([ TGBridgeChatsArrayKey: chats, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeChatsArrayKey: chats, TGBridgeUsersDictionaryKey: users ] as [String: Any])
                 })
                 
                 return SBlockDisposable {
@@ -108,7 +108,7 @@ final class WatchChatMessagesHandler: WatchRequestHandler {
                             users = users.merging(messageUsers, uniquingKeysWith: { (_, last) in last })
                         }
                     }
-                    subscriber.putNext([ TGBridgeMessagesArrayKey: messages, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeMessagesArrayKey: messages, TGBridgeUsersDictionaryKey: users ] as [String: Any])
                 })
                 
                 return SBlockDisposable {
@@ -295,7 +295,7 @@ final class WatchPeerInfoHandler: WatchRequestHandler {
                 })
                 let disposable = signal.start(next: { view in
                     let (chat, users) = makeBridgeChat(peerViewMainPeer(view), view: view)
-                    subscriber.putNext([ TGBridgeChatKey: chat, TGBridgeUsersDictionaryKey: users ])
+                    subscriber.putNext([ TGBridgeChatKey: chat, TGBridgeUsersDictionaryKey: users ] as [String: Any])
                 })
             
                 return SBlockDisposable {
@@ -520,14 +520,14 @@ final class WatchMediaHandler: WatchRequestHandler {
                                 var imageDimensions: CGSize?
                                 for media in message.media {
                                     if let image = media as? TelegramMediaImage, let resource = largestImageRepresentation(image.representations)?.resource {
-                                        self.disposable.add(messageMediaImageInteractiveFetched(context: context, message: message._asMessage(), image: image, resource: resource, storeToDownloadsPeerType: nil).start())
+                                        self.disposable.add(messageMediaImageInteractiveFetched(context: context, message: message._asMessage(), image: image, resource: resource, storeToDownloadsPeerId: nil).start())
                                         candidateMediaReference = .message(message: MessageReference(message._asMessage()), media: media)
                                         break
                                     } else if let _ = media as? TelegramMediaFile {
                                         candidateMediaReference = .message(message: MessageReference(message._asMessage()), media: media)
                                         break
                                     } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image, let resource = largestImageRepresentation(image.representations)?.resource  {
-                                        self.disposable.add(messageMediaImageInteractiveFetched(context: context, message: message._asMessage(), image: image, resource: resource, storeToDownloadsPeerType: nil).start())
+                                        self.disposable.add(messageMediaImageInteractiveFetched(context: context, message: message._asMessage(), image: image, resource: resource, storeToDownloadsPeerId: nil).start())
                                         candidateMediaReference = .webPage(webPage: WebpageReference(webPage), media: image)
                                         break
                                     }

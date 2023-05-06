@@ -920,7 +920,7 @@ public func privacyAndSecurityController(
                 hapticFeedback.impact()
                 
                 var alreadyPresented = false
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Privacy_VoiceMessages_Tooltip), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Privacy_VoiceMessages_Tooltip, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     if action == .info {
                         if !alreadyPresented {
                             let controller = PremiumIntroScreen(context: context, source: .settings)
@@ -944,28 +944,37 @@ public func privacyAndSecurityController(
             }
         })
     }, openTwoStepVerification: { data in
-        if let data = data {
-            switch data {
-            case .set:
-                break
-            case let .notSet(pendingEmail):
-                if pendingEmail == nil {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro(.init(
-                        title: presentationData.strings.TwoFactorSetup_Intro_Title,
-                        text: presentationData.strings.TwoFactorSetup_Intro_Text,
-                        actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
-                        doneText: presentationData.strings.TwoFactorSetup_Done_Action
-                    )))
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            if let data = data {
+                switch data {
+                case .set:
+                    break
+                case let .notSet(pendingEmail):
+                    if pendingEmail == nil {
+                        var phoneNumber: String?
+                        if case let .user(user) = peer {
+                            phoneNumber = user.phone
+                        }
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .intro(.init(
+                            title: presentationData.strings.TwoFactorSetup_Intro_Title,
+                            text: presentationData.strings.TwoFactorSetup_Intro_Text,
+                            actionText: presentationData.strings.TwoFactorSetup_Intro_Action,
+                            doneText: presentationData.strings.TwoFactorSetup_Done_Action,
+                            phoneNumber: phoneNumber
+                        )))
 
-                    pushControllerImpl?(controller, true)
-                    return
+                        pushControllerImpl?(controller, true)
+                        return
+                    }
                 }
             }
-        }
 
-        let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
-        pushControllerImpl?(controller, true)
+            let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
+            pushControllerImpl?(controller, true)
+        })
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: true), true)
     }, toggleArchiveAndMuteNonContacts: { archiveValue in
@@ -1270,7 +1279,7 @@ public func privacyAndSecurityController(
                        emailChangeCompletion(codeController)
                     }))
                 }
-                codeController.updateData(number: "", email: email, codeType: .email(emailPattern: "", length: data.length, nextPhoneLoginDate: nil, appleSignInAllowed: false, setup: true), nextType: nil, timeout: nil, termsOfService: nil)
+                codeController.updateData(number: "", email: email, codeType: .email(emailPattern: "", length: data.length, resetAvailablePeriod: nil, resetPendingDate: nil, appleSignInAllowed: false, setup: true), nextType: nil, timeout: nil, termsOfService: nil)
                 pushControllerImpl?(codeController, true)
                 dismissCodeControllerImpl = { [weak codeController] in
                     codeController?.dismiss()

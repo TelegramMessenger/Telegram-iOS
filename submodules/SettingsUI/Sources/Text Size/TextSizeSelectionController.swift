@@ -222,7 +222,8 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in
         }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
-        }, present: { _ in }, openForumThread: { _, _ in })
+        }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {
+        })
 
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
 
@@ -564,7 +565,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         }
         
         self.chatBackgroundNode.frame = chatFrame
-        self.chatBackgroundNode.updateLayout(size: chatFrame.size, transition: transition)
+        self.chatBackgroundNode.updateLayout(size: chatFrame.size, displayMode: .aspectFill, transition: transition)
         self.messagesContainerNode.frame = chatFrame
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))
@@ -716,6 +717,9 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         
         super.init()
         
+        self.cancelButton.accessibilityTraits = [.button]
+        self.doneButton.accessibilityTraits = [.button]
+        
         self.addSubnode(self.switchItemNode)
         self.addSubnode(self.fontSizeItemNode)
         self.addSubnode(self.cancelButton)
@@ -769,6 +773,9 @@ private final class TextSelectionToolbarNode: ASDisplayNode {
         
         self.cancelButton.setTitle(presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
         self.doneButton.setTitle(presentationData.strings.Wallpaper_Set, with: Font.regular(17.0), with: presentationData.theme.list.itemPrimaryTextColor, for: [])
+        
+        self.cancelButton.accessibilityLabel = presentationData.strings.Common_Cancel
+        self.doneButton.accessibilityLabel = presentationData.strings.Wallpaper_Set
     }
     
     func updatePresentationThemeSettings(presentationThemeSettings: PresentationThemeSettings) {

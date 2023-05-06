@@ -83,18 +83,22 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     private let iconNode: ASImageNode?
     private let animationNode: SimpleAnimationNode?
     
+    private let enableAnimations: Bool
+    
     private var animationScale: CGFloat = 1.0
     private var animationNodeOffset: CGFloat = 0.0
     private var animationNodeFlip = false
     var alignment: ItemListRevealOptionAlignment?
     var isExpanded: Bool = false
     
-    init(title: String, icon: ItemListRevealOptionIcon, color: UIColor, textColor: UIColor) {
+    init(title: String, icon: ItemListRevealOptionIcon, color: UIColor, textColor: UIColor, enableAnimations: Bool) {
         self.backgroundNode = ASDisplayNode()
         self.highlightNode = ASDisplayNode()
         
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: icon == .none ? titleFontWithoutIcon : titleFontWithIcon, textColor: textColor)
+        
+        self.enableAnimations = enableAnimations
         
         switch icon {
         case let .image(image):
@@ -113,6 +117,9 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
                 }
             }
             self.animationNode = SimpleAnimationNode(animationName: animation, replaceColors: colors, size: CGSize(width: 79.0, height: 79.0), playOnce: true)
+            if !enableAnimations {
+                self.animationNode!.seekToEnd()
+            }
             if flip {
                 self.animationNode!.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
             }
@@ -217,10 +224,12 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
                 transition.updateFrame(node: self.titleNode, frame: titleFrame)
             }
             
-            if (abs(revealFactor) >= 0.4) {
-                animationNode.play()
-            } else if abs(revealFactor) < CGFloat.ulpOfOne && !transition.isAnimated {
-                animationNode.reset()
+            if self.enableAnimations {
+                if (abs(revealFactor) >= 0.4) {
+                    animationNode.play()
+                } else if abs(revealFactor) < CGFloat.ulpOfOne && !transition.isAnimated {
+                    animationNode.reset()
+                }
             }
         } else if let iconNode = self.iconNode, let imageSize = iconNode.image?.size {
             let iconOffset: CGFloat = -9.0
@@ -303,7 +312,7 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
         self.view.addGestureRecognizer(gestureRecognizer)
     }
     
-    public func setOptions(_ options: [ItemListRevealOption], isLeft: Bool) {
+    public func setOptions(_ options: [ItemListRevealOption], isLeft: Bool, enableAnimations: Bool) {
         if self.options != options || self.isLeft != isLeft {
             self.options = options
             self.isLeft = isLeft
@@ -311,7 +320,7 @@ public final class ItemListRevealOptionsNode: ASDisplayNode {
                 node.removeFromSupernode()
             }
             self.optionNodes = options.map { option in
-                return ItemListRevealOptionNode(title: option.title, icon: option.icon, color: option.color, textColor: option.textColor)
+                return ItemListRevealOptionNode(title: option.title, icon: option.icon, color: option.color, textColor: option.textColor, enableAnimations: enableAnimations)
             }
             if isLeft {
                 for node in self.optionNodes.reversed() {

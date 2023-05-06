@@ -203,6 +203,8 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
     private var placeholderNode: StickerShimmerEffectNode
     var snapshotView: UIView?
     
+    private let activateAreaNode: AccessibilityAreaNode
+    
     var item: ThemeCarouselThemeIconItem?
     
     override var visibility: ListViewItemNodeVisibility {
@@ -230,6 +232,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
         self.imageNode.isLayerBacked = true
         self.imageNode.cornerRadius = 8.0
         self.imageNode.clipsToBounds = true
+        self.imageNode.contentAnimations = [.subsequentUpdates]
         
         self.overlayNode = ASImageNode()
         self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 84.0, height: 110.0))
@@ -246,6 +249,8 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
         self.emojiImageNode = TransformImageNode()
         
         self.placeholderNode = StickerShimmerEffectNode()
+        
+        self.activateAreaNode = AccessibilityAreaNode()
 
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
@@ -272,6 +277,8 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
             }
             firstTime = false
         }
+        
+        self.addSubnode(self.activateAreaNode)
     }
 
     deinit {
@@ -434,7 +441,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
                         strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
                         
                         let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
-                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, imageSize: thumbnailDimensions.cgSize)
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: thumbnailDimensions.cgSize)
                         strongSelf.placeholderNode.frame = emojiFrame
                     }
                     
@@ -442,6 +449,16 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
                         animatedStickerNode.frame = emojiFrame
                         animatedStickerNode.updateLayout(size: emojiFrame.size)
                     }
+                    
+                    let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.activateAreaNode.accessibilityLabel = item.themeReference.emoticon.flatMap { presentationData.strings.Appearance_VoiceOver_Theme($0).string }
+                    if item.selected {
+                        strongSelf.activateAreaNode.accessibilityTraits = [.button, .selected]
+                    } else {
+                        strongSelf.activateAreaNode.accessibilityTraits = [.button]
+                    }
+                    
+                    strongSelf.activateAreaNode.frame = CGRect(origin: .zero, size: itemLayout.size)
                 }
             })
         }
@@ -695,11 +712,10 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
 
-                    strongSelf.listNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-
+                    
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.containerNode.insertSubnode(strongSelf.backgroundNode, at: 0)
                     }
@@ -812,10 +828,11 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
             self.snapshotView = snapshotView
         }
         
-        self.listNode.forEachVisibleItemNode { node in
+        self.listNode.enumerateItemNodes { node in
             if let node = node as? ThemeCarouselThemeItemIconNode {
                 node.prepareCrossfadeTransition()
             }
+            return true
         }
     }
     
@@ -823,22 +840,23 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
         guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
             return
         }
-        
+
         var views: [UIView] = []
         if let snapshotView = self.snapshotView {
             views.append(snapshotView)
             self.snapshotView = nil
         }
-        
-        self.listNode.forEachVisibleItemNode { node in
+
+        self.listNode.enumerateItemNodes { node in
             if let node = node as? ThemeCarouselThemeItemIconNode {
                 if let snapshotView = node.snapshotView {
                     views.append(snapshotView)
                     node.snapshotView = nil
                 }
             }
+            return true
         }
-        
+
         UIView.animate(withDuration: 0.3, animations: {
             for view in views {
                 view.alpha = 0.0

@@ -15,6 +15,8 @@ private class AdMessagesHistoryContextImpl {
             case target
             case messageId
             case startParam
+            case sponsorInfo
+            case additionalInfo
         }
         
         enum MessageType: Int32, Codable {
@@ -73,6 +75,8 @@ private class AdMessagesHistoryContextImpl {
         public let target: Target
         public let messageId: MessageId?
         public let startParam: String?
+        public let sponsorInfo: String?
+        public let additionalInfo: String?
 
         public init(
             opaqueId: Data,
@@ -83,7 +87,9 @@ private class AdMessagesHistoryContextImpl {
             media: [Media],
             target: Target,
             messageId: MessageId?,
-            startParam: String?
+            startParam: String?,
+            sponsorInfo: String?,
+            additionalInfo: String?
         ) {
             self.opaqueId = opaqueId
             self.messageType = messageType
@@ -94,6 +100,8 @@ private class AdMessagesHistoryContextImpl {
             self.target = target
             self.messageId = messageId
             self.startParam = startParam
+            self.sponsorInfo = sponsorInfo
+            self.additionalInfo = additionalInfo
         }
 
         public init(from decoder: Decoder) throws {
@@ -120,6 +128,9 @@ private class AdMessagesHistoryContextImpl {
             self.target = try container.decode(Target.self, forKey: .target)
             self.messageId = try container.decodeIfPresent(MessageId.self, forKey: .messageId)
             self.startParam = try container.decodeIfPresent(String.self, forKey: .startParam)
+            
+            self.sponsorInfo = try container.decodeIfPresent(String.self, forKey: .sponsorInfo)
+            self.additionalInfo = try container.decodeIfPresent(String.self, forKey: .additionalInfo)
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -141,6 +152,9 @@ private class AdMessagesHistoryContextImpl {
             try container.encode(self.target, forKey: .target)
             try container.encodeIfPresent(self.messageId, forKey: .messageId)
             try container.encodeIfPresent(self.startParam, forKey: .startParam)
+            
+            try container.encodeIfPresent(self.sponsorInfo, forKey: .sponsorInfo)
+            try container.encodeIfPresent(self.additionalInfo, forKey: .additionalInfo)
         }
 
         public static func ==(lhs: CachedMessage, rhs: CachedMessage) -> Bool {
@@ -173,6 +187,12 @@ private class AdMessagesHistoryContextImpl {
             if lhs.startParam != rhs.startParam {
                 return false
             }
+            if lhs.sponsorInfo != rhs.sponsorInfo {
+                return false
+            }
+            if lhs.additionalInfo != rhs.additionalInfo {
+                return false
+            }
             return true
         }
 
@@ -193,7 +213,7 @@ private class AdMessagesHistoryContextImpl {
             case .recommended:
                 mappedMessageType = .recommended
             }
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -234,10 +254,13 @@ private class AdMessagesHistoryContextImpl {
             }
             
             messagePeers[author.id] = author
+            
+            let messageHash = (self.text.hashValue &+ 31 &* peerId.hashValue) &* 31 &+ author.id.hashValue
+            let messageStableVersion = UInt32(bitPattern: Int32(truncatingIfNeeded: messageHash))
 
             return Message(
                 stableId: 0,
-                stableVersion: 0,
+                stableVersion: messageStableVersion,
                 id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
                 globallyUniqueId: nil,
                 groupingKey: nil,
@@ -447,7 +470,7 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, message, entities):
+                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, message, entities, sponsorInfo, additionalInfo):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
@@ -455,9 +478,6 @@ private class AdMessagesHistoryContextImpl {
                                 
                                 let isRecommended = (flags & (1 << 5)) != 0
                                 let displayAvatar = (flags & (1 << 6)) != 0
-                                
-                                let _ = chatInvite
-                                let _ = chatInviteHash
                                 
                                 var target: CachedMessage.Target?
                                 if let fromId = fromId {
@@ -509,7 +529,9 @@ private class AdMessagesHistoryContextImpl {
                                         media: [],
                                         target: target,
                                         messageId: messageId,
-                                        startParam: startParam
+                                        startParam: startParam,
+                                        sponsorInfo: sponsorInfo,
+                                        additionalInfo: additionalInfo
                                     ))
                                 }
                             }

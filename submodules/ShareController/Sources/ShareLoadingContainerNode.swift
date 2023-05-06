@@ -27,7 +27,7 @@ protocol ShareLoadingContainer: ASDisplayNode {
 public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContainerNode, ShareLoadingContainer {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     private let activityIndicator: ActivityIndicator
     private let statusNode: RadialStatusNode
     private let doneStatusNode: RadialStatusNode
@@ -78,6 +78,10 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
         self.contentOffsetUpdated = f
     }
     
+    public func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+    }
+    
     public func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let nodeHeight: CGFloat = 125.0
         
@@ -98,7 +102,7 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
 public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareContentContainerNode, ShareLoadingContainer {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     private let strings: PresentationStrings
     
     private let animationNode: AnimatedStickerNode
@@ -254,7 +258,7 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
             
             let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: 12345), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: size, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
             
-            let videoContent = NativeVideoContent(id: .message(1, MediaId(namespace: 0, id: 1)), userLocation: .other, fileReference: .standalone(media: dummyFile), streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black)
+            let videoContent = NativeVideoContent(id: .message(1, MediaId(namespace: 0, id: 1)), userLocation: .other, fileReference: .standalone(media: dummyFile), streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black, storeAfterDownload: nil)
             
             let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: sharedContext.mediaManager.audioSession, manager: sharedContext.mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
             videoNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0))
@@ -269,6 +273,10 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
     
     deinit {
         self.animationStatusDisposable.dispose()
+    }
+    
+    public func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
     }
     
     public func activate() {

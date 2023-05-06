@@ -174,7 +174,7 @@ private final class PrefetchManagerInnerImpl {
                         
                         if case .full = automaticDownload {
                             if let image = media as? TelegramMediaImage {
-                                context.fetchDisposable.set(messageMediaImageInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, author: nil, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), image: image, resource: resource, userInitiated: false, priority: priority, storeToDownloadsPeerType: nil).start())
+                                context.fetchDisposable.set(messageMediaImageInteractiveFetched(fetchManager: self.fetchManager, messageId: mediaItem.media.index.id, messageReference: MessageReference(peer: mediaItem.media.peer, author: nil, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), image: image, resource: resource, userInitiated: false, priority: priority, storeToDownloadsPeerId: nil).start())
                             } else if let _ = media as? TelegramMediaWebFile {
                                 //strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
                             } else if let file = media as? TelegramMediaFile {
@@ -250,9 +250,11 @@ private final class PrefetchManagerInnerImpl {
         self.preloadGreetingStickerDisposable.set((self.preloadedGreetingStickerPromise.get()
         |> mapToSignal { sticker -> Signal<Void, NoError> in
             if let sticker = sticker {
-                let _ = freeMediaFileInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: sticker)).start()
-                return chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: sticker.resource, fitzModifier: nil, isVideo: sticker.isVideoSticker, width: 384, height: 384, synchronousLoad: false)
-                |> mapToSignal { _ -> Signal<Void, NoError> in
+                return freeMediaFileInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: sticker))
+                |> map { _ -> Void in
+                    return Void()
+                }
+                |> `catch` { _ -> Signal<Void, NoError> in
                     return .complete()
                 }
             } else {

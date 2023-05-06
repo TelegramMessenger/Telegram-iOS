@@ -606,6 +606,91 @@ struct ctr_state {
 
 @end
 
+@interface MTGcdAsyncSocketTcpConnectionInterface: NSObject<MTTcpConnectionInterface, GCDAsyncSocketDelegate> {
+    GCDAsyncSocket *_socket;
+    __weak id<MTTcpConnectionInterfaceDelegate> _delegate;
+}
+
+@end
+
+@implementation MTGcdAsyncSocketTcpConnectionInterface
+
+- (instancetype)initWithDelegate:(id<MTTcpConnectionInterfaceDelegate>)delegate delegateQueue:(dispatch_queue_t)delegateQueue {
+    self = [super init];
+    if (self != nil) {
+        _delegate = delegate;
+        _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:delegateQueue];
+    }
+    return self;
+}
+
+- (void)setGetLogPrefix:(NSString *(^)())getLogPrefix {
+    _socket.getLogPrefix = getLogPrefix;
+}
+
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
+    _socket.usageCalculationInfo = usageCalculationInfo;
+}
+
+- (bool)connectToHost:(NSString *)inHost
+               onPort:(uint16_t)port
+         viaInterface:(NSString *)inInterface
+          withTimeout:(NSTimeInterval)timeout
+                error:(NSError **)errPtr {
+    return [_socket connectToHost:inHost onPort:port viaInterface:inInterface withTimeout:timeout error:errPtr];
+}
+
+- (void)writeData:(NSData *)data {
+    [_socket writeData:data withTimeout:-1.0 tag:0];
+}
+
+- (void)readDataToLength:(NSUInteger)length withTimeout:(NSTimeInterval)timeout tag:(long)tag {
+    [_socket readDataToLength:length withTimeout:timeout tag:tag];
+}
+
+- (void)disconnect {
+    [_socket disconnect];
+}
+
+- (void)resetDelegate {
+    _socket.delegate = nil;
+    
+}
+
+- (void)socket:(GCDAsyncSocket *)socket didReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)tag {
+    id<MTTcpConnectionInterfaceDelegate> delegate = _delegate;
+    if (delegate) {
+        [delegate connectionInterfaceDidReadPartialDataOfLength:partialLength tag:tag];
+    }
+}
+
+- (void)socket:(GCDAsyncSocket *)socket didReadData:(NSData *)rawData withTag:(long)tag networkType:(int32_t)networkType {
+    id<MTTcpConnectionInterfaceDelegate> delegate = _delegate;
+    if (delegate) {
+        [delegate connectionInterfaceDidReadData:rawData withTag:tag networkType:networkType];
+    }
+}
+
+- (void)socket:(GCDAsyncSocket *)socket didConnectToHost:(NSString *)host port:(uint16_t)port {
+    id<MTTcpConnectionInterfaceDelegate> delegate = _delegate;
+    if (delegate) {
+        [delegate connectionInterfaceDidConnect];
+    }
+}
+
+- (void)socketDidDisconnect:(GCDAsyncSocket *)socket withError:(NSError *)error {
+    id<MTTcpConnectionInterfaceDelegate> delegate = _delegate;
+    if (delegate) {
+        [delegate connectionInterfaceDidDisconnectWithError:error];
+    }
+}
+
+- (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutReadWithTag:(long)tag elapsed:(NSTimeInterval)elapsed bytesDone:(NSUInteger)length {
+    return -1.0;
+}
+
+@end
+
 @interface MTTcpReceiveData : NSObject
 
 @property (nonatomic, readonly) int tag;
@@ -626,12 +711,13 @@ struct ctr_state {
 
 @end
 
-@interface MTTcpConnection () <GCDAsyncSocketDelegate>
+@interface MTTcpConnection () <MTTcpConnectionInterfaceDelegate>
 {
     id<EncryptionProvider> _encryptionProvider;
     
-    GCDAsyncSocket *_socket;
+    id<MTTcpConnectionInterface> _socket;
     bool _closed;
+    int32_t _lastNetworkType;
     
     bool _useIntermediateFormat;
     
@@ -679,6 +765,8 @@ struct ctr_state {
 @property (nonatomic) int64_t packetHeadDecodeToken;
 @property (nonatomic, strong) id packetProgressToken;
 
+@property (nonatomic, copy) id<MTTcpConnectionInterface> _Nonnull (^ _Nullable makeTcpConnectionInterface)(id<MTTcpConnectionInterfaceDelegate> _Nonnull delegate, dispatch_queue_t _Nonnull delegateQueue);
+
 @end
 
 @implementation MTTcpConnection
@@ -713,6 +801,8 @@ struct ctr_state {
         
         _interface = interface;
         _usageCalculationInfo = usageCalculationInfo;
+        
+        _makeTcpConnectionInterface = context.makeTcpConnectionInterface;
         
         if (context.apiEnvironment.datacenterAddressOverrides[@(datacenterId)] != nil) {
             _firstPacketControlByte = [context.apiEnvironment tcpPayloadPrefix];
@@ -786,7 +876,7 @@ struct ctr_state {
 - (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo {
     [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
         _usageCalculationInfo = usageCalculationInfo;
-        _socket.usageCalculationInfo = usageCalculationInfo;
+        [_socket setUsageCalculationInfo:usageCalculationInfo];
     }];
 }
 
@@ -805,9 +895,15 @@ struct ctr_state {
     {
         if (_socket == nil)
         {
-            _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
-            _socket.getLogPrefix = _getLogPrefix;
-            _socket.usageCalculationInfo = _usageCalculationInfo;
+            if (_makeTcpConnectionInterface) {
+                _socket = _makeTcpConnectionInterface(self, [[MTTcpConnection tcpQueue] nativeQueue]);
+            }
+            if (_socket == nil) {
+                _socket = [[MTGcdAsyncSocketTcpConnectionInterface alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
+            }
+            
+            [_socket setGetLogPrefix:_getLogPrefix];
+            [_socket setUsageCalculationInfo:_usageCalculationInfo];
             
             NSString *addressIp = _scheme.address.ip;
             MTSignal *resolveSignal = [MTSignal single:[[MTTcpConnectionData alloc] initWithIp:addressIp port:_scheme.address.port isSocks:false]];
@@ -990,7 +1086,7 @@ struct ctr_state {
                             _helloRandom = [[NSData alloc] initWithBytes:cHMAC length:32];
                             memcpy(((uint8_t *)helloData.mutableBytes) + 11, cHMAC, 32);
                             
-                            [strongSelf->_socket writeData:helloData withTimeout:-1 tag:0];
+                            [strongSelf->_socket writeData:helloData];
                             [strongSelf->_socket readDataToLength:5 withTimeout:-1 tag:MTTcpSocksReceiveHelloResponse];
                         } else {
                             strongSelf->_readyToSendData = true;
@@ -1011,7 +1107,7 @@ struct ctr_state {
                             req.NumberOfMethods += 1;
                             req.Methods[1] = 0x02;
                         }
-                        [strongSelf->_socket writeData:[NSData dataWithBytes:&req length:2 + req.NumberOfMethods] withTimeout:-1 tag:0];
+                        [strongSelf->_socket writeData:[NSData dataWithBytes:&req length:2 + req.NumberOfMethods]];
                         [strongSelf->_socket readDataToLength:sizeof(struct socks5_ident_resp) withTimeout:-1 tag:MTTcpSocksLogin];
                     }
                 }];
@@ -1038,7 +1134,7 @@ struct ctr_state {
             _closed = true;
             
             [_socket disconnect];
-            _socket.delegate = nil;
+            [_socket resetDelegate];
             _socket = nil;
             
             if (_connectionClosed)
@@ -1232,9 +1328,9 @@ struct ctr_state {
                             
                             offset += partLength;
                         }
-                        [_socket writeData:partitionedCompleteData withTimeout:-1 tag:0];
+                        [_socket writeData:partitionedCompleteData];
                     } else {
-                        [_socket writeData:completeData withTimeout:-1 tag:0];
+                        [_socket writeData:completeData];
                     }
                 }
                 
@@ -1294,7 +1390,7 @@ struct ctr_state {
     [self closeAndNotifyWithError:true];
 }
 
-- (void)socket:(GCDAsyncSocket *)__unused socket didReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)__unused tag
+- (void)connectionInterfaceDidReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)__unused tag
 {
     if (_closed)
         return;
@@ -1313,6 +1409,9 @@ struct ctr_state {
             [delegate tcpConnectionProgressUpdated:self packetProgressToken:_packetProgressToken packetLength:_packetRestLength progress:currentApproximateProgress / 100.0f];
         }
     }
+    
+    id<MTTcpConnectionDelegate> delegate = _delegate;
+    [delegate tcpConnectionDownloadActivityUpdated:self];
 }
 
 - (void)requestSocksConnection {
@@ -1357,14 +1456,17 @@ struct ctr_state {
     unsigned short port = htons(req.DestPort);
     [reqData appendBytes:&port length:2];
     
-    [_socket writeData:reqData withTimeout:-1 tag:0];
+    [_socket writeData:reqData];
     [_socket readDataToLength:4 withTimeout:-1 tag:MTTcpSocksRequest];
 }
 
-- (void)socket:(GCDAsyncSocket *)__unused socket didReadData:(NSData *)rawData withTag:(long)tag
+- (void)connectionInterfaceDidReadData:(NSData *)rawData withTag:(long)tag networkType:(int32_t)networkType
 {
     if (_closed)
         return;
+    
+    id<MTTcpConnectionDelegate> delegate = _delegate;
+    [delegate tcpConnectionDownloadActivityUpdated:self];
     
     if (tag == MTTcpSocksLogin) {
         if (rawData.length != sizeof(struct socks5_ident_resp)) {
@@ -1410,7 +1512,7 @@ struct ctr_state {
             [reqData appendBytes:&passwordLength length:1];
             [reqData appendData:passwordData];
             
-            [_socket writeData:reqData withTimeout:-1 tag:0];
+            [_socket writeData:reqData];
             [_socket readDataToLength:2 withTimeout:-1 tag:MTTcpSocksReceiveAuthResponse];
         } else {
             [self requestSocksConnection];
@@ -1653,12 +1755,12 @@ struct ctr_state {
         [_socket readDataToLength:(int)nextLength withTimeout:-1 tag:MTTcpSocksReceiveComplexPacketPart];
         return;
     } else if (tag == MTTcpSocksReceiveComplexPacketPart) {
-        [self addReadData:rawData];
+        [self addReadData:rawData networkType:networkType];
         
         [_socket readDataToLength:5 withTimeout:-1 tag:MTTcpSocksReceiveComplexLength];
         return;
     } else {
-        [self addReadData:rawData];
+        [self addReadData:rawData networkType:networkType];
     }
 }
 
@@ -1674,15 +1776,15 @@ struct ctr_state {
         [_receivedDataBuffer replaceBytesInRange:NSMakeRange(0, _pendingReceiveData.length) withBytes:nil length:0];
         int tag = _pendingReceiveData.tag;
         _pendingReceiveData = nil;
-        [self processReceivedData:rawData tag:tag];
+        [self processReceivedData:rawData tag:tag networkType:_lastNetworkType];
     }
 }
 
-- (void)addReadData:(NSData *)data {
+- (void)addReadData:(NSData *)data networkType:(int32_t)networkType {
     if (_pendingReceiveData != nil && _pendingReceiveData.length == data.length) {
         int tag = _pendingReceiveData.tag;
         _pendingReceiveData = nil;
-        [self processReceivedData:data tag:tag];
+        [self processReceivedData:data tag:tag networkType:networkType];
     } else {
         [_receivedDataBuffer appendData:data];
         if (_pendingReceiveData != nil) {
@@ -1691,13 +1793,15 @@ struct ctr_state {
                 [_receivedDataBuffer replaceBytesInRange:NSMakeRange(0, _pendingReceiveData.length) withBytes:nil length:0];
                 int tag = _pendingReceiveData.tag;
                 _pendingReceiveData = nil;
-                [self processReceivedData:rawData tag:tag];
+                [self processReceivedData:rawData tag:tag networkType:networkType];
             }
         }
     }
 }
 
-- (void)processReceivedData:(NSData *)rawData tag:(int)tag {
+- (void)processReceivedData:(NSData *)rawData tag:(int)tag networkType:(int32_t)networkType {
+    _lastNetworkType = networkType;
+    
     NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
     [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
     
@@ -1867,8 +1971,8 @@ struct ctr_state {
             if (_connectionReceivedData)
                 _connectionReceivedData(packetData);
             id<MTTcpConnectionDelegate> delegate = _delegate;
-            if ([delegate respondsToSelector:@selector(tcpConnectionReceivedData:data:)])
-                [delegate tcpConnectionReceivedData:self data:packetData];
+            if ([delegate respondsToSelector:@selector(tcpConnectionReceivedData:networkType:data:)])
+                [delegate tcpConnectionReceivedData:self networkType:networkType data:packetData];
         }
         
         if (_useIntermediateFormat) {
@@ -1899,7 +2003,7 @@ struct ctr_state {
     }
 }
              
-- (void)socket:(GCDAsyncSocket *)__unused socket didConnectToHost:(NSString *)__unused host port:(uint16_t)__unused port
+- (void)connectionInterfaceDidConnect
 {
     if (_socksIp != nil) {
         
@@ -1912,7 +2016,7 @@ struct ctr_state {
     }
 }
 
-- (void)socketDidDisconnect:(GCDAsyncSocket *)__unused socket withError:(NSError *)error
+- (void)connectionInterfaceDidDisconnectWithError:(NSError *)error
 {
     if (error != nil) {
         if (MTLogEnabled()) {

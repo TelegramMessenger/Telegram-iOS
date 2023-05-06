@@ -35,8 +35,13 @@ enum ThemeAccentColorControllerMode {
 }
 
 final class ThemeAccentColorController: ViewController {
+    enum ResultMode {
+        case `default`
+        case peer(EnginePeer)
+    }
     private let context: AccountContext
     private let mode: ThemeAccentColorControllerMode
+    private let resultMode: ResultMode
     private let section: ThemeColorSection
     private let initialBackgroundColor: UIColor?
     private var presentationData: PresentationData
@@ -57,9 +62,10 @@ final class ThemeAccentColorController: ViewController {
     
     var completion: (() -> Void)?
     
-    init(context: AccountContext, mode: ThemeAccentColorControllerMode) {
+    init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ResultMode = .default) {
         self.context = context
         self.mode = mode
+        self.resultMode = resultMode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let section: ThemeColorSection = .background
@@ -110,10 +116,11 @@ final class ThemeAccentColorController: ViewController {
         
         if case .background = mode {
             self.title = self.presentationData.strings.Wallpaper_Title
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         } else {
             self.navigationItem.titleView = self.segmentedTitleView
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         }
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -122,6 +129,10 @@ final class ThemeAccentColorController: ViewController {
     
     deinit {
         self.applyDisposable.dispose()
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -143,7 +154,7 @@ final class ThemeAccentColorController: ViewController {
             initialWallpaper = self.presentationData.chatWallpaper
         }
         
-        self.displayNode = ThemeAccentColorControllerNode(context: self.context, mode: self.mode, theme: theme, wallpaper: initialWallpaper, dismiss: { [weak self] in
+        self.displayNode = ThemeAccentColorControllerNode(context: self.context, mode: self.mode, resultMode: self.resultMode, theme: theme, wallpaper: initialWallpaper, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
@@ -161,6 +172,12 @@ final class ThemeAccentColorController: ViewController {
                     } else {
                         coloredWallpaper = .color(state.backgroundColors[0].rgb)
                     }
+                }
+                
+                if case let .peer(peer) = strongSelf.resultMode {
+                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: coloredWallpaper).start()
+                    strongSelf.completion?()
+                    return
                 }
                 
                 let prepareWallpaper: Signal<CreateThemeResult, CreateThemeError>

@@ -24,7 +24,7 @@ private enum UploadedStickerDataContent {
 }
 
 private func uploadedSticker(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedStickerData, NoError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .file), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .stickers, userContentType: .sticker), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> map { result -> UploadedStickerData in
         return UploadedStickerData(resource: resource, content: .result(result))
     }
@@ -81,12 +81,14 @@ public struct ImportSticker {
     let emojis: [String]
     public let dimensions: PixelDimensions
     public let mimeType: String
+    public let keywords: String
     
-    public init(resource: MediaResource, emojis: [String], dimensions: PixelDimensions, mimeType: String) {
+    public init(resource: MediaResource, emojis: [String], dimensions: PixelDimensions, mimeType: String, keywords: String) {
         self.resource = resource
         self.emojis = emojis
         self.dimensions = dimensions
         self.mimeType = mimeType
+        self.keywords = keywords
     }
 }
 
@@ -96,9 +98,21 @@ public enum CreateStickerSetStatus {
 }
 
 public enum CreateStickerSetType {
-    case image
-    case animation
-    case video
+    public enum ContentType {
+        case image
+        case animation
+        case video
+    }
+    
+    case stickers(content: ContentType)
+    case emoji(content: ContentType, textColored: Bool)
+    
+    var contentType: ContentType {
+        switch self {
+        case let .stickers(content), let .emoji(content, _):
+            return content
+        }
+    }
 }
 
 func _internal_createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, type: CreateStickerSetType, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
@@ -133,7 +147,7 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
             }
             if resources.count == stickers.count {
                 var flags: Int32 = 0
-                switch type {
+                switch type.contentType {
                     case .animation:
                         flags |= (1 << 1)
                     case .video:
@@ -141,12 +155,24 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                     default:
                         break
                 }
+                if case let .emoji(_, textColored) = type {
+                    flags |= (1 << 5)
+                    if textColored {
+                        flags |= (1 << 6)
+                    }
+                }
                 var inputStickers: [Api.InputStickerSetItem] = []
                 let stickerDocuments = thumbnail != nil ? resources.dropLast() : resources
                 for i in 0 ..< stickerDocuments.count {
                     let sticker = stickers[i]
                     let resource = resources[i]
-                    inputStickers.append(.inputStickerSetItem(flags: 0, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil))
+                    
+                    var flags: Int32 = 0
+                    if sticker.keywords.count > 0 {
+                        flags |= (1 << 1)
+                    }
+                    
+                    inputStickers.append(.inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil, keywords: sticker.keywords))
                 }
                 var thumbnailDocument: Api.InputDocument?
                 if thumbnail != nil, let resource = resources.last {

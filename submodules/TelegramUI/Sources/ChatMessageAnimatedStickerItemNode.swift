@@ -59,7 +59,8 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
 
 class ChatMessageShareButton: HighlightableButtonNode {
     private var backgroundContent: WallpaperBubbleBackgroundNode?
-    private let backgroundNode: NavigationBackgroundNode
+    //private let backgroundNode: NavigationBackgroundNode
+    private var backgroundBlurView: PortalView?
     
     private let iconNode: ASImageNode
     private var iconOffset = CGPoint()
@@ -72,14 +73,14 @@ class ChatMessageShareButton: HighlightableButtonNode {
     private var absolutePosition: (CGRect, CGSize)?
     
     init() {
-        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        //self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.iconNode = ASImageNode()
         
         super.init(pointerStyle: nil)
         
         self.allowsGroupOpacity = true
         
-        self.addSubnode(self.backgroundNode)
+        //self.addSubnode(self.backgroundNode)
         self.addSubnode(self.iconNode)
     }
     
@@ -125,7 +126,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             } else {
                 updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             }
-            self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
+            //self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
             self.iconNode.image = updatedIconImage
             self.iconOffset = updatedIconOffset
         }
@@ -162,8 +163,22 @@ class ChatMessageShareButton: HighlightableButtonNode {
             self.textNode = nil
             textNode.removeFromSupernode()
         }
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0, transition: .immediate)
+        
+        if self.backgroundBlurView == nil {
+            if let backgroundBlurView = controllerInteraction.presentationContext.backgroundNode?.makeFreeBackground() {
+                self.backgroundBlurView = backgroundBlurView
+                self.view.insertSubview(backgroundBlurView.view, at: 0)
+                
+                backgroundBlurView.view.clipsToBounds = true
+            }
+        }
+        if let backgroundBlurView = self.backgroundBlurView {
+            backgroundBlurView.view.frame = CGRect(origin: CGPoint(), size: size)
+            backgroundBlurView.view.layer.cornerRadius = min(size.width, size.height) / 2.0
+        }
+        
+        //self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        //self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0, transition: .immediate)
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.iconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.iconOffset.y), size: image.size)
         }
@@ -181,9 +196,10 @@ class ChatMessageShareButton: HighlightableButtonNode {
         }
         
         if let backgroundContent = self.backgroundContent {
-            self.backgroundNode.isHidden = true
-            backgroundContent.cornerRadius =  min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0
-            backgroundContent.frame = self.backgroundNode.frame
+            //self.backgroundNode.isHidden = true
+            self.backgroundBlurView?.view.isHidden = true
+            backgroundContent.cornerRadius = min(size.width, size.height) / 2.0
+            backgroundContent.frame = CGRect(origin: CGPoint(), size: size)
             if let (rect, containerSize) = self.absolutePosition {
                 var backgroundFrame = backgroundContent.frame
                 backgroundFrame.origin.x += rect.minX
@@ -191,7 +207,8 @@ class ChatMessageShareButton: HighlightableButtonNode {
                 backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
             }
         } else {
-            self.backgroundNode.isHidden = false
+            //self.backgroundNode.isHidden = false
+            self.backgroundBlurView?.view.isHidden = false
         }
         
         return size
@@ -438,6 +455,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if strongSelf.selectionNode != nil {
                     return false
                 }
+                
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId.peerId != item.content.firstMessage.id.peerId {
+                    return false
+                }
+                
                 let action = item.controllerInteraction.canSetupReply(item.message)
                 strongSelf.currentSwipeAction = action
                 if case .none = action {
@@ -616,6 +638,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.emojiString != emojiString {
                 self.emojiString = emojiString
             } else if self.emojiFile?.id != emojiFile?.id {
+                if self.emojiFile != nil {
+                    self.didSetUpAnimationNode = false
+                    item.controllerInteraction.seenOneTimeAnimatedMedia.remove(item.message.id)
+                    
+                    self.animationNode?.removeFromSupernode()
+                    self.animationNode = nil
+                    
+                    self.contextSourceNode.contentNode.insertSubnode(self.placeholderNode, aboveSubnode: self.imageNode)
+                    
+                    self.setupNode(item: item)
+                }
                 self.emojiFile = emojiFile
                 if let emojiFile = emojiFile {
                     var dimensions = emojiFile.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -675,7 +708,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramFile = self.telegramFile {
             file = telegramFile
-            if !item.controllerInteraction.stickerSettings.loopAnimatedStickers {
+            if !item.context.sharedContext.energyUsageSettings.loopStickers {
                 playbackMode = .once
             }
         } else if let emojiFile = self.emojiFile {
@@ -706,20 +739,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         if let animationNode = self.animationNode as? AnimatedStickerNode {
-            if self.isPlaying != isPlaying {
+            if self.isPlaying != isPlaying || (isPlaying && !self.didSetUpAnimationNode) {
                 self.isPlaying = isPlaying
                 
                 if isPlaying && self.setupTimestamp == nil {
                     self.setupTimestamp = CACurrentMediaTime()
                 }
                 animationNode.visibility = isPlaying
-                
-                /*if self.didSetUpAnimationNode && alreadySeen {
-                    if let emojiFile = self.emojiFile, emojiFile.resource is LocalFileReferenceMediaResource {
-                    } else {
-                        animationNode.seekTo(.start)
-                    }
-                }*/
                 
                 if self.isPlaying && !self.didSetUpAnimationNode {
                     self.didSetUpAnimationNode = true
@@ -1017,8 +1043,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 
                 if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
-                    needsShareButton = false
+                    if hasCommentButton(item: item) {
+                    } else {
+                        needsShareButton = false
+                    }
                 }
+            }
+            
+            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                needsShareButton = false
             }
             
             var isEmoji = false
@@ -1136,7 +1169,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, associatedData: item.associatedData)
             
             var isReplyThread = false
             if case .replyThread = item.chatLocation {
@@ -1249,7 +1282,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
-                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
+                    associatedData: item.associatedData
                 ))
             }
             
@@ -1441,9 +1475,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                         }
                         
-                        let foregroundColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
+                        let foregroundColor: UIColor = .clear// = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderColor, wallpaper: item.presentationData.theme.wallpaper)
                         let shimmeringColor = bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.stickerPlaceholderShimmerColor, wallpaper: item.presentationData.theme.wallpaper)
-                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: immediateThumbnailData, size: animationNodeFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0))
                         strongSelf.placeholderNode.frame = animationNodeFrame
                     }
                     
@@ -1475,7 +1509,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
-                        updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize)
+                        updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: !incoming ? updatedImageFrame.minX - buttonSize.width - 6.0 : updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0 + imageBottomPadding), size: buttonSize)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
                         strongSelf.shareButtonNode = nil
@@ -1487,9 +1521,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
                     if needsReplyBackground {
                         if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                            replyBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
+                            replyBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                         } else {
-                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                            let replyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.replyBackgroundNode = replyBackgroundNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyBackgroundNode)
                         }
@@ -2441,7 +2475,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             
                 if let item = self.item, self.swipeToReplyNode == nil {
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.insertSubnode(swipeToReplyNode, at: 0)
                 }
@@ -2858,6 +2892,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func unreadMessageRangeUpdated() {
         self.updateVisibility()
+    }
+    
+    override func contentFrame() -> CGRect {
+        return self.imageNode.frame
     }
 }
 

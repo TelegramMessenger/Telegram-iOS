@@ -628,7 +628,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         switch presentation {
         case .modal:
             self.shadowNode.isHidden = true
-        case .inline:
+        case .inline, .additional:
             self.shadowNode.isHidden = false
         }
         

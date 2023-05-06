@@ -1,4 +1,76 @@
 public extension Api {
+    enum BotInfo: TypeConstructorDescription {
+        case botInfo(flags: Int32, userId: Int64?, description: String?, descriptionPhoto: Api.Photo?, descriptionDocument: Api.Document?, commands: [Api.BotCommand]?, menuButton: Api.BotMenuButton?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let descriptionDocument, let commands, let menuButton):
+                    if boxed {
+                        buffer.appendInt32(-1892676777)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(userId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {descriptionPhoto!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 5) != 0 {descriptionDocument!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(commands!.count))
+                    for item in commands! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 3) != 0 {menuButton!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let descriptionDocument, let commands, let menuButton):
+                return ("botInfo", [("flags", flags as Any), ("userId", userId as Any), ("description", description as Any), ("descriptionPhoto", descriptionPhoto as Any), ("descriptionDocument", descriptionDocument as Any), ("commands", commands as Any), ("menuButton", menuButton as Any)])
+    }
+    }
+    
+        public static func parse_botInfo(_ reader: BufferReader) -> BotInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt64() }
+            var _3: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            var _4: Api.Photo?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            var _5: Api.Document?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _6: [Api.BotCommand]?
+            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotCommand.self)
+            } }
+            var _7: Api.BotMenuButton?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.BotMenuButton
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 5) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.BotInfo.botInfo(flags: _1!, userId: _2, description: _3, descriptionPhoto: _4, descriptionDocument: _5, commands: _6, menuButton: _7)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BotInlineMessage: TypeConstructorDescription {
         case botInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, vcard: String, replyMarkup: Api.ReplyMarkup?)
@@ -628,7 +700,7 @@ public extension Api {
         case channelAdminLogEventActionExportedInviteRevoke(invite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantInvite(participant: Api.ChannelParticipant)
         case channelAdminLogEventActionParticipantJoin
-        case channelAdminLogEventActionParticipantJoinByInvite(invite: Api.ExportedChatInvite)
+        case channelAdminLogEventActionParticipantJoinByInvite(flags: Int32, invite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantJoinByRequest(invite: Api.ExportedChatInvite, approvedBy: Int64)
         case channelAdminLogEventActionParticipantLeave
         case channelAdminLogEventActionParticipantMute(participant: Api.GroupCallParticipant)
@@ -806,10 +878,11 @@ public extension Api {
                     }
                     
                     break
-                case .channelAdminLogEventActionParticipantJoinByInvite(let invite):
+                case .channelAdminLogEventActionParticipantJoinByInvite(let flags, let invite):
                     if boxed {
-                        buffer.appendInt32(1557846647)
+                        buffer.appendInt32(-23084712)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     invite.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionParticipantJoinByRequest(let invite, let approvedBy):
@@ -987,8 +1060,8 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantInvite", [("participant", participant as Any)])
                 case .channelAdminLogEventActionParticipantJoin:
                 return ("channelAdminLogEventActionParticipantJoin", [])
-                case .channelAdminLogEventActionParticipantJoinByInvite(let invite):
-                return ("channelAdminLogEventActionParticipantJoinByInvite", [("invite", invite as Any)])
+                case .channelAdminLogEventActionParticipantJoinByInvite(let flags, let invite):
+                return ("channelAdminLogEventActionParticipantJoinByInvite", [("flags", flags as Any), ("invite", invite as Any)])
                 case .channelAdminLogEventActionParticipantJoinByRequest(let invite, let approvedBy):
                 return ("channelAdminLogEventActionParticipantJoinByRequest", [("invite", invite as Any), ("approvedBy", approvedBy as Any)])
                 case .channelAdminLogEventActionParticipantLeave:
@@ -1359,13 +1432,16 @@ public extension Api {
             return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoin
         }
         public static func parse_channelAdminLogEventActionParticipantJoinByInvite(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
-            var _1: Api.ExportedChatInvite?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.ExportedChatInvite?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+                _2 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByInvite(invite: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByInvite(flags: _1!, invite: _2!)
             }
             else {
                 return nil

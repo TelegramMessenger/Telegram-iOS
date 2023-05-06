@@ -247,6 +247,12 @@ typedef enum {
             }
             case MTDatacenterAuthStageReqDH:
             {
+#if DEBUG
+                if (arc4random_uniform(100) < 50) {
+                    [mtProto simulateDisconnection];
+                }
+#endif
+                
                 MTBuffer *reqDhBuffer = [[MTBuffer alloc] init];
                 [reqDhBuffer appendInt32:(int32_t)0xd712e4be];
                 [reqDhBuffer appendBytes:_nonce.bytes length:_nonce.length];
@@ -404,7 +410,7 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
     }
 }
 
-- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
+- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector networkType:(int32_t)networkType
 {
     if (_stage == MTDatacenterAuthStagePQ && [message.body isKindOfClass:[MTResPqMessage class]])
     {
@@ -696,7 +702,8 @@ static NSData *encryptRSAModernPadding(id<EncryptionProvider> encryptionProvider
                     [serverSaltData appendBytes:&x length:1];
                 }
                 
-                _authKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:authKey authKeyId:authKeyId notBound:_tempAuth];
+                int32_t validUntilTimestamp = ((int32_t)([NSDate date].timeIntervalSince1970)) + mtProto.context.tempKeyExpiration;
+                _authKey = [[MTDatacenterAuthKey alloc] initWithAuthKey:authKey authKeyId:authKeyId validUntilTimestamp:validUntilTimestamp notBound:_tempAuth];
                 
                 MTBuffer *clientDhInnerDataBuffer = [[MTBuffer alloc] init];
                 [clientDhInnerDataBuffer appendInt32:(int32_t)0x6643b654];

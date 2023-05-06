@@ -148,6 +148,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         self.measureTextNode = TextNode()
         
         self.limitTextNode = TextNode()
+        self.limitTextNode.displaysAsynchronously = false
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -469,6 +470,10 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         if !self.textNode.textView.isFirstResponder {
             self.textNode.textView.becomeFirstResponder()
         }
+    }
+    
+    public func selectAll() {
+        self.textNode.textView.selectAll(nil)
     }
     
     public func animateError() {

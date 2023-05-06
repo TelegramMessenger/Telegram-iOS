@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 
 #import <MtProtoKit/MTDatacenterAuthInfo.h>
+#import <MtProtoKit/MTNetworkUsageCalculationInfo.h>
 
 #import <EncryptionProvider/EncryptionProvider.h>
 
@@ -14,6 +15,34 @@
 @class MTApiEnvironment;
 @class MTSignal;
 @class MTQueue;
+
+@protocol MTTcpConnectionInterface;
+
+@protocol MTTcpConnectionInterfaceDelegate <NSObject>
+
+- (void)connectionInterfaceDidReadPartialDataOfLength:(NSUInteger)partialLength tag:(long)tag;
+- (void)connectionInterfaceDidReadData:(NSData * _Nonnull)rawData withTag:(long)tag networkType:(int32_t)networkType;
+- (void)connectionInterfaceDidConnect;
+- (void)connectionInterfaceDidDisconnectWithError:(NSError * _Nullable)error;
+
+@end
+
+@protocol MTTcpConnectionInterface<NSObject>
+
+- (void)setGetLogPrefix:(NSString * _Nonnull(^_Nullable)())getLogPrefix;
+- (void)setUsageCalculationInfo:(MTNetworkUsageCalculationInfo * _Nullable)usageCalculationInfo;
+- (bool)connectToHost:(NSString * _Nonnull)inHost
+               onPort:(uint16_t)port
+         viaInterface:(NSString * _Nullable)inInterface
+          withTimeout:(NSTimeInterval)timeout
+                error:(NSError * _Nullable * _Nullable)errPtr;
+- (void)writeData:(NSData * _Nonnull)data;
+- (void)readDataToLength:(NSUInteger)length withTimeout:(NSTimeInterval)timeout tag:(long)tag;
+- (void)disconnect;
+- (void)resetDelegate;
+
+@end
+
 
 @protocol MTContextChangeListener <NSObject>
 
@@ -50,6 +79,8 @@
 @property (nonatomic, readonly) bool isTestingEnvironment;
 @property (nonatomic, readonly) bool useTempAuthKeys;
 @property (nonatomic) int32_t tempKeyExpiration;
+
+@property (nonatomic, copy) id<MTTcpConnectionInterface> _Nonnull (^ _Nullable makeTcpConnectionInterface)(id<MTTcpConnectionInterfaceDelegate> _Nonnull delegate, dispatch_queue_t _Nonnull delegateQueue);
 
 + (int32_t)fixedTimeDifference;
 + (void)setFixedTimeDifference:(int32_t)fixedTimeDifference;

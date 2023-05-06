@@ -27,8 +27,8 @@ objc_library(
         "-DAPP_CONFIG_IS_APPSTORE_BUILD={}".format(telegram_is_appstore_build),
         "-DAPP_CONFIG_APPSTORE_ID={}".format(telegram_appstore_id),
         "-DAPP_SPECIFIC_URL_SCHEME=\\\"{}\\\"".format(telegram_app_specific_url_scheme),
-        "-DAPP_CONFIG_ICLOUD_ENABLED={}".format("true" if telegram_enable_icloud else "false"),
-        "-DAPP_CONFIG_SIRI_ENABLED={}".format("true" if telegram_enable_siri else "false"),
+        "-DAPP_CONFIG_IS_ICLOUD_ENABLED={}".format("true" if telegram_enable_icloud else "false"),
+        "-DAPP_CONFIG_IS_SIRI_ENABLED={}".format("true" if telegram_enable_siri else "false"),
     ],
     hdrs = glob([
         "PublicHeaders/**/*.h",

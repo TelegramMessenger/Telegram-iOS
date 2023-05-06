@@ -98,8 +98,8 @@ public extension TelegramEngine {
             |> ignoreValues
         }
 
-        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId, as senderPeerId: PeerId?) -> Signal<Void, NoError> {
-            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId, as: senderPeerId)
+        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId, threadId: Int64?, as senderPeerId: PeerId?) -> Signal<Void, NoError> {
+            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId, threadId: threadId, as: senderPeerId)
         }
 
         public func requestUpdatePinnedMessage(peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
@@ -352,12 +352,20 @@ public extension TelegramEngine {
             }
         }
         
-        public func messageReactionList(message: EngineMessage, reaction: MessageReaction.Reaction?) -> EngineMessageReactionListContext {
-            return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
+        public func messageReactionList(message: EngineMessage, readStats: MessageReadStats?, reaction: MessageReaction.Reaction?) -> EngineMessageReactionListContext {
+            return EngineMessageReactionListContext(account: self.account, message: message, readStats: readStats, reaction: reaction)
+        }
+
+        public func translate(text: String, toLang: String) -> Signal<String?, TranslationError> {
+            return _internal_translate(network: self.account.network, text: text, toLang: toLang)
+        }
+
+        public func translateMessages(messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
+            return _internal_translateMessages(account: self.account, messageIds: messageIds, toLang: toLang)
         }
         
-        public func translate(text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
-            return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
+        public func togglePeerMessagesTranslationHidden(peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
+            return _internal_togglePeerMessagesTranslationHidden(account: self.account, peerId: peerId, hidden: hidden)
         }
         
         public func transcribeAudio(messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
@@ -386,11 +394,14 @@ public extension TelegramEngine {
             return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, botId: botId, url: url, payload: payload, themeParams: themeParams, fromMenu: fromMenu, replyToMessageId: replyToMessageId, threadId: threadId)
         }
         
-        public func requestSimpleWebView(botId: PeerId, url: String, themeParams: [String: Any]?) -> Signal<String, RequestSimpleWebViewError> {
-            return _internal_requestSimpleWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, url: url, themeParams: themeParams)
+        public func requestSimpleWebView(botId: PeerId, url: String, inline: Bool, themeParams: [String: Any]?) -> Signal<String, RequestSimpleWebViewError> {
+            return _internal_requestSimpleWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, url: url, inline: inline, themeParams: themeParams)
         }
-                
-        
+
+        public func requestAppWebView(peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, allowWrite: Bool) -> Signal<String, RequestAppWebViewError> {
+            return _internal_requestAppWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, appReference: appReference, payload: payload, themeParams: themeParams, allowWrite: allowWrite)
+        }
+
         public func sendWebViewData(botId: PeerId, buttonText: String, data: String) -> Signal<Never, SendWebViewDataError> {
             return _internal_sendWebViewData(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, botId: botId, buttonText: buttonText, data: data)
         }
@@ -411,6 +422,10 @@ public extension TelegramEngine {
             return _internal_attachMenuBots(postbox: self.account.postbox)
         }
         
+        public func getBotApp(botId: PeerId, shortName: String, cached: Bool = false) -> Signal<BotApp, GetBotAppError> {
+            return _internal_getBotApp(account: self.account, reference: .shortName(peerId: botId, shortName: shortName))
+        }
+
         public func ensureMessagesAreLocallyAvailable(messages: [EngineMessage]) {
             let _ = self.account.postbox.transaction({ transaction in
                 for message in messages {
@@ -436,8 +451,7 @@ public extension TelegramEngine {
             |> take(1)
             |> mapToSignal { inactiveSecretChatPeerIds in
                 return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
-                    return transaction.getUnreadChatListPeerIds(groupId: groupId._asGroup(), filterPredicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
-                }
+                return transaction.getUnreadChatListPeerIds(groupId: groupId._asGroup(), filterPredicate: filterPredicate, additionalFilter: nil, stopOnFirstMatch: false)
             }
         }
         
@@ -454,7 +468,7 @@ public extension TelegramEngine {
                 |> ignoreValues
             }
         }
-        
+
         public func getRelativeUnreadChatListIndex(filtered: Bool, position: EngineChatList.RelativePosition, groupId: EngineChatList.Group, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<EngineChatList.Item.Index?, NoError> {
             guard let position = position._asPosition() else {
                 return .single(nil)
@@ -510,6 +524,18 @@ public extension TelegramEngine {
         public func keepMessageCountersSyncrhonized(peerId: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
             return managedSynchronizeMessageHistoryTagSummaries(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, threadId: threadId)
             |> ignoreValues
+        }
+
+        public func getSynchronizeAutosaveItemOperations() -> Signal<[(index: Int32, message: Message, mediaId: MediaId)], NoError> {
+            return self.account.postbox.transaction { transaction -> [(index: Int32, message: Message, mediaId: MediaId)] in
+                return _internal_getSynchronizeAutosaveItemOperations(transaction: transaction)
+            }
+        }
+
+        func removeSyncrhonizeAutosaveItemOperations(indices: [Int32]) {
+            let _ = (self.account.postbox.transaction { transaction -> Void in
+                _internal_removeSyncrhonizeAutosaveItemOperations(transaction: transaction, indices: indices)
+            }).start()
         }
     }
 }

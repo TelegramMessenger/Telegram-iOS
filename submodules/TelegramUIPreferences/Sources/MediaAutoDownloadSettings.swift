@@ -165,40 +165,229 @@ public struct MediaAutoDownloadCategory: Codable, Equatable {
     }
 }
 
+public struct MediaAutoSaveConfiguration: Codable, Equatable {
+    public var photo: Bool
+    public var video: Bool
+    public var maximumVideoSize: Int64
+    
+    public static var `default` = MediaAutoSaveConfiguration(
+        photo: false,
+        video: false,
+        maximumVideoSize: 100 * 1024 * 1024
+    )
+    
+    public init(photo: Bool, video: Bool, maximumVideoSize: Int64) {
+        self.photo = photo
+        self.video = video
+        self.maximumVideoSize = maximumVideoSize
+    }
+}
+
+public struct MediaAutoSaveSettings: Codable, Equatable {
+    private enum CodingKeys: String, CodingKey {
+        case configurations
+        case exceptions
+    }
+    
+    public enum PeerType: String, Codable {
+        case users = "users"
+        case groups = "groups"
+        case channels = "channels"
+    }
+    
+    private struct ConfigurationItem: Codable {
+        var peerType: PeerType
+        var configuration: MediaAutoSaveConfiguration
+    }
+    
+    public struct ExceptionItem: Codable, Equatable {
+        public var id: PeerId
+        public var configuration: MediaAutoSaveConfiguration
+        
+        public init(id: PeerId, configuration: MediaAutoSaveConfiguration) {
+            self.id = id
+            self.configuration = configuration
+        }
+    }
+    
+    public var configurations: [PeerType: MediaAutoSaveConfiguration]
+    public var exceptions: [ExceptionItem]
+    
+    public static let `default` = MediaAutoSaveSettings(configurations: [:], exceptions: [])
+    
+    public init(configurations: [PeerType: MediaAutoSaveConfiguration], exceptions: [ExceptionItem]) {
+        self.configurations = configurations
+        self.exceptions = exceptions
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.configurations = [:]
+        if let data = try container.decodeIfPresent(Data.self, forKey: .configurations) {
+            if let value = try? JSONDecoder().decode([ConfigurationItem].self, from: data) {
+                self.configurations = [:]
+                for item in value {
+                    self.configurations[item.peerType] = item.configuration
+                }
+            }
+        }
+        
+        self.exceptions = []
+        if let data = try container.decodeIfPresent(Data.self, forKey: .exceptions) {
+            if let value = try? JSONDecoder().decode([ExceptionItem].self, from: data) {
+                self.exceptions = value
+            }
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        var configurations: [ConfigurationItem] = []
+        for (key, value) in self.configurations {
+            configurations.append(ConfigurationItem(peerType: key, configuration: value))
+        }
+        configurations.sort(by: { $0.peerType.rawValue < $1.peerType.rawValue })
+        
+        let jsonConfigurations = try JSONEncoder().encode(configurations)
+        try container.encode(jsonConfigurations, forKey: .configurations)
+        
+        let jsonExceptions = try JSONEncoder().encode(self.exceptions)
+        try container.encode(jsonExceptions, forKey: .exceptions)
+    }
+}
+
+public struct EnergyUsageSettings: Codable, Equatable {
+    private enum CodingKeys: CodingKey {
+        case activationThreshold
+        case autoplayVideo
+        case autoplayGif
+        case loopStickers
+        case loopEmoji
+        case fullTranslucency
+        case extendBackgroundWork
+        case autodownloadInBackground
+    }
+    
+    public static let `default`: EnergyUsageSettings = {
+        var length: Int = 4
+        var cpuCount: UInt32 = 0
+        sysctlbyname("hw.ncpu", &cpuCount, &length, nil, 0)
+        
+        let isCapable = cpuCount >= 4
+        
+        return EnergyUsageSettings(
+            activationThreshold: 15,
+            autoplayVideo: true,
+            autoplayGif: true,
+            loopStickers: true,
+            loopEmoji: isCapable,
+            fullTranslucency: isCapable,
+            extendBackgroundWork: true,
+            autodownloadInBackground: true
+        )
+    }()
+    
+    public static var powerSavingDefault: EnergyUsageSettings {
+        return EnergyUsageSettings(
+            activationThreshold: 15,
+            autoplayVideo: false,
+            autoplayGif: false,
+            loopStickers: false,
+            loopEmoji: false,
+            fullTranslucency: false,
+            extendBackgroundWork: false,
+            autodownloadInBackground: false
+        )
+    }
+    
+    public var activationThreshold: Int32
+    
+    public var autoplayVideo: Bool
+    public var autoplayGif: Bool
+    public var loopStickers: Bool
+    public var loopEmoji: Bool
+    public var fullTranslucency: Bool
+    public var extendBackgroundWork: Bool
+    public var autodownloadInBackground: Bool
+    
+    public init(
+        activationThreshold: Int32,
+        autoplayVideo: Bool,
+        autoplayGif: Bool,
+        loopStickers: Bool,
+        loopEmoji: Bool,
+        fullTranslucency: Bool,
+        extendBackgroundWork: Bool,
+        autodownloadInBackground: Bool
+    ) {
+        self.activationThreshold = activationThreshold
+        self.autoplayVideo = autoplayVideo
+        self.autoplayGif = autoplayGif
+        self.loopStickers = loopStickers
+        self.loopEmoji = loopEmoji
+        self.fullTranslucency = fullTranslucency
+        self.extendBackgroundWork = extendBackgroundWork
+        self.autodownloadInBackground = autodownloadInBackground
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.activationThreshold = try container.decodeIfPresent(Int32.self, forKey: .activationThreshold) ?? EnergyUsageSettings.default.activationThreshold
+        self.autoplayVideo = try container.decodeIfPresent(Bool.self, forKey: .autoplayVideo) ?? EnergyUsageSettings.default.autoplayVideo
+        self.autoplayGif = try container.decodeIfPresent(Bool.self, forKey: .autoplayGif) ?? EnergyUsageSettings.default.autoplayGif
+        self.loopStickers = try container.decodeIfPresent(Bool.self, forKey: .loopStickers) ?? EnergyUsageSettings.default.loopStickers
+        self.loopEmoji = try container.decodeIfPresent(Bool.self, forKey: .loopEmoji) ?? EnergyUsageSettings.default.loopEmoji
+        self.fullTranslucency = try container.decodeIfPresent(Bool.self, forKey: .fullTranslucency) ?? EnergyUsageSettings.default.fullTranslucency
+        self.extendBackgroundWork = try container.decodeIfPresent(Bool.self, forKey: .extendBackgroundWork) ?? EnergyUsageSettings.default.extendBackgroundWork
+        self.autodownloadInBackground = try container.decodeIfPresent(Bool.self, forKey: .autodownloadInBackground) ?? EnergyUsageSettings.default.autodownloadInBackground
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.activationThreshold, forKey: .activationThreshold)
+        try container.encode(self.autoplayVideo, forKey: .autoplayVideo)
+        try container.encode(self.autoplayGif, forKey: .autoplayGif)
+        try container.encode(self.loopEmoji, forKey: .loopEmoji)
+        try container.encode(self.loopStickers, forKey: .loopStickers)
+        try container.encode(self.fullTranslucency, forKey: .fullTranslucency)
+        try container.encode(self.extendBackgroundWork, forKey: .extendBackgroundWork)
+        try container.encode(self.autodownloadInBackground, forKey: .autodownloadInBackground)
+    }
+}
+
 public struct MediaAutoDownloadSettings: Codable, Equatable {
     public var presets: MediaAutoDownloadPresets
     public var cellular: MediaAutoDownloadConnection
     public var wifi: MediaAutoDownloadConnection
-    public var saveDownloadedPhotos: MediaAutoDownloadCategory
     
-    public var autoplayGifs: Bool
-    public var autoplayVideos: Bool
     public var downloadInBackground: Bool
+    
+    public var energyUsageSettings: EnergyUsageSettings
     
     public static var defaultSettings: MediaAutoDownloadSettings {
         let mb: Int64 = 1024 * 1024
         let presets = MediaAutoDownloadPresets(low: MediaAutoDownloadCategories(basePreset: .low, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
-                                                                                video: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false),
-                                                                                file: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false)),
-                                               medium: MediaAutoDownloadCategories(basePreset: .medium, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
-                                                                                video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: Int64(2.5 * CGFloat(mb)), predownload: false),
-                                                                                file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false)),
-                                               high: MediaAutoDownloadCategories(basePreset: .high, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
-                                                                                video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 10 * mb, predownload: true),
-                                                                                file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 3 * mb, predownload: false)))
-        let saveDownloadedPhotos = MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 0, predownload: false)
-        
-        return MediaAutoDownloadSettings(presets: presets, cellular: MediaAutoDownloadConnection(enabled: true, preset: .medium, custom: nil), wifi: MediaAutoDownloadConnection(enabled: true, preset: .high, custom: nil), saveDownloadedPhotos: saveDownloadedPhotos, autoplayGifs: true, autoplayVideos: true, downloadInBackground: true)
+            video: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false),
+            file: MediaAutoDownloadCategory(contacts: false, otherPrivate: false, groups: false, channels: false, sizeLimit: 1 * mb, predownload: false)),
+            medium: MediaAutoDownloadCategories(basePreset: .medium, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+            video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: Int64(2.5 * CGFloat(mb)), predownload: false),
+            file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false)),
+            high: MediaAutoDownloadCategories(basePreset: .high, photo: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 1 * mb, predownload: false),
+            video: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 10 * mb, predownload: true),
+            file: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 3 * mb, predownload: false)))
+        return MediaAutoDownloadSettings(presets: presets, cellular: MediaAutoDownloadConnection(enabled: true, preset: .medium, custom: nil), wifi: MediaAutoDownloadConnection(enabled: true, preset: .high, custom: nil), downloadInBackground: true, energyUsageSettings: EnergyUsageSettings.default)
     }
     
-    public init(presets: MediaAutoDownloadPresets, cellular: MediaAutoDownloadConnection, wifi: MediaAutoDownloadConnection, saveDownloadedPhotos: MediaAutoDownloadCategory, autoplayGifs: Bool, autoplayVideos: Bool, downloadInBackground: Bool) {
+    public init(presets: MediaAutoDownloadPresets, cellular: MediaAutoDownloadConnection, wifi: MediaAutoDownloadConnection, downloadInBackground: Bool, energyUsageSettings: EnergyUsageSettings) {
         self.presets = presets
         self.cellular = cellular
         self.wifi = wifi
-        self.saveDownloadedPhotos = saveDownloadedPhotos
-        self.autoplayGifs = autoplayGifs
-        self.autoplayVideos = autoplayGifs
         self.downloadInBackground = downloadInBackground
+        self.energyUsageSettings = energyUsageSettings
     }
     
     public init(from decoder: Decoder) throws {
@@ -211,11 +400,9 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
         self.cellular = (try? container.decodeIfPresent(MediaAutoDownloadConnection.self, forKey: "cellular")) ?? defaultSettings.cellular
         self.wifi = (try? container.decodeIfPresent(MediaAutoDownloadConnection.self, forKey: "wifi")) ?? defaultSettings.wifi
 
-        self.saveDownloadedPhotos = (try? container.decodeIfPresent(MediaAutoDownloadCategory.self, forKey: "saveDownloadedPhotos")) ?? defaultSettings.saveDownloadedPhotos
-
-        self.autoplayGifs = try container.decode(Int32.self, forKey: "autoplayGifs") != 0
-        self.autoplayVideos = try container.decode(Int32.self, forKey: "autoplayVideos") != 0
         self.downloadInBackground = try container.decode(Int32.self, forKey: "downloadInBackground") != 0
+        
+        self.energyUsageSettings = (try container.decodeIfPresent(EnergyUsageSettings.self, forKey: "energyUsageSettings")) ?? EnergyUsageSettings.default
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -223,10 +410,8 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
 
         try container.encode(self.cellular, forKey: "cellular")
         try container.encode(self.wifi, forKey: "wifi")
-        try container.encode(self.saveDownloadedPhotos, forKey: "saveDownloadedPhotos")
-        try container.encode((self.autoplayGifs ? 1 : 0) as Int32, forKey: "autoplayGifs")
-        try container.encode((self.autoplayVideos ? 1 : 0) as Int32, forKey: "autoplayVideos")
         try container.encode((self.downloadInBackground ? 1 : 0) as Int32, forKey: "downloadInBackground")
+        try container.encode(self.energyUsageSettings, forKey: "energyUsageSettings")
     }
     
     public func connectionSettings(for networkType: MediaAutoDownloadNetworkType) -> MediaAutoDownloadConnection {
@@ -388,3 +573,18 @@ public func shouldPredownloadMedia(settings: MediaAutoDownloadSettings, peerType
     }
 }
 
+public func updateMediaAutoSaveSettingsInteractively(account: Account, _ f: @escaping (MediaAutoSaveSettings) -> MediaAutoSaveSettings) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.mediaAutoSaveSettings, { entry in
+            let currentSettings: MediaAutoSaveSettings
+            if let entry = entry?.get(MediaAutoSaveSettings.self) {
+                currentSettings = entry
+            } else {
+                currentSettings = .default
+            }
+            let updated = f(currentSettings)
+            return PreferencesEntry(updated)
+        })
+    }
+    |> ignoreValues
+}

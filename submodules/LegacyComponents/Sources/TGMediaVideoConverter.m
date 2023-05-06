@@ -101,12 +101,12 @@
 
 @implementation TGMediaVideoConverter
 
-+ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
++ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments path:(NSString *)path watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
-    return [self convertAVAsset:avAsset adjustments:adjustments watcher:watcher inhibitAudio:false entityRenderer:entityRenderer];
+    return [self convertAVAsset:avAsset adjustments:adjustments path:path watcher:watcher inhibitAudio:false entityRenderer:entityRenderer];
 }
 
-+ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher inhibitAudio:(bool)inhibitAudio entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
++ (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments path:(NSString *)path watcher:(TGMediaVideoFileWatcher *)watcher inhibitAudio:(bool)inhibitAudio entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
     if ([avAsset isKindOfClass:[NSURL class]]) {
         avAsset = [[AVURLAsset alloc] initWithURL:(NSURL *)avAsset options:nil];
@@ -116,7 +116,7 @@
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
         SAtomic *context = [[SAtomic alloc] initWithValue:[TGMediaVideoConversionContext contextWithQueue:queue subscriber:subscriber]];
-        NSURL *outputUrl = [self _randomTemporaryURL];
+        NSURL *outputUrl = [NSURL fileURLWithPath:path];
         
         NSArray *requiredKeys = @[ @"tracks", @"duration" ];
         [avAsset loadValuesAsynchronouslyForKeys:requiredKeys completionHandler:^
@@ -222,14 +222,14 @@
     }];
 }
 
-+ (SSignal *)renderUIImage:(UIImage *)image duration:(NSTimeInterval)duration adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
++ (SSignal *)renderUIImage:(UIImage *)image duration:(NSTimeInterval)duration adjustments:(TGMediaVideoEditAdjustments *)adjustments path:(NSString *)path watcher:(TGMediaVideoFileWatcher *)watcher entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
     SQueue *queue = [[SQueue alloc] init];
        
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
             {
         SAtomic *context = [[SAtomic alloc] initWithValue:[TGMediaVideoConversionContext contextWithQueue:queue subscriber:subscriber]];
-        NSURL *outputUrl = [self _randomTemporaryURL];
+        NSURL *outputUrl = [NSURL fileURLWithPath:path];
         
         NSString *path = TGComponentsPathForResource(@"blank", @"mp4");
         AVAsset *avAsset = [[AVURLAsset alloc] initWithURL:[NSURL fileURLWithPath:path] options:nil];
@@ -368,18 +368,18 @@
     CMTime frameDuration30FPS = CMTimeMake(1, 30);
     CMTime frameDuration = frameDuration30FPS;
     if (videoTrack.nominalFrameRate > 0)
-        frameDuration = CMTimeMake(1, (int32_t)videoTrack.nominalFrameRate);
+        frameDuration = CMTimeMake(1, (int32_t)ceil(videoTrack.nominalFrameRate));
     else if (CMTimeCompare(videoTrack.minFrameDuration, kCMTimeZero) == 1)
         frameDuration = videoTrack.minFrameDuration;
     
     if (CMTimeCompare(frameDuration, kCMTimeZero) != 1 || !CMTIME_IS_VALID(frameDuration) || image != nil || entityRenderer != nil || adjustments.toolsApplied)
         frameDuration = frameDuration30FPS;
     
-    if (CMTimeCompare(frameDuration, frameDuration30FPS)) {
+    if (CMTimeCompare(frameDuration, frameDuration30FPS) && preset != TGMediaVideoConversionPresetCompressedVeryHigh) {
         frameDuration = frameDuration30FPS;
     }
     
-    NSInteger fps = (NSInteger)(1.0 / CMTimeGetSeconds(frameDuration));
+    NSInteger fps = (NSInteger)ceil(1.0 / CMTimeGetSeconds(frameDuration));
     
     UIImage *overlayImage = nil;
     if (adjustments.paintingData.imagePath != nil)
@@ -536,7 +536,7 @@
         videoComposition.animationTool = [AVVideoCompositionCoreAnimationTool videoCompositionCoreAnimationToolWithPostProcessingAsVideoLayer:videoLayer inLayer:parentLayer];
     }
     
-    NSDictionary *settings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:outputDimensions];
+    NSDictionary *settings = [TGMediaVideoConversionPresetSettings videoSettingsForPreset:preset dimensions:outputDimensions frameRate:(int32_t)fps];
     *outputSettings = settings;
     *dimensions = outputDimensions;
 
@@ -893,11 +893,6 @@
     if (fmod(renderHeight, blockSize) != 0)
         renderHeight = CGFloor(cropSize.height / blockSize) * blockSize;
     return CGSizeMake(renderWidth, renderHeight);
-}
-
-+ (NSURL *)_randomTemporaryURL
-{
-    return [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.mp4", (int)arc4random()]]];
 }
 
 + (NSUInteger)estimatedSizeForPreset:(TGMediaVideoConversionPreset)preset duration:(NSTimeInterval)duration hasAudio:(bool)hasAudio
@@ -1308,7 +1303,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     };
 }
 
-+ (NSDictionary *)videoSettingsForPreset:(TGMediaVideoConversionPreset)preset dimensions:(CGSize)dimensions
++ (NSDictionary *)videoSettingsForPreset:(TGMediaVideoConversionPreset)preset dimensions:(CGSize)dimensions frameRate:(int32_t)frameRate
 {
     NSDictionary *videoCleanApertureSettings = @
     {
@@ -1329,7 +1324,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
     AVVideoAverageBitRateKey: @([self _videoBitrateKbpsForPreset:preset] * 1000),
     AVVideoCleanApertureKey: videoCleanApertureSettings,
     AVVideoPixelAspectRatioKey: videoAspectRatioSettings,
-    AVVideoExpectedSourceFrameRateKey: @30
+    AVVideoExpectedSourceFrameRateKey: @(frameRate)
     };
     
     NSDictionary *hdVideoProperties = @
@@ -1369,13 +1364,13 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 700;
             
         case TGMediaVideoConversionPresetCompressedMedium:
-            return 1100;
+            return 1600;
             
         case TGMediaVideoConversionPresetCompressedHigh:
-            return 2500;
+            return 3000;
             
         case TGMediaVideoConversionPresetCompressedVeryHigh:
-            return 4000;
+            return 6600;
             
         case TGMediaVideoConversionPresetVideoMessage:
             return 1000;

@@ -280,7 +280,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     var currentAutoremoveTimeout: Int32? = chatPresentationInterfaceState.autoremoveTimeout
     var canSetupAutoremoveTimeout = false
     
+    var canSendTextMessages = true
+    
     var accessoryItems: [ChatTextInputAccessoryItem] = []
+    
     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
         var extendedSearchLayout = false
         loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
@@ -298,6 +301,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         if !group.hasBannedPermission(.banChangeInfo) {
             canSetupAutoremoveTimeout = true
         }
+        canSendTextMessages = !group.hasBannedPermission(.banSendText)
     } else if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser {
         if user.botInfo == nil {
             canSetupAutoremoveTimeout = true
@@ -306,6 +310,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         if channel.hasPermission(.changeInfo) {
             canSetupAutoremoveTimeout = true
         }
+        canSendTextMessages = channel.hasBannedPermission(.banSendText) == nil
     }
     
     if canSetupAutoremoveTimeout {
@@ -330,6 +335,19 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
+                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
+                let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
+                
+                
+                if case .scheduledMessages = chatPresentationInterfaceState.subject {
+                } else {
+                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                    let giftIsEnabled = !premiumConfiguration.isPremiumDisabled && premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField
+                    if isTextEmpty, giftIsEnabled, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium && !chatPresentationInterfaceState.premiumGiftOptions.isEmpty && chatPresentationInterfaceState.suggestPremiumGift {
+                        accessoryItems.append(.gift)
+                    }
+                }
+                
                 var extendedSearchLayout = false
                 loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
                     if case let .contextRequestResult(peer, _) = result, peer != nil {
@@ -347,44 +365,47 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         }
                     }
                 }
+                   
+                if isTextEmpty && chatPresentationInterfaceState.hasScheduledMessages && !hasForward {
+                    accessoryItems.append(.scheduledMessages)
+                }
+                    
+                var stickersEnabled = true
+                var stickersAreEmoji = !isTextEmpty
+                if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                    if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
+                        accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
+                    }
+                    if peer.hasBannedPermission(.banSendStickers) != nil {
+                        stickersEnabled = false
+                    }
+                } else if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                    if peer.hasBannedPermission(.banSendStickers) {
+                        stickersEnabled = false
+                    }
+                }
                 
-                let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
+                if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands && !hasForward {
+                    accessoryItems.append(.commands)
+                }
                 
-                if chatPresentationInterfaceState.interfaceState.forwardMessageIds == nil {
-                    if isTextEmpty && chatPresentationInterfaceState.hasScheduledMessages {
-                        accessoryItems.append(.scheduledMessages)
+                if !canSendTextMessages {
+                    if stickersEnabled && !stickersAreEmoji && !hasForward {
+                        accessoryItems.append(.input(isEnabled: true, inputMode: .stickers))
                     }
-                    
-                    var stickersEnabled = true
-                    
-                    let stickersAreEmoji = !isTextEmpty
-                    
-                    if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                        if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
-                            accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
-                        }
-                        if peer.hasBannedPermission(.banSendStickers) != nil {
-                            stickersEnabled = false
-                        }
-                    } else if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
-                        if peer.hasBannedPermission(.banSendStickers) {
-                            stickersEnabled = false
-                        }
-                    }
-                    if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands {
-                        accessoryItems.append(.commands)
-                    }
-                    
+                } else {
+                    stickersAreEmoji = stickersAreEmoji || hasForward
                     if stickersEnabled {
                         accessoryItems.append(.input(isEnabled: true, inputMode: stickersAreEmoji ? .emoji : .stickers))
                     } else {
                         accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
                     }
-                    
-                    if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
-                        accessoryItems.append(.botInput(isEnabled: true, inputMode: .bot))
-                    }
                 }
+                
+                if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
+                    accessoryItems.append(.botInput(isEnabled: true, inputMode: .bot))
+                }
+                
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             }
     }

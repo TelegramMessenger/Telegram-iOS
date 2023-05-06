@@ -29,7 +29,7 @@
         headlineLabel.textColor = color;
         headlineLabel.textAlignment = NSTextAlignmentCenter;
         headlineLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;
-        
+        _headerLabel = headlineLabel;
       
         NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
         style.lineSpacing = IPAD ? 4 : 3;
@@ -76,7 +76,7 @@
         descriptionLabel.numberOfLines=0;
         descriptionLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;
         [self addSubview:descriptionLabel];
-        
+        _descriptionLabel = descriptionLabel;
         
         [self addSubview:headlineLabel];
         

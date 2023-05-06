@@ -16,6 +16,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     
     UIPanGestureRecognizer *_panGestureRecognizer;
     UITapGestureRecognizer *_tapGestureRecognizer;
+    UITapGestureRecognizer *_edgeTapGestureRecognizer;
     UITapGestureRecognizer *_doubleTapGestureRecognizer;
     
     UIColor *_backColor;
@@ -74,6 +75,10 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
         _tapGestureRecognizer.enabled = false;
         [self addGestureRecognizer:_tapGestureRecognizer];
+        
+        _edgeTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleEdgeTap:)];
+        _edgeTapGestureRecognizer.enabled = false;
+        [self addGestureRecognizer:_edgeTapGestureRecognizer];
         
         _doubleTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
         _doubleTapGestureRecognizer.numberOfTapsRequired = 2;
@@ -195,7 +200,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     }
     
     if (self.displayEdges) {
-        CGContextSetFillColorWithColor(context, _startColor.CGColor);
+        CGContextSetFillColorWithColor(context, _backColor.CGColor);
         [self drawRectangle:endFrame cornerRadius:self.trackCornerRadius context:context];
     }
     
@@ -510,6 +515,46 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     }
 }
 
+- (void)setEnableEdgeTap:(bool)enableEdgeTap {
+    _enableEdgeTap = enableEdgeTap;
+    _edgeTapGestureRecognizer.enabled = enableEdgeTap;
+}
+
+- (void)handleEdgeTap:(UITapGestureRecognizer *)gestureRecognizer {
+    bool changed = false;
+    
+    if (gestureRecognizer.state == UIGestureRecognizerStateEnded) {
+        CGPoint touchLocation = [gestureRecognizer locationInView:self];
+        CGFloat edgeWidth = 16.0f;
+        if (touchLocation.x < edgeWidth || touchLocation.x > self.bounds.size.width - edgeWidth) {
+            CGRect knobRect = CGRectInset(self.knobView.frame, -8.0, -8.0);
+            if (!CGRectContainsPoint(knobRect, touchLocation)) {
+                if (touchLocation.x < edgeWidth) {
+                    [self setValue:_minimumValue];
+                } else {
+                    [self setValue:_maximumValue];
+                }
+                changed = true;
+            }
+        }
+    }
+    
+    if (changed)
+    {
+        if (self.interactionBegan != nil)
+            self.interactionBegan();
+        
+        [self setNeedsLayout];
+        [self sendActionsForControlEvents:UIControlEventValueChanged];
+        
+        if (self.interactionEnded != nil)
+            self.interactionEnded();
+        
+        [_feedbackGenerator selectionChanged];
+        [_feedbackGenerator prepare];
+    }
+}
+
 - (void)handleDoubleTap:(UITapGestureRecognizer *)__unused gestureRecognizer
 {
     if (self.reset != nil)
@@ -666,6 +711,34 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     
     if (self.interactionEnded != nil)
         self.interactionEnded();
+}
+
+- (void)increase {
+    self.value = MIN(self.maximumValue, self.value + 1);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
+}
+
+- (void)increaseBy:(CGFloat)delta {
+    self.value = MIN(self.maximumValue, self.value + delta);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
+}
+
+- (void)decrease {
+    self.value = MAX(self.minimumValue, self.value - 1);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
+}
+
+- (void)decreaseBy:(CGFloat)delta {
+    self.value = MAX(self.minimumValue, self.value - delta);
+    
+    [self sendActionsForControlEvents:UIControlEventValueChanged];
+    [self setNeedsLayout];
 }
 
 @end

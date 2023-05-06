@@ -18,7 +18,7 @@ public enum RequestCancelAccountResetDataError {
 }
 
 func _internal_requestCancelAccountResetData(network: Network, hash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
-    return network.request(Api.functions.account.sendConfirmPhoneCode(hash: hash, settings: .codeSettings(flags: 0, logoutTokens: nil)), automaticFloodWait: false)
+    return network.request(Api.functions.account.sendConfirmPhoneCode(hash: hash, settings: .codeSettings(flags: 0, logoutTokens: nil, token: nil, appSandbox: nil)), automaticFloodWait: false)
     |> mapError { error -> RequestCancelAccountResetDataError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded
@@ -26,14 +26,16 @@ func _internal_requestCancelAccountResetData(network: Network, hash: String) -> 
             return .generic
         }
     }
-    |> map { sentCode -> CancelAccountResetData in
+    |> mapToSignal { sentCode -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> in
         switch sentCode {
-            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                var parsedNextType: AuthorizationCodeNextType?
-                if let nextType = nextType {
-                    parsedNextType = AuthorizationCodeNextType(apiType: nextType)
-                }
-                return CancelAccountResetData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)
+        case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+            var parsedNextType: AuthorizationCodeNextType?
+            if let nextType = nextType {
+                parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+            }
+            return .single(CancelAccountResetData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType))
+        case .sentCodeSuccess:
+            return .never()
         }
     }
 }
@@ -47,14 +49,16 @@ func _internal_requestNextCancelAccountResetOption(network: Network, phoneNumber
             return .generic
         }
     }
-    |> map { sentCode -> CancelAccountResetData in
+    |> mapToSignal { sentCode -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> in
         switch sentCode {
-            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                var parsedNextType: AuthorizationCodeNextType?
-                if let nextType = nextType {
-                    parsedNextType = AuthorizationCodeNextType(apiType: nextType)
-                }
-                return CancelAccountResetData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType)
+        case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
+            var parsedNextType: AuthorizationCodeNextType?
+            if let nextType = nextType {
+                parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+            }
+            return .single(CancelAccountResetData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType))
+        case .sentCodeSuccess:
+            return .never()
         }
     }
 }

@@ -55,7 +55,7 @@
 
 @property (nonatomic) int32_t apiId;
 @property (nonatomic, strong, readonly) NSString * _Nullable deviceModel;
-@property (nonatomic, strong, readonly) NSDictionary<NSString *, NSString *> * _Nullable resolvedDeviceName;
+@property (nonatomic, strong, readonly) NSString * _Nullable deviceModelName;
 
 @property (nonatomic, strong, readonly) NSString * _Nullable systemVersion;
 @property (nonatomic, strong) NSString * _Nullable appVersion;
@@ -83,6 +83,6 @@
 - (MTApiEnvironment * _Nonnull)withUpdatedNetworkSettings:(MTNetworkSettings * _Nullable)networkSettings;
 - (MTApiEnvironment * _Nonnull)withUpdatedSystemCode:(NSData * _Nullable)systemCode;
 
--(id _Nonnull)initWithResolvedDeviceName:(NSDictionary<NSString *, NSString *> * _Nullable)resolvedDeviceName;
+-(id _Nonnull)initWithDeviceModelName:(NSString * _Nullable)deviceModelName;
 
 @end

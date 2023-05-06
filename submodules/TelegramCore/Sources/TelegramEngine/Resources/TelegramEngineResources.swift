@@ -8,7 +8,9 @@ public typealias EngineTempBoxFile = TempBoxFile
 
 public extension MediaResourceUserContentType {
     init(file: TelegramMediaFile) {
-        if file.isMusic || file.isVoice {
+        if file.isInstantVideo || file.isVoice {
+            self = .audioVideoMessage
+        } else if file.isMusic {
             self = .audio
         } else if file.isSticker || file.isAnimatedSticker {
             self = .sticker
@@ -231,12 +233,12 @@ public extension TelegramEngine {
             return _internal_renderStorageUsageStatsMessages(account: self.account, stats: stats, categories: categories, existingMessages: existingMessages)
         }
         
-        public func clearStorage(peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey]) -> Signal<Never, NoError> {
-            return _internal_clearStorage(account: self.account, peerId: peerId, categories: categories)
+        public func clearStorage(peerId: EnginePeer.Id?, categories: [StorageUsageStats.CategoryKey], includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
+            return _internal_clearStorage(account: self.account, peerId: peerId, categories: categories, includeMessages: includeMessages, excludeMessages: excludeMessages)
         }
         
-        public func clearStorage(peerIds: Set<EnginePeer.Id>) -> Signal<Never, NoError> {
-            _internal_clearStorage(account: self.account, peerIds: peerIds)
+        public func clearStorage(peerIds: Set<EnginePeer.Id>, includeMessages: [Message], excludeMessages: [Message]) -> Signal<Float, NoError> {
+            _internal_clearStorage(account: self.account, peerIds: peerIds, includeMessages: includeMessages, excludeMessages: excludeMessages)
         }
         
         public func clearStorage(messages: [Message]) -> Signal<Never, NoError> {
@@ -337,7 +339,7 @@ public extension TelegramEngine {
             |> mapToSignal { datacenterId -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> in
                 let resource = AlbumCoverResource(datacenterId: Int(datacenterId), file: file, title: title, performer: performer, isThumbnail: isThumbnail)
                 
-                return multipartFetch(postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, resource: resource, datacenterId: Int(datacenterId), size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
+                return multipartFetch(postbox: self.account.postbox, network: self.account.network, mediaReferenceRevalidationContext: self.account.mediaReferenceRevalidationContext, networkStatsContext: self.account.networkStatsContext, resource: resource, datacenterId: Int(datacenterId), size: nil, intervals: .single([(0 ..< Int64.max, .default)]), parameters: MediaResourceFetchParameters(
                     tag: nil,
                     info: TelegramCloudMediaResourceFetchInfo(
                         reference: MediaResourceReference.standalone(resource: resource),

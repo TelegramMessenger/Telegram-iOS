@@ -64,7 +64,10 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let titleLabelNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private var badgeIconNode: ASImageNode?
     private var animationNode: AnimationNode?
+    
+    private var currentBadge: (badge: ContextMenuActionBadge, image: UIImage)?
     
     private var iconDisposable: Disposable?
     
@@ -101,6 +104,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         
         self.isAccessibilityElement = true
         self.accessibilityLabel = item.text
+        self.accessibilityTraits = [.button]
         
         self.addSubnode(self.highlightBackgroundNode)
         self.addSubnode(self.titleLabelNode)
@@ -264,7 +268,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 textColor: titleColor)
         }
         
-        self.titleLabelNode.isUserInteractionEnabled = self.titleLabelNode.tapAttributeAction != nil
+        self.titleLabelNode.isUserInteractionEnabled = self.titleLabelNode.tapAttributeAction != nil && self.item.action == nil
         
         self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
             return NSAttributedString(
@@ -301,14 +305,91 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             iconSize = iconImage?.size
         }
         
+        let badgeSize: CGSize?
+        if let badge = self.item.badge {
+            var badgeImage: UIImage?
+            if let currentBadge = self.currentBadge, currentBadge.badge == badge {
+                badgeImage = currentBadge.image
+            } else {
+                switch badge.style {
+                case .badge:
+                    let badgeTextColor: UIColor = presentationData.theme.list.itemCheckColors.foregroundColor
+                    let badgeString = NSAttributedString(string: badge.value, font: Font.regular(13.0), textColor: badgeTextColor)
+                    let badgeTextBounds = badgeString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
+                    
+                    let badgeSideInset: CGFloat = 5.0
+                    let badgeVerticalInset: CGFloat = 1.0
+                    var badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + ceil(badgeTextBounds.width), height: badgeVerticalInset * 2.0 + ceil(badgeTextBounds.height))
+                    badgeBackgroundSize.width = max(badgeBackgroundSize.width, badgeBackgroundSize.height)
+                    badgeImage = generateImage(badgeBackgroundSize, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: size.height * 0.5).cgPath)
+                        context.fillPath()
+                        
+                        UIGraphicsPushContext(context)
+                        
+                        badgeString.draw(at: CGPoint(x: badgeTextBounds.minX + floor((badgeBackgroundSize.width - badgeTextBounds.width) * 0.5), y: badgeTextBounds.minY + badgeVerticalInset))
+                        
+                        UIGraphicsPopContext()
+                    })
+                case .label:
+                    let badgeTextColor: UIColor = presentationData.theme.list.itemCheckColors.foregroundColor
+                    let badgeString = NSAttributedString(string: badge.value, font: Font.semibold(11.0), textColor: badgeTextColor)
+                    let badgeTextBounds = badgeString.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: [.usesLineFragmentOrigin], context: nil)
+                    
+                    let badgeSideInset: CGFloat = 3.0
+                    let badgeVerticalInset: CGFloat = 1.0
+                    let badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + ceil(badgeTextBounds.width), height: badgeVerticalInset * 2.0 + ceil(badgeTextBounds.height))
+                    badgeImage = generateImage(badgeBackgroundSize, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 5.0).cgPath)
+                        context.fillPath()
+                        
+                        UIGraphicsPushContext(context)
+                        
+                        badgeString.draw(at: CGPoint(x: badgeTextBounds.minX + badgeSideInset + UIScreenPixel, y: badgeTextBounds.minY + badgeVerticalInset + UIScreenPixel))
+                        
+                        UIGraphicsPopContext()
+                    })
+                }
+            }
+            
+            let badgeIconNode: ASImageNode
+            if let current = self.badgeIconNode {
+                badgeIconNode = current
+            } else {
+                badgeIconNode = ASImageNode()
+                self.badgeIconNode = badgeIconNode
+                self.addSubnode(badgeIconNode)
+            }
+            badgeIconNode.image = badgeImage
+            
+            badgeSize = badgeImage?.size
+        } else {
+            if let badgeIconNode = self.badgeIconNode {
+                self.badgeIconNode = nil
+                badgeIconNode.removeFromSupernode()
+            }
+            badgeSize = nil
+        }
+        
         var maxTextWidth: CGFloat = constrainedSize.width
         maxTextWidth -= sideInset
+        
         if let iconSize = iconSize {
             maxTextWidth -= max(standardIconWidth, iconSize.width)
             maxTextWidth -= iconSpacing
         } else {
             maxTextWidth -= sideInset
         }
+        
+        if let badgeSize = badgeSize {
+            maxTextWidth -= badgeSize.width
+            maxTextWidth -= 8.0
+        }
+        
         maxTextWidth = max(1.0, maxTextWidth)
         
         let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
@@ -340,15 +421,30 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             if let titleVerticalOffset {
                 titleFrame = titleFrame.offsetBy(dx: 0.0, dy: titleVerticalOffset)
             }
-            let subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+            var subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+            if self.item.iconPosition == .left {
+                titleFrame = titleFrame.offsetBy(dx: 36.0, dy: 0.0)
+                subtitleFrame = subtitleFrame.offsetBy(dx: 36.0, dy: 0.0)
+            }
             
             transition.updateFrame(node: self.highlightBackgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
             transition.updateFrameAdditive(node: self.titleLabelNode, frame: titleFrame)
             transition.updateFrameAdditive(node: self.subtitleNode, frame: subtitleFrame)
             
+            if let badgeIconNode = self.badgeIconNode {
+                if let iconSize = badgeIconNode.image?.size {
+                    transition.updateFrame(node: badgeIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 8.0, y: titleFrame.minY + floor((titleFrame.height - iconSize.height) * 0.5)), size: iconSize))
+                }
+            }
+            
             if let iconSize = iconSize {
                 let iconWidth = max(standardIconWidth, iconSize.width)
-                let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+                let iconFrame = CGRect(
+                    origin: CGPoint(
+                        x: self.item.iconPosition == .left ? iconSideInset : size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0),
+                        y: floor((size.height - iconSize.height) / 2.0)
+                    ),
+                    size: iconSize)
                 transition.updateFrame(node: self.iconNode, frame: iconFrame, beginWithCurrentState: true)
                 if let animationNode = self.animationNode {
                     transition.updateFrame(node: animationNode, frame: iconFrame, beginWithCurrentState: true)
@@ -811,16 +907,18 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     }
 }
 
-func makeContextControllerActionsStackItem(items: ContextController.Items) -> ContextControllerActionsStackItem {
+func makeContextControllerActionsStackItem(items: ContextController.Items) -> [ContextControllerActionsStackItem] {
     var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     if let context = items.context, let animationCache = items.animationCache, !items.reactionItems.isEmpty {
         reactionItems = (context, items.reactionItems, items.selectedReactionItems, animationCache, items.getEmojiContent)
     }
     switch items.content {
     case let .list(listItems):
-        return ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
+        return [ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)]
+    case let .twoLists(listItems1, listItems2):
+        return [ContextControllerActionsListStackItem(items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil), ContextControllerActionsListStackItem(items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil)]
     case let .custom(customContent):
-        return ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
+        return [ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)]
     }
 }
 
@@ -828,6 +926,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     enum Presentation {
         case modal
         case inline
+        case additional
     }
     
     final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
@@ -917,6 +1016,9 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 self.parentShadowNode.isHidden = true
             case .inline:
                 self.backgroundNode.updateColor(color: presentationData.theme.contextMenu.backgroundColor, enableBlur: true, forceKeepBlur: true, transition: transition)
+                self.parentShadowNode.isHidden = false
+            case .additional:
+                self.backgroundNode.updateColor(color: presentationData.theme.contextMenu.backgroundColor.withMultipliedAlpha(0.5), enableBlur: true, forceKeepBlur: true, transition: transition)
                 self.parentShadowNode.isHidden = false
             }
             self.backgroundNode.update(size: size, transition: transition)

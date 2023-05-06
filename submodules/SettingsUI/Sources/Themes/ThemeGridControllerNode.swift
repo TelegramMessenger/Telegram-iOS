@@ -263,6 +263,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.gridNode.addSubnode(self.descriptionItemNode)
         self.gridNode.addSubnode(self.resetItemNode)
         self.gridNode.addSubnode(self.resetDescriptionItemNode)
+        
         self.addSubnode(self.gridNode)
         
         let previousEntries = Atomic<[ThemeGridControllerEntry]?>(value: nil)
@@ -341,9 +342,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let transition = combineLatest(self.wallpapersPromise.get(), deletedWallpaperIdsPromise.get(), context.sharedContext.presentationData)
         |> map { wallpapers, deletedWallpaperIds, presentationData -> (ThemeGridEntryTransition, Bool) in
             var entries: [ThemeGridControllerEntry] = []
-            var index = 1
+            var index: Int = 0
 
             entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: false, isSelected: true), at: 0)
+            index += 1
             
             var defaultWallpaper: TelegramWallpaper?
             if !presentationData.chatWallpaper.isBasicallyEqual(to: presentationData.theme.chat.defaultWallpaper) {
@@ -375,6 +377,16 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 sortedWallpapers = wallpapers.map(\.wallpaper)
             }
             
+            if let builtinIndex = sortedWallpapers.firstIndex(where: { wallpaper in
+                if case .builtin = wallpaper {
+                    return true
+                } else {
+                    return false
+                }
+            }) {
+                sortedWallpapers[builtinIndex] = defaultBuiltinWallpaper(data: .legacy, colors: legacyBuiltinWallpaperGradientColors.map(\.rgb))
+            }
+            
             for wallpaper in sortedWallpapers {
                 if case let .file(file) = wallpaper, (wallpaper.isPattern && file.settings.colors.isEmpty) {
                     continue
@@ -403,10 +415,6 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 }
             }
 
-            /*if !entries.isEmpty {
-                entries = [entries[0]]
-            }*/
-            
             let previous = previousEntries.swap(entries)
             return (preparedThemeGridEntryTransition(context: context, from: previous ?? [], to: entries, interaction: interaction), previous == nil)
         }
@@ -738,6 +746,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         let makeResetDescriptionLayout = self.resetDescriptionItemNode.asyncLayout()
         let (resetDescriptionLayout, _) = makeResetDescriptionLayout(self.resetDescriptionItem, params, ItemListNeighbors(top: .none, bottom: .none))
+    
         insets.bottom += buttonHeight + 35.0 + resetDescriptionLayout.contentSize.height + 32.0
         
         self.gridNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)

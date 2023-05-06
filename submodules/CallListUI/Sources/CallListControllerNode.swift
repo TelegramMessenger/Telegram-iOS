@@ -690,13 +690,13 @@ final class CallListControllerNode: ASDisplayNode {
         let alpha: CGFloat = isHidden ? 0.0 : 1.0
         let previousAlpha = self.emptyTextNode.alpha
         self.emptyTextNode.alpha = alpha
-        self.emptyTextNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.2)
+        self.emptyTextNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.25)
         
         if previousAlpha.isZero && !alpha.isZero {
             self.emptyAnimationNode.visibility = true
         }
         self.emptyAnimationNode.alpha = alpha
-        self.emptyAnimationNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.2, completion: { [weak self] _ in
+        self.emptyAnimationNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.25, completion: { [weak self] _ in
             if let strongSelf = self {
                 if !previousAlpha.isZero && strongSelf.emptyAnimationNode.alpha.isZero {
                     strongSelf.emptyAnimationNode.visibility = false
@@ -705,10 +705,13 @@ final class CallListControllerNode: ASDisplayNode {
         })
         
         self.emptyButtonIconNode.alpha = alpha
-        self.emptyButtonIconNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.2)
+        self.emptyButtonIconNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.25)
         self.emptyButtonTextNode.alpha = alpha
-        self.emptyButtonTextNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.2)
+        self.emptyButtonTextNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: 0.25)
         self.emptyButtonNode.isUserInteractionEnabled = !isHidden
+        
+        self.listNode.alpha = 1.0 - alpha
+        self.listNode.layer.animateAlpha(from: 1.0 - previousAlpha, to: 1.0 - alpha, duration: 0.25)
         
         if !isHidden {
             let type = self.currentLocationAndType.scope
@@ -733,7 +736,6 @@ final class CallListControllerNode: ASDisplayNode {
             }
             
             self.emptyTextNode.attributedText = NSAttributedString(string: emptyText, font: textFont, textColor: color, paragraphAlignment: .center)
-            
             self.emptyButtonTextNode.attributedText = NSAttributedString(string: buttonText, font: buttonFont, textColor: theme.list.itemAccentColor, paragraphAlignment: .center)
             
             if let layout = self.containerLayout {

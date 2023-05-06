@@ -152,6 +152,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let context: AccountContext
     private var theme: PresentationTheme
     private let mode: ThemeAccentColorControllerMode
+    private let resultMode: ThemeAccentColorController.ResultMode
     private var presentationData: PresentationData
     
     private let animationCache: AnimationCache
@@ -187,7 +188,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private var messageNodes: [ListViewItemNode]?
     private let colorPanelNode: WallpaperColorPanelNode
     private let patternPanelNode: WallpaperPatternPanelNode
-    private let toolbarNode: WallpaperGalleryToolbarNode
+    private let toolbarNode: WallpaperGalleryToolbar
     
     private var serviceColorDisposable: Disposable?
     private var stateDisposable: Disposable?
@@ -224,9 +225,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
     }
     
-    init(context: AccountContext, mode: ThemeAccentColorControllerMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void, ready: Promise<Bool>) {
+    init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ThemeAccentColorController.ResultMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void, ready: Promise<Bool>) {
         self.context = context
         self.mode = mode
+        self.resultMode = resultMode
         self.state = ThemeColorState()
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = theme
@@ -305,10 +307,19 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let doneButtonType: WallpaperGalleryToolbarDoneButtonType
         if case .edit(_, _, _, _, _, true, _) = self.mode {
             doneButtonType = .proceed
+        } else if case .peer = resultMode {
+            doneButtonType = .setPeer
         } else {
             doneButtonType = .set
         }
-        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
+        if case .background = mode {
+            let toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
+            toolbarNode.dark = true
+            toolbarNode.setDoneIsSolid(true, transition: .immediate)
+            self.toolbarNode = toolbarNode
+        } else {
+            self.toolbarNode = WallpaperGalleryOldToolbarNode(theme: self.theme, strings: self.presentationData.strings, doneButtonType: doneButtonType)
+        }
         
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
@@ -763,6 +774,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             } else {
                 if case .edit(_, _, _, _, _, true, _) = self.mode {
                     doneButtonType = .proceed
+                } else if case .peer = self.resultMode {
+                    doneButtonType = .setPeer
                 } else {
                     doneButtonType = .set
                 }
@@ -843,7 +856,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
-        }, openForumThread: { _, _ in })
+        }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {
+        })
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
 
         func makeChatListItem(
@@ -1159,8 +1173,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             self.pageControlNode.setPage(0.0)
         }
         
-        let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
-        transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
+        var toolbarBottomInset = layout.intrinsicInsets.bottom
+        if case .background = mode, toolbarBottomInset.isZero {
+            toolbarBottomInset = 16.0
+        }
+        let toolbarHeight = 49.0 + toolbarBottomInset
+        transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         var bottomInset = toolbarHeight
@@ -1169,23 +1187,30 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let colorPanelHeight = max(standardInputHeight, layout.inputHeight ?? 0.0) - bottomInset + inputFieldPanelHeight
         
         var colorPanelOffset: CGFloat = 0.0
+        var colorPanelY = layout.size.height - bottomInset - colorPanelHeight
+        let originalBottomInset = bottomInset
         if self.state.colorPanelCollapsed {
             colorPanelOffset = colorPanelHeight
+            colorPanelY = layout.size.height
         }
-        let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset - colorPanelHeight + colorPanelOffset), size: CGSize(width: layout.size.width, height: colorPanelHeight))
         bottomInset += (colorPanelHeight - colorPanelOffset)
+        
+        if let toolbarNode = self.toolbarNode as? WallpaperGalleryToolbarNode {
+            toolbarNode.setDoneIsSolid(!self.state.colorPanelCollapsed, transition: transition)
+        }
         
         if bottomInset + navigationBarHeight > bounds.height {
             return
         }
         
-        transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
-        self.colorPanelNode.updateLayout(size: colorPanelFrame.size, transition: transition)
+        let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: colorPanelY), size: CGSize(width: layout.size.width, height: colorPanelHeight))
+        transition.updateFrame(node: self.colorPanelNode, frame: CGRect(origin: colorPanelFrame.origin, size: CGSize(width: colorPanelFrame.width, height: colorPanelFrame.height + originalBottomInset)))
+        self.colorPanelNode.updateLayout(size: colorPanelFrame.size, bottomInset: originalBottomInset, transition: transition)
         
         let patternPanelAlpha: CGFloat = self.state.displayPatternPanel ? 1.0 : 0.0
         let patternPanelFrame = colorPanelFrame
         transition.updateFrame(node: self.patternPanelNode, frame: patternPanelFrame)
-        self.patternPanelNode.updateLayout(size: patternPanelFrame.size, transition: transition)
+        self.patternPanelNode.updateLayout(size: patternPanelFrame.size, bottomInset: originalBottomInset, transition: transition)
         self.patternPanelNode.isUserInteractionEnabled = self.state.displayPatternPanel
         transition.updateAlpha(node: self.patternPanelNode, alpha: patternPanelAlpha)
         
@@ -1198,7 +1223,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         transition.updateFrame(node: self.backgroundContainerNode, frame: CGRect(origin: CGPoint(), size: backgroundSize))
 
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, transition: transition)
+        self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, displayMode: .aspectFill, transition: transition)
         
         transition.updatePosition(node: self.backgroundWrapperNode, position: CGPoint(x: backgroundSize.width / 2.0, y: backgroundSize.height / 2.0))
         

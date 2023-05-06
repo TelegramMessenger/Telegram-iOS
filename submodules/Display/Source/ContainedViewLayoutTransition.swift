@@ -423,6 +423,29 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateAnchorPoint(layer: CALayer, anchorPoint: CGPoint, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if layer.anchorPoint.equalTo(anchorPoint) && !force {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                layer.removeAnimation(forKey: "anchorPoint")
+                layer.anchorPoint = anchorPoint
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousAnchorPoint = layer.anchorPoint
+                layer.anchorPoint = anchorPoint
+                layer.animateAnchorPoint(from: previousAnchorPoint, to: anchorPoint, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+            }
+        }
+    }
+    
     func animatePosition(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self {
         case .immediate:
@@ -902,6 +925,35 @@ public extension ContainedViewLayoutTransition {
                     completion(result)
                 }
             })
+        }
+    }
+    
+    func updateTintColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
+        if let current = layer.layerTintColor, current == color.cgColor {
+            completion?(true)
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.layerTintColor = color.cgColor
+            completion?(true)
+        case let .animated(duration, curve):
+            let previousColor: CGColor = layer.layerTintColor ?? UIColor.clear.cgColor
+            layer.layerTintColor = color.cgColor
+            
+            layer.animate(
+                from: previousColor,
+                to: color.cgColor,
+                keyPath: "contentsMultiplyColor",
+                timingFunction: curve.timingFunction,
+                duration: duration,
+                delay: 0.0,
+                mediaTimingFunction: curve.mediaTimingFunction,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
         }
     }
     
@@ -1831,6 +1883,10 @@ final class ControlledTransitionProperty {
     let toValue: AnyValue
     private let completion: ((Bool) -> Void)?
     
+    private lazy var animationKey: String = {
+        return "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())"
+    }()
+    
     init<T: Equatable>(layer: CALayer, path: String, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
         self.layer = layer
         self.path = path
@@ -1842,7 +1898,7 @@ final class ControlledTransitionProperty {
     }
     
     deinit {
-        self.layer.removeAnimation(forKey: "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())")
+        self.layer.removeAnimation(forKey: self.animationKey)
     }
     
     func update(at fraction: CGFloat) {
@@ -1858,7 +1914,7 @@ final class ControlledTransitionProperty {
         animation.toValue = value.nsValue
         animation.timingFunction = CAMediaTimingFunction(name: .linear)
         animation.isRemovedOnCompletion = false
-        self.layer.add(animation, forKey: "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())")
+        self.layer.add(animation, forKey: self.animationKey)
     }
     
     func complete(atEnd: Bool) {

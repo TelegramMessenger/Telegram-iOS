@@ -908,7 +908,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 } else if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil  {
                     selectedType = .publicChannel
                 } else if case .initialSetup = mode {
-                    selectedType = .publicChannel
+                    selectedType = .privateChannel
                 } else {
                     selectedType = .privateChannel
                 }
@@ -1803,6 +1803,15 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         
         var footerItem: ItemListControllerFooterItem?
         
+        var isGroup = false
+        if let peer = peer as? TelegramChannel {
+            if case .group = peer.info {
+                isGroup = true
+            }
+        } else if let _ = peer as? TelegramGroup {
+            isGroup = true
+        }
+        
         var rightNavigationButton: ItemListNavigationButton?
         if case .revokeNames = mode {
             let count = Int32(publicChannelsToRevoke?.count ?? 0)
@@ -1895,19 +1904,23 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                             
                         }
                         
-                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
-                            if showAlert {
-                                let text: String
-                                if case .broadcast = peer.info {
-                                    text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                        if !updatedAddressNameValue.isEmpty {
+                            _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
+                                if showAlert {
+                                    let text: String
+                                    if case .broadcast = peer.info {
+                                        text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                                    } else {
+                                        text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
                                 } else {
-                                    text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
+                                    invokeAction()
                                 }
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
-                            } else {
-                                invokeAction()
-                            }
-                        })
+                            })
+                        } else {
+                            invokeAction()
+                        }
                     } else {
                         switch mode {
                             case .initialSetup:
@@ -1993,7 +2006,13 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         
                         _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
                             if showAlert {
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
+                                let text: String
+                                if isGroup {
+                                    text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
+                                } else {
+                                    text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                                }
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
                             } else {
                                 invokeAction()
                             }
@@ -2013,16 +2032,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         if state.revokingPeerId != nil {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
         }
-        
-        var isGroup = false
-        if let peer = peer as? TelegramChannel {
-            if case .group = peer.info {
-                isGroup = true
-            }
-        } else if let _ = peer as? TelegramGroup {
-            isGroup = true
-        }
-        
+                
         let leftNavigationButton: ItemListNavigationButton?
         switch mode {
             case .initialSetup:

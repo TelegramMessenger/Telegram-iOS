@@ -14,6 +14,7 @@ import SheetComponent
 import MultilineTextComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
+import BlurredBackgroundComponent
 import Markdown
 import TelegramUIPreferences
 
@@ -282,15 +283,18 @@ final class DemoPagerComponent: Component {
     
     let items: [Item]
     let index: Int
+    let nextAction: ActionSlot<Void>?
     let updated: (CGFloat, Int) -> Void
     
     public init(
         items: [Item],
         index: Int = 0,
+        nextAction: ActionSlot<Void>? = nil,
         updated: @escaping (CGFloat, Int) -> Void
     ) {
         self.items = items
         self.index = index
+        self.nextAction = nextAction
         self.updated = updated
     }
     
@@ -344,6 +348,17 @@ final class DemoPagerComponent: Component {
         
         func update(component: DemoPagerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             var validIds: [AnyHashable] = []
+            
+            component.nextAction?.connect { [weak self] in
+                if let self {
+                    var nextContentOffset = self.scrollView.contentOffset
+                    nextContentOffset.x += self.scrollView.frame.width
+                    if nextContentOffset.x >= self.scrollView.contentSize.width {
+                        nextContentOffset.x = 0.0
+                    }
+                    self.scrollView.contentOffset = nextContentOffset
+                }
+            }
             
             let firstTime = self.itemViews.isEmpty
             
@@ -456,7 +471,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation]
         self.action = action
         self.dismiss = dismiss
     }
@@ -786,7 +801,8 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(
                                     StickersCarouselComponent(
                                         context: component.context,
-                                        stickers: stickers
+                                        stickers: stickers,
+                                        tapAction: {}
                                     )
                                 ),
                                 title: strings.Premium_Stickers,
@@ -904,6 +920,26 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.translation] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.translation,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["translations"],
+                                    decoration: .hello
+                                )),
+                                title: strings.Premium_Translation,
+                                text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
                 switch component.source {
@@ -936,9 +972,8 @@ private final class DemoSheetContent: CombinedComponent {
                         AnyComponentWithIdentity(
                             id: "background",
                             component: AnyComponent(
-                                BlurredRectangle(
-                                    color:  UIColor(rgb: 0x888888, alpha: 0.1),
-                                    radius: 15.0
+                                BlurredBackgroundComponent(
+                                    color:  UIColor(rgb: 0x888888, alpha: 0.1)
                                 )
                             )
                         ),
@@ -958,6 +993,8 @@ private final class DemoSheetContent: CombinedComponent {
             )
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
+                .clipsToBounds(true)
+                .cornerRadius(15.0)
             )
                          
             let buttonText: String
@@ -990,6 +1027,8 @@ private final class DemoSheetContent: CombinedComponent {
                             case .animatedEmoji:
                                 buttonText = strings.Premium_AnimatedEmoji_Proceed
                                 buttonAnimationName = "premium_unlock"
+                            case .translation:
+                                buttonText = strings.Premium_Translation_Proceed
                             default:
                                 buttonText = strings.Common_OK
                         }
@@ -1170,6 +1209,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case appIcons
         case animatedEmoji
         case emojiStatus
+        case translation
     }
     
     public enum Source: Equatable {

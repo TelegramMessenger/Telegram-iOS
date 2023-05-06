@@ -158,6 +158,24 @@ public extension UIColor {
         }
     }
     
+    var brightness: CGFloat {
+        var hue: CGFloat = 0.0
+        var saturation: CGFloat = 0.0
+        var brightness: CGFloat = 0.0
+        var alpha: CGFloat = 0.0
+        self.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        return brightness
+    }
+    
+    var saturation: CGFloat {
+        var hue: CGFloat = 0.0
+        var saturation: CGFloat = 0.0
+        var brightness: CGFloat = 0.0
+        var alpha: CGFloat = 0.0
+        self.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        return saturation
+    }
+    
     func withMultipliedBrightnessBy(_ factor: CGFloat) -> UIColor {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0
@@ -198,6 +216,26 @@ public extension UIColor {
             let b = b1 * oneMinusAlpha + b2 * alpha
             let a = a1 * oneMinusAlpha + a2 * alpha
             return UIColor(red: r, green: g, blue: b, alpha: a)
+        }
+        return self
+    }
+    
+    func multipliedWith(_ other: UIColor) -> UIColor {
+        var r1: CGFloat = 0.0
+        var r2: CGFloat = 0.0
+        var g1: CGFloat = 0.0
+        var g2: CGFloat = 0.0
+        var b1: CGFloat = 0.0
+        var b2: CGFloat = 0.0
+        var a1: CGFloat = 0.0
+        var a2: CGFloat = 0.0
+        if self.getRed(&r1, green: &g1, blue: &b1, alpha: &a1) &&
+            other.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        {
+            let r = r1 * r2
+            let g = g1 * g2
+            let b = b1 * b2
+            return UIColor(red: r, green: g, blue: b, alpha: 1.0)
         }
         return self
     }
@@ -399,9 +437,21 @@ public extension UIImage {
     }
 }
 
-private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) -> UIView? {
+private func makeSubtreeSnapshot(layer: CALayer, keepPortals: Bool = false, keepTransform: Bool = false) -> UIView? {
     if layer is AVSampleBufferDisplayLayer {
         return nil
+    }
+    if keepPortals && layer.description.contains("PortalLayer") {
+        let sourceView = (layer.delegate as? UIView)?.value(forKey: "sourceView") as? UIView
+        if let snapshotView = sourceView?.snapshotContentTree() {
+            let globalFrame = layer.convert(layer.bounds, to: sourceView?.layer)
+            snapshotView.frame = CGRect(origin: CGPoint(x: -globalFrame.minX, y: -globalFrame.minY), size: snapshotView.frame.size)
+            snapshotView.alpha = 1.0
+            snapshotView.tag = 0xbeef
+            return snapshotView
+        } else {
+            return nil
+        }
     }
     let view = UIView()
     view.layer.isHidden = layer.isHidden
@@ -437,21 +487,23 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
     view.layer.backgroundColor = layer.backgroundColor
     if let sublayers = layer.sublayers {
         for sublayer in sublayers {
-            let subtree = makeSubtreeSnapshot(layer: sublayer, keepTransform: keepTransform)
+            let subtree = makeSubtreeSnapshot(layer: sublayer, keepPortals: keepPortals, keepTransform: keepTransform)
             if let subtree = subtree {
                 if keepTransform {
                     subtree.layer.transform = sublayer.transform
                 }
-                subtree.layer.transform = sublayer.transform
-                subtree.layer.position = sublayer.position
-                subtree.layer.bounds = sublayer.bounds
-                subtree.layer.anchorPoint = sublayer.anchorPoint
-                subtree.layer.layerTintColor = sublayer.layerTintColor
+                if subtree.tag != 0xbeef {
+                    subtree.layer.transform = sublayer.transform
+                    subtree.layer.position = sublayer.position
+                    subtree.layer.bounds = sublayer.bounds
+                    subtree.layer.anchorPoint = sublayer.anchorPoint
+                    subtree.layer.layerTintColor = sublayer.layerTintColor
+                }
                 if let maskLayer = subtree.layer.mask {
-                    maskLayer.transform = sublayer.transform
-                    maskLayer.position = sublayer.position
-                    maskLayer.bounds = sublayer.bounds
-                    maskLayer.anchorPoint = sublayer.anchorPoint
+//                    maskLayer.transform = sublayer.transform
+//                    maskLayer.position = sublayer.position
+//                    maskLayer.bounds = sublayer.bounds
+//                    maskLayer.anchorPoint = sublayer.anchorPoint
                     maskLayer.layerTintColor = sublayer.layerTintColor
                 }
                 view.addSubview(subtree)
@@ -647,12 +699,12 @@ private func makeLayerSubtreeSnapshotAsView(layer: CALayer) -> UIView? {
 
 
 public extension UIView {
-    func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
+    func snapshotContentTree(unhide: Bool = false, keepPortals: Bool = false, keepTransform: Bool = false) -> UIView? {
         let wasHidden = self.isHidden
         if unhide && wasHidden {
             self.isHidden = false
         }
-        let snapshot = makeSubtreeSnapshot(layer: self.layer, keepTransform: keepTransform)
+        let snapshot = makeSubtreeSnapshot(layer: self.layer, keepPortals: keepPortals, keepTransform: keepTransform)
         if unhide && wasHidden {
             self.isHidden = true
         }

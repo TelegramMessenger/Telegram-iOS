@@ -9,6 +9,11 @@ CGSize aspectFillSize(CGSize size, CGSize bounds) {
     return CGSizeMake(floor(size.width * scale), floor(size.height * scale));
 }
 
+CGSize aspectFitSize(CGSize size, CGSize bounds) {
+    CGFloat scale = MIN(bounds.width / MAX(1.0, size.width), bounds.height / MAX(1.0, size.height));
+    return CGSizeMake(floor(size.width * scale), floor(size.height * scale));
+}
+
 @interface SvgXMLParsingDelegate : NSObject <NSXMLParserDelegate> {
     NSString *_elementName;
     NSString *_currentStyleString;
@@ -358,7 +363,7 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
 
 @end
 
-UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, CGFloat scale) {
+UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, CGFloat scale, bool fit) {
     NSDate *startTime = [NSDate date];
     
     UIColor *foregroundColor = [UIColor whiteColor];
@@ -383,6 +388,15 @@ UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIC
     
     bool isTransparent = [backgroundColor isEqual:[UIColor clearColor]];
     
+    CGSize svgSize = CGSizeMake(width, height);
+    CGSize drawingSize;
+    if (fit) {
+        drawingSize = aspectFitSize(svgSize, size);
+        size = drawingSize;
+    } else {
+        drawingSize = aspectFillSize(svgSize, size);
+    }
+    
     UIGraphicsBeginImageContextWithOptions(size, !isTransparent, scale);
     CGContextRef context = UIGraphicsGetCurrentContext();
     if (isTransparent) {
@@ -392,8 +406,7 @@ UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIC
         CGContextFillRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
     }
     
-    CGSize svgSize = CGSizeMake(width, height);
-    CGSize drawingSize = aspectFillSize(svgSize, size);
+    
     
     CGFloat renderScale = MAX(size.width / MAX(1.0, svgSize.width), size.height / MAX(1.0, svgSize.height));
     

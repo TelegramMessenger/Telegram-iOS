@@ -3,20 +3,29 @@ import UIKit
 import Photos
 import SwiftSignalKit
 
-private let imageManager = PHCachingImageManager()
+private let imageManager: PHCachingImageManager = {
+    let imageManager = PHCachingImageManager()
+    imageManager.allowsCachingHighQualityImages = false
+    return imageManager
+}()
+
+
 private let assetsQueue = Queue()
 
-func assetImage(fetchResult: PHFetchResult<PHAsset>, index: Int, targetSize: CGSize, exact: Bool) -> Signal<UIImage?, NoError> {
+func assetImage(fetchResult: PHFetchResult<PHAsset>, index: Int, targetSize: CGSize, exact: Bool, deliveryMode: PHImageRequestOptionsDeliveryMode = .opportunistic, synchronous: Bool = false) -> Signal<UIImage?, NoError> {
     let asset = fetchResult[index]
-    return assetImage(asset: asset, targetSize: targetSize, exact: exact)
+    return assetImage(asset: asset, targetSize: targetSize, exact: exact, deliveryMode: deliveryMode, synchronous: synchronous)
 }
 
-func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool) -> Signal<UIImage?, NoError> {
+func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool, deliveryMode: PHImageRequestOptionsDeliveryMode = .opportunistic, synchronous: Bool = false) -> Signal<UIImage?, NoError> {
     return Signal { subscriber in        
         let options = PHImageRequestOptions()
+        options.deliveryMode = deliveryMode
         if exact {
             options.resizeMode = .exact
         }
+        options.isSynchronous = synchronous
+        options.isNetworkAccessAllowed = true
         let token = imageManager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options) { (image, info) in
             var degraded = false
             
@@ -31,17 +40,15 @@ func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool) -> Signal<UIIma
             
             if let image = image {
                 subscriber.putNext(image)
-                if !degraded {
+                if !degraded || deliveryMode == .fastFormat {
                     subscriber.putCompletion()
                 }
             }
         }
         return ActionDisposable {
-            assetsQueue.async {
-                imageManager.cancelImageRequest(token)
-            }
+            imageManager.cancelImageRequest(token)
         }
-    } |> runOn(assetsQueue)
+    }
 }
 
 func assetVideo(fetchResult: PHFetchResult<PHAsset>, index: Int) -> Signal<AVAsset?, NoError> {
@@ -49,7 +56,6 @@ func assetVideo(fetchResult: PHFetchResult<PHAsset>, index: Int) -> Signal<AVAss
         let asset = fetchResult[index]
         
         let options = PHVideoRequestOptions()
-        
         let token = imageManager.requestAVAsset(forVideo: asset, options: options) { (avAsset, _, info) in
             if let avAsset = avAsset {
                 subscriber.putNext(avAsset)

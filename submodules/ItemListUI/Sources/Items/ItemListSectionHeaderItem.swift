@@ -41,19 +41,25 @@ public enum ItemListSectionHeaderActivityIndicator {
 public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let text: String
+    let badge: String?
     let multiline: Bool
     let activityIndicator: ItemListSectionHeaderActivityIndicator
     let accessoryText: ItemListSectionHeaderAccessoryText?
+    let actionText: String?
+    let action: (() -> Void)?
     public let sectionId: ItemListSectionId
     
     public let isAlwaysPlain: Bool = true
     
-    public init(presentationData: ItemListPresentationData, text: String, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
+    public init(presentationData: ItemListPresentationData, text: String, badge: String? = nil, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, actionText: String? = nil, action: (() -> Void)? = nil, sectionId: ItemListSectionId) {
         self.presentationData = presentationData
         self.text = text
+        self.badge = badge
         self.multiline = multiline
         self.activityIndicator = activityIndicator
         self.accessoryText = accessoryText
+        self.actionText = actionText
+        self.action = action
         self.sectionId = sectionId
     }
     
@@ -97,9 +103,13 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
     private var item: ItemListSectionHeaderItem?
     
     private let titleNode: TextNode
+    private var badgeBackgroundLayer: SimpleLayer?
+    private var badgeTextNode: TextNode?
     private let accessoryTextNode: TextNode
     private var accessoryImageNode: ASImageNode?
     private var activityIndicator: ActivityIndicator?
+    private var actionNode: TextNode?
+    private var actionButtonNode: HighlightableButtonNode?
 
     private let activateArea: AccessibilityAreaNode
     
@@ -126,6 +136,8 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
     
     public func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeActionLayout = TextNode.asyncLayout(self.actionNode)
+        let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let makeAccessoryTextLayout = TextNode.asyncLayout(self.accessoryTextNode)
         
         let previousItem = self.item
@@ -135,7 +147,26 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var badgeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let badge = item.badge {
+                let badgeFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize * 11.0 / 13.0)
+                badgeLayoutAndApply = makeBadgeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: badge, font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+            }
+            
+            let badgeSpacing: CGFloat = 6.0
+            var textRightInset: CGFloat = 20.0
+            if let badgeLayoutAndApply {
+                textRightInset += badgeLayoutAndApply.0.size.width + badgeSpacing
+            }
+            
+            var actionLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let actionText = item.actionText {
+                let actionLayoutAndApplyValue = makeActionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: actionText, font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                actionLayoutAndApply = actionLayoutAndApplyValue
+                textRightInset += actionLayoutAndApplyValue.0.size.width + 2.0
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: item.multiline ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             var accessoryTextString: NSAttributedString?
             var accessoryIcon: UIImage?
             if let accessoryText = item.accessoryText {
@@ -177,6 +208,76 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                     strongSelf.activateArea.accessibilityLabel = item.text
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: titleLayout.size)
+                    
+                    if let (actionLayout, actionApply) = actionLayoutAndApply {
+                        let actionButtonNode: HighlightableButtonNode
+                        if let current = strongSelf.actionButtonNode {
+                            actionButtonNode = current
+                        } else {
+                            actionButtonNode = HighlightableButtonNode()
+                            strongSelf.actionButtonNode = actionButtonNode
+                            actionButtonNode.hitTestSlop = UIEdgeInsets(top: -4.0, left: -4.0, bottom: -4.0, right: -4.0)
+                            strongSelf.addSubnode(actionButtonNode)
+                            actionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.actionButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        
+                        let actionNode = actionApply()
+                        if strongSelf.actionNode !== actionNode {
+                            strongSelf.actionNode?.removeFromSupernode()
+                            strongSelf.actionNode = actionNode
+                            actionButtonNode.addSubnode(actionNode)
+                        }
+                        
+                        actionButtonNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - actionLayout.size.width, y: 7.0), size: actionLayout.size)
+                        
+                        actionNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actionLayout.size)
+                    } else {
+                        if let actionNode = strongSelf.actionNode {
+                            strongSelf.actionNode = nil
+                            actionNode.removeFromSupernode()
+                        }
+                        if let actionButtonNode = strongSelf.actionButtonNode {
+                            strongSelf.actionButtonNode = nil
+                            actionButtonNode.removeFromSupernode()
+                        }
+                    }
+                    
+                    if let badgeLayoutAndApply {
+                        let badgeTextNode = badgeLayoutAndApply.1()
+                        let badgeSideInset: CGFloat = 4.0
+                        let badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + badgeLayoutAndApply.0.size.width, height: badgeLayoutAndApply.0.size.height + 3.0)
+                        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: strongSelf.titleNode.frame.maxX + badgeSpacing, y: strongSelf.titleNode.frame.minY - UIScreenPixel + floorToScreenPixels((strongSelf.titleNode.bounds.height - badgeBackgroundSize.height) * 0.5)), size: badgeBackgroundSize)
+                        
+                        let badgeBackgroundLayer: SimpleLayer
+                        if let current = strongSelf.badgeBackgroundLayer {
+                            badgeBackgroundLayer = current
+                        } else {
+                            badgeBackgroundLayer = SimpleLayer()
+                            strongSelf.badgeBackgroundLayer = badgeBackgroundLayer
+                            strongSelf.layer.addSublayer(badgeBackgroundLayer)
+                        }
+                        
+                        if strongSelf.badgeTextNode !== badgeTextNode {
+                            strongSelf.badgeTextNode?.removeFromSupernode()
+                            strongSelf.badgeTextNode = badgeTextNode
+                            strongSelf.addSubnode(badgeTextNode)
+                        }
+                        
+                        badgeBackgroundLayer.frame = badgeBackgroundFrame
+                        badgeBackgroundLayer.backgroundColor = item.presentationData.theme.list.itemCheckColors.fillColor.cgColor
+                        badgeBackgroundLayer.cornerRadius = 5.0
+                        
+                        badgeTextNode.frame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.minX + floor((badgeBackgroundFrame.width - badgeLayoutAndApply.0.size.width) * 0.5), y: badgeBackgroundFrame.minY + 1.0 + floorToScreenPixels((badgeBackgroundFrame.height - badgeLayoutAndApply.0.size.height) * 0.5)), size: badgeLayoutAndApply.0.size)
+                    } else {
+                        if let badgeTextNode = strongSelf.badgeTextNode {
+                            strongSelf.badgeTextNode = nil
+                            badgeTextNode.removeFromSupernode()
+                        }
+                        if let badgeBackgroundLayer = strongSelf.badgeBackgroundLayer {
+                            strongSelf.badgeBackgroundLayer = nil
+                            badgeBackgroundLayer.removeFromSuperlayer()
+                        }
+                    }
                     
                     var accessoryTextOffset: CGFloat = 0.0
                     if let accessoryIcon = accessoryIcon {
@@ -240,6 +341,10 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                 }
             })
         }
+    }
+    
+    @objc private func actionButtonPressed() {
+        self.item?.action?()
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {

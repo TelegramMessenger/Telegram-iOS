@@ -14,10 +14,10 @@ private final class InstantPageTileNodeParameters: NSObject {
     }
 }
 
-final class InstantPageTileNode: ASDisplayNode {
+public final class InstantPageTileNode: ASDisplayNode {
     private let tile: InstantPageTile
     
-    init(tile: InstantPageTile, backgroundColor: UIColor) {
+    public init(tile: InstantPageTile, backgroundColor: UIColor) {
         self.tile = tile
         
         super.init()
@@ -27,12 +27,11 @@ final class InstantPageTileNode: ASDisplayNode {
         self.backgroundColor = backgroundColor
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+    public override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         return InstantPageTileNodeParameters(tile: self.tile, backgroundColor: self.backgroundColor ?? UIColor.white)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
-        
         let context = UIGraphicsGetCurrentContext()!
         
         if let parameters = parameters as? InstantPageTileNodeParameters {

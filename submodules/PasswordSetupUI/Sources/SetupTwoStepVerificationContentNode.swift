@@ -67,7 +67,9 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
                 self.inputNode.textField.autocapitalizationType = .none
                 self.inputNode.textField.autocorrectionType = .no
                 if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+                    #if DEBUG
                     self.inputNode.textField.textContentType = .newPassword
+                    #endif
                 }
             case .text:
                 break

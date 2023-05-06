@@ -15,6 +15,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 import InviteLinksUI
 import UndoUI
+import SendInviteLinkScreen
 
 private final class ChannelMembersControllerArguments {
     let context: AccountContext
@@ -510,16 +511,19 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
     let contactsPromise = Promise<[RenderedChannelParticipant]?>(nil)
     
     let arguments = ChannelMembersControllerArguments(context: context, addMember: {
-        actionsDisposable.add((peersPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { members in
+        actionsDisposable.add((combineLatest(
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId)),
+            peersPromise.get() |> take(1)
+        )
+        |> deliverOnMainQueue).start(next: { chatPeer, exportedInvitation, members in
             let disabledIds = members?.compactMap({$0.peer.id}) ?? []
             let contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: [], filters: [.excludeSelf, .disable(disabledIds)]))
             
-            addMembersDisposable.set((contactsController.result
+            addMembersDisposable.set((
+                contactsController.result
             |> deliverOnMainQueue
-            |> castError(AddChannelMemberError.self)
-            |> mapToSignal { [weak contactsController] result -> Signal<Never, AddChannelMemberError> in
+            |> mapToSignal { [weak contactsController] result -> Signal<[(PeerId, AddChannelMemberError)], NoError> in
                 contactsController?.displayProgress = true
                 
                 var contacts: [ContactListPeerId] = []
@@ -527,7 +531,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                     contacts = peerIdsValue
                 }
                 
-                let signal = context.peerChannelMemberCategoriesContextsManager.addMembers(engine: context.engine, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
+                let signal = context.peerChannelMemberCategoriesContextsManager.addMembersAllowPartial(engine: context.engine, peerId: peerId, memberIds: contacts.compactMap({ contact -> PeerId? in
                     switch contact {
                         case let .peer(contactId):
                             return contactId
@@ -537,17 +541,43 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                 }))
                 
                 return signal
-                |> ignoreValues
                 |> deliverOnMainQueue
-                |> afterCompleted {
-                    contactsController?.dismiss()
-                }
-            }).start(error: { [weak contactsController] error in
+            }).start(next: { [weak contactsController] failedPeerIds in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                |> deliverOnMainQueue).start(next: { peer in
-                    let text: String
-                    switch error {
+                
+                if failedPeerIds.isEmpty {
+                    contactsController?.dismiss()
+                } else {
+                    if let chatPeer {
+                        let _ = (context.engine.data.get(
+                            EngineDataList(failedPeerIds.compactMap { item -> EnginePeer.Id? in
+                                return item.0
+                            }.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                        )
+                        |> deliverOnMainQueue).start(next: { peerItems in
+                            let peers = peerItems.compactMap { $0 }
+                            if !peers.isEmpty, let contactsController, let navigationController = contactsController.navigationController as? NavigationController {
+                                var viewControllers = navigationController.viewControllers
+                                if let index = viewControllers.firstIndex(where: { $0 === contactsController }) {
+                                    let inviteScreen = SendInviteLinkScreen(context: context, peer: chatPeer, link: exportedInvitation?.link, peers: peers)
+                                    viewControllers.remove(at: index)
+                                    viewControllers.append(inviteScreen)
+                                    navigationController.setViewControllers(viewControllers, animated: true)
+                                }
+                            } else {
+                                contactsController?.dismiss()
+                            }
+                        })
+                        
+                        return
+                    }
+                    
+                    contactsController?.dismiss()
+                    
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        let text: String
+                        switch failedPeerIds[0].1 {
                         case .limitExceeded:
                             text = presentationData.strings.Channel_ErrorAddTooMuch
                         case .tooMuchJoined:
@@ -557,13 +587,13 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                         case .restricted:
                             text = presentationData.strings.Channel_ErrorAddBlocked
                         case .notMutualContact:
-                        if case let .channel(peer) = peer, case .broadcast = peer.info {
+                            if case let .channel(peer) = peer, case .broadcast = peer.info {
                                 text = presentationData.strings.Channel_AddUserLeftError
                             } else {
                                 text = presentationData.strings.GroupInfo_AddUserLeftError
                             }
                         case let .bot(memberId):
-                        guard case let .channel(peer) = peer else {
+                            guard case let .channel(peer) = peer else {
                                 presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 contactsController?.dismiss()
                                 return
@@ -589,10 +619,11 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                             text = presentationData.strings.Channel_TooMuchBots
                         case .kicked:
                             text = presentationData.strings.Channel_AddUserKickedError
-                    }
-                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                    contactsController?.dismiss()
-                })
+                        }
+                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                        contactsController?.dismiss()
+                    })
+                }
             }))
             
             presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -774,7 +805,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
         case .notAllowed:
             text = presentationData.strings.PeerInfo_HideMembersLimitedRights
         }
-        controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
     }
     getControllerImpl =  { [weak controller] in
         return controller

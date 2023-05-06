@@ -136,15 +136,16 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, otherGestureRecognizer is UIPanGestureRecognizer {
+        if let _ = gestureRecognizer as? UIPanGestureRecognizer, otherGestureRecognizer is UIPanGestureRecognizer {
             if let _ = otherGestureRecognizer.view?.superview as? MKMapView {
                 return false
             }
             if let view = otherGestureRecognizer.view, view.description.contains("WKChildScroll") {
-                let velocity = panGestureRecognizer.velocity(in: nil)
-                if abs(velocity.x) > abs(velocity.y) * 2.0 {
-                    return false
-                }
+                return false
+//                let velocity = panGestureRecognizer.velocity(in: nil)
+//                if abs(velocity.x) > abs(velocity.y) * 2.0 {
+//                    return false
+//                }
             }
             if let _ = otherGestureRecognizer.view?.asyncdisplaykit_node as? CollectionIndexNode {
                 return false
@@ -433,7 +434,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         let containerFrame: CGRect
         let clipFrame: CGRect
         let containerScale: CGFloat
-        if layout.metrics.widthClass == .compact {
+        if case .compact = layout.metrics.widthClass {
             self.clipNode.clipsToBounds = true
             
             if isLandscape {
@@ -547,7 +548,11 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     private func findScrollView(view: UIView?) -> (UIScrollView, ListView?)? {
         if let view = view {
             if let view = view as? UIScrollView {
-                return (view, nil)
+                if view.description.contains("WKChildScroll") {
+                    return nil
+                } else {
+                    return (view, nil)
+                }
             }
             if let node = view.asyncdisplaykit_node as? ListView {
                 return (node.scroller, node)

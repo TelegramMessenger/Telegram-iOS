@@ -235,30 +235,30 @@ class ChatListFilterPresetCategoryItemNode: ItemListRevealOptionsItemNode, ItemL
                         switch item.icon {
                         case .contacts:
                             color = .blue
-                            imageName = "Chat/Context Menu/User"
+                            imageName = "Chat List/Filters/Contact"
                         case .nonContacts:
                             color = .yellow
-                            imageName = "Chat/Context Menu/UnknownUser"
+                            imageName = "Chat List/Filters/User"
                         case .groups:
                             color = .green
-                            imageName = "Chat/Context Menu/Groups"
+                            imageName = "Chat List/Filters/Group"
                         case .channels:
                             color = .red
-                            imageName = "Chat/Context Menu/Channels"
+                            imageName = "Chat List/Filters/Channel"
                         case .bots:
                             color = .violet
-                            imageName = "Chat/Context Menu/Bots"
+                            imageName = "Chat List/Filters/Bot"
                         case .muted:
                             color = .red
-                            imageName = "Chat/Context Menu/Muted"
+                            imageName = "Chat List/Filters/Muted"
                         case .read:
                             color = .blue
-                            imageName = "Chat/Context Menu/Message"
+                            imageName = "Chat List/Filters/Read"
                         case .archived:
                             color = .yellow
-                            imageName = "Chat/Context Menu/Archive"
+                            imageName = "Chat List/Filters/Archive"
                         }
-                        updatedAvatarImage = generateAvatarImage(size: CGSize(width: avatarSize, height: avatarSize), icon: generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white), color: color)
+                        updatedAvatarImage = generateAvatarImage(size: CGSize(width: avatarSize, height: avatarSize), icon: generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white), cornerRadius: 12.0, color: color)
                     }
                     
                     let revealOffset = strongSelf.revealOffset

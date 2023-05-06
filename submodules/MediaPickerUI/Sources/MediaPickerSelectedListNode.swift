@@ -17,6 +17,7 @@ import ChatMessageBackground
 private class MediaPickerSelectedItemNode: ASDisplayNode {
     let asset: TGMediaEditableItem
     private let interaction: MediaPickerInteraction?
+    private let enableAnimations: Bool
     
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
@@ -56,14 +57,15 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     
     private var videoDuration: Double?
     
-    init(asset: TGMediaEditableItem, interaction: MediaPickerInteraction?) {
+    init(asset: TGMediaEditableItem, interaction: MediaPickerInteraction?, enableAnimations: Bool) {
+        self.asset = asset
+        self.interaction = interaction
+        self.enableAnimations = enableAnimations
+        
         self.imageNode = ImageNode()
         self.imageNode.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
         self.imageNode.animateFirstTransition = false
-        
-        self.asset = asset
-        self.interaction = interaction
         
         super.init()
         
@@ -165,7 +167,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     
         if hasSpoiler {
             if self.spoilerNode == nil {
-                let spoilerNode = SpoilerOverlayNode()
+                let spoilerNode = SpoilerOverlayNode(enableAnimations: self.enableAnimations)
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
                 self.spoilerNode = spoilerNode
                 
@@ -254,7 +256,9 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
                 if let strongSelf = self, let interaction = strongSelf.interaction, let selectableItem = strongSelf.asset as? TGMediaSelectableItem {
-                    interaction.toggleSelection(selectableItem, value, true)
+                    if !interaction.toggleSelection(selectableItem, value, true) {
+                        strongSelf.checkNode?.setSelected(false, animated: false)
+                    }
                 }
             }
             self.addSubnode(checkNode)
@@ -519,7 +523,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         self.context = context
         self.persistentItems = persistentItems
         
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         self.wallpaperBackgroundNode.backgroundColor = .black
         self.scrollNode = ASScrollNode()
         
@@ -589,7 +593,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             strongSelf.wallpaperBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                 completion()
             })
-            strongSelf.wallpaperBackgroundNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            strongSelf.wallpaperBackgroundNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.33, timingFunction: kCAMediaTimingFunctionSpring)
             
             for (_, backgroundNode) in strongSelf.backgroundNodes {
                 backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
@@ -637,7 +641,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             }
         })
         
-        self.wallpaperBackgroundNode.layer.animateScale(from: 1.0, to: 1.2, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+        self.wallpaperBackgroundNode.layer.animateScale(from: 1.0, to: 1.2, duration: 0.33, timingFunction: kCAMediaTimingFunctionSpring)
         
         for (_, backgroundNode) in self.backgroundNodes {
             backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
@@ -779,7 +783,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             if let current = self.itemNodes[identifier] {
                 itemNode = current
             } else {
-                itemNode = MediaPickerSelectedItemNode(asset: asset, interaction: self.interaction)
+                itemNode = MediaPickerSelectedItemNode(asset: asset, interaction: self.interaction, enableAnimations: self.context.sharedContext.energyUsageSettings.fullTranslucency)
                 self.itemNodes[identifier] = itemNode
                 self.scrollNode.addSubnode(itemNode)
                 
@@ -1068,7 +1072,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
         self.wallpaperBackgroundNode.updateBubbleTheme(bubbleTheme: theme, bubbleCorners: bubbleCorners)
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(x: inset, y: 0.0), size: CGSize(width: size.width - inset * 2.0, height: size.height)))
-        self.wallpaperBackgroundNode.updateLayout(size: CGSize(width: size.width - inset * 2.0, height: size.height), transition: transition)
+        self.wallpaperBackgroundNode.updateLayout(size: CGSize(width: size.width - inset * 2.0, height: size.height), displayMode: .aspectFill, transition: transition)
         
         self.updateItems(transition: itemsTransition)
         

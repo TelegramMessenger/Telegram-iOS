@@ -101,7 +101,7 @@
     [request setPayload:exportAuthRequestData metadata:@"exportAuthorization" shortMetadata:@"exportAuthorization" responseParser:responseParser];
     
     __weak MTDatacenterTransferAuthAction *weakSelf = self;
-    [request setCompleted:^(MTExportedAuthorizationData *result, __unused NSTimeInterval timestamp, id error)
+    [request setCompleted:^(MTExportedAuthorizationData *result, __unused MTRequestResponseInfo *info, id error)
     {
         __strong MTDatacenterTransferAuthAction *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -147,7 +147,7 @@
     id authToken = _authToken;
     
     __weak MTDatacenterTransferAuthAction *weakSelf = self;
-    [request setCompleted:^(__unused id result, __unused NSTimeInterval timestamp, id error)
+    [request setCompleted:^(__unused id result, __unused MTRequestResponseInfo *info, id error)
     {
         __strong MTDatacenterTransferAuthAction *strongSelf = weakSelf;
         if (strongSelf == nil)

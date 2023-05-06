@@ -370,6 +370,7 @@ private final class CallSessionManagerContext {
     
     private let ringingSubscribers = Bag<([CallSessionRingingState]) -> Void>()
     private var contexts: [CallSessionInternalId: CallSessionContext] = [:]
+    private var futureContextSubscribers: [CallSessionInternalId: Bag<(CallSession) -> Void>] = [:]
     private var contextIdByStableId: [CallSessionStableId: CallSessionInternalId] = [:]
 
     private var enqueuedSignalingData: [Int64: [Data]] = [:]
@@ -444,7 +445,10 @@ private final class CallSessionManagerContext {
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
             queue.async {
-                if let strongSelf = self, let context = strongSelf.contexts[internalId] {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let context = strongSelf.contexts[internalId] {
                     let index = context.subscribers.add { next in
                         subscriber.putNext(next)
                     }
@@ -459,6 +463,23 @@ private final class CallSessionManagerContext {
                             }
                         }
                     })
+                } else {
+                    if strongSelf.futureContextSubscribers[internalId] == nil {
+                        strongSelf.futureContextSubscribers[internalId] = Bag()
+                    }
+                    let index = strongSelf.futureContextSubscribers[internalId]?.add({ session in
+                        subscriber.putNext(session)
+                    })
+                    if let index = index {
+                        disposable.set(ActionDisposable {
+                            queue.async {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.futureContextSubscribers[internalId]?.remove(index)
+                            }
+                        })
+                    }
                 }
             }
             return disposable
@@ -515,6 +536,11 @@ private final class CallSessionManagerContext {
             for subscriber in context.subscribers.copyItems() {
                 subscriber(session)
             }
+            if let futureSubscribers = self.futureContextSubscribers[internalId] {
+                for subscriber in futureSubscribers.copyItems() {
+                    subscriber(session)
+                }
+            }
         }
     }
     
@@ -537,7 +563,10 @@ private final class CallSessionManagerContext {
             let context = CallSessionContext(peerId: peerId, isOutgoing: false, type: isVideo ? .video : .audio, isVideoPossible: isVideoPossible, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions))
             self.contexts[internalId] = context
             let queue = self.queue
-            context.acknowledgeIncomingCallDisposable.set(self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash))).start(error: { [weak self] _ in
+            
+            let requestSignal: Signal<Api.Bool, MTRpcError> = self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash)))
+            
+            context.acknowledgeIncomingCallDisposable.set(requestSignal.start(error: { [weak self] _ in
                 queue.async {
                     guard let strongSelf = self else {
                         return

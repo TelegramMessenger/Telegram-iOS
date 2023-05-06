@@ -186,6 +186,10 @@ private struct UsageCalculationTag {
                 return 4 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
             case .call:
                 return 5 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .stickers:
+                return 6 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
+            case .voiceMessages:
+                return 7 * 4 + self.connection.rawValue * 2 + self.direction.rawValue * 1
         }
     }
 }
@@ -234,19 +238,17 @@ public struct NetworkUsageStatsConnectionsEntry: Equatable {
 }
 
 public struct NetworkUsageStats: Equatable {
-    public let generic: NetworkUsageStatsConnectionsEntry
-    public let image: NetworkUsageStatsConnectionsEntry
-    public let video: NetworkUsageStatsConnectionsEntry
-    public let audio: NetworkUsageStatsConnectionsEntry
-    public let file: NetworkUsageStatsConnectionsEntry
-    public let call: NetworkUsageStatsConnectionsEntry
+    public var generic: NetworkUsageStatsConnectionsEntry
+    public var image: NetworkUsageStatsConnectionsEntry
+    public var video: NetworkUsageStatsConnectionsEntry
+    public var audio: NetworkUsageStatsConnectionsEntry
+    public var file: NetworkUsageStatsConnectionsEntry
+    public var call: NetworkUsageStatsConnectionsEntry
+    public var sticker: NetworkUsageStatsConnectionsEntry
+    public var voiceMessage: NetworkUsageStatsConnectionsEntry
     
-    public let resetWifiTimestamp: Int32
-    public let resetCellularTimestamp: Int32
-    
-    public static func ==(lhs: NetworkUsageStats, rhs: NetworkUsageStats) -> Bool {
-        return lhs.generic == rhs.generic && lhs.image == rhs.image && lhs.video == rhs.video && lhs.audio == rhs.audio && lhs.file == rhs.file && lhs.call == rhs.call && lhs.resetWifiTimestamp == rhs.resetWifiTimestamp && lhs.resetCellularTimestamp == rhs.resetCellularTimestamp
-    }
+    public var resetWifiTimestamp: Int32
+    public var resetCellularTimestamp: Int32
 }
 
 public struct ResetNetworkUsageStats: OptionSet {
@@ -313,7 +315,17 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
             UsageCalculationTag(connection: .cellular, direction: .incoming, category: .call),
             UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .call),
             UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call),
-            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call)
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .stickers),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .stickers),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .stickers),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .stickers),
+            
+            UsageCalculationTag(connection: .cellular, direction: .incoming, category: .voiceMessages),
+            UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .voiceMessages),
+            UsageCalculationTag(connection: .wifi, direction: .incoming, category: .voiceMessages),
+            UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .voiceMessages)
         ]
         
         var keys: [NSNumber] = rawKeys.map { $0.key as NSNumber }
@@ -386,6 +398,20 @@ func networkUsageStats(basePath: String, reset: ResetNetworkUsageStats) -> Signa
                     wifi: NetworkUsageStatsDirectionsEntry(
                         incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .call).key]!,
                         outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .call).key]!)),
+                sticker: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .stickers).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .stickers).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .stickers).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .stickers).key]!)),
+                voiceMessage: NetworkUsageStatsConnectionsEntry(
+                    cellular: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .cellular, direction: .incoming, category: .voiceMessages).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .cellular, direction: .outgoing, category: .voiceMessages).key]!),
+                    wifi: NetworkUsageStatsDirectionsEntry(
+                        incoming: dict[UsageCalculationTag(connection: .wifi, direction: .incoming, category: .voiceMessages).key]!,
+                        outgoing: dict[UsageCalculationTag(connection: .wifi, direction: .outgoing, category: .voiceMessages).key]!)),
                 resetWifiTimestamp: Int32(dict[UsageCalculationResetKey.wifi.rawValue]!),
                 resetCellularTimestamp: Int32(dict[UsageCalculationResetKey.cellular.rawValue]!)
             ))
@@ -406,8 +432,11 @@ public struct NetworkInitializationArguments {
     public let appData: Signal<Data?, NoError>
     public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
-    public let resolvedDeviceName:[String: String]?
-    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, resolvedDeviceName:[String: String]?) {
+    public let deviceModelName:String?
+    public let useBetaFeatures: Bool
+    public let isICloudEnabled: Bool
+    
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool, isICloudEnabled: Bool) {
         self.apiId = apiId
         self.apiHash = apiHash
         self.languagesCategory = languagesCategory
@@ -417,14 +446,16 @@ public struct NetworkInitializationArguments {
         self.appData = appData
         self.autolockDeadine = autolockDeadine
         self.encryptionProvider = encryptionProvider
-        self.resolvedDeviceName = resolvedDeviceName
+        self.deviceModelName = deviceModelName
+        self.useBetaFeatures = useBetaFeatures
+        self.isICloudEnabled = isICloudEnabled
     }
 }
 #if os(iOS)
 private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
 #endif
 
-func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
+func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?, useRequestTimeoutTimers: Bool) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
@@ -432,7 +463,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             let serialization = Serialization()
             
-            var apiEnvironment = MTApiEnvironment(resolvedDeviceName: arguments.resolvedDeviceName)
+            var apiEnvironment = MTApiEnvironment(deviceModelName: arguments.deviceModelName)
             
             apiEnvironment.apiId = arguments.apiId
             apiEnvironment.langPack = arguments.languagesCategory
@@ -468,6 +499,25 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
             
+            if let networkSettings = networkSettings {
+                let useNetworkFramework: Bool
+                if let customValue = networkSettings.useNetworkFramework {
+                    useNetworkFramework = customValue
+                } else if arguments.useBetaFeatures {
+                    useNetworkFramework = true
+                } else {
+                    useNetworkFramework = false
+                }
+                
+                if useNetworkFramework {
+                    if #available(iOS 12.0, macOS 10.14, *) {
+                        context.makeTcpConnectionInterface = { delegate, delegateQueue in
+                            return NetworkFrameworkTcpConnectionInterface(delegate: delegate, delegateQueue: delegateQueue)
+                        }
+                    }
+                }
+            }
+            
             let seedAddressList: [Int: [String]]
             
             if testingEnvironment {
@@ -493,7 +543,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             context.keychain = keychain
             var wrappedAdditionalSource: MTSignal?
             #if os(iOS)
-            if #available(iOS 10.0, *), !supplementary {
+            if #available(iOS 10.0, *), !supplementary, arguments.isICloudEnabled {
                 var cloudDataContextValue: CloudDataContext?
                 if let value = cloudDataContext.with({ $0 }) {
                     cloudDataContextValue = value
@@ -555,7 +605,9 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider)
+            let useExperimentalFeatures = networkSettings?.useExperimentalDownload ?? false
+            
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider, useRequestTimeoutTimers: useRequestTimeoutTimers, useBetaFeatures: arguments.useBetaFeatures, useExperimentalFeatures: useExperimentalFeatures)
             appDataUpdatedImpl = { [weak network] data in
                 guard let data = data else {
                     return
@@ -685,6 +737,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     let requestService: MTRequestMessageService
     let basePath: String
     private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
+    private let useRequestTimeoutTimers: Bool
+    public let useBetaFeatures: Bool
+    public let useExperimentalFeatures: Bool
     
     private let appDataDisposable: Disposable
     
@@ -728,7 +783,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return "Network context: \(self.context)"
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider, useRequestTimeoutTimers: Bool, useBetaFeatures: Bool, useExperimentalFeatures: Bool) {
         self.encryptionProvider = encryptionProvider
         
         self.queue = queue
@@ -741,6 +796,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         self._connectionStatus = _connectionStatus
         self.appDataDisposable = appDataDisposable
         self.basePath = basePath
+        self.useRequestTimeoutTimers = useRequestTimeoutTimers
+        self.useBetaFeatures = useBetaFeatures
+        self.useExperimentalFeatures = useExperimentalFeatures
         
         super.init()
         
@@ -873,7 +931,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
             return shouldKeepConnection || shouldExplicitelyKeepWorkerConnections || (continueInBackground && shouldKeepBackgroundDownloadConnections)
         }
         |> distinctUntilChanged
-        return Download(queue: self.queue, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: self.context, masterDatacenterId: self.datacenterId, usageInfo: usageCalculationInfo(basePath: self.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection)
+        return Download(queue: self.queue, datacenterId: datacenterId, isMedia: isMedia, isCdn: isCdn, context: self.context, masterDatacenterId: self.datacenterId, usageInfo: usageCalculationInfo(basePath: self.basePath, category: (tag as? TelegramMediaResourceFetchTag)?.statsCategory), shouldKeepConnection: shouldKeepWorkerConnection, useRequestTimeoutTimers: self.useRequestTimeoutTimers)
     }
     
     private func worker(datacenterId: Int, isCdn: Bool, isMedia: Bool, tag: MediaResourceFetchTag?) -> Signal<Download, NoError> {

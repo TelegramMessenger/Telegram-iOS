@@ -30,6 +30,8 @@ private let accountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResource: { a
     return .single(nil)
 }, prepareSecretThumbnailData: { _ in
     return nil
+}, backgroundUpload: { _, _, _ in
+    return .single(nil)
 })
 
 private struct ApplicationSettings {
@@ -86,7 +88,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
     private var appGroupUrl: URL?
     
     private let ptgSecretPasscodes = Promise<PtgSecretPasscodes>()
-    
+
     override init() {
         super.init()
         
@@ -176,7 +178,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         if let accountCache = accountCache {
             account = .single(accountCache)
         } else {
-            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters, initialPeerIdsExcludedFromUnreadCounters: [])
+            account = currentAccount(allocateIfNotExists: false, networkArguments: NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: false), supplementary: true, manager: accountManager, rootPath: rootPath, auxiliaryMethods: accountAuxiliaryMethods, encryptionParameters: encryptionParameters)
             |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
                     switch account {
@@ -203,7 +205,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             |> take(1)
         }
         self.accountPromise.set(account)
-        
+
         self.ptgSecretPasscodes.set(accountManager.transaction { transaction in
             return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
         })
@@ -523,7 +525,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         }
         
         let ptgSecretPasscodes = self.ptgSecretPasscodes.get()
-        
+
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
         |> castError(IntentHandlingError.self)
@@ -868,7 +870,7 @@ private final class WidgetIntentHandler {
     private var appGroupUrl: URL?
     
     private let ptgSecretPasscodes = Promise<PtgSecretPasscodes>()
-    
+
     init() {
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return
@@ -899,7 +901,7 @@ private final class WidgetIntentHandler {
         
         initializeAccountManagement()
         let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
-        
+
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
         self.encryptionParameters = encryptionParameters
@@ -941,7 +943,7 @@ private final class WidgetIntentHandler {
         self.allAccounts.set(.single(result.map { record -> (AccountRecordId, PeerId, Bool) in
             return (record.0, record.2, record.3)
         }))
-        
+
         self.ptgSecretPasscodes.set(accountManager.transaction { transaction in
             return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
         })

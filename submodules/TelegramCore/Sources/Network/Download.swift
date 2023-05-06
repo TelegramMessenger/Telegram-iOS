@@ -43,14 +43,16 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
+    let useRequestTimeoutTimers: Bool
     private let logPrefix = Atomic<String?>(value: nil)
     
     private var shouldKeepConnectionDisposable: Disposable?
     
-    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>) {
+    init(queue: Queue, datacenterId: Int, isMedia: Bool, isCdn: Bool, context: MTContext, masterDatacenterId: Int, usageInfo: MTNetworkUsageCalculationInfo?, shouldKeepConnection: Signal<Bool, NoError>, useRequestTimeoutTimers: Bool) {
         self.datacenterId = datacenterId
         self.isCdn = isCdn
         self.context = context
+        self.useRequestTimeoutTimers = useRequestTimeoutTimers
 
         var requiredAuthToken: Any?
         var authTokenMasterDatacenterId: Int = 0
@@ -203,6 +205,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -254,6 +257,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -301,6 +305,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 return true
@@ -342,6 +347,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
@@ -356,16 +362,16 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 return true
             }
             
-            request.completed = { (boxedResponse, timestamp, error) -> () in
+            request.completed = { (boxedResponse, info, error) -> () in
                 if let error = error {
-                    subscriber.putError((error, timestamp))
+                    subscriber.putError((error, info?.timestamp ?? 0.0))
                 } else {
                     if let result = (boxedResponse as! BoxedMessage).body as? T {
-                        subscriber.putNext((result, timestamp))
+                        subscriber.putNext((result, info?.timestamp ?? 0.0))
                         subscriber.putCompletion()
                     }
                     else {
-                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), timestamp))
+                        subscriber.putError((MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"), info?.timestamp ?? 0.0))
                     }
                 }
             }
@@ -380,7 +386,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "") -> Signal<(Any, Double), (MTRpcError, Double)> {
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "") -> Signal<(Any, NetworkResponseInfo), (MTRpcError, Double)> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -393,6 +399,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             })
             
             request.dependsOnPasswordEntry = false
+            request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
@@ -407,11 +414,16 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
                 return true
             }
             
-            request.completed = { (boxedResponse, timestamp, error) -> () in
+            request.completed = { (boxedResponse, info, error) -> () in
                 if let error = error {
-                    subscriber.putError((error, timestamp))
+                    subscriber.putError((error, info?.timestamp ?? 0))
                 } else {
-                    subscriber.putNext(((boxedResponse as! BoxedMessage).body, timestamp))
+                    let mappedInfo = NetworkResponseInfo(
+                        timestamp: info?.timestamp ?? 0.0,
+                        networkType: info?.networkType == 0 ? .wifi : .cellular,
+                        networkDuration: info?.duration ?? 0.0
+                    )
+                    subscriber.putNext(((boxedResponse as! BoxedMessage).body, mappedInfo))
                     subscriber.putCompletion()
                 }
             }

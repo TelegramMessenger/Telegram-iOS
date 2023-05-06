@@ -244,6 +244,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             guard let strongSelf = self else {
                 return
             }
+            var useDarkButton = true
             if case let .file(file) = wallpaper {
                 let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                 let displaySize = dimensions.cgSize.dividedByScreenScale().integralFloor
@@ -258,6 +259,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if wallpaper.isPattern {
                     signal = .complete()
                 } else {
+                    useDarkButton = false
                     signal = .complete()
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
@@ -296,6 +298,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
 
                 strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), custom: patternArguments))()
+                strongSelf.toolbarNode.dark = useDarkButton
             }
         })
     }
@@ -367,7 +370,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
-        }, openForumThread: { _, _ in })
+        }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {
+        })
 
         func makeChatListItem(
             peer: EnginePeer,
@@ -712,11 +716,11 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.messagesContainerNode.frame = self.chatContainerNode.bounds
         self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
-        self.instantChatBackgroundNode.updateLayout(size: self.instantChatBackgroundNode.bounds.size, transition: .immediate)
+        self.instantChatBackgroundNode.updateLayout(size: self.instantChatBackgroundNode.bounds.size, displayMode: .aspectFill, transition: .immediate)
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.blurredNode.frame = self.chatContainerNode.bounds
         self.wallpaperNode.frame = self.chatContainerNode.bounds
-        self.wallpaperNode.updateLayout(size: self.wallpaperNode.bounds.size, transition: .immediate)
+        self.wallpaperNode.updateLayout(size: self.wallpaperNode.bounds.size, displayMode: .aspectFill, transition: .immediate)
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)

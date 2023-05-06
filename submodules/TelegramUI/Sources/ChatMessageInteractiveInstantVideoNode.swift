@@ -238,7 +238,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode)?
-            var updatedReplyBackgroundNode: NavigationBackgroundNode?
             
             var updatedInstantVideoBackgroundImage: UIImage?
             let instantVideoBackgroundImage: UIImage?
@@ -350,7 +349,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 parentMessage: item.message,
                                 constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                                 animationCache: item.controllerInteraction.presentationContext.animationCache,
-                                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer,
+                                associatedData: item.associatedData
                             ))
                         }
                     }
@@ -486,7 +486,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, associatedData: item.associatedData)
             
             let maxDateAndStatusWidth: CGFloat
             if case .bubble = statusDisplayType {
@@ -555,24 +555,26 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             
             let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
-            
-            if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {
-                if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                    updatedReplyBackgroundNode = currentReplyBackgroundNode
-                } else {
-                    updatedReplyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
-                }
-                
-                updatedReplyBackgroundNode?.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
-            }
-            
+                        
             return (result, { [weak self] layoutData, animation in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.videoFrame = displayVideoFrame
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.secretProgressIcon = secretProgressIcon
+                    
                     strongSelf.automaticDownload = automaticDownload
+                    
+                    var updatedReplyBackgroundNode: NavigationBackgroundNode?
+                    if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {
+                        if let currentReplyBackgroundNode = currentReplyBackgroundNode {
+                            updatedReplyBackgroundNode = currentReplyBackgroundNode
+                        } else {
+                            updatedReplyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
+                        }
+                        
+                        updatedReplyBackgroundNode?.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
+                    }
                     
                     if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
                         strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
@@ -624,7 +626,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         case .free:
                              let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
                             durationTextColor = serviceColor.primaryText
-                            durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
+                            durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
                         case .bubble:
                             durationBlurColor = nil
                             if incoming {
@@ -688,7 +690,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         }
                                     }
                                 }
-                            }), content: NativeVideoContent(id: .message(item.message.stableId, telegramFile.fileId), userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo ? .conservative : .none, enableSound: false, fetchAutomatically: false, captureProtected: item.message.isCopyProtected()), priority: .embedded, autoplay: true)
+                            }), content: NativeVideoContent(id: .message(item.message.stableId, telegramFile.fileId), userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo ? .conservative : .none, enableSound: false, fetchAutomatically: false, isAudioVideoMessage: true, captureProtected: item.message.isCopyProtected(), storeAfterDownload: nil), priority: .embedded, autoplay: item.context.sharedContext.energyUsageSettings.autoplayVideo)
                             if let previousVideoNode = previousVideoNode {
                                 videoNode.bounds = previousVideoNode.bounds
                                 videoNode.position = previousVideoNode.position
@@ -927,7 +929,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.addSubnode(viaBotNode)
                         }
                         
-                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? 11.0 : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0), size: viaBotLayout.size)
+                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 6.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0), size: viaBotLayout.size)
                         animation.animator.updateFrame(layer: viaBotNode.layer, frame: viaBotFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: messageInfoSize.width, height: viaBotLayout.size.height)
@@ -1225,6 +1227,30 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
+                            if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
+                                if let item = self.item {
+                                    for attribute in item.message.attributes {
+                                        if let attribute = attribute as? InlineBotMessageAttribute {
+                                            var botAddressName: String?
+                                            if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
+                                                botAddressName = addressName
+                                            } else {
+                                                botAddressName = attribute.title
+                                            }
+                                            
+                                            if let botAddressName = botAddressName {
+                                                item.controllerInteraction.updateInputState { textInputState in
+                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                                }
+                                                item.controllerInteraction.updateInputMode { _ in
+                                                    return .text
+                                                }
+                                                return
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
@@ -1313,6 +1339,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             } else {
                 return playbackNode.view
             }
+        }
+        if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(point), !viaBotNode.alpha.isZero {
+            return self.view
         }
         if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(point), !forwardInfoNode.alpha.isZero {
             return self.view
@@ -1486,7 +1515,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     private func transcribe() {
-        guard let item = self.item, self.statusNode == nil else {
+        guard let item = self.item, item.message.id.namespace == Namespaces.Message.Cloud else {
             return
         }
                 
@@ -1497,7 +1526,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             self.hapticFeedback?.impact(.medium)
             
             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
-            let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
+            let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                 if case .undo = action {
                     let context = item.context
                     var replaceImpl: ((ViewController) -> Void)?
@@ -1572,7 +1601,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let duration: Double = 0.2
         
         node.alpha = 1.0
-        node.isHidden = false
+        if node.supernode == nil {
+            self.supernode?.insertSubnode(node, belowSubnode: self)
+        }
         
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
@@ -1686,7 +1717,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         
         node.alpha = 0.0
         node.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { _ in
-            node.isHidden = true
+            node.removeFromSupernode()
         })
         node.waveformView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
                 

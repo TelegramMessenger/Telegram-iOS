@@ -73,7 +73,7 @@ public enum AdminLogEventAction {
     case deleteExportedInvitation(ExportedInvitation)
     case revokeExportedInvitation(ExportedInvitation)
     case editExportedInvitation(previous: ExportedInvitation, updated: ExportedInvitation)
-    case participantJoinedViaInvite(ExportedInvitation)
+    case participantJoinedViaInvite(invitation: ExportedInvitation, joinedViaFolderLink: Bool)
     case changeHistoryTTL(previousValue: Int32?, updatedValue: Int32?)
     case changeTheme(previous: String?, updated: String?)
     case participantJoinByRequest(invitation: ExportedInvitation, approvedBy: PeerId)
@@ -268,8 +268,8 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         action = .revokeExportedInvitation(ExportedInvitation(apiExportedInvite: invite))
                                     case let .channelAdminLogEventActionExportedInviteEdit(prevInvite, newInvite):
                                         action = .editExportedInvitation(previous: ExportedInvitation(apiExportedInvite: prevInvite), updated: ExportedInvitation(apiExportedInvite: newInvite))
-                                    case let .channelAdminLogEventActionParticipantJoinByInvite(invite):
-                                        action = .participantJoinedViaInvite(ExportedInvitation(apiExportedInvite: invite))
+                                    case let .channelAdminLogEventActionParticipantJoinByInvite(flags, invite):
+                                        action = .participantJoinedViaInvite(invitation: ExportedInvitation(apiExportedInvite: invite), joinedViaFolderLink: (flags & (1 << 0)) != 0)
                                     case let .channelAdminLogEventActionParticipantVolume(participant):
                                         let parsedParticipant = GroupCallParticipantsContext.Update.StateUpdate.ParticipantUpdate(participant)
                                         action = .groupCallUpdateParticipantVolume(peerId: parsedParticipant.peerId, volume: parsedParticipant.volume ?? 10000)

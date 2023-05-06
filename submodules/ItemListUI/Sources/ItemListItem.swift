@@ -37,6 +37,7 @@ public protocol ItemListItemNode {
 
 public protocol ItemListItemFocusableNode {
     func focus()
+    func selectAll()
 }
 
 public enum ItemListInsetWithOtherSection {
@@ -159,11 +160,13 @@ public final class ItemListPresentationData: Equatable {
     public let theme: PresentationTheme
     public let fontSize: PresentationFontSize
     public let strings: PresentationStrings
+    public let nameDisplayOrder: PresentationPersonNameOrder
     
-    public init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings) {
+    public init(theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
     }
     
     public static func ==(lhs: ItemListPresentationData, rhs: ItemListPresentationData) -> Bool {
@@ -174,6 +177,9 @@ public final class ItemListPresentationData: Equatable {
             return false
         }
         if lhs.fontSize != rhs.fontSize {
+            return false
+        }
+        if lhs.nameDisplayOrder != rhs.nameDisplayOrder {
             return false
         }
         return true
@@ -226,6 +232,6 @@ public extension PresentationFontSize {
 
 public extension ItemListPresentationData {
     convenience init(_ presentationData: PresentationData) {
-        self.init(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings)
+        self.init(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder)
     }
 }

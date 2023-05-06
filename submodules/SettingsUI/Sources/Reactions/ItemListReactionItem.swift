@@ -11,10 +11,17 @@ import EmojiStatusComponent
 import ComponentFlow
 import AccountContext
 
+public enum ItemListReactionArrowStyle {
+    case arrow
+    case none
+}
+
 public class ItemListReactionItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
+    let icon: UIImage?
     let title: String
+    let arrowStyle: ItemListReactionArrowStyle
     let reaction: MessageReaction.Reaction
     let availableReactions: AvailableReactions?
     public let sectionId: ItemListSectionId
@@ -22,10 +29,12 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
     let action: (() -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(context: AccountContext, presentationData: ItemListPresentationData, title: String, reaction: MessageReaction.Reaction, availableReactions: AvailableReactions?, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, tag: ItemListItemTag? = nil) {
+    public init(context: AccountContext, presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, arrowStyle: ItemListReactionArrowStyle = .none, reaction: MessageReaction.Reaction, availableReactions: AvailableReactions?, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.presentationData = presentationData
+        self.icon = icon
         self.title = title
+        self.arrowStyle = arrowStyle
         self.reaction = reaction
         self.availableReactions = availableReactions
         self.sectionId = sectionId
@@ -36,13 +45,13 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = ItemListReactionItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-            
-            node.contentSize = layout.contentSize
-            node.insets = layout.insets
-            
             Queue.mainQueue().async {
+                let node = ItemListReactionItemNode()
+                let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                
+                node.contentSize = layout.contentSize
+                node.insets = layout.insets
+                
                 completion(node, {
                     return (nil, { _ in apply() })
                 })
@@ -84,7 +93,9 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
+    let iconNode: ASImageNode
     let titleNode: TextNode
+    let arrowNode: ASImageNode
     let iconView: ComponentHostView<Empty>
     
     private let activateArea: AccessibilityAreaNode
@@ -119,10 +130,19 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displaysAsynchronously = false
+        
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         
         self.iconView = ComponentHostView<Empty>()
+        
+        self.arrowNode = ASImageNode()
+        self.arrowNode.displayWithoutProcessing = true
+        self.arrowNode.displaysAsynchronously = false
+        self.arrowNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -133,6 +153,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
         
         self.addSubnode(self.titleNode)
         self.view.addSubview(self.iconView)
+        self.addSubnode(self.arrowNode)
         
         self.addSubnode(self.activateArea)
     }
@@ -157,10 +178,28 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            let leftInset = 16.0 + params.leftInset
+            var updatedTheme: PresentationTheme?
+            var updateArrowImage: UIImage?
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                updatedTheme = item.presentationData.theme
+                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+            }
+            
+            var updateIcon = false
+            if currentItem?.icon != item.icon {
+                updateIcon = true
+            }
+        
+            var leftInset = 16.0 + params.leftInset
+            if item.icon != nil {
+                leftInset += 43.0
+            }
             
             var additionalTextRightInset: CGFloat = 0.0
             additionalTextRightInset += 44.0
+            if item.arrowStyle == .arrow {
+                additionalTextRightInset += 24.0
+            }
             
             let titleColor: UIColor = item.presentationData.theme.list.itemPrimaryTextColor
             
@@ -197,11 +236,30 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                     
                     strongSelf.activateArea.accessibilityTraits = []
                     
-                    if currentItem?.presentationData.theme !== item.presentationData.theme {
+                    if let icon = item.icon {
+                        if strongSelf.iconNode.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.iconNode)
+                        }
+                        if updateIcon {
+                            strongSelf.iconNode.image = icon
+                        }
+                        let iconY = floor((layout.contentSize.height - icon.size.height) / 2.0)
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - icon.size.width) / 2.0), y: iconY), size: icon.size)
+                    } else if strongSelf.iconNode.supernode != nil {
+                        strongSelf.iconNode.image = nil
+                        strongSelf.iconNode.removeFromSupernode()
+                    }
+                    
+                    if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
+                        
+                    }
+                    
+                    if let updateArrowImage = updateArrowImage {
+                        strongSelf.arrowNode.image = updateArrowImage
                     }
                     
                     let _ = titleApply()
@@ -282,6 +340,17 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                         animationContent = .customEmoji(fileId: fileId)
                     }
                     
+                    
+                    var rightInset: CGFloat = 0.0
+                    if let arrowImage = strongSelf.arrowNode.image, item.arrowStyle == .arrow {
+                        let arrowRightOffset: CGFloat = 7.0
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - arrowRightOffset - arrowImage.size.width, y: floorToScreenPixels((height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                        rightInset += arrowRightOffset + arrowImage.size.width
+                        strongSelf.arrowNode.isHidden = false
+                    } else {
+                        strongSelf.arrowNode.isHidden = true
+                    }
+                    
                     if let animationContent = animationContent {
                         let iconBoundingSize = CGSize(width: 28.0, height: 28.0)
                         let iconOffsetX: CGFloat = 0.0
@@ -299,12 +368,9 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                             containerSize: iconBoundingSize
                         )
                         strongSelf.iconView.isUserInteractionEnabled = false
-                        strongSelf.iconView.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - iconSize.width + iconOffsetX, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
+                        strongSelf.iconView.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - iconSize.width + iconOffsetX - rightInset, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
                     }
                     
-                    /*if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width, y: floorToScreenPixels((height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
-                    }*/
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: height + UIScreenPixel))
                 }
             })

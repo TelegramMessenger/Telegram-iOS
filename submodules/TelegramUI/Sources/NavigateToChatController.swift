@@ -132,8 +132,15 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             if let attachBotStart = params.attachBotStart {
                 controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
             }
+            if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
+                controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
+            }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation.asChatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation.asChatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, botAppStart: params.botAppStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
+            
+            if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
+                controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
+            }
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {

@@ -91,7 +91,7 @@ private enum MediaGroupsEntry: Comparable, Identifiable {
             case let .albumsHeader(_, text), let .smartAlbumsHeader(_, text):
                 return MediaGroupsHeaderItem(presentationData: ItemListPresentationData(presentationData), title: text)
             case let .albums(_, collections):
-                return MediaGroupsAlbumGridItem(presentationData: ItemListPresentationData(presentationData), collections: collections, action: { collection in
+                return MediaGroupsAlbumGridItem(presentationData: presentationData, collections: collections, action: { collection in
                     openGroup(collection)
                 })
             case let .smartAlbum(_, _, collection, count):
@@ -234,7 +234,7 @@ public final class MediaGroupsScreen: ViewController {
                     albums.append(collection)
                 }
             }
-            state.albums.enumerateObjects { collection, _, _ in
+            state.albums.enumerateObjects(options: [.reverse]) { collection, _, _ in
                 albums.append(collection)
             }
             entries.append(.albums(self.presentationData.theme, albums))

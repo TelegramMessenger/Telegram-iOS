@@ -23,7 +23,8 @@ typedef enum {
     TGPhotoEditorControllerVideoIntent = (1 << 4),
     TGPhotoEditorControllerForumAvatarIntent = (1 << 5),
     TGPhotoEditorControllerSuggestedAvatarIntent = (1 << 6),
-    TGPhotoEditorControllerSuggestingAvatarIntent = (1 << 7)
+    TGPhotoEditorControllerSuggestingAvatarIntent = (1 << 7),
+    TGPhotoEditorControllerWallpaperIntent = (1 << 8)
 } TGPhotoEditorControllerIntent;
 
 @interface TGPhotoEditorController : TGOverlayController
@@ -33,7 +34,7 @@ typedef enum {
 
 @property (nonatomic, copy) UIView *(^beginTransitionIn)(CGRect *referenceFrame, UIView **parentView);
 @property (nonatomic, copy) void (^finishedTransitionIn)(void);
-@property (nonatomic, copy) UIView *(^beginTransitionOut)(CGRect *referenceFrame, UIView **parentView);
+@property (nonatomic, copy) UIView *(^beginTransitionOut)(CGRect *referenceFrame, UIView **parentView, bool saving);
 @property (nonatomic, copy) void (^finishedTransitionOut)(bool saved);
 
 @property (nonatomic, copy) void (^onDismiss)();
@@ -67,6 +68,8 @@ typedef enum {
 
 @property (nonatomic, strong) UIView<TGPhotoDrawingEntitiesView> *entitiesView;
 
+@property (nonatomic, assign) bool ignoreCropForResult;
+
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSAttributedString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab;
 
 - (void)dismissEditor;
@@ -86,7 +89,7 @@ typedef enum {
 
 - (void)setToolbarHidden:(bool)hidden animated:(bool)animated;
 
-+ (TGPhotoEditorTab)defaultTabsForAvatarIntent;
++ (TGPhotoEditorTab)defaultTabsForAvatarIntent:(bool)hasStickers;
 
 - (NSTimeInterval)currentTime;
 - (void)setMinimalVideoDuration:(NSTimeInterval)duration;

@@ -595,6 +595,10 @@
             hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
         }
     }
+    
+    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad && _intent == TGMediaAssetsControllerSendFileIntent) {
+        hasOnScreenNavigation = false;
+    }
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -1471,6 +1475,8 @@
             }
         }
         
+        bool spoiler = [editingContext spoilerForItem:asset];
+        
         if ([asset isKindOfClass:[UIImage class]]) {
             if (intent == TGMediaAssetsControllerSendFileIntent)
             {
@@ -1508,6 +1514,10 @@
                     
                     if (groupedId != nil && !hasAnyTimers)
                         dict[@"groupedId"] = groupedId;
+                    
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
                     
                     id generatedItem = descriptionGenerator(dict, caption, nil, nil);
                     return generatedItem;
@@ -1555,6 +1565,10 @@
                     
                     if (groupedId != nil && !hasAnyTimers)
                         dict[@"groupedId"] = groupedId;
+                    
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
                     
                     id generatedItem = descriptionGenerator(dict, caption, nil, nil);
                     return generatedItem;
@@ -1632,6 +1646,10 @@
                     else if (groupedId != nil && !hasAnyTimers)
                         dict[@"groupedId"] = groupedId;
                     
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
+                    
                     id generatedItem = descriptionGenerator(dict, caption, nil, nil);
                     return generatedItem;
                 }];
@@ -1693,9 +1711,9 @@
     }
 }
 
-- (void)send:(bool)silently
+- (void)send:(bool)silently whenOnline:(bool)whenOnlne
 {
-    [self completeWithCurrentItem:nil silentPosting:silently scheduleTime:0];
+    [self completeWithCurrentItem:nil silentPosting:silently scheduleTime:whenOnlne ? 0x7ffffffe : 0];
 }
 
 - (void)schedule:(bool)media {

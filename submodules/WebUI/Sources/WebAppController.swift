@@ -26,27 +26,32 @@ import InstantPageUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
-private class CancelButtonNode: ASDisplayNode {
-    enum State {
+public class WebAppCancelButtonNode: ASDisplayNode {
+    public enum State {
         case cancel
         case back
     }
     
-    private let buttonNode: HighlightTrackingButtonNode
+    public let buttonNode: HighlightTrackingButtonNode
     private let arrowNode: ASImageNode
     private let labelNode: ImmediateTextNode
     
-    var state: State = .cancel
+    public var state: State = .cancel
     
-    var theme: PresentationTheme {
-        didSet {
-            
+    private var _theme: PresentationTheme
+    public var theme: PresentationTheme {
+        get {
+            return self._theme
+        }
+        set {
+            self._theme = newValue
+            self.setState(self.state, animated: false, animateScale: false, force: true)
         }
     }
     private let strings: PresentationStrings
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
-        self.theme = theme
+    public init(theme: PresentationTheme, strings: PresentationStrings) {
+        self._theme = theme
         self.strings = strings
         
         self.buttonNode = HighlightTrackingButtonNode()
@@ -55,6 +60,7 @@ private class CancelButtonNode: ASDisplayNode {
         self.arrowNode.displaysAsynchronously = false
         
         self.labelNode = ImmediateTextNode()
+        self.labelNode.displaysAsynchronously = false
         
         super.init()
         
@@ -82,23 +88,40 @@ private class CancelButtonNode: ASDisplayNode {
         self.setState(.cancel, animated: false, force: true)
     }
     
-    func setState(_ state: State, animated: Bool, force: Bool = false) {
+    public func setTheme(_ theme: PresentationTheme, animated: Bool) {
+        self._theme = theme
+        var animated = animated
+        if self.animatingStateChange {
+            animated = false
+        }
+        self.setState(self.state, animated: animated, animateScale: false, force: true)
+    }
+    
+    private var animatingStateChange = false
+    public func setState(_ state: State, animated: Bool, animateScale: Bool = true, force: Bool = false) {
         guard self.state != state || force else {
             return
         }
         self.state = state
         
         if animated, let snapshotView = self.buttonNode.view.snapshotContentTree() {
+            self.animatingStateChange = true
             snapshotView.layer.sublayerTransform = self.buttonNode.subnodeTransform
             self.view.addSubview(snapshotView)
             
-            snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            let duration: Double = animateScale ? 0.25 : 0.3
+            if animateScale {
+                snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
+            }
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
+                self.animatingStateChange = false
             })
             
-            self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-            self.buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.25)
+            if animateScale {
+                self.buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.25)
+            }
+            self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
         
         self.arrowNode.isHidden = state == .cancel
@@ -134,6 +157,8 @@ public struct WebAppParameters {
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
     let fromMenu: Bool
+    let fromAttachMenu: Bool
+    let isInline: Bool
     let isSimple: Bool
     
     public init(
@@ -146,6 +171,8 @@ public struct WebAppParameters {
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
         fromMenu: Bool,
+        fromAttachMenu: Bool,
+        isInline: Bool,
         isSimple: Bool
     ) {
         self.peerId = peerId
@@ -157,6 +184,8 @@ public struct WebAppParameters {
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.fromMenu = fromMenu
+        self.fromAttachMenu = fromAttachMenu
+        self.isInline = isInline
         self.isSimple = isSimple
     }
 }
@@ -186,7 +215,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
-        
+            
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -199,6 +228,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var placeholderNode: ShimmerEffectNode?
     
         fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
+        
+        fileprivate var mainButtonState: AttachmentMainButtonState? {
+            didSet {
+                self.mainButtonStatePromise.set(.single(self.mainButtonState))
+            }
+        }
         fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
         
         private let context: AccountContext
@@ -397,6 +432,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         @objc fileprivate func mainButtonPressed() {
+            if let mainButtonState = self.mainButtonState, !mainButtonState.isVisible || !mainButtonState.isEnabled {
+                return
+            }
             self.webView?.lastTouchTimestamp = CACurrentMediaTime()
             self.webView?.sendEvent(name: "main_button_pressed", data: nil)
         }
@@ -613,12 +651,38 @@ public final class WebAppController: ViewController, AttachmentContainable {
             switch eventName {
                 case "web_app_ready":
                     self.animateTransitionIn()
+                case "web_app_switch_inline_query":
+                    if let json, let query = json["query"] as? String {
+                        if let chatTypes = json["chat_types"] as? [String], !chatTypes.isEmpty {
+                            var requestPeerTypes: [ReplyMarkupButtonRequestPeerType] = []
+                            for type in chatTypes {
+                                switch type {
+                                case "users":
+                                    requestPeerTypes.append(.user(ReplyMarkupButtonRequestPeerType.User(isBot: false, isPremium: nil)))
+                                case "bots":
+                                    requestPeerTypes.append(.user(ReplyMarkupButtonRequestPeerType.User(isBot: true, isPremium: nil)))
+                                case "groups":
+                                    requestPeerTypes.append(.group(ReplyMarkupButtonRequestPeerType.Group(isCreator: false, hasUsername: nil, isForum: nil, botParticipant: false, userAdminRights: nil, botAdminRights: nil)))
+                                case "channels":
+                                    requestPeerTypes.append(.channel(ReplyMarkupButtonRequestPeerType.Channel(isCreator: false, hasUsername: nil, userAdminRights: nil, botAdminRights: nil)))
+                                default:
+                                    break
+                                }
+                            }
+                            controller.requestSwitchInline(query, requestPeerTypes, { [weak controller] in
+                                controller?.dismiss()
+                            })
+                        } else {
+                            controller.dismiss()
+                            controller.requestSwitchInline(query, nil, {})
+                        }
+                    }
                 case "web_app_data_send":
                     if controller.isSimple, let eventData = body["eventData"] as? String {
                         self.handleSendData(data: eventData)
                     }
                 case "web_app_setup_main_button":
-                    if let webView = self.webView, !webView.didTouchOnce && controller.url == nil {
+                    if let webView = self.webView, !webView.didTouchOnce && controller.url == nil && controller.fromAttachMenu {
                         self.delayedScriptMessage = message
                     } else if let json = json {
                         if var isVisible = json["is_visible"] as? Bool {
@@ -634,8 +698,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             
                             let isLoading = json["is_progress_visible"] as? Bool
                             let isEnabled = json["is_active"] as? Bool
-                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false, isEnabled: isEnabled ?? true)
-                            self.mainButtonStatePromise.set(.single(state))
+                            let state = AttachmentMainButtonState(text: text, font: .bold, background: .color(backgroundColor), textColor: textColor, isVisible: isVisible, progress: (isLoading ?? false) ? .side : .none, isEnabled: isEnabled ?? true)
+                            self.mainButtonState = state
                         }
                     }
                 case "web_app_request_viewport":
@@ -971,7 +1035,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let id = id {
                 paramsString = "{button_id: \"\(id)\"}"
             }
-            self.webView?.sendEvent(name: "popup_closed", data: paramsString)
+            self.webView?.sendEvent(name: "popup_closed", data: paramsString ?? "{}")
         }
         
         fileprivate func sendPhoneRequestedEvent(phone: String?) {
@@ -1008,7 +1072,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     private var titleView: CounterContollerTitleView?
-    private let cancelButtonNode: CancelButtonNode
+    private let cancelButtonNode: WebAppCancelButtonNode
     private let moreButtonNode: MoreButtonNode
     
     private let context: AccountContext
@@ -1020,6 +1084,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let payload: String?
     private let buttonText: String?
     private let fromMenu: Bool
+    private let fromAttachMenu: Bool
+    private let isInline: Bool
     private let isSimple: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
@@ -1032,7 +1098,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var openUrl: (String) -> Void = { _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
-        
+    public var requestSwitchInline: (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, replyToMessageId: MessageId?, threadId: Int64?) {
         self.context = context
         self.peerId = params.peerId
@@ -1043,6 +1110,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.payload = params.payload
         self.buttonText = params.buttonText
         self.fromMenu = params.fromMenu
+        self.fromAttachMenu = params.fromAttachMenu
+        self.isInline = params.isInline
         self.isSimple = params.isSimple
         self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
@@ -1051,7 +1120,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
-        self.cancelButtonNode = CancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
@@ -1299,7 +1368,7 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString) {
     }
     
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
     }
     
     func schedule() {
@@ -1325,7 +1394,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, requestSwitchInline: @escaping (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu, hasTextInput: false, makeEntityInputView: {
         return nil
     })
@@ -1335,6 +1404,7 @@ public func standaloneWebAppController(context: AccountContext, updatedPresentat
         webAppController.openUrl = openUrl
         webAppController.completion = completion
         webAppController.getNavigationController = getNavigationController
+        webAppController.requestSwitchInline = requestSwitchInline
         present(webAppController, webAppController.mediaPickerContext)
     }
     controller.willDismiss = willDismiss

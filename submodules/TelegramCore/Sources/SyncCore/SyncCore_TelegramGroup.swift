@@ -146,6 +146,7 @@ public final class TelegramGroup: Peer, Equatable {
         encoder.encodeInt32(Int32(self.participantCount), forKey: "pc")
         encoder.encodeObject(self.role, forKey: "rv")
         encoder.encodeInt32(self.membership.rawValue, forKey: "m")
+        encoder.encodeInt32(self.flags.rawValue, forKey: "f")
         if let defaultBannedRights = self.defaultBannedRights {
             encoder.encodeObject(defaultBannedRights, forKey: "dbr")
         } else {

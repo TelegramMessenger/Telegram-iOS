@@ -100,12 +100,12 @@ public final class ChatControllerInteraction {
     public let sendCurrentMessage: (Bool) -> Void
     public let sendMessage: (String) -> Void
     public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
-    public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
+    public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
     public let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
-    public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
+    public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool
     public let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
-    public let activateSwitchInline: (PeerId?, String) -> Void
+    public let activateSwitchInline: (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void
     public let openUrl: (String, Bool, Bool?, Message?) -> Void
     public let shareCurrentLocation: () -> Void
     public let shareAccountContact: () -> Void
@@ -165,8 +165,9 @@ public final class ChatControllerInteraction {
     public let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
     public let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     public let openJoinLink: (String) -> Void
-    public let openWebView: (String, String, Bool, Bool) -> Void
+    public let openWebView: (String, String, Bool, ChatOpenWebViewSource) -> Void
     public let activateAdAction: (EngineMessage.Id) -> Void
+    public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -191,6 +192,7 @@ public final class ChatControllerInteraction {
     public var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let presentationContext: ChatPresentationContext
     public var playNextOutgoingGift: Bool = false
+    public var enableFullTranslucency: Bool = true
     
     public init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
@@ -210,12 +212,12 @@ public final class ChatControllerInteraction {
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
         sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
-        sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void,
+        sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
-        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool,
+        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
-        activateSwitchInline: @escaping (PeerId?, String) -> Void,
+        activateSwitchInline: @escaping (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void,
         openUrl: @escaping (String, Bool, Bool?, Message?) -> Void,
         shareCurrentLocation: @escaping () -> Void,
         shareAccountContact: @escaping () -> Void,
@@ -275,8 +277,9 @@ public final class ChatControllerInteraction {
         commitEmojiInteraction: @escaping (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void,
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
-        openWebView: @escaping (String, String, Bool, Bool) -> Void,
+        openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource) -> Void,
         activateAdAction: @escaping (EngineMessage.Id) -> Void,
+        openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -370,6 +373,7 @@ public final class ChatControllerInteraction {
         self.openJoinLink = openJoinLink
         self.openWebView = openWebView
         self.activateAdAction = activateAdAction
+        self.openRequestedPeerSelection = openRequestedPeerSelection
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput

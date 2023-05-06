@@ -32,7 +32,9 @@ private final class InternalContext {
     
     init(sharedContext: SharedAccountContextImpl) {
         self.sharedContext = sharedContext
-        self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: .single(nil), watchTasks: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+        self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, acquireIdleExtension: {
+            return nil
+        }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: .single(nil), watchTasks: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
             return sharedContext.accountUserInterfaceInUse(id)
         })
     }
@@ -63,8 +65,9 @@ public struct ShareRootControllerInitializationData {
     public let encryptionParameters: (Data, Data)
     public let appVersion: String
     public let bundleData: Data?
-    
-    public init(appBundleId: String, appBuildType: TelegramAppBuildType, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+    public let useBetaFeatures: Bool
+
+    public init(appBundleId: String, appBuildType: TelegramAppBuildType, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?, useBetaFeatures: Bool) {
         self.appBundleId = appBundleId
         self.appBuildType = appBuildType
         self.appGroupPath = appGroupPath
@@ -74,6 +77,7 @@ public struct ShareRootControllerInitializationData {
         self.encryptionParameters = encryptionParameters
         self.appVersion = appVersion
         self.bundleData = bundleData
+        self.useBetaFeatures = useBetaFeatures
     }
 }
 
@@ -118,7 +122,7 @@ public class ShareRootControllerImpl {
     private weak var navigationController: NavigationController?
     
     private let isAppLocked: Bool
-    
+
     public init(initializationData: ShareRootControllerInitializationData, getExtensionContext: @escaping () -> NSExtensionContext?, isAppLocked: Bool) {
         self.initializationData = initializationData
         self.getExtensionContext = getExtensionContext
@@ -215,7 +219,7 @@ public class ShareRootControllerImpl {
             let internalContext: InternalContext
             
             let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
-            
+
             initializeAccountManagement()
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
@@ -230,9 +234,9 @@ public class ShareRootControllerImpl {
                 semaphore.signal()
             })
             semaphore.wait()
-            
+
             initialPresentationDataAndSettings = initialPresentationDataAndSettings!.withUpdatedPtgSecretPasscodes(initialPresentationDataAndSettings!.ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath))
-            
+
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
                 internalContext.sharedContext.updatePtgSecretPasscodesPromise(.single(initialPresentationDataAndSettings!.ptgSecretPasscodes))
@@ -243,8 +247,7 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
-                appLockContext.sharedAccountContext = sharedContext
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: self.initializationData.useBetaFeatures, isICloudEnabled: false), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), firebaseSecretStream: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, appDelegate: nil)
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -360,8 +363,8 @@ public class ShareRootControllerImpl {
                             } |> runOn(Queue.mainQueue())
                         }
                         
-                        let sentItems: ([PeerId], [PreparedShareItemContent], Account, Bool) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account, silently in
-                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents, silently: silently)
+                        let sentItems: ([PeerId], [PeerId: Int64], [PreparedShareItemContent], Account, Bool) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, threadIds, contents, account, silently in
+                            let sentItems = sentShareItems(account: account, to: peerIds, threadIds: threadIds, items: contents, silently: silently)
                             |> `catch` { _ -> Signal<
                                 Float, NoError> in
                                 return .complete()
@@ -373,7 +376,7 @@ public class ShareRootControllerImpl {
                             |> then(.single(.done))
                         }
                                             
-                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account, silently in
+                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, threadIds, additionalText, account, silently in
                             if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                                 let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
                                 return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
@@ -399,11 +402,11 @@ public class ShareRootControllerImpl {
                                             return requestUserInteraction(value)
                                             |> castError(ShareControllerError.self)
                                             |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, ShareControllerError> in
-                                                return sentItems(peerIds, contents, account, silently)
+                                                return sentItems(peerIds, threadIds, contents, account, silently)
                                                 |> castError(ShareControllerError.self)
                                             }
                                         case let .done(contents):
-                                            return sentItems(peerIds, contents, account, silently)
+                                            return sentItems(peerIds, threadIds, contents, account, silently)
                                             |> castError(ShareControllerError.self)
                                     }
                                 }
@@ -670,7 +673,7 @@ public class ShareRootControllerImpl {
                                                         attemptSelectionImpl?(peer)
                                                     }, createNewGroup: {
                                                         createNewGroupImpl?()
-                                                    }, pretendPresentedInModal: true, selectForumThreads: true))
+                                                    }, pretendPresentedInModal: true, selectForumThreads: false))
                                                     
                                                     controller.customDismiss = {
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -1104,7 +1107,7 @@ public class ShareRootControllerImpl {
                 guard let strongSelf = self else {
                     return
                 }
-                
+
                 if strongSelf.isAppLocked {
                     let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Share_LockedTitle, text: presentationData.strings.Share_LockedDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
@@ -1113,7 +1116,7 @@ public class ShareRootControllerImpl {
                     strongSelf.mainWindow?.present(controller, on: .root)
                     return
                 }
-                
+
                 displayShare()
             }
             

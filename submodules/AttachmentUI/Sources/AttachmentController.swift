@@ -20,6 +20,7 @@ public enum AttachmentButtonType: Equatable {
     case contact
     case poll
     case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case gift
     case standalone
     
     public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
@@ -56,6 +57,12 @@ public enum AttachmentButtonType: Equatable {
                 }
             case let .app(lhsPeer, lhsTitle, lhsIcons):
                 if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+                    return true
+                } else {
+                    return false
+                }
+            case .gift:
+                if case .gift = rhs {
                     return true
                 } else {
                     return false
@@ -110,6 +117,12 @@ public extension AttachmentContainable {
 }
 
 public enum AttachmentMediaPickerSendMode {
+    case generic
+    case silently
+    case whenOnline
+}
+
+public enum AttachmentMediaPickerAttachmentMode {
     case media
     case files
 }
@@ -124,7 +137,7 @@ public protocol AttachmentMediaPickerContext {
     func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
-    func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode)
     func schedule()
 }
 
@@ -164,12 +177,13 @@ private func generateMaskImage() -> UIImage? {
 public class AttachmentController: ViewController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    private let chatLocation: ChatLocation
+    private let chatLocation: ChatLocation?
     private let buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     private let hasTextInput: Bool
     private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+    public var animateAppearance: Bool = false
     
     public var willDismiss: () -> Void = {}
     public var didDismiss: () -> Void = {}
@@ -352,6 +366,12 @@ public class AttachmentController: ViewController {
                 }
             }
             
+            self.panel.longPressed = { [weak self] _ in
+                if let strongSelf = self, let currentController = strongSelf.currentControllers.last {
+                    currentController.longTapWithTabBar?()
+                }
+            }
+            
             self.panel.beganTextEditing = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
@@ -367,12 +387,14 @@ public class AttachmentController: ViewController {
             self.panel.sendMessagePressed = { [weak self] mode in
                 if let strongSelf = self {
                     switch mode {
-                        case .generic:
-                            strongSelf.mediaPickerContext?.send(silently: false, mode: .media)
-                        case .silent:
-                            strongSelf.mediaPickerContext?.send(silently: true, mode: .media)
-                        case .schedule:
-                            strongSelf.mediaPickerContext?.schedule()
+                    case .generic:
+                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media)
+                    case .silent:
+                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media)
+                    case .schedule:
+                        strongSelf.mediaPickerContext?.schedule()
+                    case .whenOnline:
+                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media)
                     }
                 }
             }
@@ -423,6 +445,16 @@ public class AttachmentController: ViewController {
                 if case let .app(bot, _, _) = controller.initialButton {
                     if let index = controller.buttons.firstIndex(where: {
                         if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }) {
+                        self.panel.updateSelectedIndex(index)
+                    }
+                } else if controller.initialButton != .standalone {
+                    if let index = controller.buttons.firstIndex(where: {
+                        if $0 == controller.initialButton {
                             return true
                         } else {
                             return false
@@ -590,14 +622,26 @@ public class AttachmentController: ViewController {
         
         private var animating = false
         func animateIn() {
-            guard let layout = self.validLayout else {
+            guard let layout = self.validLayout, let controller = self.controller else {
                 return
             }
             
             self.animating = true
             if case .regular = layout.metrics.widthClass {
-                self.animating = false
-                
+                if controller.animateAppearance {
+                    let targetPosition = self.position
+                    let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
+                    
+                    self.position = startPosition
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                    transition.animateView(allowUserInteraction: true, {
+                        self.position = targetPosition
+                    }, completion: { _ in
+                        self.animating = false
+                    })
+                } else {
+                    self.animating = false
+                }
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 0.1)
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
@@ -859,7 +903,7 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
@@ -938,9 +982,15 @@ public class AttachmentController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        let previousSize = self.validLayout?.size
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.validLayout = layout
+        if let previousSize, previousSize != layout.size {
+            Queue.mainQueue().after(0.1) {
+                self.node.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
     

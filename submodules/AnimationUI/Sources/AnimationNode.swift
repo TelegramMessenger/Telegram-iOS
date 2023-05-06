@@ -2,10 +2,11 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Lottie
+import GZip
 import AppBundle
 import Display
 
-public final class AnimationNode : ASDisplayNode {
+public final class AnimationNode: ASDisplayNode {
     private let scale: CGFloat
     public var speed: CGFloat = 1.0 {
         didSet {
@@ -14,9 +15,7 @@ public final class AnimationNode : ASDisplayNode {
             }
         }
     }
-    
-    //private var colorCallbacks: [LOTColorValueCallback] = []
-    
+
     public var didPlay = false
     public var completion: (() -> Void)?
     private var internalCompletion: (() -> Void)?
@@ -33,8 +32,16 @@ public final class AnimationNode : ASDisplayNode {
         
         super.init()
         
-        self.setViewBlock({ [weak self] in
-            if let animationName = animationName, let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let animation = Animation.filepath(url.path) {
+        self.setViewBlock({
+            var animation: Animation?
+            if let animationName {
+                if let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let maybeAnimation = Animation.filepath(url.path) {
+                    animation = maybeAnimation
+                } else if let url = getAppBundle().url(forResource: animationName, withExtension: "tgs"), let data = try? Data(contentsOf: URL(fileURLWithPath: url.path)), let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                    animation = try? Animation.from(data: unpackedData, strategy: .codable)
+                }
+            }
+            if let animation {
                 let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = self?.speed ?? 1.0
                 view.backgroundColor = .clear
@@ -43,9 +50,6 @@ public final class AnimationNode : ASDisplayNode {
                 if let colors = colors {
                     for (key, value) in colors {
                         view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                        /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-                        self.colorCallbacks.append(colorCallback)
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                     }
                     
                     if let value = colors["__allcolors__"] {
@@ -77,9 +81,6 @@ public final class AnimationNode : ASDisplayNode {
                 if let colors = colors {
                     for (key, value) in colors {
                         view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                        /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-                        self.colorCallbacks.append(colorCallback)
-                        view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                     }
                     
                     if let value = colors["__allcolors__"] {
@@ -112,6 +113,16 @@ public final class AnimationNode : ASDisplayNode {
         self.animationView()?.currentProgress = 1.0
     }
     
+    public func setProgress(_ progress: CGFloat) {
+        self.animationView()?.currentProgress = progress
+    }
+
+    public func animate(from: CGFloat, to: CGFloat, completion: @escaping () -> Void) {
+        self.animationView()?.play(fromProgress: from, toProgress: to, completion: { _ in
+            completion()
+        })
+    }
+
     public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
         self.currentParams = (name, colors)
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let animation = Animation.filepath(url.path) {
@@ -121,11 +132,14 @@ public final class AnimationNode : ASDisplayNode {
             if let colors = colors {
                 for (key, value) in colors {
                     self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
-                    /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
-                    self.colorCallbacks.append(colorCallback)
-                    self.animationView()?.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                 }
             }
+        }
+    }
+
+    public func setColors(colors: [String: UIColor]) {
+        for (key, value) in colors {
+            self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
         }
     }
     

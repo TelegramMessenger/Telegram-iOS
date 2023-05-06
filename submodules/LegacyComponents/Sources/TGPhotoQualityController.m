@@ -648,6 +648,11 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     [(TGPhotoEditorController *)self.parentViewController setInfoString:fileSize];
 }
 
++ (NSString *)_randomTemporaryPath
+{
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.mp4", (int)arc4random()]];
+}
+
 - (void)generateVideoPreview
 {
     if (self.preset == _currentPreset)
@@ -665,6 +670,8 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     TGVideoEditAdjustments *adjustments = [self.photoEditor exportAdjustments];
     adjustments = [adjustments editAdjustmentsWithPreset:self.preset maxDuration:TGPhotoQualityPreviewDuration];
     
+    NSString *path = [TGPhotoQualityController _randomTemporaryPath];
+    
     __block NSTimeInterval delay = 0.0;
     __weak TGPhotoQualityController *weakSelf = self;
     SSignal *convertSignal = [[assetSignal onNext:^(AVAsset *next) {
@@ -680,7 +687,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
     {
         return [[[[[SSignal single:avAsset] delay:delay onQueue:[SQueue concurrentDefaultQueue]] mapToSignal:^SSignal *(AVAsset *avAsset)
         {
-            return [TGMediaVideoConverter convertAVAsset:avAsset adjustments:adjustments watcher:nil inhibitAudio:true entityRenderer:nil];
+            return [TGMediaVideoConverter convertAVAsset:avAsset adjustments:adjustments path:path watcher:nil inhibitAudio:true entityRenderer:nil];
         }] onError:^(__unused id error) {
             delay = 1.0;
         }] retryIf:^bool(__unused id error)

@@ -162,7 +162,7 @@ class ChatReplyCountItemNode: ListViewItemNode {
                     if strongSelf.backgroundNode == nil {
                         if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
                             strongSelf.backgroundNode = backgroundNode
-                            backgroundNode.addSubnode(strongSelf.backgroundColorNode)
+                            //backgroundNode.addSubnode(strongSelf.backgroundColorNode)
                             strongSelf.insertSubnode(backgroundNode, at: 0)
                         }
                     }

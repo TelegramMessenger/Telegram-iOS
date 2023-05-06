@@ -1,0 +1,45 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "AvatarEditorScreen",
+    module_name = "AvatarEditorScreen",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
+        "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
+        "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/SolidRoundedButtonComponent",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/ContextUI",
+        "//submodules/UndoUI",
+        "//submodules/AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/Markdown:Markdown",
+        "//submodules/GradientBackground:GradientBackground",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/DrawingUI:DrawingUI",
+        "//submodules/StickerResources:StickerResources",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

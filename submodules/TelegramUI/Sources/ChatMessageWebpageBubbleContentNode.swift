@@ -149,7 +149,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
 
                 var automaticPlayback = false
                 
-                if let file = webpage.file, (file.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs) || (!file.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos) {
+                if let file = webpage.file, (file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayGif) || (!file.isAnimated && item.context.sharedContext.energyUsageSettings.autoplayVideo) {
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
                     if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: file) {
                         automaticDownload = .full
@@ -318,6 +318,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             title = item.presentationData.strings.Conversation_Theme
                             text = nil
                             actionTitle = item.presentationData.strings.Conversation_ViewTheme
+                        case "telegram_botapp":
+                            title = item.presentationData.strings.Conversation_BotApp
+                            actionTitle = item.presentationData.strings.Conversation_OpenBotApp
+                        case "telegram_chatlist":
+                            actionTitle = item.presentationData.strings.Conversation_OpenChatFolder
                         default:
                             break
                     }

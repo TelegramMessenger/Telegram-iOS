@@ -2,12 +2,14 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import ContextUI
 import ChatPresentationInterfaceState
 import ChatMessageBackground
 import ChatControllerInteraction
+import AccountContext
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
     private let presentationContext: ChatPresentationContext?
@@ -37,13 +39,13 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
-    init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationContext = presentationContext
         let theme = presentationInterfaceState.theme
         let strings = presentationInterfaceState.strings
         self.strings = strings
          
-        self.micButton = ChatTextInputMediaRecordingButton(theme: theme, strings: strings, presentController: presentController)
+        self.micButton = ChatTextInputMediaRecordingButton(context: context, theme: theme, strings: strings, presentController: presentController)
         
         self.sendContainerNode = ASDisplayNode()
         self.sendContainerNode.layer.allowsGroupOpacity = true
@@ -74,7 +76,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                 } else {
                     if highlighted {
                         strongSelf.sendContainerNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
-                    } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
+                    } else if let presentationLayer = strongSelf.sendContainerNode.layer.presentation() {
                         strongSelf.sendContainerNode.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
                     }
                 }
@@ -132,8 +134,15 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     private var absoluteRect: (CGRect, CGSize)?
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+        let previousContaierSize = self.absoluteRect?.1
         self.absoluteRect = (rect, containerSize)
         self.backdropNode.update(rect: rect, within: containerSize, transition: transition)
+        
+        if let previousContaierSize, previousContaierSize != containerSize {
+            Queue.mainQueue().after(0.2) {
+                self.micButton.reset()
+            }
+        }
     }
     
     func updateLayout(size: CGSize, isMediaInputExpanded: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {

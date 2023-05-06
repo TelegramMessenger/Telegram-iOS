@@ -175,6 +175,72 @@ public final class AccountContextImpl: AccountContext {
     
     private var animatedEmojiStickersDisposable: Disposable?
     public private(set) var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+    private let animatedEmojiStickersValue = Promise<[String: [StickerPackItem]]>()
+    public var animatedEmojiStickersSignal: Signal<[String: [StickerPackItem]], NoError> {
+        return self.animatedEmojiStickersValue.get()
+    }
+    
+    private var additionalAnimatedEmojiStickersValue: Promise<[String: [Int: StickerPackItem]]>?
+    public var additionalAnimatedEmojiStickers: Signal<[String: [Int: StickerPackItem]], NoError> {
+        let additionalAnimatedEmojiStickersValue: Promise<[String: [Int: StickerPackItem]]>
+        if let current = self.additionalAnimatedEmojiStickersValue {
+            additionalAnimatedEmojiStickersValue = current
+        } else {
+            additionalAnimatedEmojiStickersValue = Promise<[String: [Int: StickerPackItem]]>()
+            self.additionalAnimatedEmojiStickersValue = additionalAnimatedEmojiStickersValue
+            additionalAnimatedEmojiStickersValue.set(self.engine.stickers.loadedStickerPack(reference: .animatedEmojiAnimations, forceActualized: false)
+            |> map { animatedEmoji -> [String: [Int: StickerPackItem]] in
+                let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣".strippedEmoji
+                var animatedEmojiStickers: [String: [Int: StickerPackItem]] = [:]
+                switch animatedEmoji {
+                case let .result(_, items, _):
+                    for item in items {
+                        let indexKeys = item.getStringRepresentationsOfIndexKeys()
+                        if indexKeys.count > 1, let first = indexKeys.first, let last = indexKeys.last {
+                            let emoji: String?
+                            let indexEmoji: String?
+                            if sequence.contains(first.strippedEmoji) {
+                                emoji = last
+                                indexEmoji = first
+                            } else if sequence.contains(last.strippedEmoji) {
+                                emoji = first
+                                indexEmoji = last
+                            } else {
+                                emoji = nil
+                                indexEmoji = nil
+                            }
+                            
+                            if let emoji = emoji?.strippedEmoji, let indexEmoji = indexEmoji?.strippedEmoji.first, let strIndex = sequence.firstIndex(of: indexEmoji) {
+                                let index = sequence.distance(from: sequence.startIndex, to: strIndex)
+                                if animatedEmojiStickers[emoji] != nil {
+                                    animatedEmojiStickers[emoji]![index] = item
+                                } else {
+                                    animatedEmojiStickers[emoji] = [index: item]
+                                }
+                            }
+                        }
+                    }
+                default:
+                    break
+                }
+                return animatedEmojiStickers
+            })
+        }
+        return additionalAnimatedEmojiStickersValue.get()
+    }
+    
+    private var availableReactionsValue: Promise<AvailableReactions?>?
+    public var availableReactions: Signal<AvailableReactions?, NoError> {
+        let availableReactionsValue: Promise<AvailableReactions?>
+        if let current = self.availableReactionsValue {
+            availableReactionsValue = current
+        } else {
+            availableReactionsValue = Promise<AvailableReactions?>()
+            self.availableReactionsValue = availableReactionsValue
+            availableReactionsValue.set(self.engine.stickers.availableReactions())
+        }
+        return availableReactionsValue.get()
+    }
     
     private var userLimitsConfigurationDisposable: Disposable?
     public private(set) var userLimits: EngineConfiguration.UserLimits
@@ -227,8 +293,13 @@ public final class AccountContextImpl: AccountContext {
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
         self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
         
+        let cacheStorageBox = self.account.postbox.mediaBox.cacheStorageBox
         self.animationCache = AnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
+        }, updateStorageStats: { path, size in
+            if let pathData = path.data(using: .utf8) {
+                cacheStorageBox.update(id: pathData, size: size)
+            }
         })
         self.animationRenderer = MultiAnimationRendererImpl()
         
@@ -342,6 +413,7 @@ public final class AccountContextImpl: AccountContext {
                 return
             }
             strongSelf.animatedEmojiStickers = stickers
+            strongSelf.animatedEmojiStickersValue.set(.single(stickers))
         })
         
         self.userLimitsConfigurationDisposable = (self.account.postbox.peerView(id: self.account.peerId)

@@ -1,17 +1,16 @@
 import Foundation
 import UIKit
-import AsyncDisplayKit
+import ComponentFlow
 import TelegramCore
 import Postbox
 import SwiftSignalKit
-import Display
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import WebKit
 import AppBundle
 
-final class BrowserWebContent: ASDisplayNode, BrowserContent {
+final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
     private let webView: WKWebView
     
     private var _state: BrowserContentState
@@ -21,13 +20,14 @@ final class BrowserWebContent: ASDisplayNode, BrowserContent {
         return self.statePromise.get()
     }
     
+    var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
+    
     init(url: String) {
         let configuration = WKWebViewConfiguration()
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            self.webView.allowsLinkPreview = false
-        }
+        self.webView.allowsLinkPreview = false
+        
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.webView.scrollView.contentInsetAdjustmentBehavior = .never
         }
@@ -40,17 +40,24 @@ final class BrowserWebContent: ASDisplayNode, BrowserContent {
             title = parsedUrl.host ?? ""
         }
         
-        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, isInstant: false)
+        self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, contentType: .webPage)
         self.statePromise = Promise<BrowserContentState>(self._state)
         
-        super.init()
+        super.init(frame: .zero)
         
         self.webView.allowsBackForwardNavigationGestures = true
+        self.webView.scrollView.delegate = self
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.title), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.url), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward), options: [], context: nil)
+        
+        self.addSubview(self.webView)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     deinit {
@@ -59,12 +66,6 @@ final class BrowserWebContent: ASDisplayNode, BrowserContent {
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack))
         self.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward))
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        self.view.addSubview(self.webView)
     }
     
     func setFontSize(_ fontSize: CGFloat) {
@@ -109,7 +110,7 @@ final class BrowserWebContent: ASDisplayNode, BrowserContent {
         })
     }
     
-    var previousQuery: String?
+    private var previousQuery: String?
     func setSearch(_ query: String?, completion: ((Int) -> Void)?) {
         guard self.previousQuery != query else {
             return
@@ -182,8 +183,15 @@ final class BrowserWebContent: ASDisplayNode, BrowserContent {
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(view: self.webView, frame: CGRect(origin: CGPoint(x: 0.0, y: 56.0), size: CGSize(width: size.width, height: size.height - 56.0)))
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
+        var scrollInsets = insets
+        scrollInsets.top = 0.0
+        if self.webView.scrollView.contentInset != insets {
+            self.webView.scrollView.contentInset = scrollInsets
+            self.webView.scrollView.scrollIndicatorInsets = scrollInsets
+        }
+        self.previousScrollingOffset = ScrollingOffsetState(value: self.webView.scrollView.contentOffset.y, isDraggingOrDecelerating: self.webView.scrollView.isDragging || self.webView.scrollView.isDecelerating)
+        transition.setFrame(view: self.webView, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top)))
     }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
@@ -195,15 +203,63 @@ final class BrowserWebContent: ASDisplayNode, BrowserContent {
         
         if keyPath == "title" {
             updateState { $0.withUpdatedTitle(self.webView.title ?? "") }
-        } else if keyPath == "url" {
+        } else if keyPath == "URL" {
             updateState { $0.withUpdatedUrl(self.webView.url?.absoluteString ?? "") }
             self.didSetupSearch = false
         }  else if keyPath == "estimatedProgress" {
             updateState { $0.withUpdatedEstimatedProgress(self.webView.estimatedProgress) }
         } else if keyPath == "canGoBack" {
             updateState { $0.withUpdatedCanGoBack(self.webView.canGoBack) }
+            self.webView.disablesInteractiveTransitionGestureRecognizer = self.webView.canGoBack
         }  else if keyPath == "canGoForward" {
             updateState { $0.withUpdatedCanGoForward(self.webView.canGoForward) }
         }
+    }
+    
+    private struct ScrollingOffsetState: Equatable {
+        var value: CGFloat
+        var isDraggingOrDecelerating: Bool
+    }
+    
+    private var previousScrollingOffset: ScrollingOffsetState?
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.updateScrollingOffset(isReset: false, transition: .immediate)
+    }
+    
+    private func snapScrollingOffsetToInsets() {
+        let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
+        self.updateScrollingOffset(isReset: false, transition: transition)
+    }
+    
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            self.snapScrollingOffsetToInsets()
+        }
+    }
+    
+    public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.snapScrollingOffsetToInsets()
+    }
+    
+    private func updateScrollingOffset(isReset: Bool, transition: Transition) {
+        let scrollView = self.webView.scrollView
+        let isInteracting = scrollView.isDragging || scrollView.isDecelerating
+        if let previousScrollingOffsetValue = self.previousScrollingOffset {
+            let currentBounds = scrollView.bounds
+            let offsetToTopEdge = max(0.0, currentBounds.minY - 0.0)
+            let offsetToBottomEdge = max(0.0, scrollView.contentSize.height - currentBounds.maxY)
+            
+            let relativeOffset = scrollView.contentOffset.y - previousScrollingOffsetValue.value
+            self.onScrollingUpdate(ContentScrollingUpdate(
+                relativeOffset: relativeOffset,
+                absoluteOffsetToTopEdge: offsetToTopEdge,
+                absoluteOffsetToBottomEdge: offsetToBottomEdge,
+                isReset: isReset,
+                isInteracting: isInteracting,
+                transition: transition
+            ))
+        }
+        self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: isInteracting)
     }
 }

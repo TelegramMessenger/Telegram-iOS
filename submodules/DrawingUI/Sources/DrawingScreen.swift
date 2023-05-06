@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import CoreServices
 import Display
 import ComponentFlow
 import LegacyComponents
@@ -14,6 +15,7 @@ import LegacyComponents
 import ComponentDisplayAdapters
 import LottieAnimationComponent
 import ViewControllerComponent
+import BlurredBackgroundComponent
 import ContextUI
 import ChatEntityKeyboardInputNode
 import EntityKeyboard
@@ -308,9 +310,11 @@ struct DrawingState: Equatable {
 
 final class DrawingSettings: Codable, Equatable {
     let tools: [DrawingToolState]
+    let colors: [DrawingColor]
     
-    init(tools: [DrawingToolState]) {
+    init(tools: [DrawingToolState], colors: [DrawingColor]) {
         self.tools = tools
+        self.colors = colors
     }
     
     init(from decoder: Decoder) throws {
@@ -321,6 +325,12 @@ final class DrawingSettings: Codable, Equatable {
         } else {
             self.tools = DrawingState.initial.tools
         }
+        
+        if let data = try container.decodeIfPresent(Data.self, forKey: "colors"), let colors = try? JSONDecoder().decode([DrawingColor].self, from: data) {
+            self.colors = colors
+        } else {
+            self.colors = []
+        }
     }
     
     func encode(to encoder: Encoder) throws {
@@ -329,10 +339,13 @@ final class DrawingSettings: Codable, Equatable {
         if let data = try? JSONEncoder().encode(self.tools) {
             try container.encode(data, forKey: "tools")
         }
+        if let data = try? JSONEncoder().encode(self.colors) {
+            try container.encode(data, forKey: "colors")
+        }
     }
     
     static func ==(lhs: DrawingSettings, rhs: DrawingSettings) -> Bool {
-        return lhs.tools == rhs.tools
+        return lhs.tools == rhs.tools && lhs.colors == rhs.colors
     }
 }
 
@@ -348,7 +361,7 @@ private final class ReferenceContentSource: ContextReferenceContentSource {
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: customPosition)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: self.contentArea, customPosition: self.customPosition, actionsPosition: .top)
     }
 }
 
@@ -404,7 +417,7 @@ private final class BlurredGradientComponent: Component {
                 self.gradientMask.image = generateGradientImage(
                     size: CGSize(width: 1.0, height: availableSize.height),
                     colors: [UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 0.0)],
-                    locations: component.position == .top ? [0.0, 0.5, 1.0] : [1.0, 0.5, 0.0],
+                    locations: component.position == .top ? [0.0, 0.8, 1.0] : [1.0, 0.5, 0.0],
                     direction: .vertical
                 )
                 
@@ -650,6 +663,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     isStatusSelection: false,
                     isReactionSelection: false,
                     isEmojiSelection: true,
+                    hasTrending: false,
                     topReactionItems: [],
                     areUnicodeEmojiEnabled: true,
                     areCustomEmojiEnabled: true,
@@ -734,7 +748,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             let tools = self.drawingState.tools
             let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Void in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.drawingSettings, { _ in
-                    return PreferencesEntry(DrawingSettings(tools: tools))
+                    return PreferencesEntry(DrawingSettings(tools: tools, colors: []))
                 })
             }).start()
         }
@@ -910,7 +924,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         }
         
         func addTextEntity() {
-            let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
+            let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
             self.insertEntity.invoke(textEntity)
         }
         
@@ -923,7 +937,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 self?.updateEntitiesPlayback.invoke(true)
                 
                 if let file = file {
-                    let stickerEntity = DrawingStickerEntity(file: file)
+                    let stickerEntity = DrawingStickerEntity(content: .file(file))
                     self?.insertEntity.invoke(stickerEntity)
                 } else {
                     self?.updateCurrentMode(.drawing)
@@ -1049,7 +1063,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     position: .top,
                     tag: topGradientTag
                 ),
-                availableSize: CGSize(width: context.availableSize.width, height: topInset + 10.0),
+                availableSize: CGSize(width: context.availableSize.width, height: topInset + 15.0),
                 transition: .immediate
             )
             context.add(topGradient
@@ -1074,6 +1088,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     component: TextSettingsComponent(
                         color: nil,
                         style: DrawingTextStyle(style: textEntity.style),
+                        animation: DrawingTextAnimation(animation: textEntity.animation),
                         alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                         font: DrawingTextFont(font: textEntity.font),
                         isEmojiKeyboard: false,
@@ -1095,6 +1110,27 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 nextStyle = .regular
                             }
                             textEntity.style = nextStyle
+                            if let entityView = textEntity.currentEntityView {
+                                entityView.update()
+                            }
+                            state?.updated(transition: .easeInOut(duration: 0.2))
+                        },
+                        toggleAnimation: { [weak state, weak textEntity] in
+                            guard let textEntity = textEntity else {
+                                return
+                            }
+                            var nextAnimation: DrawingTextEntity.Animation
+                            switch textEntity.animation {
+                            case .none:
+                                nextAnimation = .typing
+                            case .typing:
+                                nextAnimation = .wiggle
+                            case .wiggle:
+                                nextAnimation = .zoomIn
+                            case .zoomIn:
+                                nextAnimation = .none
+                            }
+                            textEntity.animation = nextAnimation
                             if let entityView = textEntity.currentEntityView {
                                 entityView.update()
                             }
@@ -1752,9 +1788,9 @@ private final class DrawingScreenComponent: CombinedComponent {
                         AnyComponentWithIdentity(
                             id: "background",
                             component: AnyComponent(
-                                BlurredRectangle(
+                                BlurredBackgroundComponent(
                                     color:  UIColor(rgb: 0x888888, alpha: 0.3),
-                                    radius: 12.0
+                                    cornerRadius: 12.0
                                 )
                             )
                         ),
@@ -1791,6 +1827,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .position(CGPoint(x: rightEdge - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
+                .cornerRadius(12.0)
             )
             
             let doneButton = doneButton.update(
@@ -1922,7 +1959,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     }
 }
 
-public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
+public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, UIDropInteractionDelegate {
     fileprivate final class Node: ViewControllerTracingNode {
         private weak var controller: DrawingScreen?
         private let context: AccountContext
@@ -1931,7 +1968,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         private let performAction: ActionSlot<DrawingView.Action>
         private let updateToolState: ActionSlot<DrawingToolState>
         private let updateSelectedEntity: ActionSlot<DrawingEntity?>
-        private let insertEntity: ActionSlot<DrawingEntity>
+        fileprivate let insertEntity: ActionSlot<DrawingEntity>
         private let deselectEntity: ActionSlot<Void>
         private let updateEntitiesPlayback: ActionSlot<Bool>
         private let previewBrushSize: ActionSlot<CGFloat?>
@@ -1957,6 +1994,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         var drawingView: DrawingView {
             if self._drawingView == nil, let controller = self.controller {
                 self._drawingView = DrawingView(size: controller.size)
+                self._drawingView?.animationsEnabled = self.context.sharedContext.energyUsageSettings.fullTranslucency
                 self._drawingView?.shouldBegin = { [weak self] _ in
                     if let strongSelf = self {
                         if strongSelf._entitiesView?.hasSelection == true {
@@ -2043,6 +2081,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                     self._entitiesView = externalEntitiesView
                 } else {
                     self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.size)
+                    //self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.originalSize)
                 }
                 self._drawingView?.entitiesView = self._entitiesView
                 self._entitiesView?.drawingView = self._drawingView
@@ -2188,9 +2227,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             return self._contentWrapperView!
         }
         
-        init(controller: DrawingScreen, context: AccountContext) {
+        init(controller: DrawingScreen) {
             self.controller = controller
-            self.context = context
+            self.context = controller.context
             self.updateState = ActionSlot<DrawingView.NavigationState>()
             self.updateColor = ActionSlot<DrawingColor>()
             self.performAction = ActionSlot<DrawingView.Action>()
@@ -2326,12 +2365,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 return
             }
             self.hapticFeedback.impact(.medium)
+            var didDismiss = false
             let colorController = ColorPickerScreen(context: self.context, initialColor: initialColor, updated: { [weak self] color in
                 self?.updateColor.invoke(color)
             }, openEyedropper: { [weak self] in
                 self?.presentEyedropper(dismissed: dismissed)
             }, dismissed: {
-                dismissed()
+                if !didDismiss {
+                    didDismiss = true
+                    dismissed()
+                }
             })
             controller.present(colorController, in: .window(.root))
             self.colorPickerScreen = colorController
@@ -2672,6 +2715,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                             TextSettingsComponent(
                                 color: textEntity.color,
                                 style: DrawingTextStyle(style: textEntity.style),
+                                animation: DrawingTextAnimation(animation: textEntity.animation),
                                 alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                                 font: DrawingTextFont(font: textEntity.font),
                                 isEmojiKeyboard: entityView.textView.inputView != nil,
@@ -2714,6 +2758,29 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                         nextStyle = .regular
                                     }
                                     textEntity.style = nextStyle
+                                    entityView.update()
+                                    
+                                    if let (layout, orientation) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, orientation: orientation, transition: .immediate)
+                                    }
+                                },
+                                toggleAnimation: { [weak self] in
+                                    self?.dismissFontPicker()
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    var nextAnimation: DrawingTextEntity.Animation
+                                    switch textEntity.animation {
+                                    case .none:
+                                        nextAnimation = .typing
+                                    case .typing:
+                                        nextAnimation = .wiggle
+                                    case .wiggle:
+                                        nextAnimation = .zoomIn
+                                    case .zoomIn:
+                                        nextAnimation = .none
+                                    }
+                                    textEntity.animation = nextAnimation
                                     entityView.update()
                                     
                                     if let (layout, orientation) = strongSelf.validLayout {
@@ -2858,6 +2925,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
+    required public init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
     public var drawingView: DrawingView {
         return self.node.drawingView
     }
@@ -2874,14 +2945,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         return self.node.contentWrapperView
     }
     
-    required public init(coder: NSCoder) {
-        preconditionFailure()
-    }
-    
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context)
+        self.displayNode = Node(controller: self)
 
         super.displayNodeDidLoad()
+        
+        let dropInteraction = UIDropInteraction(delegate: self)
+        self.drawingView.addInteraction(dropInteraction)
     }
     
     public func generateResultData() -> TGPaintingData? {
@@ -2920,6 +2990,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             self.entitiesView.layer.render(in: context)
         }, opaque: false, scale: 1.0)
         
+        if #available(iOS 16.0, *) {
+            let path = NSTemporaryDirectory() + "img.jpg"
+            try? finalImage?.jpegData(compressionQuality: 0.9)?.write(to: URL(filePath: path))
+        }
+        
         var image = paintingImage
         var stillImage: UIImage?
         if hasAnimatedEntities {
@@ -2933,37 +3008,24 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         
         var stickers: [Any] = []
         for entity in self.entitiesView.entities {
-            if let sticker = entity as? DrawingStickerEntity {
+            if let sticker = entity as? DrawingStickerEntity, case let .file(file) = sticker.content {
                 let coder = PostboxEncoder()
-                coder.encodeRootObject(sticker.file)
+                coder.encodeRootObject(file)
                 stickers.append(coder.makeData())
             } else if let text = entity as? DrawingTextEntity, let subEntities = text.renderSubEntities {
                 for sticker in subEntities {
-                    let coder = PostboxEncoder()
-                    coder.encodeRootObject(sticker.file)
-                    stickers.append(coder.makeData())        
+                    if case let .file(file) = sticker.content {
+                        let coder = PostboxEncoder()
+                        coder.encodeRootObject(file)
+                        stickers.append(coder.makeData())
+                    }
                 }
             }
         }
         
         return TGPaintingData(drawing: drawingData, entitiesData: entitiesData, image: image, stillImage: stillImage, hasAnimation: hasAnimatedEntities, stickers: stickers)
     }
-    
-    public func resultImage() -> UIImage! {
-        let image = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
-            let bounds = CGRect(origin: .zero, size: size)
-            context.clear(bounds)
-            if let cgImage = self.drawingView.drawingImage?.cgImage {
-                context.draw(cgImage, in: bounds)
-            }
-            context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-            context.scaleBy(x: 1.0, y: -1.0)
-            context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-            self.entitiesView.layer.render(in: context)
-        }, opaque: false, scale: 1.0)
-        return image
-    }
-    
+        
     public func animateOut(_ completion: @escaping (() -> Void)) {
         self.selectionContainerView.alpha = 0.0
         
@@ -2974,7 +3036,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, orientation: orientation, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, orientation: self.orientation, transition: Transition(transition))
     }
     
     public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, isRegular: Bool, animated: Bool) {
@@ -2992,5 +3054,45 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         )
         self.orientation = orientation
         self.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
+        return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidUpdate session: UIDropSession) -> UIDropProposal {
+        //self.chatDisplayNode.updateDropInteraction(isActive: true)
+        
+        let operation: UIDropOperation
+        operation = .copy
+        return UIDropProposal(operation: operation)
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, performDrop session: UIDropSession) {
+        session.loadObjects(ofClass: UIImage.self) { [weak self] imageItems in
+            guard let strongSelf = self else {
+                return
+            }
+            let images = imageItems as! [UIImage]
+            
+            //strongSelf.chatDisplayNode.updateDropInteraction(isActive: false)
+            if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
+                let entity = DrawingStickerEntity(content: .image(image))
+                strongSelf.node.insertEntity.invoke(entity)
+            }
+        }
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidExit session: UIDropSession) {
+        //self.chatDisplayNode.updateDropInteraction(isActive: false)
+    }
+    
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
+    public func dropInteraction(_ interaction: UIDropInteraction, sessionDidEnd session: UIDropSession) {
+        //self.chatDisplayNode.updateDropInteraction(isActive: false)
     }
 }

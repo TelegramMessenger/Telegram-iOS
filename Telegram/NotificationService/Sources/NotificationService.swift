@@ -19,6 +19,7 @@ import PersistentStringHash
 import CallKit
 import AppLockState
 import NotificationsPresentationData
+import RangeSet
 
 private let queue = Queue()
 
@@ -37,6 +38,8 @@ private let accountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResource: { a
     return .single(nil)
 }, prepareSecretThumbnailData: { _ in
     return nil
+}, backgroundUpload: { _, _, _ in
+    return .single(nil)
 })
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
@@ -450,7 +453,7 @@ private struct NotificationContent: CustomStringConvertible {
     
     var suppressForeignAgentNotice: Bool = false
     var messageType: String?
-    
+
     init(isLockedMessage: String?) {
         self.isLockedMessage = isLockedMessage
     }
@@ -467,6 +470,7 @@ private struct NotificationContent: CustomStringConvertible {
         string += " userInfo: \(String(describing: self.userInfo)),\n"
         string += " senderImage: \(self.senderImage != nil ? "non-empty" : "empty"),\n"
         string += " isLockedMessage: \(String(describing: self.isLockedMessage)),\n"
+        string += " attachments: \(self.attachments),\n"
         string += "}"
         return string
     }
@@ -529,7 +533,7 @@ private struct NotificationContent: CustomStringConvertible {
                 content.body = body
             }
         }
-        
+
         if !content.title.isEmpty || !content.subtitle.isEmpty || !content.body.isEmpty {
             if let isLockedMessage = self.isLockedMessage {
                 content.body = isLockedMessage
@@ -694,7 +698,7 @@ private final class NotificationServiceHandler {
         Logger.shared.logToConsole = loggingSettings.logToConsole
         Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
 
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: false)
         
         let isLockedMessage: String?
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
@@ -735,7 +739,12 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.ptgSettings, ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            self.accountManager.sharedData(keys: [
+                ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
+                ApplicationSpecificSharedDataKeys.voiceCallSettings,
+                ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings,
+                SharedDataKeys.loggingSettings
+            ])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -745,6 +754,14 @@ private final class NotificationServiceHandler {
             let loggingSettings = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
             Logger.shared.logToFile = loggingSettings.logToFile
             Logger.shared.logToConsole = loggingSettings.logToConsole
+
+            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+                automaticMediaDownloadSettings = value
+            } else {
+                automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
+            }
+            let shouldSynchronizeState = true//automaticMediaDownloadSettings.energyUsageSettings.synchronizeInBackground
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
                 outer: for listRecord in records.records {
@@ -782,9 +799,9 @@ private final class NotificationServiceHandler {
             }
 
             let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
-            
+
             let allSecretPasscodeSecretChatPeerIds = ptgSecretPasscodes.allSecretChatPeerIds(accountId: recordId)
-            
+
             let _ = (standaloneStateManager(
                 accountManager: strongSelf.accountManager,
                 networkArguments: networkArguments,
@@ -989,7 +1006,7 @@ private final class NotificationServiceHandler {
                                 completed()
                                 return
                             }
-                            
+
                             let ptgSettings = PtgSettings(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSettings])
                             content.suppressForeignAgentNotice = ptgSettings.suppressForeignAgentNotice
 
@@ -1066,7 +1083,12 @@ private final class NotificationServiceHandler {
                             }
 
                             if let category = aps["category"] as? String {
-                                content.category = category
+                                if peerId.isGroupOrChannel && ["r", "m"].contains(category) {
+                                    content.category = "g\(category)"
+                                } else {
+                                    content.category = category
+                                }
+
 
                                 let _ = messageId
 
@@ -1192,7 +1214,13 @@ private final class NotificationServiceHandler {
                                                 } else {
                                                     let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
                                                     fetchMediaSignal = Signal { subscriber in
-                                                        let collectedData = Atomic<Data>(value: Data())
+                                                        final class DataValue {
+                                                            var data = Data()
+                                                            var missingRanges = RangeSet<Int64>(0 ..< Int64.max)
+                                                        }
+
+                                                        let collectedData = Atomic<DataValue>(value: DataValue())
+
                                                         return standaloneMultipartFetch(
                                                             postbox: stateManager.postbox,
                                                             network: stateManager.network,
@@ -1218,11 +1246,43 @@ private final class NotificationServiceHandler {
                                                             useMainConnection: true
                                                         ).start(next: { result in
                                                             switch result {
-                                                            case let .dataPart(_, data, _, _):
+                                                            case let .dataPart(offset, data, dataRange, _):
+                                                                var isCompleted = false
                                                                 let _ = collectedData.modify { current in
-                                                                    var current = current
-                                                                    current.append(data)
+                                                                    let current = current
+
+                                                                    let fillRange = Int(offset) ..< (Int(offset) + data.count)
+                                                                    if current.data.count < fillRange.upperBound {
+                                                                        current.data.count = fillRange.upperBound
+                                                                    }
+                                                                    current.data.withUnsafeMutableBytes { buffer -> Void in
+                                                                        let bytes = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                                                        data.copyBytes(to: bytes.advanced(by: Int(offset)), from: Int(dataRange.lowerBound) ..< Int(dataRange.upperBound))
+                                                                    }
+                                                                    current.missingRanges.remove(contentsOf: Int64(fillRange.lowerBound) ..< Int64(fillRange.upperBound))
+
+                                                                    if current.missingRanges.isEmpty {
+                                                                        isCompleted = true
+                                                                    }
                                                                     return current
+                                                                }
+                                                                if isCompleted {
+                                                                    subscriber.putNext(collectedData.with({ $0.data }))
+                                                                    subscriber.putCompletion()
+                                                                }
+                                                            case let .resourceSizeUpdated(size):
+                                                                var isCompleted = false
+                                                                let _ = collectedData.modify { current in
+                                                                    let current = current
+                                                                    current.missingRanges.remove(contentsOf: size ..< Int64.max)
+                                                                    if current.missingRanges.isEmpty {
+                                                                        isCompleted = true
+                                                                    }
+                                                                    return current
+                                                                }
+                                                                if isCompleted {
+                                                                    subscriber.putNext(collectedData.with({ $0.data }))
+                                                                    subscriber.putCompletion()
                                                                 }
                                                             default:
                                                                 break
@@ -1231,7 +1291,7 @@ private final class NotificationServiceHandler {
                                                             subscriber.putNext(nil)
                                                             subscriber.putCompletion()
                                                         }, completed: {
-                                                            subscriber.putNext(collectedData.with({ $0 }))
+                                                            subscriber.putNext(collectedData.with({ $0.data }))
                                                             subscriber.putCompletion()
                                                         })
                                                     }
@@ -1332,9 +1392,14 @@ private final class NotificationServiceHandler {
 
                                                 Logger.shared.log("NotificationService \(episode)", "Unread count: \(value.0), isCurrentAccount: \(isCurrentAccount)")
 
+                                                Logger.shared.log("NotificationService \(episode)", "mediaAttachment: \(String(describing: mediaAttachment)), mediaData: \(String(describing: mediaData?.count))")
+
                                                 if let image = mediaAttachment as? TelegramMediaImage, let resource = largestImageRepresentation(image.representations)?.resource {
                                                     if let mediaData = mediaData {
                                                         stateManager.postbox.mediaBox.storeResourceData(resource.id, data: mediaData, synchronous: true)
+                                                        if let messageId {
+                                                            let _ = addSynchronizeAutosaveItemOperation(postbox: stateManager.postbox, messageId: messageId, mediaId: image.imageId).start()
+                                                        }
                                                     }
                                                     if let storedPath = stateManager.postbox.mediaBox.completedResourcePath(resource, pathExtension: "jpg") {
                                                         if let attachment = try? UNNotificationAttachment(identifier: "image", url: URL(fileURLWithPath: storedPath), options: nil) {
@@ -1385,7 +1450,7 @@ private final class NotificationServiceHandler {
                                                         }
                                                     }
                                                 }
-                                                
+
                                                 if content.suppressForeignAgentNotice && content.messageType == nil {
                                                     if mediaAttachment is TelegramMediaImage {
                                                         content.messageType = presentationStrings?.messagePhoto ?? "Photo"
@@ -1418,34 +1483,38 @@ private final class NotificationServiceHandler {
 
                                 let pollSignal: Signal<Never, NoError>
 
-                                stateManager.network.shouldKeepConnection.set(.single(true))
-                                if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                    Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
-
-                                    pollSignal = standalonePollChannelOnce(
-                                        accountPeerId: stateManager.accountPeerId,
-                                        postbox: stateManager.postbox,
-                                        network: stateManager.network,
-                                        peerId: peerId,
-                                        stateManager: stateManager
-                                    )
+                                if !shouldSynchronizeState {
+                                    pollSignal = .complete()
                                 } else {
-                                    Logger.shared.log("NotificationService \(episode)", "Will perform non-specific getDifference")
-                                    enum ControlError {
-                                        case restart
-                                    }
-                                    let signal = stateManager.standalonePollDifference()
-                                    |> castError(ControlError.self)
-                                    |> mapToSignal { result -> Signal<Never, ControlError> in
-                                        if result {
-                                            return .complete()
-                                        } else {
-                                            return .fail(.restart)
-                                        }
-                                    }
-                                    |> restartIfError
+                                    stateManager.network.shouldKeepConnection.set(.single(true))
+                                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                        Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
 
-                                    pollSignal = signal
+                                        pollSignal = standalonePollChannelOnce(
+                                            accountPeerId: stateManager.accountPeerId,
+                                            postbox: stateManager.postbox,
+                                            network: stateManager.network,
+                                            peerId: peerId,
+                                            stateManager: stateManager
+                                        )
+                                    } else {
+                                        Logger.shared.log("NotificationService \(episode)", "Will perform non-specific getDifference")
+                                        enum ControlError {
+                                            case restart
+                                        }
+                                        let signal = stateManager.standalonePollDifference()
+                                        |> castError(ControlError.self)
+                                        |> mapToSignal { result -> Signal<Never, ControlError> in
+                                            if result {
+                                                return .complete()
+                                            } else {
+                                                return .fail(.restart)
+                                            }
+                                        }
+                                        |> restartIfError
+
+                                        pollSignal = signal
+                                    }
                                 }
 
                                 let pollWithUpdatedContent: Signal<NotificationContent, NoError>
@@ -1482,7 +1551,10 @@ private final class NotificationServiceHandler {
                                                         switch state {
                                                         case let .idBased(maxIncomingReadId, _, _, _, _):
                                                             if maxIncomingReadId >= messageId.id {
+                                                                Logger.shared.log("NotificationService \(episode)", "maxIncomingReadId: \(maxIncomingReadId), messageId: \(messageId.id), skipping")
                                                                 content = NotificationContent(isLockedMessage: nil)
+                                                            } else {
+                                                                Logger.shared.log("NotificationService \(episode)", "maxIncomingReadId: \(maxIncomingReadId), messageId: \(messageId.id), not skipping")
                                                             }
                                                         case .indexBased:
                                                             break

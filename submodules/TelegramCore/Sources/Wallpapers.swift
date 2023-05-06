@@ -109,7 +109,7 @@ private enum UploadedWallpaperDataContent {
 }
 
 private func uploadedWallpaper(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedWallpaperData, NoError> {
-    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
+    return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image, userContentType: .image), hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false)
     |> map { result -> UploadedWallpaperData in
         return UploadedWallpaperData(resource: resource, content: .result(result))
     }
@@ -118,8 +118,12 @@ private func uploadedWallpaper(postbox: Postbox, network: Network, resource: Med
     }
 }
 
-public func uploadWallpaper(account: Account, resource: MediaResource, mimeType: String = "image/jpeg", settings: WallpaperSettings) -> Signal<UploadWallpaperStatus, UploadWallpaperError> {
-    return uploadedWallpaper(postbox: account.postbox, network: account.network, resource: resource)
+public func uploadWallpaper(account: Account, resource: MediaResource, mimeType: String = "image/jpeg", settings: WallpaperSettings, forChat: Bool) -> Signal<UploadWallpaperStatus, UploadWallpaperError> {
+    return _internal_uploadWallpaper(postbox: account.postbox, network: account.network, resource: resource, settings: settings, forChat: forChat)
+}
+
+func _internal_uploadWallpaper(postbox: Postbox, network: Network, resource: MediaResource, mimeType: String = "image/jpeg", settings: WallpaperSettings, forChat: Bool) -> Signal<UploadWallpaperStatus, UploadWallpaperError> {
+    return uploadedWallpaper(postbox: postbox, network: network, resource: resource)
     |> mapError { _ -> UploadWallpaperError in }
     |> mapToSignal { result -> Signal<(UploadWallpaperStatus, MediaResource?), UploadWallpaperError> in
         switch result.content {
@@ -130,11 +134,15 @@ public func uploadWallpaper(account: Account, resource: MediaResource, mimeType:
                     case let .progress(progress):
                         return .single((.progress(progress), result.resource))
                     case let .inputFile(file):
-                        return account.network.request(Api.functions.account.uploadWallPaper(file: file, mimeType: mimeType, settings: apiWallpaperSettings(settings)))
-                        |> mapError { _ in return UploadWallpaperError.generic }
-                        |> map { wallpaper -> (UploadWallpaperStatus, MediaResource?) in
-                            return (.complete(TelegramWallpaper(apiWallpaper: wallpaper)), result.resource)
-                        }
+                    var flags: Int32 = 0
+                    if forChat {
+                        flags |= 1 << 0
+                    }
+                    return network.request(Api.functions.account.uploadWallPaper(flags: flags, file: file, mimeType: mimeType, settings: apiWallpaperSettings(settings)))
+                    |> mapError { _ in return UploadWallpaperError.generic }
+                    |> map { wallpaper -> (UploadWallpaperStatus, MediaResource?) in
+                        return (.complete(TelegramWallpaper(apiWallpaper: wallpaper)), result.resource)
+                    }
                     default:
                         return .fail(.generic)
                 }

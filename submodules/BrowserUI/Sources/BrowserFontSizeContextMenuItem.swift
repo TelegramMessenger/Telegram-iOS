@@ -7,12 +7,12 @@ import AppBundle
 import ContextUI
 
 final class BrowserFontSizeContextMenuItem: ContextMenuCustomItem {
-    private let value: CGFloat
-    private let decrease: () -> CGFloat
-    private let increase: () -> CGFloat
+    private let value: Int32
+    private let decrease: () -> Int32
+    private let increase: () -> Int32
     private let reset: () -> Void
     
-    init(value: CGFloat, decrease: @escaping () -> CGFloat, increase: @escaping () -> CGFloat, reset: @escaping () -> Void) {
+    init(value: Int32, decrease: @escaping () -> Int32, increase: @escaping () -> Int32, reset: @escaping () -> Void) {
         self.value = value
         self.decrease = decrease
         self.increase = increase
@@ -46,17 +46,17 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
     private let leftSeparatorNode: ASDisplayNode
     private let rightSeparatorNode: ASDisplayNode
     
-    var value: CGFloat = 1.0 {
+    var value: Int32 = 100 {
         didSet {
             self.updateValue()
         }
     }
     
-    private let decrease: () -> CGFloat
-    private let increase: () -> CGFloat
+    private let decrease: () -> Int32
+    private let increase: () -> Int32
     private let reset: () -> Void
     
-    init(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, value: CGFloat, decrease: @escaping () -> CGFloat, increase: @escaping () -> CGFloat, reset: @escaping () -> Void) {
+    init(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, value: Int32, decrease: @escaping () -> Int32, increase: @escaping () -> Int32, reset: @escaping () -> Void) {
         self.presentationData = presentationData
         self.value = value
         self.decrease = decrease
@@ -198,14 +198,14 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
     }
     
     private func updateValue() {
-        self.centerTextNode.attributedText = NSAttributedString(string: "\(Int(self.value * 100.0))%", font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
+        self.centerTextNode.attributedText = NSAttributedString(string: "\(self.value)%", font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
         let _ = self.centerTextNode.updateLayout(CGSize(width: 70.0, height: .greatestFiniteMagnitude))
         
-        self.leftButtonNode.isEnabled = self.value > 0.5
+        self.leftButtonNode.isEnabled = self.value > 50
         self.leftIconNode.alpha = self.leftButtonNode.isEnabled ? 1.0 : 0.3
-        self.rightButtonNode.isEnabled = self.value < 2.0
+        self.rightButtonNode.isEnabled = self.value < 150
         self.rightIconNode.alpha = self.rightButtonNode.isEnabled ? 1.0 : 0.3
-        self.centerButtonNode.isEnabled = self.value != 1.0
+        self.centerButtonNode.isEnabled = self.value != 100
         self.centerTextNode.alpha = self.centerButtonNode.isEnabled ? 1.0 : 0.4
     }
     
@@ -255,7 +255,7 @@ private final class BrowserFontSizeContextMenuItemNode: ASDisplayNode, ContextMe
     
     @objc private func centerPressed() {
         self.reset()
-        self.value = 1.0
+        self.value = 100
     }
     
     func canBeHighlighted() -> Bool {

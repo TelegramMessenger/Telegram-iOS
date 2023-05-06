@@ -9,7 +9,7 @@ open class SparseNode: ASDisplayNode {
         if self.alpha.isZero {
             return nil
         }
-        if !self.bounds.contains(point) {
+        if !self.bounds.inset(by: self.hitTestSlop).contains(point) {
             return nil
         }
         for view in self.view.subviews.reversed() {
@@ -138,8 +138,9 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     private var _color: UIColor
 
     private var enableBlur: Bool
+    private var enableSaturation: Bool
 
-    private var effectView: UIVisualEffectView?
+    public var effectView: UIVisualEffectView?
     private let backgroundNode: ASDisplayNode
 
     private var validLayout: (CGSize, CGFloat)?
@@ -152,9 +153,10 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
     }
 
-    public init(color: UIColor, enableBlur: Bool = true) {
+    public init(color: UIColor, enableBlur: Bool = true, enableSaturation: Bool = true) {
         self._color = .clear
         self.enableBlur = enableBlur
+        self.enableSaturation = enableSaturation
 
         self.backgroundNode = ASDisplayNode()
 
@@ -195,10 +197,12 @@ public final class NavigationBackgroundNode: ASDisplayNode {
                 if let sublayer = effectView.layer.sublayers?[0], let filters = sublayer.filters {
                     sublayer.backgroundColor = nil
                     sublayer.isOpaque = false
-                    let allowedKeys: [String] = [
-                        "colorSaturate",
+                    var allowedKeys: [String] = [
                         "gaussianBlur"
                     ]
+                    if self.enableSaturation {
+                        allowedKeys.append("colorSaturate")
+                    }
                     sublayer.filters = filters.filter { filter in
                         guard let filter = filter as? NSObject else {
                             return true
@@ -225,14 +229,16 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func updateColor(color: UIColor, enableBlur: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
+    public func updateColor(color: UIColor, enableBlur: Bool? = nil, enableSaturation: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
         let effectiveEnableBlur = enableBlur ?? self.enableBlur
-
-        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur {
+        let effectiveEnableSaturation = enableSaturation ?? self.enableSaturation
+        
+        if self._color.isEqual(color) && self.enableBlur == effectiveEnableBlur && self.enableSaturation == effectiveEnableSaturation {
             return
         }
         self._color = color
         self.enableBlur = effectiveEnableBlur
+        self.enableSaturation = effectiveEnableSaturation
 
         if sharedIsReduceTransparencyEnabled {
             transition.updateBackgroundColor(node: self.backgroundNode, color: self._color.withAlphaComponent(1.0))
@@ -697,8 +703,15 @@ open class NavigationBar: ASDisplayNode {
             if self.rightButtonNode.supernode != nil {
                 addAccessibilityChildren(of: self.rightButtonNode, container: self, to: &accessibilityElements)
             }
+            if let customHeaderContentView = self.customHeaderContentView, customHeaderContentView.superview != nil {
+                customHeaderContentView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(customHeaderContentView.bounds, in: customHeaderContentView)
+                accessibilityElements.append(customHeaderContentView)
+            }
             if let contentNode = self.contentNode {
                 addAccessibilityChildren(of: contentNode, container: self, to: &accessibilityElements)
+            }
+            if let secondaryContentNode = self.secondaryContentNode {
+                addAccessibilityChildren(of: secondaryContentNode, container: self, to: &accessibilityElements)
             }
             return accessibilityElements
         } set(value) {
@@ -1190,6 +1203,7 @@ open class NavigationBar: ASDisplayNode {
             
             self.badgeNode.updateTheme(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
             
+            self.updateLeftButton(animated: false)
             self.requestLayout()
         }
     }

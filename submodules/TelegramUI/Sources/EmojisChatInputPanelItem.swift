@@ -17,7 +17,7 @@ final class EmojisChatInputPanelItem: ListViewItem {
     fileprivate let theme: PresentationTheme
     fileprivate let symbol: String
     fileprivate let text: String
-    fileprivate let file: TelegramMediaFile?
+    let file: TelegramMediaFile?
     fileprivate let animationCache: AnimationCache
     fileprivate let animationRenderer: MultiAnimationRenderer
     private let emojiSelected: (String, TelegramMediaFile?) -> Void
@@ -94,6 +94,8 @@ final class EmojisChatInputPanelItemNode: ListViewItemNode {
     private let symbolNode: TextNode
     private var emojiView: EmojiTextAttachmentView?
     
+    var item: EmojisChatInputPanelItem?
+    
     init() {
         self.symbolNode = TextNode()
         self.symbolNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
@@ -123,6 +125,8 @@ final class EmojisChatInputPanelItemNode: ListViewItemNode {
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
                     let _ = symbolApply()
                     strongSelf.symbolNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((EmojisChatInputPanelItemNode.itemSize.width - symbolLayout.size.width) / 2.0), y: 0.0), size: symbolLayout.size)
                     
@@ -157,6 +161,8 @@ final class EmojisChatInputPanelItemNode: ListViewItemNode {
                             emojiView.center = emojiFrame.center
                             emojiView.bounds = CGRect(origin: CGPoint(), size: emojiFrame.size)
                         }
+                        
+                        emojiView.updateTextColor(item.theme.list.itemPrimaryTextColor)
                     } else {
                         strongSelf.symbolNode.isHidden = false
                         

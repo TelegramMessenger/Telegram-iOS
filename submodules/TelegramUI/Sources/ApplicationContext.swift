@@ -97,9 +97,7 @@ final class AuthorizedApplicationContext {
     
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
-    
-    private var scheduledOpenNotificationSettings: Bool = false
-    private var scheduledOpenChatWithPeerId: (PeerId, MessageId?, Bool)?
+
     private let scheduledCallPeerDisposable = MetaDisposable()
     private var scheduledOpenExternalUrl: URL?
         
@@ -132,7 +130,7 @@ final class AuthorizedApplicationContext {
         // badge on app icon should not include unread messages from secret chats from secret passcodes
         // regardless whether they are active or not
         // inactive are already excluded, here we subtract unread messages of active secret chats
-        
+
         let accountId = self.context.account.id
         let activeSecretChatData = self.context.sharedContext.ptgSecretPasscodes
         |> map { ptgSecretPasscodes in
@@ -149,14 +147,14 @@ final class AuthorizedApplicationContext {
                 activeSecretChatPeerIds.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init)
             ))
         }
-        
+
         let totalUnreadCountDisplayCategory = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> map { sharedData in
             let inAppSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? .defaultSettings
             return inAppSettings.totalUnreadCountDisplayCategory
         }
         |> distinctUntilChanged
-        
+
         let activeSecretChatUnreadCount = combineLatest(activeSecretChatData, totalUnreadCountDisplayCategory)
         |> map { activeSecretChatData, totalUnreadCountDisplayCategory -> Int32 in
             let (peerUnreadCount, peerNotificationSettings) = activeSecretChatData
@@ -174,7 +172,7 @@ final class AuthorizedApplicationContext {
             return Int32(activeUnreadCount)
         }
         |> distinctUntilChanged
-        
+
         return combineLatest(renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine), activeSecretChatUnreadCount)
         |> map {
             max($0.0 - $1, 0)
@@ -206,10 +204,7 @@ final class AuthorizedApplicationContext {
         self.showCallsTab = showCallsTab
         
         self.notificationController = NotificationContainerController(context: context)
-        
-        self.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-        self.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
-        
+
         self.rootController = TelegramRootController(context: context)
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
@@ -407,7 +402,7 @@ final class AuthorizedApplicationContext {
                             if inactiveSecretChatPeerIds.contains(firstMessage.id.peerId) {
                                 return
                             }
-                            
+
                             guard !locked else {
                                 return
                             }
@@ -445,7 +440,7 @@ final class AuthorizedApplicationContext {
                             }
                             
                             if inAppNotificationSettings.displayPreviews {
-                               let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, threadData: threadData, tapAction: {
                                     if let strongSelf = self {
                                         var foundOverlay = false
@@ -782,8 +777,7 @@ final class AuthorizedApplicationContext {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
-                    strongSelf.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                    strongSelf.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
+                    strongSelf.lockedCoveringView.updateTheme(presentationData.theme)
                     strongSelf.rootController.updateTheme(NavigationControllerTheme(presentationTheme: presentationData.theme))
                 }
             }
@@ -886,11 +880,7 @@ final class AuthorizedApplicationContext {
     }
     
     func openNotificationSettings() {
-        if self.rootController.rootTabController != nil {
-            self.rootController.pushViewController(notificationsAndSoundsController(context: self.context, exceptionsList: nil))
-        } else {
-            self.scheduledOpenNotificationSettings = true
-        }
+        self.rootController.pushViewController(notificationsAndSoundsController(context: self.context, exceptionsList: nil))
     }
     
     func startCall(peerId: PeerId, isVideo: Bool) {
@@ -917,27 +907,40 @@ final class AuthorizedApplicationContext {
         }
         
         if visiblePeerId != peerId || messageId != nil {
-            if self.rootController.rootTabController != nil {
-                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                |> deliverOnMainQueue).start(next: { peer in
-                    guard let peer = peer else {
-                        return
-                    }
-                    
-                    let chatLocation: NavigateToChatControllerParams.Location
-                    if let threadId = threadId {
-                        chatLocation = .replyThread(ChatReplyThreadMessage(
-                            messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
-                        ))
+            let isOutgoingMessage: Signal<Bool, NoError>
+            if let messageId {
+                let accountPeerId = self.context.account.peerId
+                isOutgoingMessage = self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                |> map { message -> Bool in
+                    if let message {
+                        return !message._asMessage().effectivelyIncoming(accountPeerId)
                     } else {
-                        chatLocation = .peer(peer)
+                        return false
                     }
-                    
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput ? .text : nil))
-                })
+                }
             } else {
-                self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
+                isOutgoingMessage = .single(false)
             }
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+                isOutgoingMessage
+            ).start(next: { peer, isOutgoingMessage in
+                guard let peer = peer else {
+                    return
+                }
+
+                let chatLocation: NavigateToChatControllerParams.Location
+                if let threadId = threadId {
+                    chatLocation = .replyThread(ChatReplyThreadMessage(
+                        messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                    ))
+                } else {
+                    chatLocation = .peer(peer)
+                }
+
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) } : nil, activateInput: activateInput ? .text : nil))
+            })
         }
     }
     

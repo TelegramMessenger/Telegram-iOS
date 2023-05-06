@@ -17,6 +17,8 @@ import WebSearchUI
 import PeerInfoUI
 import MapResourceToAvatarSizes
 import LegacyMediaPickerUI
+import TextFormat
+import AvatarEditorScreen
 
 private struct CreateChannelArguments {
     let context: AccountContext
@@ -26,11 +28,14 @@ private struct CreateChannelArguments {
     let done: () -> Void
     let changeProfilePhoto: () -> Void
     let focusOnDescription: () -> Void
+    let updatePublicLinkText: (String) -> Void
+    let openAuction: (String) -> Void
 }
 
 private enum CreateChannelSection: Int32 {
     case info
     case description
+    case username
 }
 
 private enum CreateChannelEntryTag: ItemListItemTag {
@@ -62,9 +67,14 @@ private enum CreateChannelEntryTag: ItemListItemTag {
 private enum CreateChannelEntry: ItemListNodeEntry {
     case channelInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
-    
+        
     case descriptionSetup(PresentationTheme, String, String)
     case descriptionInfo(PresentationTheme, String)
+    
+    case usernameHeader(PresentationTheme, String)
+    case username(PresentationTheme, String, String)
+    case usernameStatus(PresentationTheme, String, AddressNameValidationStatus, String, String)
+    case usernameInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -72,6 +82,8 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                 return CreateChannelSection.info.rawValue
             case .descriptionSetup, .descriptionInfo:
                 return CreateChannelSection.description.rawValue
+            case .usernameHeader, .username, .usernameStatus, .usernameInfo:
+                return CreateChannelSection.username.rawValue
         }
     }
     
@@ -85,6 +97,14 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                 return 2
             case .descriptionInfo:
                 return 3
+            case .usernameHeader:
+                return 4
+            case .username:
+                return 5
+            case .usernameStatus:
+                return 6
+            case .usernameInfo:
+                return 7
         }
     }
     
@@ -136,6 +156,30 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .usernameHeader(lhsTheme, lhsText):
+                if case let .usernameHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .username(lhsTheme, lhsText, lhsValue):
+                if case let .username(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .usernameStatus(lhsTheme, lhsAddressName, lhsStatus, lhsText, lhsUsername):
+                if case let .usernameStatus(rhsTheme, rhsAddressName, rhsStatus, rhsText, rhsUsername) = rhs, lhsTheme === rhsTheme, lhsAddressName == rhsAddressName, lhsStatus == rhsStatus, lhsText == rhsText, lhsUsername == rhsUsername {
+                    return true
+                } else {
+                    return false
+                }
+            case let .usernameInfo(lhsTheme, lhsText):
+                if case let .usernameInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -164,6 +208,37 @@ private enum CreateChannelEntry: ItemListNodeEntry {
                 }, tag: CreateChannelEntryTag.description)
             case let .descriptionInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .usernameHeader(_, title):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
+            case let .username(theme, placeholder, text):
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: placeholder, type: .username, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { updatedText in
+                    arguments.updatePublicLinkText(updatedText)
+                }, action: {
+                })
+            case let .usernameStatus(_, _, status, text, username):
+                var displayActivity = false
+                let textColor: ItemListActivityTextItem.TextColor
+                switch status {
+                case .invalidFormat:
+                    textColor = .destructive
+                case let .availability(availability):
+                    switch availability {
+                    case .available:
+                        textColor = .constructive
+                    case .purchaseAvailable:
+                        textColor = .generic
+                    case .invalid, .taken:
+                        textColor = .destructive
+                    }
+                case .checking:
+                    textColor = .generic
+                    displayActivity = true
+                }
+                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: text, color: textColor, linkAction: { _ in
+                    arguments.openAuction(username)
+                }, sectionId: self.section)
+            case let .usernameInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
     }
 }
@@ -173,6 +248,8 @@ private struct CreateChannelState: Equatable {
     var editingName: ItemListAvatarAndNameInfoItemName
     var editingDescriptionText: String
     var avatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
+    var editingPublicLinkText: String?
+    var addressNameValidationStatus: AddressNameValidationStatus?
     
     static func ==(lhs: CreateChannelState, rhs: CreateChannelState) -> Bool {
         if lhs.creating != rhs.creating {
@@ -187,11 +264,17 @@ private struct CreateChannelState: Equatable {
         if lhs.avatar != rhs.avatar {
             return false
         }
+        if lhs.editingPublicLinkText != rhs.editingPublicLinkText {
+            return false
+        }
+        if lhs.addressNameValidationStatus != rhs.addressNameValidationStatus {
+            return false
+        }
         return true
     }
 }
 
-private func CreateChannelEntries(presentationData: PresentationData, state: CreateChannelState) -> [CreateChannelEntry] {
+private func CreateChannelEntries(presentationData: PresentationData, state: CreateChannelState, requestPeer: ReplyMarkupButtonRequestPeerType.Channel?) -> [CreateChannelEntry] {
     var entries: [CreateChannelEntry] = []
     
     let groupInfoState = ItemListAvatarAndNameInfoItemState(editingName: state.editingName, updatingName: nil)
@@ -203,10 +286,64 @@ private func CreateChannelEntries(presentationData: PresentationData, state: Cre
     entries.append(.descriptionSetup(presentationData.theme, presentationData.strings.Channel_Edit_AboutItem, state.editingDescriptionText))
     entries.append(.descriptionInfo(presentationData.theme, presentationData.strings.Channel_About_Help))
     
+    if let requestPeer {
+        if let hasUsername = requestPeer.hasUsername, hasUsername {
+            let currentUsername = state.editingPublicLinkText ?? ""
+            entries.append(.usernameHeader(presentationData.theme, presentationData.strings.CreateGroup_PublicLinkTitle.uppercased()))
+            entries.append(.username(presentationData.theme, presentationData.strings.Group_PublicLink_Placeholder, currentUsername))
+            
+            if let status = state.addressNameValidationStatus {
+                let statusText: String
+                switch status {
+                case let .invalidFormat(error):
+                    switch error {
+                    case .startsWithDigit:
+                        statusText = presentationData.strings.Username_InvalidStartsWithNumber
+                    case .startsWithUnderscore:
+                        statusText = presentationData.strings.Username_InvalidStartsWithUnderscore
+                    case .endsWithUnderscore:
+                        statusText = presentationData.strings.Username_InvalidEndsWithUnderscore
+                    case .invalidCharacters:
+                        statusText = presentationData.strings.Username_InvalidCharacters
+                    case .tooShort:
+                        statusText = presentationData.strings.Username_InvalidTooShort
+                    }
+                case let .availability(availability):
+                    switch availability {
+                    case .available:
+                        statusText = presentationData.strings.Username_UsernameIsAvailable(currentUsername).string
+                    case .invalid:
+                        statusText = presentationData.strings.Username_InvalidCharacters
+                    case .taken:
+                        statusText = presentationData.strings.Username_InvalidTaken
+                    case .purchaseAvailable:
+                        var markdownString = presentationData.strings.Username_UsernamePurchaseAvailable
+                        let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+                        if let entity = entities.first {
+                            markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+                            markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+                        }
+                        statusText = markdownString
+                    }
+                case .checking:
+                    statusText = presentationData.strings.Username_CheckingUsername
+                }
+                entries.append(.usernameStatus(presentationData.theme, currentUsername, status, statusText, currentUsername))
+            }
+            
+            entries.append(.usernameInfo(presentationData.theme, presentationData.strings.CreateGroup_PublicLinkInfo))
+        }
+    }
+    
     return entries
 }
 
-public func createChannelController(context: AccountContext) -> ViewController {
+public enum CreateChannelMode {
+    case generic
+    case requestPeer(ReplyMarkupButtonRequestPeerType.Channel)
+}
+
+public func createChannelController(context: AccountContext, mode: CreateChannelMode = .generic, willComplete: @escaping (String, @escaping () -> Void) -> Void = { _, complete in complete() }, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     let initialState = CreateChannelState(creating: false, editingName: ItemListAvatarAndNameInfoItemName.title(title: "", type: .channel), editingDescriptionText: "", avatar: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -217,6 +354,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
     var replaceControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var dismissImpl: (() -> Void)?
     var endEditingImpl: (() -> Void)?
     var focusOnDescriptionImpl: (() -> Void)?
     
@@ -226,6 +364,14 @@ public func createChannelController(context: AccountContext) -> ViewController {
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
     var uploadedVideoAvatar: (Promise<UploadedPeerPhotoData?>, Double?)? = nil
+    
+    let checkAddressNameDisposable = MetaDisposable()
+    actionsDisposable.add(checkAddressNameDisposable)
+    
+    var requestPeer: ReplyMarkupButtonRequestPeerType.Channel?
+    if case let .requestPeer(peerType) = mode {
+        requestPeer = peerType
+    }
     
     let arguments = CreateChannelArguments(context: context, updateEditingName: { editingName in
         updateState { current in
@@ -245,58 +391,82 @@ public func createChannelController(context: AccountContext) -> ViewController {
             return current
         }
     }, done: {
-        let (creating, title, description) = stateValue.with { state -> (Bool, String, String) in
-            return (state.creating, state.editingName.composedTitle, state.editingDescriptionText)
+        let (creating, title, description, publicLink) = stateValue.with { state -> (Bool, String, String, String?) in
+            return (state.creating, state.editingName.composedTitle, state.editingDescriptionText, state.editingPublicLinkText)
         }
         
         if !creating && !title.isEmpty {
-            updateState { current in
-                var current = current
-                current.creating = true
-                return current
-            }
-            
-            endEditingImpl?()
-            actionsDisposable.add((context.engine.peers.createChannel(title: title, description: description.isEmpty ? nil : description)
-            |> deliverOnMainQueue
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    updateState { current in
-                        var current = current
-                        current.creating = false
-                        return current
-                    }
-                }
-            }).start(next: { peerId in
-                let updatingAvatar = stateValue.with {
-                    return $0.avatar
-                }
-                if let _ = updatingAvatar {
-                    let _ = context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
-                        return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
-                    }).start()
+            willComplete(title, {
+                updateState { current in
+                    var current = current
+                    current.creating = true
+                    return current
                 }
                 
-                let controller = channelVisibilityController(context: context, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
-                replaceControllerImpl?(controller)
-            }, error: { error in
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let text: String?
-                switch error {
-                    case .generic, .tooMuchLocationBasedGroups:
-                        text = presentationData.strings.Login_UnknownError
-                    case .tooMuchJoined:
-                        pushControllerImpl?(oldChannelsController(context: context, intent: .create))
-                        return
-                    case .restricted:
-                        text = presentationData.strings.Common_ActionNotAllowedError
-                    default:
-                        text = nil
+                endEditingImpl?()
+                
+                var createSignal: Signal<PeerId, CreateChannelError> = context.engine.peers.createChannel(title: title, description: description.isEmpty ? nil : description)
+                if case .requestPeer = mode {
+                    if let publicLink, !publicLink.isEmpty {
+                        createSignal = createSignal
+                        |> mapToSignal { peerId in
+                            return context.engine.peers.updateAddressName(domain: .peer(peerId), name: publicLink)
+                            |> mapError { _ in
+                                return .generic
+                            }
+                            |> map { _ in
+                                return peerId
+                            }
+                        }
+                    }
                 }
-                if let text = text {
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                }
-            }))
+                actionsDisposable.add((createSignal
+                |> deliverOnMainQueue
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        updateState { current in
+                            var current = current
+                            current.creating = false
+                            return current
+                        }
+                    }
+                }).start(next: { peerId in
+                    let updatingAvatar = stateValue.with {
+                        return $0.avatar
+                    }
+                    if let _ = updatingAvatar {
+                        let _ = context.engine.peers.updatePeerPhoto(peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
+                            return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
+                        }).start()
+                    }
+                    
+                    if case .requestPeer = mode {
+                        completion?(peerId, {
+                            dismissImpl?()
+                        })
+                    } else {
+                        let controller = channelVisibilityController(context: context, peerId: peerId, mode: .initialSetup, upgradedToSupergroup: { _, f in f() })
+                        replaceControllerImpl?(controller)
+                    }
+                }, error: { error in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let text: String?
+                    switch error {
+                        case .generic, .tooMuchLocationBasedGroups:
+                            text = presentationData.strings.Login_UnknownError
+                        case .tooMuchJoined:
+                            pushControllerImpl?(oldChannelsController(context: context, intent: .create))
+                            return
+                        case .restricted:
+                            text = presentationData.strings.Common_ActionNotAllowedError
+                        default:
+                            text = nil
+                    }
+                    if let text = text {
+                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    }
+                }))
+            })
         }
     }, changeProfilePhoto: {
         endEditingImpl?()
@@ -364,6 +534,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
                                 return nil
                             }
                         }
+                        
+                        let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
                         let uploadInterface = LegacyLiveUploadInterface(context: context)
                         let signal: SSignal
                         if let url = asset as? URL, url.absoluteString.hasSuffix(".jpg"), let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
@@ -379,14 +551,14 @@ public func createChannelController(context: AccountContext) -> ViewController {
                             })
                             signal = durationSignal.map(toSignal: { duration -> SSignal in
                                 if let duration = duration as? Double {
-                                    return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                                    return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, path: tempFile.path, watcher: nil, entityRenderer: entityRenderer)!
                                 } else {
                                     return SSignal.single(nil)
                                 }
                             })
                            
                         } else if let asset = asset as? AVAsset {
-                            signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                            signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, path: tempFile.path, watcher: uploadInterface, entityRenderer: entityRenderer)!
                         } else {
                             signal = SSignal.complete()
                         }
@@ -412,6 +584,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
                                         }
                                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                         subscriber.putNext(resource)
+                                        
+                                        EngineTempBox.shared.dispose(tempFile)
                                     }
                                 }
                                 subscriber.putCompletion()
@@ -454,7 +628,11 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 }
             }
             
+            let keyboardInputData = Promise<AvatarKeyboardInputData>()
+            keyboardInputData.set(AvatarEditorScreen.inputData(context: context, isGroup: true))
+            
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: false, title: nil, isSuggesting: false)!
+            mixin.stickersContext = LegacyPaintStickersContext(context: context)
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
@@ -462,6 +640,15 @@ public func createChannelController(context: AccountContext) -> ViewController {
                     completedChannelPhotoImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }
+            mixin.requestAvatarEditor = { imageCompletion, videoCompletion in
+                guard let imageCompletion, let videoCompletion else {
+                    return
+                }
+                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: .channel, markup: nil)
+                controller.imageCompletion = imageCompletion
+                controller.videoCompletion = videoCompletion
+                pushControllerImpl?(controller)
             }
             mixin.didFinishWithImage = { image in
                 if let image = image {
@@ -496,27 +683,62 @@ public func createChannelController(context: AccountContext) -> ViewController {
         })
     }, focusOnDescription: {
         focusOnDescriptionImpl?()
-    })
-    
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-            
-            let rightNavigationButton: ItemListNavigationButton
-            if state.creating {
-                rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
-            } else {
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: !state.editingName.composedTitle.isEmpty, action: {
-                    arguments.done()
-                })
+    }, updatePublicLinkText: { text in
+        if text.isEmpty {
+            checkAddressNameDisposable.set(nil)
+            updateState { state in
+                var updated = state
+                updated.editingPublicLinkText = text
+                updated.addressNameValidationStatus = nil
+                return updated
+            }
+        } else {
+            updateState { state in
+                var updated = state
+                updated.editingPublicLinkText = text
+                return updated
             }
             
-            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChannelIntro_CreateChannel), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: CreateChannelEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: CreateChannelEntryTag.info)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+            checkAddressNameDisposable.set((context.engine.peers.validateAddressNameInteractive(domain: .peer(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(0))), name: text)
+            |> deliverOnMainQueue).start(next: { result in
+                updateState { state in
+                    var updated = state
+                    updated.addressNameValidationStatus = result
+                    return updated
+                }
+            }))
         }
+    }, openAuction: { username in
+        endEditingImpl?()
+        
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://fragment.com/username/\(username)", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+    })
+        
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let rightNavigationButton: ItemListNavigationButton
+        if state.creating {
+            rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
+        } else {
+            var isEnabled = true
+            if state.editingName.composedTitle.isEmpty {
+                isEnabled = false
+            }
+            if case let .requestPeer(peerType) = mode, let hasUsername = peerType.hasUsername, hasUsername, (state.editingPublicLinkText ?? "").isEmpty {
+                isEnabled = false
+            }
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Next), style: .bold, enabled: isEnabled, action: {
+                arguments.done()
+            })
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChannelIntro_CreateChannel), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: CreateChannelEntries(presentationData: presentationData, state: state, requestPeer: requestPeer), style: .blocks, focusItemTag: CreateChannelEntryTag.info)
+        
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
+    }
     
     let controller = ItemListController(context: context, state: signal)
     replaceControllerImpl = { [weak controller] value in
@@ -527,6 +749,9 @@ public func createChannelController(context: AccountContext) -> ViewController {
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    dismissImpl = { [weak controller] in
+        controller?.dismiss()
     }
     controller.willDisappear = { _ in
         endEditingImpl?()

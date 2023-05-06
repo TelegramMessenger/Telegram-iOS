@@ -14,15 +14,15 @@ enum InstantPageShape {
     case roundLine
 }
 
-final class InstantPageShapeItem: InstantPageItem {
-    var frame: CGRect
+public final class InstantPageShapeItem: InstantPageItem {
+    public var frame: CGRect
     let shapeFrame: CGRect
     let shape: InstantPageShape
     let color: UIColor
     
-    let medias: [InstantPageMedia] = []
-    let wantsNode: Bool = false
-    let separatesTiles: Bool = false
+    public let medias: [InstantPageMedia] = []
+    public let wantsNode: Bool = false
+    public let separatesTiles: Bool = false
     
     init(frame: CGRect, shapeFrame: CGRect, shape: InstantPageShape, color: UIColor) {
         self.frame = frame
@@ -31,7 +31,7 @@ final class InstantPageShapeItem: InstantPageItem {
         self.color = color
     }
     
-    func drawInTile(context: CGContext) {
+    public func drawInTile(context: CGContext) {
         context.setFillColor(self.color.cgColor)
         
         switch self.shape {
@@ -54,27 +54,27 @@ final class InstantPageShapeItem: InstantPageItem {
         }
     }
     
-    func matchesAnchor(_ anchor: String) -> Bool {
+    public func matchesAnchor(_ anchor: String) -> Bool {
         return false
     }
     
-    func matchesNode(_ node: InstantPageNode) -> Bool {
+    public func matchesNode(_ node: InstantPageNode) -> Bool {
         return false
     }
     
-    func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
+    public func node(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, sourceLocation: InstantPageSourceLocation, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, updateWebEmbedHeight: @escaping (CGFloat) -> Void, updateDetailsExpanded: @escaping (Bool) -> Void, currentExpandedDetails: [Int : Bool]?) -> InstantPageNode? {
         return nil
     }
     
-    func linkSelectionRects(at point: CGPoint) -> [CGRect] {
+    public func linkSelectionRects(at point: CGPoint) -> [CGRect] {
         return []
     }
     
-    func distanceThresholdGroup() -> Int? {
+    public func distanceThresholdGroup() -> Int? {
         return nil
     }
     
-    func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
+    public func distanceThresholdWithGroupCount(_ count: Int) -> CGFloat {
         return 0.0
     }
 }

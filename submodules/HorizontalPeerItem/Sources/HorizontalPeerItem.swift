@@ -217,17 +217,15 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                         strongSelf.badgeBackgroundNode.isHidden = true
                     }
                     
-                    var verticalOffset: CGFloat = 0.0
                     let state: RecentStatusOnlineIconState
                     if case .actionSheet = item.mode {
                         state = .panel
-                        verticalOffset -= 9.0
                     } else {
                         state = .regular
                     }
                     
                     strongSelf.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.theme, state: state), color: nil, transition: .immediate)
-                    strongSelf.onlineNode.frame = CGRect(x: itemLayout.size.width - onlineLayout.width - 18.0, y: itemLayout.size.height - onlineLayout.height - 18.0 + verticalOffset, width: onlineLayout.width, height: onlineLayout.height)
+                    strongSelf.onlineNode.frame = CGRect(x: itemLayout.size.width / 2.0 + 14.0, y: itemLayout.size.width - onlineLayout.height - 30.0, width: onlineLayout.width, height: onlineLayout.height)
                     
                     let _ = badgeApply()
                     let _ = onlineApply(animateContent)

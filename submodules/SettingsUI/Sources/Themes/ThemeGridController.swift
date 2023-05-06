@@ -14,14 +14,15 @@ import ShareController
 import SearchUI
 import HexColor
 import PresentationDataUtils
+import MediaPickerUI
 
-final class ThemeGridController: ViewController {
+public final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {
         return self.displayNode as! ThemeGridControllerNode
     }
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    public override var ready: Promise<Bool> {
         return self._ready
     }
     
@@ -38,13 +39,13 @@ final class ThemeGridController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
-    override var navigationBarRequiresEntireLayoutUpdate: Bool {
+    public override var navigationBarRequiresEntireLayoutUpdate: Bool {
         return false
     }
     
     private var previousContentOffset: GridNodeVisibleContentOffset?
     
-    init(context: AccountContext) {
+    public init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))
@@ -115,82 +116,66 @@ final class ThemeGridController: ViewController {
         }
     }
     
-    override func loadDisplayNode() {
+    public override func loadDisplayNode() {
         self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
                 let controller = WallpaperGalleryController(context: strongSelf.context, source: source)
-                controller.apply = { [weak self, weak controller] wallpaper, mode, cropRect in
+                controller.apply = { [weak self, weak controller] wallpaper, options, editedImage, cropRect, brightness in
                     if let strongSelf = self {
-                        uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: mode, cropRect: cropRect, completion: { [weak self, weak controller] in
+                        uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: { [weak self, weak controller] in
                             if let strongSelf = self {
                                 strongSelf.deactivateSearch(animated: false)
                                 strongSelf.controllerNode.scrollToTop(animated: false)
                             }
                             if let controller = controller {
                                 switch wallpaper {
-                                    case .asset, .contextResult:
-                                        controller.dismiss(forceAway: true)
-                                    default:
-                                        break
+                                case .asset, .contextResult:
+                                    controller.dismiss(animated: true)
+                                default:
+                                    break
                                 }
                             }
                         })
                     }
                 }
-                self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
+                self?.push(controller)
             }
         }, presentGallery: { [weak self] in
             if let strongSelf = self {
-                presentCustomWallpaperPicker(context: strongSelf.context, present: { [weak self] controller in
-                    self?.present(controller, in: .window(.root), with: nil, blockInteraction: true)
-                })
+                let dismissControllers = { [weak self] in
+                    if let self, let navigationController = self.navigationController as? NavigationController {
+                        let controllers = navigationController.viewControllers.filter({ controller in
+                            if controller is WallpaperGalleryController || controller is MediaPickerScreen {
+                                return false
+                            }
+                            return true
+                        })
+                        navigationController.setViewControllers(controllers, animated: true)
+                    }
+                }
+                
+                let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
+                controller.customSelection = { [weak self] asset in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset))
+                    controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness in
+                        if let strongSelf = self {
+                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
+                                dismissControllers()
+                            })
+                        }
+                    }
+                    strongSelf.push(controller)
+                }
+                self?.push(controller)
             }
         }, presentColors: { [weak self] in
             if let strongSelf = self {
                 let controller = ThemeColorsGridController(context: strongSelf.context)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
-
-            /*if let strongSelf = self {
-                let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] sharedData in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
-
-                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
-                    let themeReference: PresentationThemeReference
-                    if autoNightModeTriggered {
-                        themeReference = settings.automaticThemeSwitchSetting.theme
-                    } else {
-                        themeReference = settings.theme
-                    }
-
-                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference))
-                    controller.completion = { [weak self] in
-                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { controller in
-                                if controller is ThemeColorsGridController {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(controllers, animated: false)
-                            controllers = controllers.filter { controller in
-                                if controller is ThemeAccentColorController {
-                                    return false
-                                }
-                                return true
-                            }
-                            navigationController.setViewControllers(controllers, animated: true)
-                        }
-                    }
-                    strongSelf.push(controller)
-                })
-            }*/
         }, emptyStateUpdated: { [weak self] empty in
             if let strongSelf = self {
                 if empty != strongSelf.isEmpty {
@@ -408,7 +393,7 @@ final class ThemeGridController: ViewController {
         self.donePressed()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, transition: transition)

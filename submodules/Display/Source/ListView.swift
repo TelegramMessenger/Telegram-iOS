@@ -195,6 +195,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private final var lastContentOffset: CGPoint = CGPoint()
     private final var lastContentOffsetTimestamp: CFAbsoluteTime = 0.0
     private final var ignoreScrollingEvents: Bool = false
+    public final var globalIgnoreScrollingEvents: Bool = false
 
     private let infiniteScrollSize: CGFloat
     
@@ -382,8 +383,41 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private let waitingForNodesDisposable = MetaDisposable()
     
     private var auxiliaryDisplayLink: CADisplayLink?
+    private var auxiliaryDisplayLinkHandle: SharedDisplayLinkDriver.Link?
+    private var debugView: UIView?
     private var isAuxiliaryDisplayLinkEnabled: Bool = false {
         didSet {
+            if self.isAuxiliaryDisplayLinkEnabled {
+                if self.auxiliaryDisplayLinkHandle == nil {
+                    self.auxiliaryDisplayLinkHandle = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: true, { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if self.debugView == nil {
+                            let debugView = UIView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)))
+                            debugView.backgroundColor = .black
+                            debugView.alpha = 0.0001
+                            self.debugView = debugView
+                            self.view.addSubview(debugView)
+                        }
+                        if let debugView = self.debugView {
+                            if debugView.frame.origin.x == 0.0 {
+                                debugView.frame = CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: 1.0, height: 1.0))
+                            } else {
+                                debugView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 1.0, height: 1.0))
+                            }
+                        }
+                    })
+                }
+            } else if let auxiliaryDisplayLinkHandle = self.auxiliaryDisplayLinkHandle {
+                self.auxiliaryDisplayLinkHandle = nil
+                auxiliaryDisplayLinkHandle.invalidate()
+                if let debugView = self.debugView {
+                    self.debugView = nil
+                    debugView.removeFromSuperview()
+                }
+            }
+            
             /*if self.isAuxiliaryDisplayLinkEnabled != oldValue {
                 if self.isAuxiliaryDisplayLinkEnabled {
                     if self.auxiliaryDisplayLink == nil {
@@ -802,6 +836,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         self.scrolledToItem = nil
 
+        self.scroller.forceDecelerating = false
         self.isDragging = true
         
         self.beganInteractiveDragging(self.touchesPosition)
@@ -814,12 +849,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if #available(iOS 15.0, *) {
-            if let scrollDisplayLink = self.scroller.value(forKey: "_scrollHeartbeat") as? CADisplayLink {
-                let _ = scrollDisplayLink
-            }
-        }
-        
         self.isDragging = false
         if decelerate {
             self.lastContentOffsetTimestamp = CACurrentMediaTime()
@@ -860,6 +889,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.decelerationAnimator?.isPaused = true
         let startTime = CACurrentMediaTime()
         let decelerationRate: CGFloat = 0.998
+        self.scroller.forceDecelerating = true
         self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -885,6 +915,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
             
             if abs(currentVelocity) < 0.1 {
+                strongSelf.scroller.forceDecelerating = false
                 strongSelf.decelerationAnimator?.isPaused = true
                 strongSelf.decelerationAnimator = nil
             }
@@ -907,6 +938,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     private func updateScrollViewDidScroll(_ scrollView: UIScrollView, synchronous: Bool) {
         if self.ignoreScrollingEvents || scroller !== self.scroller {
+            return
+        }
+        if self.globalIgnoreScrollingEvents {
             return
         }
 
@@ -1330,6 +1364,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.ignoreScrollingEvents = true
         self.scroller.setContentOffset(self.scroller.contentOffset, animated: false)
         self.ignoreScrollingEvents = wasIgnoringScrollingEvents
+    }
+    
+    public func cancelTracking() {
+        self.scroller.panGestureRecognizer.isEnabled = false
+        self.scroller.panGestureRecognizer.isEnabled = true
     }
     
     private func updateTopItemOverscrollBackground(transition: ContainedViewLayoutTransition) {
@@ -3539,7 +3578,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, synchronousLoad: Bool, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {
+    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, synchronousLoad: Bool, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {        
         self.assignHeaderSpaceAffinities()
 
         let upperDisplayBound = self.headerInsets.top
@@ -4401,7 +4440,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     if let index = strongSelf.itemIndexAtPoint(strongSelf.touchesPosition) {
                         var canBeSelectedOrLongTapped = false
                         for itemNode in strongSelf.itemNodes {
-                            if itemNode.index == index && (strongSelf.items[index].selectable && itemNode.canBeSelected) || itemNode.canBeLongTapped {
+                            var canBeSelected = itemNode.canBeSelected
+                            if canBeSelected {
+                                if !itemNode.isLayerBacked {
+                                    if !itemNode.visibleForSelection(at: strongSelf.view.convert(strongSelf.touchesPosition, to: itemNode.view)) {
+                                        canBeSelected = false
+                                    }
+                                }
+                            }
+                            if itemNode.index == index && (strongSelf.items[index].selectable && canBeSelected) || itemNode.canBeLongTapped {
                                 canBeSelectedOrLongTapped = true
                             }
                         }
@@ -4409,7 +4456,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if canBeSelectedOrLongTapped {
                             strongSelf.highlightedItemIndex = index
                             for itemNode in strongSelf.itemNodes {
-                                if itemNode.index == index && itemNode.canBeSelected {
+                                let itemNodeFrame = itemNode.frame
+                                let itemNodeBounds = itemNode.bounds
+                                let itemPoint = strongSelf.touchesPosition.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY)
+                                
+                                var canBeSelected = itemNode.canBeSelected
+                                if canBeSelected {
+                                    if !itemNode.isLayerBacked {
+                                        if !itemNode.visibleForSelection(at: itemPoint) {
+                                            canBeSelected = false
+                                        }
+                                    }
+                                }
+                                
+                                if itemNode.index == index && canBeSelected {
                                     if true {
                                         if !itemNode.isLayerBacked {
                                             strongSelf.reorderItemNodeToFront(itemNode)
@@ -4417,10 +4477,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                                 strongSelf.reorderHeaderNodeToFront(headerNode)
                                             }
                                         }
-                                        let itemNodeFrame = itemNode.frame
-                                        let itemNodeBounds = itemNode.bounds
                                         if strongSelf.items[index].selectable {
-                                            itemNode.setHighlighted(true, at: strongSelf.touchesPosition.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY), animated: false)
+                                            itemNode.setHighlighted(true, at: itemPoint, animated: false)
                                         }
                                         
                                         if itemNode.canBeLongTapped {

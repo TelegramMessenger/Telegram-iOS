@@ -118,6 +118,8 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
         
+    private let activateAreaNode: AccessibilityAreaNode
+    
     init() {
         self.textNode = TextNode()
         self.commandNode = TextNode()
@@ -139,6 +141,9 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.clipsToBounds = true
         
+        self.activateAreaNode = AccessibilityAreaNode()
+        self.activateAreaNode.accessibilityTraits = [.button]
+        
         super.init(layerBacked: false, dynamicBounce: false)
                 
         self.addSubnode(self.clippingNode)
@@ -148,6 +153,8 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
         self.backgroundNode.addSubnode(self.textNode)
         self.backgroundNode.addSubnode(self.commandNode)
         self.backgroundNode.addSubnode(self.separatorNode)
+        
+        self.addSubnode(self.activateAreaNode)
     }
     
     override func didLoad() {
@@ -203,7 +210,7 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 130.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (commandLayout, commandApply) = makeCommandLayout(TextNodeLayoutArguments(attributedString: commandString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: 120.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (commandLayout, commandApply) = makeCommandLayout(TextNodeLayoutArguments(attributedString: commandString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - rightInset - textLayout.size.width - 16.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(CommandMenuChatInputPanelItemNode.itemHeight, textLayout.size.height + 14.0)), insets: UIEdgeInsets())
                         
@@ -226,6 +233,10 @@ final class CommandMenuChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
+                    
+                    strongSelf.activateAreaNode.accessibilityLabel = textString.string
+                    strongSelf.activateAreaNode.accessibilityValue = commandString.string
+                    strongSelf.activateAreaNode.frame = CGRect(origin: .zero, size: nodeLayout.size)
                     
                     if !mergedTop {
                         strongSelf.shadowNode.isHidden = false

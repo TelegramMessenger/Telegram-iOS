@@ -103,6 +103,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     private var isDrawing = false
     private var drawingGestureStartTimestamp: Double?
     
+    var animationsEnabled = true
+    
     private func loadTemplates() {
         func load(_ name: String) {
             if let url = getAppBundle().url(forResource: name, withExtension: "json"),
@@ -555,7 +557,13 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                         self.currentDrawingViewContainer.mask = nil
                         self.currentDrawingViewContainer.image = nil
                     } else {
-                        currentDrawingRenderView.removeFromSuperview()
+                        if let renderView = currentDrawingRenderView as? PenTool.RenderView, renderView.isDryingUp {
+                            renderView.onDryingUp = { [weak renderView] in
+                                renderView?.removeFromSuperview()
+                            }
+                        } else {
+                            currentDrawingRenderView.removeFromSuperview()
+                        }
                     }
                     self.currentDrawingRenderView = nil
                 }
@@ -651,10 +659,14 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             
             self.updateInternalState()
         }
-        if let uncommitedElement = self.uncommitedElement as? PenTool, uncommitedElement.hasArrow {
-            uncommitedElement.finishArrow({
+        if let uncommitedElement = self.uncommitedElement as? PenTool {
+            if uncommitedElement.hasArrow {
+                uncommitedElement.finishArrow {
+                    complete(true)
+                }
+            } else {
                 complete(true)
-            })
+            }
         } else {
             complete(synchronous)
         }
@@ -910,7 +922,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: false,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .arrow:
@@ -921,7 +934,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: true,
                 isEraser: false,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .marker:
@@ -946,7 +960,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: false,
                 isBlur: true,
-                blurredImage: self.preparedBlurredImage
+                blurredImage: self.preparedBlurredImage,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         case .eraser:
@@ -957,7 +972,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 hasArrow: false,
                 isEraser: true,
                 isBlur: false,
-                blurredImage: nil
+                blurredImage: nil,
+                animationsEnabled: self.animationsEnabled
             )
             element = penTool
         }

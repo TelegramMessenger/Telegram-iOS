@@ -43,7 +43,7 @@
             }
         }
         
-        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]), "", false, colorsVector, modifier);
+        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]), "", cacheKey.length != 0, colorsVector, modifier);
         if (_animation == nullptr) {
             return nil;
         }
@@ -61,7 +61,7 @@
         
         _dimensions = CGSizeMake(width, height);
         
-        if ((_frameRate > 60) || _animation->duration() > 7.0) {
+        if ((_frameRate > 60) || _animation->duration() > 9.0) {
             return nil;
         }
     }

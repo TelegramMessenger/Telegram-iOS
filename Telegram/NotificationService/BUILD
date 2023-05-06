@@ -25,6 +25,7 @@ swift_library(
         "//submodules/rlottie:RLottieBinding",
         "//submodules/GZip:GZip",
         "//submodules/PersistentStringHash:PersistentStringHash",
+        "//submodules/Utils/RangeSet",
     
     ],
     visibility = [

@@ -6,6 +6,16 @@
 @class MTRequestErrorContext;
 @class MTRpcError;
 
+@interface MTRequestResponseInfo : NSObject
+
+@property (nonatomic, readonly) int32_t networkType;
+@property (nonatomic, readonly) double timestamp;
+@property (nonatomic, readonly) double duration;
+
+- (instancetype)initWithNetworkType:(int32_t)networkType timestamp:(double)timestamp duration:(double)duration;
+
+@end
+
 @interface MTRequest : NSObject
 
 @property (nonatomic, strong, readonly) id internalId;
@@ -22,8 +32,9 @@
 @property (nonatomic) bool hasHighPriority;
 @property (nonatomic) bool dependsOnPasswordEntry;
 @property (nonatomic) bool passthroughPasswordEntryError;
+@property (nonatomic) bool needsTimeoutTimer;
 
-@property (nonatomic, copy) void (^completed)(id result, NSTimeInterval completionTimestamp, MTRpcError *error);
+@property (nonatomic, copy) void (^completed)(id result, MTRequestResponseInfo *info, MTRpcError *error);
 @property (nonatomic, copy) void (^progressUpdated)(float progress, NSUInteger packetLength);
 @property (nonatomic, copy) void (^acknowledgementReceived)();
 

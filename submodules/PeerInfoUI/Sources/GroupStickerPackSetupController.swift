@@ -13,15 +13,15 @@ import StickerPackPreviewUI
 import ItemListStickerPackItem
 
 private final class GroupStickerPackSetupControllerArguments {
-    let account: Account
+    let context: AccountContext
     
     let selectStickerPack: (StickerPackCollectionInfo) -> Void
     let openStickerPack: (StickerPackCollectionInfo) -> Void
     let updateSearchText: (String) -> Void
     let openStickersBot: () -> Void
     
-    init(account: Account, selectStickerPack: @escaping (StickerPackCollectionInfo) -> Void, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, updateSearchText: @escaping (String) -> Void, openStickersBot: @escaping () -> Void) {
-        self.account = account
+    init(context: AccountContext, selectStickerPack: @escaping (StickerPackCollectionInfo) -> Void, openStickerPack: @escaping (StickerPackCollectionInfo) -> Void, updateSearchText: @escaping (String) -> Void, openStickersBot: @escaping () -> Void) {
+        self.context = context
         self.selectStickerPack = selectStickerPack
         self.openStickerPack = openStickerPack
         self.updateSearchText = updateSearchText
@@ -218,7 +218,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
             case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .pack(_, _, _, info, topItem, count, playAnimatedStickers, selected):
-                return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     if selected {
                         arguments.openStickerPack(info)
                     } else {
@@ -230,7 +230,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                 }, toggleSelected: {
                 })
             case let .currentPack(_, theme, strings, content):
-                return GroupStickerPackCurrentItem(theme: theme, strings: strings, account: arguments.account, content: content, sectionId: self.section, action: {
+                return GroupStickerPackCurrentItem(theme: theme, strings: strings, account: arguments.context.account, content: content, sectionId: self.section, action: {
                     if case let .found(packInfo, _, _) = content {
                         arguments.openStickerPack(packInfo)
                     }
@@ -260,7 +260,7 @@ private struct GroupStickerPackSetupControllerState: Equatable {
     var isSaving: Bool
 }
 
-private func groupStickerPackSetupControllerEntries(presentationData: PresentationData, searchText: String, view: CombinedView, initialData: InitialStickerPackData?, searchState: GroupStickerPackSearchState, stickerSettings: StickerSettings) -> [GroupStickerPackEntry] {
+private func groupStickerPackSetupControllerEntries(context: AccountContext, presentationData: PresentationData, searchText: String, view: CombinedView, initialData: InitialStickerPackData?, searchState: GroupStickerPackSearchState, stickerSettings: StickerSettings) -> [GroupStickerPackEntry] {
     if initialData == nil {
         return []
     }
@@ -290,7 +290,7 @@ private func groupStickerPackSetupControllerEntries(presentationData: Presentati
                     if case let .found(found) = searchState {
                         selected = found.info.id == info.id
                     }
-                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count), stickerSettings.loopAnimatedStickers, selected))
+                    entries.append(.pack(index, presentationData.theme, presentationData.strings, info, entry.firstItem as? StickerPackItem, presentationData.strings.StickerPack_StickerCount(info.count == 0 ? entry.count : info.count), context.sharedContext.energyUsageSettings.loopStickers, selected))
                     index += 1
                 }
             }
@@ -385,7 +385,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     
     var presentStickerPackController: ((StickerPackCollectionInfo) -> Void)?
     
-    let arguments = GroupStickerPackSetupControllerArguments(account: context.account, selectStickerPack: { info in
+    let arguments = GroupStickerPackSetupControllerArguments(context: context, selectStickerPack: { info in
         searchText.set(info.shortName)
     }, openStickerPack: { info in
         presentStickerPackController?(info)
@@ -464,7 +464,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupStickerPackSetupControllerEntries(presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupStickerPackSetupControllerEntries(context: context, presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
         actionsDisposable.dispose()

@@ -76,6 +76,7 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/TelegramUI/Components/SendInviteLinkScreen",
     ],
     visibility = [
         "//visibility:public",

@@ -113,7 +113,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                             }))
                         }
                     }
-                })
+                }, getSourceRect: params.getSourceRect)
                 params.dismissInput()
                 params.present(controller, nil)
                 return true

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import SwipeToDismissGesture
+import AccountContext
 
 open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     public var statusBar: StatusBar?
@@ -86,6 +87,10 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         self.pager.dismiss = { [weak self] in
             if let strongSelf = self {
+                if let galleryController = strongSelf.galleryController(), galleryController.navigationController != nil {
+                    galleryController.dismiss(animated: true)
+                    return
+                }
                 var interfaceAnimationCompleted = false
                 var contentAnimationCompleted = true
                 
@@ -361,9 +366,13 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         } else if useSimpleAnimation {
             self.scrollView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
+        
+        if let chatController = self.baseNavigationController()?.topViewController as? ChatController {
+            chatController.updatePushedTransition(1.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
+        }
     }
     
-    open func animateOut(animateContent: Bool, completion: @escaping () -> Void) {
+    open func animateOut(animateContent: Bool, completion: @escaping () -> Void) {        
         self.isDismissed = true
         
         self.pager.isScrollEnabled = false
@@ -380,9 +389,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         if let backgroundColor = self.backgroundNode.backgroundColor {
             let updatedColor = backgroundColor.withAlphaComponent(0.0)
             self.backgroundNode.backgroundColor = updatedColor
-            self.backgroundNode.layer.animate(from: backgroundColor.cgColor, to: updatedColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.15)
+            self.backgroundNode.layer.animate(from: backgroundColor.cgColor, to: updatedColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.1)
         }
-        UIView.animate(withDuration: 0.25, animations: {
+        UIView.animate(withDuration: 0.1, animations: {
             self.statusBar?.alpha = 0.0
             self.navigationBar?.alpha = 0.0
             self.footerNode.alpha = 0.0
@@ -413,7 +422,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     }
     
     open func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if self.isDismissed {
+        guard !self.isDismissed else {
             return
         }
         let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
@@ -441,6 +450,11 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         self.updateDismissTransition(transition)
         self.updateDistanceFromEquilibrium(distanceFromEquilibrium)
         
+        if scrollView.isDragging, let chatController = self.baseNavigationController()?.topViewController as? ChatController {
+            let transition = 1.0 - min(1.0, max(0.0, abs(distanceFromEquilibrium) / 150.0))
+            chatController.updatePushedTransition(transition, transition: .immediate)
+        }
+        
         if let overlayNode = self.overlayNode {
             overlayNode.alpha = transition
         }
@@ -466,6 +480,10 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                         dismiss()
                     }
                 }
+            }
+            
+            if let chatController = self.baseNavigationController()?.topViewController as? ChatController {
+                chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
             }
             
             if let centralItemNode = self.pager.centralItemNode(), let (transitionNodeForCentralItem, addToTransitionSurface) = self.transitionDataForCentralItem?(), let node = transitionNodeForCentralItem {
@@ -513,5 +531,13 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             default:
                 break
         }
+    }
+    
+    open override func accessibilityPerformEscape() -> Bool {
+        if let controller = self.galleryController() {
+            controller.dismiss(animated: true)
+            return true
+        }
+        return false
     }
 }

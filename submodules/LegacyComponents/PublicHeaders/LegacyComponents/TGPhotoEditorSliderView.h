@@ -40,8 +40,15 @@
 @property (nonatomic, assign) CGFloat dotSize;
 
 @property (nonatomic, assign) bool enablePanHandling;
+@property (nonatomic, assign) bool enableEdgeTap;
 
 - (void)setValue:(CGFloat)value animated:(BOOL)animated;
+
+- (void)increase;
+- (void)increaseBy:(CGFloat)delta;
+
+- (void)decrease;
+- (void)decreaseBy:(CGFloat)delta;
 
 @end
 

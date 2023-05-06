@@ -34,11 +34,6 @@ public struct NavigationAnimationOptions : OptionSet {
     public static let removeOnMasterDetails = NavigationAnimationOptions(rawValue: 1 << 0)
 }
 
-public enum NavigationEmptyDetailsBackgoundMode {
-    case image(UIImage)
-    case wallpaper(UIImage)
-}
-
 private enum ControllerTransition {
     case none
     case appearance
@@ -120,6 +115,10 @@ public final class NavigationControllerDropContent {
     }
 }
 
+public protocol NavigationDetailsPlaceholderNode: ASDisplayNode {
+    func updateLayout(size: CGSize, needsTiling: Bool, transition: ContainedViewLayoutTransition)
+}
+
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
@@ -131,7 +130,6 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     private var masterDetailsBlackout: MasterDetailLayoutBlackout?
-    private var backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode?
     
     public var lockOrientation: Bool = false
     
@@ -232,16 +230,21 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.requestLayout(transition: transition)
     }
     
-    public func updateBackgroundDetailsMode(_ mode: NavigationEmptyDetailsBackgoundMode?, transition: ContainedViewLayoutTransition) {
-        self.backgroundDetailsMode = mode
-        self.requestLayout(transition: transition)
+    private weak var detailsPlaceholderNode: NavigationDetailsPlaceholderNode?
+    public func updateDetailsPlaceholderNode(_ node: NavigationDetailsPlaceholderNode?) {
+        if self.detailsPlaceholderNode !== node {
+            self.detailsPlaceholderNode?.removeFromSupernode()
+            self.detailsPlaceholderNode = node
+            if let node {
+                self.displayNode.insertSubnode(node, at: 0)
+            }
+        }
     }
     
-    public init(mode: NavigationControllerMode, theme: NavigationControllerTheme, isFlat: Bool = false, backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode? = nil) {
+    public init(mode: NavigationControllerMode, theme: NavigationControllerTheme, isFlat: Bool = false) {
         self.mode = mode
         self.theme = theme
         self.isFlat = isFlat
-        self.backgroundDetailsMode = backgroundDetailsMode
         
         super.init(nibName: nil, bundle: nil)
     }
@@ -340,7 +343,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         return nil
     }
     
-    public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if !self.isViewLoaded {
             self.loadView()
         }
@@ -361,7 +364,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
         
-    private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         self.isUpdatingContainers = true
                 
         var layout = rawLayout
@@ -433,8 +436,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 minHeight = 40.0
             }
             var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(minHeight, layout.safeInsets.top))))
-            if (layout.deviceMetrics.hasTopNotch || layout.deviceMetrics.hasDynamicIsland) && !isLandscape {
-                inCallStatusBarFrame.size.height += 12.0
+            if !isLandscape {
+                if layout.deviceMetrics.hasTopNotch {
+                    inCallStatusBarFrame.size.height += 12.0
+                } else if layout.deviceMetrics.hasDynamicIsland {
+                    inCallStatusBarFrame.size.height += 20.0
+                }
             }
             if inCallStatusBar.frame.isEmpty {
                 inCallStatusBar.frame = inCallStatusBarFrame
@@ -819,6 +826,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                         self?.controllerRemoved(controller)
                     })
+                    flatContainer.requestFilterController = { [weak self] controller in
+                        self?.filterController(controller, animated: true)
+                    }
                     flatContainer.statusBarStyleUpdated = { [weak self] transition in
                         guard let strongSelf = self else {
                             return
@@ -832,7 +842,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                         flatContainer.keyboardViewManager = nil
                         flatContainer.canHaveKeyboardFocus = false
                     }
-                    self.displayNode.insertSubnode(flatContainer, at: 0)
+                    if let detailsPlaceholderNode = self.detailsPlaceholderNode {
+                        self.displayNode.insertSubnode(flatContainer, aboveSubnode: detailsPlaceholderNode)
+                    } else {
+                        self.displayNode.insertSubnode(flatContainer, at: 0)
+                    }
                     self.rootContainer = .flat(flatContainer)
                     flatContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
                     flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: .immediate)
@@ -842,6 +856,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let flatContainer = NavigationContainer(isFlat: self.isFlat, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
+                flatContainer.requestFilterController = { [weak self] controller in
+                    self?.filterController(controller, animated: true)
+                }
                 flatContainer.statusBarStyleUpdated = { [weak self] transition in
                     guard let strongSelf = self else {
                         return
@@ -855,7 +872,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                     flatContainer.keyboardViewManager = nil
                     flatContainer.canHaveKeyboardFocus = false
                 }
-                self.displayNode.insertSubnode(flatContainer, at: 0)
+                if let detailsPlaceholderNode = self.detailsPlaceholderNode {
+                    self.displayNode.insertSubnode(flatContainer, aboveSubnode: detailsPlaceholderNode)
+                } else {
+                    self.displayNode.insertSubnode(flatContainer, at: 0)
+                }
                 self.rootContainer = .flat(flatContainer)
                 flatContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
                 flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: .immediate)
@@ -869,7 +890,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }, scrollToTop: { [weak self] subject in
                         self?.scrollToTop(subject)
                     })
-                    self.displayNode.insertSubnode(splitContainer, at: 0)
+                    if let detailsPlaceholderNode = self.detailsPlaceholderNode {
+                        self.displayNode.insertSubnode(splitContainer, aboveSubnode: detailsPlaceholderNode)
+                    } else {
+                        self.displayNode.insertSubnode(splitContainer, at: 0)
+                    }
                     self.rootContainer = .split(splitContainer)
                     if previousModalContainer == nil {
                         splitContainer.canHaveKeyboardFocus = true
@@ -877,7 +902,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                         splitContainer.canHaveKeyboardFocus = false
                     }
                     splitContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
-                    splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, transition: .immediate)
+                    splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
                     flatContainer.statusBarStyleUpdated = nil
                     flatContainer.removeFromSupernode()
                 case let .split(splitContainer):
@@ -887,7 +912,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                         splitContainer.canHaveKeyboardFocus = false
                     }
                     transition.updateFrame(node: splitContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
-                    splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, transition: transition)
+                    splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: transition)
                 }
             } else {
                 let splitContainer = NavigationSplitContainer(theme: self.theme, controllerRemoved: { [weak self] controller in
@@ -895,7 +920,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }, scrollToTop: { [weak self] subject in
                     self?.scrollToTop(subject)
                 })
-                self.displayNode.insertSubnode(splitContainer, at: 0)
+                if let detailsPlaceholderNode = self.detailsPlaceholderNode {
+                    self.displayNode.insertSubnode(splitContainer, aboveSubnode: detailsPlaceholderNode)
+                } else {
+                    self.displayNode.insertSubnode(splitContainer, at: 0)
+                }
                 self.rootContainer = .split(splitContainer)
                 if previousModalContainer == nil {
                     splitContainer.canHaveKeyboardFocus = true
@@ -903,7 +932,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     splitContainer.canHaveKeyboardFocus = false
                 }
                 splitContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
-                splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, transition: .immediate)
+                splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, detailsPlaceholderNode: self.detailsPlaceholderNode, transition: .immediate)
             }
         }
         
@@ -1189,22 +1218,25 @@ open class NavigationController: UINavigationController, ContainableController, 
                     split.isInFocus = true
                 }
                 
+                var masterTopHasOpaque = topHasOpaque
+                var detailTopHasOpaque = topHasOpaque
+                
                 if let controller = split.masterControllers.last {
-                    if topHasOpaque {
+                    if masterTopHasOpaque {
                         controller.displayNode.accessibilityElementsHidden = true
                     } else {
                         if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
-                            topHasOpaque = true
+                            masterTopHasOpaque = true
                         }
                         controller.displayNode.accessibilityElementsHidden = false
                     }
                 }
                 if let controller = split.detailControllers.last {
-                    if topHasOpaque {
+                    if detailTopHasOpaque {
                         controller.displayNode.accessibilityElementsHidden = true
                     } else {
                         if controller.isOpaqueWhenInOverlay || controller.blocksBackgroundWhenInOverlay {
-                            topHasOpaque = true
+                            detailTopHasOpaque = true
                         }
                         controller.displayNode.accessibilityElementsHidden = false
                     }
@@ -1308,19 +1340,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.pushViewController(controller, animated: animated)
         completion()
     }
-    
-    public func updateContainerPulled(_ pushed: Bool) {
-        guard self.modalContainers.isEmpty else {
-            return
-        }
-        if let rootContainer = self.rootContainer, case let .flat(container) = rootContainer {
-            let scale: CGFloat = pushed ? 1.06 : 1.0
-            
-            container.view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
-            container.view.layer.animateScale(from: pushed ? 1.0 : 1.06, to: scale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        }
-    }
-    
+        
     open override func pushViewController(_ viewController: UIViewController, animated: Bool) {
         var controllers = self.viewControllers
         controllers.append(viewController)
@@ -1359,10 +1379,24 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         ready?.set(true)
-        var controllers = controllers
-        controllers.append(controller)
-        self.setViewControllers(controllers, animated: animated)
-        completion()
+        let action = { [weak self] in
+            guard let self else {
+                return
+            }
+            var controllers = controllers
+            controllers.append(controller)
+            self.setViewControllers(controllers, animated: animated)
+            completion()
+        }
+        if let rootContainer = self.rootContainer, case let .split(container) = rootContainer, let topController = container.detailControllers.last {
+            if topController.attemptNavigation({
+                action()
+            }) {
+                action()
+            }
+        } else {
+            action()
+        }
     }
     
     public func replaceControllers(controllers: [UIViewController], animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
@@ -1455,7 +1489,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             return controller
         }
         if let layout = self.validLayout {
-            self.updateContainers(layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
+            self.updateContainers(layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate, completion: { [weak self] in
+                self?.notifyAccessibilityScreenChanged()
+            })
         }
         self._viewControllersPromise.set(self.viewControllers)
     }
@@ -1712,5 +1748,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             hidden = hidden || overlayController.prefersOnScreenNavigationHidden
         }
         return hidden
+    }
+    
+    private func notifyAccessibilityScreenChanged() {
+        UIAccessibility.post(notification: UIAccessibility.Notification.screenChanged, argument: nil)
     }
 }

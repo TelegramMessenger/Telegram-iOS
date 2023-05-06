@@ -90,7 +90,7 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
                     let sharedContext = self.sharedContext
                     let account = self.account
                     
-                    let uploadSignal = uploadWallpaper(account: account, resource: currentResource, settings: currentWallpaper.settings ?? WallpaperSettings())
+                    let uploadSignal = uploadWallpaper(account: account, resource: currentResource, settings: currentWallpaper.settings ?? WallpaperSettings(), forChat: false)
                     |> map { result -> UploadWallpaperStatus in
                         switch result {
                             case let .complete(wallpaper):

@@ -3,6 +3,7 @@ import SwiftSignalKit
 
 public struct UserLimitsConfiguration: Equatable {
     public let maxPinnedChatCount: Int32
+    public let maxArchivedPinnedChatCount: Int32
     public let maxChannelsCount: Int32
     public let maxPublicLinksCount: Int32
     public let maxSavedGifCount: Int32
@@ -14,10 +15,13 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxAboutLength: Int32
     public let maxAnimatedEmojisInText: Int32
     public let maxReactionsPerMessage: Int32
+    public let maxSharedFolderInviteLinks: Int32
+    public let maxSharedFolderJoin: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
             maxPinnedChatCount: 5,
+            maxArchivedPinnedChatCount: 100,
             maxChannelsCount: 500,
             maxPublicLinksCount: 10,
             maxSavedGifCount: 200,
@@ -28,12 +32,15 @@ public struct UserLimitsConfiguration: Equatable {
             maxUploadFileParts: 4000,
             maxAboutLength: 70,
             maxAnimatedEmojisInText: 10,
-            maxReactionsPerMessage: 1
+            maxReactionsPerMessage: 1,
+            maxSharedFolderInviteLinks: 3,
+            maxSharedFolderJoin: 2
         )
     }
 
     public init(
         maxPinnedChatCount: Int32,
+        maxArchivedPinnedChatCount: Int32,
         maxChannelsCount: Int32,
         maxPublicLinksCount: Int32,
         maxSavedGifCount: Int32,
@@ -44,9 +51,12 @@ public struct UserLimitsConfiguration: Equatable {
         maxUploadFileParts: Int32,
         maxAboutLength: Int32,
         maxAnimatedEmojisInText: Int32,
-        maxReactionsPerMessage: Int32
+        maxReactionsPerMessage: Int32,
+        maxSharedFolderInviteLinks: Int32,
+        maxSharedFolderJoin: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
+        self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
         self.maxChannelsCount = maxChannelsCount
         self.maxPublicLinksCount = maxPublicLinksCount
         self.maxSavedGifCount = maxSavedGifCount
@@ -58,6 +68,8 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxAboutLength = maxAboutLength
         self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
         self.maxReactionsPerMessage = maxReactionsPerMessage
+        self.maxSharedFolderInviteLinks = maxSharedFolderInviteLinks
+        self.maxSharedFolderJoin = maxSharedFolderJoin
     }
 }
 
@@ -83,6 +95,7 @@ extension UserLimitsConfiguration {
         }
         
         self.maxPinnedChatCount = getValue("dialogs_pinned_limit", orElse: defaultValue.maxPinnedChatCount)
+        self.maxArchivedPinnedChatCount = getValue("dialogs_folder_pinned_limit", orElse: defaultValue.maxArchivedPinnedChatCount)
         self.maxChannelsCount = getValue("channels_limit", orElse: defaultValue.maxChannelsCount)
         self.maxPublicLinksCount = getValue("channels_public_limit", orElse: defaultValue.maxPublicLinksCount)
         self.maxSavedGifCount = getValue("saved_gifs_limit", orElse: defaultValue.maxSavedGifCount)
@@ -94,5 +107,7 @@ extension UserLimitsConfiguration {
         self.maxAboutLength = getValue("about_length_limit", orElse: defaultValue.maxAboutLength)
         self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)
         self.maxReactionsPerMessage = getValue("reactions_user_max", orElse: 1)
+        self.maxSharedFolderInviteLinks = getValue("chatlist_invites_limit", orElse: isPremium ? 100 : 3)
+        self.maxSharedFolderJoin = getValue("chatlist_joined_limit", orElse: isPremium ? 100 : 2)
     }
 }

@@ -34,55 +34,6 @@ private let completionKey = "CAAnimationUtils_completion"
 public let kCAMediaTimingFunctionSpring = "CAAnimationUtilsSpringCurve"
 public let kCAMediaTimingFunctionCustomSpringPrefix = "CAAnimationUtilsSpringCustomCurve"
 
-private final class FrameRangeContext {
-    private var animationCount: Int = 0
-    private var displayLink: CADisplayLink?
-    
-    init() {
-    }
-    
-    func add() {
-        self.animationCount += 1
-        self.update()
-    }
-    
-    func remove() {
-        self.animationCount -= 1
-        if self.animationCount < 0 {
-            self.animationCount = 0
-            assertionFailure()
-        }
-        self.update()
-    }
-    
-    @objc func displayEvent() {
-    }
-    
-    private func update() {
-        if self.animationCount != 0 {
-            if self.displayLink == nil {
-                let displayLink = CADisplayLink(target: self, selector: #selector(self.displayEvent))
-                
-                if #available(iOS 15.0, *) {
-                    let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
-                    if maxFps > 61.0 {
-                        displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: maxFps, preferred: maxFps)
-                    }
-                }
-                
-                self.displayLink = displayLink
-                displayLink.add(to: .main, forMode: .common)
-                displayLink.isPaused = false
-            }
-        } else if let displayLink = self.displayLink {
-            self.displayLink = nil
-            displayLink.invalidate()
-        }
-    }
-}
-
-private let frameRangeContext = FrameRangeContext()
-
 public extension CAAnimation {
     var completion: ((Bool) -> Void)? {
         get {
@@ -103,18 +54,16 @@ public extension CAAnimation {
 
 private func adjustFrameRate(animation: CAAnimation) {
     if #available(iOS 15.0, *) {
-        if let animation = animation as? CABasicAnimation {
-            if animation.keyPath == "opacity" {
-                return
-            }
-        }
         let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
         if maxFps > 61.0 {
-            #if DEBUG
-            //let _ = frameRangeContext.add()
-            #endif
-            
-            animation.preferredFrameRateRange = CAFrameRateRange(minimum: 30.0, maximum: maxFps, preferred: maxFps)
+            var preferredFps: Float = maxFps
+            if let animation = animation as? CABasicAnimation {
+                if animation.keyPath == "opacity" {
+                    preferredFps = 60.0
+                    return
+                }
+            }
+            animation.preferredFrameRateRange = CAFrameRateRange(minimum: 30.0, maximum: preferredFps, preferred: maxFps)
         }
     }
 }
@@ -416,6 +365,10 @@ public extension CALayer {
     func animateScale(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
+    
+    func animateSublayerScale(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "sublayerTransform.scale", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
+    }
 
     func animateScaleX(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale.x", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: completion)
@@ -437,6 +390,16 @@ public extension CALayer {
             return
         }
         self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "position", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
+    }
+    
+    func animateAnchorPoint(from: CGPoint, to: CGPoint, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if from == to && !force {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "anchorPoint", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
     func animateBounds(from: CGRect, to: CGRect, duration: Double, delay: Double = 0.0, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {

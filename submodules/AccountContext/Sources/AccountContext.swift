@@ -188,6 +188,7 @@ public enum ResolvedUrlSettingsSection {
     case devices
     case autoremoveMessages
     case twoStepAuth
+    case enableLog
 }
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {
@@ -284,6 +285,7 @@ public enum ResolvedUrl {
     case inaccessiblePeer
     case botStart(peer: Peer, payload: String)
     case groupBotStart(peerId: PeerId, payload: String, adminRights: ResolvedBotAdminRights?)
+    case gameStart(peerId: PeerId, game: String)
     case channelMessage(peer: Peer, messageId: MessageId, timecode: Double?)
     case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
     case replyThread(messageId: MessageId)
@@ -301,8 +303,9 @@ public enum ResolvedUrl {
     case joinVoiceChat(PeerId, String?)
     case importStickers
     case startAttach(peerId: PeerId, payload: String?, choose: ResolvedBotChoosePeerTypes?)
-    case invoice(slug: String, invoice: TelegramMediaInvoice)
+    case invoice(slug: String, invoice: TelegramMediaInvoice?)
     case premiumOffer(reference: String?)
+    case chatFolder(slug: String)
 }
 
 public enum NavigateToChatKeepStack {
@@ -449,6 +452,7 @@ public final class NavigateToChatControllerParams {
     public let subject: ChatControllerSubject?
     public let botStart: ChatControllerInitialBotStart?
     public let attachBotStart: ChatControllerInitialAttachBotStart?
+    public let botAppStart: ChatControllerInitialBotAppStart?
     public let updateTextInputState: ChatTextInputState?
     public let activateInput: ChatControllerActivateInput?
     public let keepStack: NavigateToChatKeepStack
@@ -469,7 +473,7 @@ public final class NavigateToChatControllerParams {
     public let setupController: (ChatController) -> Void
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: Location, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: ChatControllerActivateInput? = nil, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, useBackAnimation: Bool = false, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = [], changeColors: Bool = false, setupController: @escaping (ChatController) -> Void = { _ in }, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: Location, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: ChatControllerActivateInput? = nil, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, useBackAnimation: Bool = false, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = [], changeColors: Bool = false, setupController: @escaping (ChatController) -> Void = { _ in }, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -478,6 +482,7 @@ public final class NavigateToChatControllerParams {
         self.subject = subject
         self.botStart = botStart
         self.attachBotStart = attachBotStart
+        self.botAppStart = botAppStart
         self.updateTextInputState = updateTextInputState
         self.activateInput = activateInput
         self.keepStack = keepStack
@@ -726,6 +731,7 @@ public enum CreateGroupMode {
     case generic
     case supergroup
     case locatedGroup(latitude: Double, longitude: Double, address: String?)
+    case requestPeer(ReplyMarkupButtonRequestPeerType.Group)
 }
 
 public protocol AppLockContext: AnyObject {
@@ -750,12 +756,16 @@ public protocol SharedAccountContext: AnyObject {
     var currentPresentationData: Atomic<PresentationData> { get }
     var presentationData: Signal<PresentationData, NoError> { get }
     
-    var currentAutomaticMediaDownloadSettings: Atomic<MediaAutoDownloadSettings> { get }
+    var currentAutomaticMediaDownloadSettings: MediaAutoDownloadSettings { get }
     var automaticMediaDownloadSettings: Signal<MediaAutoDownloadSettings, NoError> { get }
     var currentAutodownloadSettings: Atomic<AutodownloadSettings> { get }
     var immediateExperimentalUISettings: ExperimentalUISettings { get }
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
+    var currentStickerSettings: Atomic<StickerSettings> { get }
+    var currentMediaDisplaySettings: Atomic<MediaDisplaySettings> { get }
+    
+    var energyUsageSettings: EnergyUsageSettings { get }
     
     var ptgSettings: Signal<PtgSettings, NoError> { get }
     var currentPtgSettings: Atomic<PtgSettings> { get }
@@ -764,6 +774,9 @@ public protocol SharedAccountContext: AnyObject {
     var animationsTemporarilyDisabledForCoverUp: Bool { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
+    
+    var authorizationPushConfiguration: Signal<AuthorizationCodePushNotificationConfiguration?, NoError> { get }
+    var firebaseSecretStream: Signal<[String: String], NoError> { get }
     
     var mediaManager: MediaManager { get }
     var locationManager: DeviceLocationManager? { get }
@@ -804,6 +817,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController
     func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController
     func makePrivacyAndSecurityController(context: AccountContext) -> ViewController
+    func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController
+    func makeStorageManagementController(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>
@@ -827,12 +842,15 @@ public protocol SharedAccountContext: AnyObject {
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
+    func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, action: @escaping () -> Void) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
         
     func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
     
     func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController
+    
+    func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
@@ -866,6 +884,7 @@ public enum PremiumIntroSource {
     case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
     case voiceToText
     case fasterDownload
+    case translation
 }
 
 public enum PremiumDemoSubject {
@@ -882,6 +901,18 @@ public enum PremiumDemoSubject {
     case appIcons
     case animatedEmoji
     case emojiStatus
+    case translation
+}
+
+public enum PremiumLimitSubject {
+    case folders
+    case chatsPerFolder
+    case pins
+    case files
+    case accounts
+    case linksPerSharedFolder
+    case membershipInSharedFolders
+    case channels
 }
 
 public protocol ComposeController: ViewController {
@@ -944,18 +975,26 @@ public protocol AccountContext: AnyObject {
 
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
-        return PremiumConfiguration(isPremiumDisabled: true)
+        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false)
     }
     
     public let isPremiumDisabled: Bool
+    public let showPremiumGiftInAttachMenu: Bool
+    public let showPremiumGiftInTextField: Bool
     
-    fileprivate init(isPremiumDisabled: Bool) {
+    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool) {
         self.isPremiumDisabled = isPremiumDisabled
+        self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
+        self.showPremiumGiftInTextField = showPremiumGiftInTextField
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
-        if let data = appConfiguration.data, let value = data["premium_purchase_blocked"] as? Bool {
-            return PremiumConfiguration(isPremiumDisabled: value)
+        if let data = appConfiguration.data {
+            return PremiumConfiguration(
+                isPremiumDisabled: data["premium_purchase_blocked"] as? Bool ?? false,
+                showPremiumGiftInAttachMenu: data["premium_gift_attach_menu_icon"] as? Bool ?? false,
+                showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? false
+            )
         } else {
             return .defaultValue
         }
