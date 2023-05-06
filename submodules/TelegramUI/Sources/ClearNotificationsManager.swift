@@ -150,46 +150,37 @@ public final class ClearNotificationsManager {
     }
     
     public func clearPeers(peerIds: Set<PeerId>) {
-        self.getNotificationIds(ClearNotificationIdsCompletion { [weak self] result in
-            Queue.mainQueue().async {
-                var removeKeys: [String] = []
-                for (identifier, requestId) in result {
-                    switch requestId {
-                    case let .messageId(messageId):
-                        if peerIds.contains(messageId.peerId) {
-                            removeKeys.append(identifier)
-                        }
-                    case let .globallyUniqueId(_, peerId):
-                        if let peerId, peerIds.contains(peerId) {
-                            removeKeys.append(identifier)
-                        }
+        func findIdsToRemove(_ ids: [(String, NotificationManagedNotificationRequestId)]) -> [String] {
+            var removeIds: [String] = []
+            for (identifier, requestId) in ids {
+                switch requestId {
+                case let .messageId(messageId):
+                    if peerIds.contains(messageId.peerId) {
+                        removeIds.append(identifier)
+                    }
+                case let .globallyUniqueId(_, peerId):
+                    if let peerId, peerIds.contains(peerId) {
+                        removeIds.append(identifier)
                     }
                 }
-                
-                if let strongSelf = self, !removeKeys.isEmpty {
-                    strongSelf.removeNotificationIds(removeKeys)
+            }
+            return removeIds
+        }
+        
+        self.getNotificationIds(ClearNotificationIdsCompletion { [weak self] result in
+            Queue.mainQueue().async {
+                let removeIds = findIdsToRemove(result)
+                if !removeIds.isEmpty {
+                    self?.removeNotificationIds(removeIds)
                 }
             }
         })
         
         self.getPendingNotificationIds(ClearNotificationIdsCompletion { [weak self] result in
             Queue.mainQueue().async {
-                var removeKeys: [String] = []
-                for (identifier, requestId) in result {
-                    switch requestId {
-                    case let .messageId(messageId):
-                        if peerIds.contains(messageId.peerId) {
-                            removeKeys.append(identifier)
-                        }
-                    case let .globallyUniqueId(_, peerId):
-                        if let peerId, peerIds.contains(peerId) {
-                            removeKeys.append(identifier)
-                        }
-                    }
-                }
-                
-                if let strongSelf = self, !removeKeys.isEmpty {
-                    strongSelf.removePendingNotificationIds(removeKeys)
+                let removeIds = findIdsToRemove(result)
+                if !removeIds.isEmpty {
+                    self?.removePendingNotificationIds(removeIds)
                 }
             }
         })

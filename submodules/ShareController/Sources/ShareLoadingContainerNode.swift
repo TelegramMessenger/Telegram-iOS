@@ -260,7 +260,7 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
             
             let videoContent = NativeVideoContent(id: .message(1, MediaId(namespace: 0, id: 1)), userLocation: .other, fileReference: .standalone(media: dummyFile), streamVideo: .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .black, storeAfterDownload: nil)
             
-            let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: sharedContext.mediaManager.audioSession, manager: sharedContext.mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
+            let videoNode = UniversalVideoNode(postbox: account.postbox, audioSession: sharedContext.mediaManager.audioSession, manager: sharedContext.mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded, sourceAccountId: account.id)
             videoNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 2.0, height: 2.0))
             videoNode.alpha = 0.01
             self.videoNode = videoNode

@@ -57,6 +57,10 @@ public enum SendMessageIntentSubject: CaseIterable {
 
 public func donateSendMessageIntent(account: Account, sharedContext: SharedAccountContext, intentContext: SendMessageIntentContext, peerIds: [PeerId]) {
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
+        if sharedContext.currentPtgSecretPasscodes.with({ $0.allHidableAccountIds() }).contains(account.id) {
+            return
+        }
+        
         let _ = (sharedContext.accountManager.transaction { transaction -> Bool in
             if case .none = transaction.getAccessChallengeData() {
                 return true

@@ -92,7 +92,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
     
-    let navigationController: NavigationController?
+    weak var navigationController: NavigationController?
     
     let passthroughTouches: Bool = true
     
@@ -1174,7 +1174,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if !strongSelf.didAppear {
                 return
             }
-            navigationController.filterController(strongSelf, animated: !strongSelf.context.sharedContext.animationsTemporarilyDisabledForCoverUp)
+            navigationController.filterController(strongSelf, animated: !_animationsTemporarilyDisabledForCoverUp)
         }
         
         self.chatListDisplayNode.contentOffsetChanged = { [weak self] offset in
@@ -4375,7 +4375,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     override public func setToolbar(_ toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
-        let transition = self.context.sharedContext.animationsTemporarilyDisabledForCoverUp ? .immediate : transition
+        let transition = _animationsTemporarilyDisabledForCoverUp ? .immediate : transition
         if case .chatList(.root) = self.chatListDisplayNode.mainContainerNode.location {
             super.setToolbar(toolbar, transition: transition)
         } else {

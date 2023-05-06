@@ -52,20 +52,26 @@
 "PtgSettings.EnableLiveText" = "Live Text";
 "PtgSettings.EnableLiveTextHelp" = "Automatically perform text recognition and bar code detection (e.g. QR-code) on each image you preview in fullscreen. Turn it off to save battery life.";
 "PtgSettings.PreferAppleVoiceToText" = "Voice-to-Text Conversion by Apple";
-"PtgSettings.PreferAppleVoiceToTextHelp" = "**This setting affects only Premium accounts.** It determines which services are used for voice-to-text conversion. If turned off (default), Telegram servers are used. If turned on, Apple services are used. For non-Premium accounts, Apple services are always used.";
+"PtgSettings.PreferAppleVoiceToTextHelp" = "This setting affects only Premium accounts. It determines which services are used for voice-to-text conversion. If turned off (default), Telegram servers are used. If turned on, Apple services are used. **For non-Premium accounts, Apple services are always used.**";
 
 "Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID copied to clipboard.";
 "Settings.CopyId" = "Copy ID";
 
-"SiriAndDictationAreDisabledAlert" = "To transcribe voice messages, either Dictation (System Settings > General > Keyboard) or Siri (System Settings > Siri & Search) needs to be enabled.";
+"SiriAndDictationAreDisabledAlert" = "To convert voice messages to text, either Dictation (System Settings > General > Keyboard) or Siri (System Settings > Siri & Search) needs to be enabled.";
 
 "SecretPasscodeSettings.Title" = "Secret Passcode";
 "SecretPasscodeSettings.EnterPasscode" = "Enter secret passcode";
 "SecretPasscodeSettings.EnterNewPasscode" = "Enter new secret passcode";
 "SecretPasscodeSettings.RepeatNewPasscode" = "Re-enter new secret passcode";
 "SecretPasscodeSettings.AutoHide" = "Auto-Hide";
+"SecretPasscodeSettings.AccountsHeader" = "Hiding Accounts";
+"SecretPasscodeSettings.AddAccount" = "Add Account";
+"SecretPasscodeSettings.SecretChatsHeader" = "Hiding Secret Chats";
+"SecretPasscodeSettings.AddSecretChats" = "Add Secret Chats";
 "SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Passcode";
+"SecretPasscodeSettings.DeleteSecretPasscodeNotice" = "⚠️ All specified here accounts and secret chats will remain and become visible at all times.";
+"SecretPasscodeSettings.AtLeastOneAccountMustRemainUnhidden" = "At least one account must remain unhidden.";
 "Settings.EnterSecretPasscode" = "Enter Secret Passcode";
 "Settings.ManageSecretPasscodes" = "Manage Secret Passcodes";
 "SecretPasscodeMenu.Add" = "Add Secret Passcode";
@@ -73,13 +79,17 @@
 "SecretPasscodeMenu.HideAllSecrets" = "Hide All Secrets";
 "SecretPasscodeStatus.SomeRevealed" = "Some secrets are revealed.";
 "SecretPasscodeStatus.AllHidden" = "All secrets are hidden.";
-"SecretPasscodeStatus.Revealed" = "Current state: **secrets are revealed**.";
-"SecretPasscodeStatus.Hidden" = "Current state: **secrets are hidden**.";
-"SecretPasscode.AddSecretChats" = "Add Secret Chats";
+"SecretPasscodeStatus.Revealed" = "⚡ Current state: secrets are revealed.";
+"SecretPasscodeStatus.Hidden" = "🔒 Current state: secrets are hidden.";
 "SecretPasscode.SecretChatsSelectionTitle" = "Secret Chats";
 "SecretPasscode.SecretChatDeleted" = "Deleted";
 "SecretPasscode.AccountListTitle" = "Accounts";
 "SecretPasscode.AccountSelectionTitle" = "Select Account";
+
+"FunctionalityUnavailableForHidableAccounts" = "This functionality is not available for hiding accounts.";
+"ContactsSyncHelpForHidableAccounts" = "Contacts are not synced in hiding accounts.";
+
+"PasscodeAttempts.TryAgainIn" = "Protection against brute force attacks. Try again in %@.";
 
 "Share.LockedTitle" = "Unlock Telegram";
 "Share.LockedDescription" = "Open and unlock Telegram to share.";

@@ -13,9 +13,9 @@ import AccountContext
 import CallKit
 import PhoneNumberFormat
 
-private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, settings: VoiceCallSettings?) -> CallKitIntegration?  {
+private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, settings: VoiceCallSettings?, isHidableAccount: Bool) -> CallKitIntegration?  {
     let enabled = settings?.enableSystemIntegration ?? true
-    return enabled ? integration : nil
+    return enabled && !isHidableAccount ? integration : nil
 }
 
 private func shouldEnableStunMarking(appConfiguration: AppConfiguration) -> Bool {
@@ -313,7 +313,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         context: firstState.0,
                         audioSession: strongSelf.audioSession,
                         callSessionManager: firstState.0.account.callSessionManager,
-                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil,
+                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings, isHidableAccount: firstState.0.immediateIsHidable) : nil,
                         serializedData: configuration.serializedData,
                         dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
                         getDeviceAccessData: strongSelf.getDeviceAccessData,
@@ -377,7 +377,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         if alreadyInCall, !endCurrentIfAny {
             return .alreadyInProgress(alreadyInCallWithPeerId)
         }
-        if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings) {
+        if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings, isHidableAccount: context.immediateIsHidable) {
             let begin: () -> Void = { [weak self] in
                 guard let strongSelf = self else {
                     return
@@ -559,7 +559,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         callSessionManager: context.account.callSessionManager,
                         callKitIntegration: callKitIntegrationIfEnabled(
                             strongSelf.callKitIntegration,
-                            settings: strongSelf.callSettings
+                            settings: strongSelf.callSettings,
+                            isHidableAccount: context.immediateIsHidable
                         ),
                         serializedData: configuration.serializedData,
                         dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),

@@ -57,7 +57,7 @@ private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceh
 }
 
 public final class TelegramRootController: NavigationController {
-    private let context: AccountContext
+    let context: AccountContext
     
     public var rootTabController: TabBarController?
     

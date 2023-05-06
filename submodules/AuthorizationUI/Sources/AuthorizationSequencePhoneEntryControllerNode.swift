@@ -660,7 +660,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         |> castError(ExportAuthTransferTokenError.self)
         |> take(1)
         |> mapToSignal { activeAccountsAndInfo -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> in
-            let (_, activeAccounts, _) = activeAccountsAndInfo
+            let (_, activeAccounts, _, _) = activeAccountsAndInfo
             let activeProductionUserIds = activeAccounts.map({ $0.1.account }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
             let activeTestingUserIds = activeAccounts.map({ $0.1.account }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
             

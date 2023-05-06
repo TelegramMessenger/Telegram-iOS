@@ -2106,6 +2106,8 @@ private func chatSecretMessageVideoData(account: Account, userLocation: MediaRes
             }
         }
         return thumbnail
+    } else if let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
+        return .single(decodedThumbnailData)
     } else {
         return .single(nil)
     }

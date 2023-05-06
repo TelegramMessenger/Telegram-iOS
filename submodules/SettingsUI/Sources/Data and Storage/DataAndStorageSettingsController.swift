@@ -588,7 +588,7 @@ private func autosaveLabelAndValue(presentationData: PresentationData, settings:
     return (label, value)
 }
 
-private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64, mediaAutoSaveSettings: MediaAutoSaveSettings, autosaveExceptionPeers: [EnginePeer.Id: EnginePeer?]) -> [DataAndStorageEntry] {
+private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String, contentSettingsConfiguration: ContentSettingsConfiguration?, networkUsage: Int64, storageUsage: Int64, mediaAutoSaveSettings: MediaAutoSaveSettings, autosaveExceptionPeers: [EnginePeer.Id: EnginePeer?], mediaStoreAllowed: Bool) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
     entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
@@ -601,16 +601,18 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     let defaultSettings = MediaAutoDownloadSettings.defaultSettings
     entries.append(.automaticDownloadReset(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadReset, data.automaticMediaDownloadSettings.cellular != defaultSettings.cellular || data.automaticMediaDownloadSettings.wifi != defaultSettings.wifi))
     
-    entries.append(.autoSaveHeader(presentationData.strings.Settings_SaveToCameraRollSection))
-    
-    let privateLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .privateChats, exceptionPeers: autosaveExceptionPeers)
-    let groupsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .groups, exceptionPeers: autosaveExceptionPeers)
-    let channelsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .channels, exceptionPeers: autosaveExceptionPeers)
-    
-    entries.append(.autoSaveItem(index: 0, type: .privateChats, title: presentationData.strings.Notifications_PrivateChats, label: privateLabelAndValue.label, value: privateLabelAndValue.value))
-    entries.append(.autoSaveItem(index: 1, type: .groups, title: presentationData.strings.Notifications_GroupChats, label: groupsLabelAndValue.label, value: groupsLabelAndValue.value))
-    entries.append(.autoSaveItem(index: 2, type: .channels, title: presentationData.strings.Notifications_Channels, label: channelsLabelAndValue.label, value: channelsLabelAndValue.value))
-    entries.append(.autoSaveInfo(presentationData.strings.Settings_SaveToCameraRollInfo))
+    if mediaStoreAllowed {
+        entries.append(.autoSaveHeader(presentationData.strings.Settings_SaveToCameraRollSection))
+        
+        let privateLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .privateChats, exceptionPeers: autosaveExceptionPeers)
+        let groupsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .groups, exceptionPeers: autosaveExceptionPeers)
+        let channelsLabelAndValue = autosaveLabelAndValue(presentationData: presentationData, settings: mediaAutoSaveSettings, peerType: .channels, exceptionPeers: autosaveExceptionPeers)
+        
+        entries.append(.autoSaveItem(index: 0, type: .privateChats, title: presentationData.strings.Notifications_PrivateChats, label: privateLabelAndValue.label, value: privateLabelAndValue.value))
+        entries.append(.autoSaveItem(index: 1, type: .groups, title: presentationData.strings.Notifications_GroupChats, label: groupsLabelAndValue.label, value: groupsLabelAndValue.value))
+        entries.append(.autoSaveItem(index: 2, type: .channels, title: presentationData.strings.Notifications_Channels, label: channelsLabelAndValue.label, value: channelsLabelAndValue.value))
+        entries.append(.autoSaveInfo(presentationData.strings.Settings_SaveToCameraRollInfo))
+    }
     
     
     let dataSaving = effectiveDataSaving(for: data.voiceCallSettings, autodownloadSettings: data.autodownloadSettings)
@@ -641,11 +643,11 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.connectionHeader(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_Title.uppercased()))
     entries.append(.connectionProxy(presentationData.theme, presentationData.strings.SocksProxySetup_Title, proxyValue))
     
-    #if DEBUG
+//    #if DEBUG
     if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
         entries.append(.enableSensitiveContent("Display Sensitive Content", contentSettingsConfiguration.sensitiveContentEnabled))
     }
-    #endif
+//    #endif
     
     return entries
 }
@@ -909,9 +911,10 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         contentSettingsConfiguration.get(),
         preferences,
         usageSignal,
-        autosaveExceptionPeers
+        autosaveExceptionPeers,
+        context.isHidable
     )
-    |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration, mediaAutoSaveSettings, usageSignal, autosaveExceptionPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration, mediaAutoSaveSettings, usageSignal, autosaveExceptionPeers, isHidableAccount -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let webBrowserSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) ?? WebBrowserSettings.defaultSettings
         let options = availableOpenInOptions(context: context, item: .url(url: "https://telegram.org"))
         let defaultWebBrowser: String
@@ -922,7 +925,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration, networkUsage: usageSignal.network, storageUsage: usageSignal.storage, mediaAutoSaveSettings: mediaAutoSaveSettings, autosaveExceptionPeers: autosaveExceptionPeers), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser, contentSettingsConfiguration: contentSettingsConfiguration, networkUsage: usageSignal.network, storageUsage: usageSignal.storage, mediaAutoSaveSettings: mediaAutoSaveSettings, autosaveExceptionPeers: autosaveExceptionPeers, mediaStoreAllowed: !isHidableAccount), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

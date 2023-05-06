@@ -738,9 +738,13 @@ public protocol AppLockContext: AnyObject {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
     
+    var isScreenCovered: Bool { get }
+    
     func lock()
     func unlock()
     func failedUnlockAttempt()
+    
+    func secretPasscodesTimeoutCheck() -> Signal<Void, NoError>
 }
 
 public protocol RecentSessionsController: AnyObject {
@@ -771,7 +775,9 @@ public protocol SharedAccountContext: AnyObject {
     var currentPtgSettings: Atomic<PtgSettings> { get }
     var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> { get }
     var currentPtgSecretPasscodes: Atomic<PtgSecretPasscodes> { get }
-    var animationsTemporarilyDisabledForCoverUp: Bool { get }
+    var passcodeAttemptAccounter: PasscodeAttemptAccounter? { get }
+    var inactiveAccountIds: Signal<Set<AccountRecordId>, NoError> { get }
+    var allHidableAccountIds: Signal<Set<AccountRecordId>, NoError> { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
     
@@ -783,7 +789,7 @@ public protocol SharedAccountContext: AnyObject {
     var callManager: PresentationCallManager? { get }
     var contactDataManager: DeviceContactDataManager? { get }
     
-    var activeAccountContexts: Signal<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?), NoError> { get }
+    var activeAccountContexts: Signal<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?, inactiveAccounts: [(AccountRecordId, AccountContext, Int32)]), NoError> { get }
     var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> { get }
     
     var presentGlobalController: (ViewController, Any?) -> Void { get }
@@ -971,6 +977,8 @@ public protocol AccountContext: AnyObject {
     
     var inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError> { get }
     var currentInactiveSecretChatPeerIds: Atomic<Set<PeerId>> { get }
+    var isHidable: Signal<Bool, NoError> { get }
+    var immediateIsHidable: Bool { get }
 }
 
 public struct PremiumConfiguration {

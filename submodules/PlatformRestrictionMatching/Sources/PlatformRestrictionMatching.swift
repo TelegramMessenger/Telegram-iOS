@@ -19,6 +19,10 @@ public extension Message {
 
 public extension RestrictedContentMessageAttribute {
     func platformText(platform: String, contentSettings: ContentSettings) -> String? {
+        if contentSettings.ignoreAllContentRestrictions {
+            return nil
+        }
+        
         for rule in self.rules {
             if rule.platform == "all" || rule.platform == "ios" || contentSettings.addContentRestrictionReasons.contains(rule.platform) {
                 if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {

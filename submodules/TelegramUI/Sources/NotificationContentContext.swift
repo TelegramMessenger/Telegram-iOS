@@ -100,12 +100,23 @@ public final class NotificationViewControllerImpl {
         let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
         
         var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
+        var loggingSettings: LoggingSettings!
+        
+        let loggingSettingsSignal = accountManager.transaction { transaction in
+            return transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
+        }
+        
         let semaphore = DispatchSemaphore(value: 0)
-        let _ = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light).start(next: { value in
+        let _ = combineLatest(currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: .light), loggingSettingsSignal).start(next: { value, ls in
             initialPresentationDataAndSettings = value
+            loggingSettings = ls
             semaphore.signal()
         })
         semaphore.wait()
+        
+        Logger.shared.logToFile = loggingSettings.logToFile
+        Logger.shared.logToConsole = loggingSettings.logToConsole
+        Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
         
         initialPresentationDataAndSettings = initialPresentationDataAndSettings!.withUpdatedPtgSecretPasscodes(initialPresentationDataAndSettings!.ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath))
         
@@ -216,7 +227,7 @@ public final class NotificationViewControllerImpl {
             }
             
             self.applyDisposable.set((sharedAccountContext.activeAccountContexts
-            |> map { _, accounts, _ -> Account? in
+            |> map { _, accounts, _, _ -> Account? in
                 return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1.account
             }
             |> filter { account in
@@ -267,7 +278,7 @@ public final class NotificationViewControllerImpl {
             self.updateImageLayout(boundingSize: view.bounds.size)
             
             self.applyDisposable.set((sharedAccountContext.activeAccountContexts
-            |> map { _, contexts, _ -> AccountContext? in
+            |> map { _, contexts, _, _ -> AccountContext? in
                 return contexts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
             }
             |> filter { context in

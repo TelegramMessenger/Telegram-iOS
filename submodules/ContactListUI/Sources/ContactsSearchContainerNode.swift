@@ -407,7 +407,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                         }
                     }
                     
-                    if let _ = addContact, isViablePhoneNumber(query) {
+                    if let _ = addContact, isViablePhoneNumber(query), !context.immediateIsHidable {
                         entries.append(.addContact(themeAndStrings.0, themeAndStrings.1, query))
                     }
                     

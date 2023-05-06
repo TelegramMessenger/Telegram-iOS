@@ -1834,6 +1834,10 @@ public final class MediaBox {
                     reportProgress(count)
                 }
                 
+                if !pathsToDelete.isEmpty {
+                    self.cacheStorageBox.remove(ids: pathsToDelete.compactMap { $0.data(using: .utf8) })
+                }
+                
                 if notify {
                     for id in ids {
                         if let context = self.statusContexts[id] {

@@ -1349,8 +1349,8 @@ public class Window1 {
         return hidden
     }
     
-    public func forEachViewController(_ f: (ContainableController) -> Bool, excludeNavigationSubControllers: Bool = false, includeAllOverlayControllers: Bool = false) {
-        if let navigationController = self._rootController as? NavigationController {
+    public func forEachViewController(_ f: (ContainableController) -> Bool, excludeNavigationSubControllers: Bool = false, includeAllOverlayControllers: Bool = false, excludeRootController: Bool = false) {
+        if let navigationController = self._rootController as? NavigationController, !excludeRootController {
             if !excludeNavigationSubControllers {
                 for case let controller as ContainableController in navigationController.viewControllers {
                     let _ = f(controller)
@@ -1401,15 +1401,21 @@ public class Window1 {
     }
 }
 
-private var UIViewController_SensitiveUIKey: Int?
-
 extension UIViewController {
+    private static var sensitiveUIKey: Int?
+    
     public var isSensitiveUI: Bool {
         get {
-            return objc_getAssociatedObject(self, &UIViewController_SensitiveUIKey) != nil
+            return objc_getAssociatedObject(self, &Self.sensitiveUIKey) != nil
         }
         set {
-            objc_setAssociatedObject(self, &UIViewController_SensitiveUIKey, newValue ? true : nil, .OBJC_ASSOCIATION_ASSIGN)
+            objc_setAssociatedObject(self, &Self.sensitiveUIKey, newValue ? true : nil, .OBJC_ASSOCIATION_ASSIGN)
         }
     }
 }
+
+public protocol ReactivatableInput {
+    func activateInput()
+}
+
+public var _animationsTemporarilyDisabledForCoverUp: Bool = false

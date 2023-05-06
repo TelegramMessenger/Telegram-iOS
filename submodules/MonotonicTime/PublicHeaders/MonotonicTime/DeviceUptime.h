@@ -1,3 +1,3 @@
 #import <Foundation/Foundation.h>
 
-int32_t getDeviceUptimeSeconds(int32_t *bootTime);
+int32_t getDeviceUptimeSeconds(struct timeval *bootTime);

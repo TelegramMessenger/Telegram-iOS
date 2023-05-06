@@ -234,6 +234,9 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
 private func intentsSettingsControllerEntries(context: AccountContext, presentationData: PresentationData, settings: IntentsSettings, accounts: [(Account, EnginePeer)]) -> [IntentsSettingsControllerEntry] {
     var entries: [IntentsSettingsControllerEntry] = []
     
+    let allHidableAccountIds = context.sharedContext.currentPtgSecretPasscodes.with { $0.allHidableAccountIds() }
+    let accounts = accounts.filter { !allHidableAccountIds.contains($0.0.id) }
+    
     if accounts.count > 1 {
         entries.append(.accountHeader(presentationData.theme, presentationData.strings.IntentsSettings_MainAccount.uppercased()))
         var index: Int32 = 0

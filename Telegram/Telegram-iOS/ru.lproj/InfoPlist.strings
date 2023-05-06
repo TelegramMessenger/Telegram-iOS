@@ -11,4 +11,4 @@
 "NSSiriUsageDescription" = "Вы можете использовать Siri для отправки сообщений.";
 "NSFaceIDUsageDescription" = "Вы можете разблокировать приложение с помощью Face ID.";
 
-"NSSpeechRecognitionUsageDescription" = "Это необходимо для расшифровки голосовых сообщений по вашему запросу.";
+"NSSpeechRecognitionUsageDescription" = "Это необходимо для перевода в текст голосовых сообщений по вашему запросу.";

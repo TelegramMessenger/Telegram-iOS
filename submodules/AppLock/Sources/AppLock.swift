@@ -15,17 +15,18 @@ import AppLockState
 import PassKit
 
 private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState) -> Bool {
-    if state.isManuallyLocked {
+    if state.isLocked {
         return true
     } else if let autolockTimeout = passcodeSettings.autolockTimeout {
-        var bootTimestamp: Int32 = 0
-        let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-        let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
+        let timestamp = MonotonicTimestamp()
         
         let applicationActivityTimestamp = state.applicationActivityTimestamp
         
         if let applicationActivityTimestamp = applicationActivityTimestamp {
-            if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
+            if timestamp.bootTimestamp.absDiff(with: applicationActivityTimestamp.bootTimestamp) > 0.1 {
+                return true
+            }
+            if timestamp.uptime < applicationActivityTimestamp.uptime {
                 return true
             }
             if timestamp.uptime >= applicationActivityTimestamp.uptime + autolockTimeout {
@@ -73,10 +74,16 @@ public final class AppLockContextImpl: AppLockContext {
     private var savedNativeViewController: UIViewController?
     private let syncingWait = ValuePromise<Bool>(false, ignoreRepeated: true)
     
-    public private(set) var animationsTemporarilyDisabledForCoverUp: Bool = false
     private var temporarilyDisableAnimationsTimer: SwiftSignalKit.Timer?
     
-    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public var isScreenCovered: Bool {
+        assert(Queue.mainQueue().isCurrent())
+        return self.coveringView != nil || self.passcodeController != nil
+    }
+    
+    private let appContextIsReady: Signal<Bool, NoError>?
+    
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?, appContextIsReady: Signal<Bool, NoError>? = nil) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -85,6 +92,7 @@ public final class AppLockContextImpl: AppLockContext {
         self.rootPath = rootPath
         self.window = window
         self.rootController = rootController
+        self.appContextIsReady = appContextIsReady
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: self.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
             self.currentStateValue = current
@@ -138,9 +146,11 @@ public final class AppLockContextImpl: AppLockContext {
                         return sp.timeout != nil && isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)
                     }).start(completed: {
                         if becameActive {
-                            Queue.mainQueue().justDispatch {
-                                strongSelf.syncingWait.set(false)
-                            }
+                            let _ = strongSelf.appContextIsReady!.start(completed: {
+                                Queue.mainQueue().justDispatch {
+                                    strongSelf.syncingWait.set(false)
+                                }
+                            })
                         }
                     })
                     
@@ -148,10 +158,10 @@ public final class AppLockContextImpl: AppLockContext {
                         // timeout = 10 has special meaning: it fires immediately if app goes to background.
                         // Actually firing when app comes FROM background so that user using Share extension has a chance to complete sharing in this case.
                         
-                        if accessChallengeData.data.isLockable && passcodeSettings.autolockTimeout == 10 && !state.isManuallyLocked {
+                        if accessChallengeData.data.isLockable && passcodeSettings.autolockTimeout == 10 && !state.isLocked {
                             strongSelf.updateLockState { state in
                                 var state = state
-                                state.isManuallyLocked = true
+                                state.isLocked = true
                                 return state
                             }
                             return
@@ -190,7 +200,7 @@ public final class AppLockContextImpl: AppLockContext {
                 if !appInForeground {
                     if let autolockTimeout = passcodeSettings.autolockTimeout {
                         strongSelf.autolockReportTimeout.set(autolockTimeout)
-                    } else if state.isManuallyLocked {
+                    } else if state.isLocked {
                         strongSelf.autolockReportTimeout.set(1)
                     } else {
                         strongSelf.autolockReportTimeout.set(nil)
@@ -202,6 +212,17 @@ public final class AppLockContextImpl: AppLockContext {
                 strongSelf.autolockTimeout.set(passcodeSettings.autolockTimeout)
                 
                 if isLocked(passcodeSettings: passcodeSettings, state: state) {
+                    if !state.isLocked && strongSelf.applicationBindings.isMainApp {
+                        // save locked state to prevent bypassing lock by tampering with device time
+                        Queue.mainQueue().justDispatch {
+                            self?.updateLockState { state in
+                                var state = state
+                                state.isLocked = true
+                                return state
+                            }
+                        }
+                    }
+                    
                     isCurrentlyLocked = true
                     
                     let biometrics: PasscodeEntryControllerBiometricsMode
@@ -377,7 +398,7 @@ public final class AppLockContextImpl: AppLockContext {
             } else if strongSelf.passcodeController == nil {
                 if strongSelf.coveringView != nil {
                     strongSelf.window?.hostView.containerView.windowHost?.forEachController { controller in
-                        if let controller = controller as? PasscodeSetupController {
+                        if let controller = controller as? ReactivatableInput {
                             controller.activateInput()
                         }
                     }
@@ -410,7 +431,7 @@ public final class AppLockContextImpl: AppLockContext {
                     strongSelf.savedNativeViewController = nil
                 } else if let coveringView = strongSelf.coveringView {
                     strongSelf.coveringView = nil
-                    if let controller = strongSelf.rootController?.presentedViewController, !controller.isBeingDismissed {
+                    if coveringView !== strongSelf.window?.coveringView {
                         removeFromSuperviewAnimated(coveringView)
                     } else {
                         strongSelf.window?.coveringView = nil
@@ -439,9 +460,12 @@ public final class AppLockContextImpl: AppLockContext {
             })
             
             self.temporarilyDisableAnimations()
-            
-            let _ = self.secretPasscodesTimeoutCheck(state: self.currentStateValue).start()
         }
+    }
+    
+    public var isUIActivityViewControllerPresented: Bool {
+        assert(Queue.mainQueue().isCurrent())
+        return self.rootController?.presentedViewController is UIActivityViewController || self.savedNativeViewController is UIActivityViewController
     }
     
     public func dismissPresentedViewController() {
@@ -519,25 +543,54 @@ public final class AppLockContextImpl: AppLockContext {
             }
             
             if self.secretPasscodesTimeoutCheckTimer == nil && self.applicationBindings.isMainApp {
-                let secretPasscodesTimeoutCheckTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
-                    guard let strongSelf = self else {
+                // set timer to check for secret passcodes timeout when the app is locked or in background while playing audio or video in picture-in-picture mode
+                
+                weak var weakSelf = self
+                
+                func resetTimer() {
+                    guard let strongSelf = weakSelf else {
                         return
                     }
-                    let _ = strongSelf.secretPasscodesTimeoutCheck(state: strongSelf.currentStateValue).start()
-                }, queue: .mainQueue())
-                self.secretPasscodesTimeoutCheckTimer = secretPasscodesTimeoutCheckTimer
-                secretPasscodesTimeoutCheckTimer.start()
+                    
+                    let _ = (strongSelf.accountManager.transaction { transaction in
+                        return PtgSecretPasscodes(transaction)
+                    }
+                    |> deliverOnMainQueue).start(next: { ptgSecretPasscodes in
+                        guard let strongSelf = weakSelf else {
+                            return
+                        }
+                        
+                        if let minActiveTimeout = ptgSecretPasscodes.secretPasscodes.compactMap({ $0.active ? $0.timeout : nil }).min() {
+                            let state = strongSelf.currentStateValue
+                            
+                            if let applicationActivityTimestamp = state.applicationActivityTimestamp {
+                                let timestamp = MonotonicTimestamp()
+                                
+                                // since timer does not take into account system sleep time, use just fraction of timeout
+                                let nextTimeout = max(5, (applicationActivityTimestamp.uptime + minActiveTimeout - timestamp.uptime) / 2)
+                                
+                                let secretPasscodesTimeoutCheckTimer = SwiftSignalKit.Timer(timeout: Double(nextTimeout), repeat: false, completion: {
+                                    let _ = weakSelf?.secretPasscodesTimeoutCheck().start(completed: {
+                                        resetTimer()
+                                    })
+                                }, queue: .mainQueue())
+                                
+                                strongSelf.secretPasscodesTimeoutCheckTimer = secretPasscodesTimeoutCheckTimer
+                                secretPasscodesTimeoutCheckTimer.start()
+                            }
+                        }
+                    })
+                }
+                
+                resetTimer()
             }
         }
     }
     
     private func updateApplicationActivityTimestamp() {
         self.updateLockState { state in
-            var bootTimestamp: Int32 = 0
-            let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-            
             var state = state
-            state.applicationActivityTimestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
+            state.applicationActivityTimestamp = MonotonicTimestamp()
             return state
         }
     }
@@ -585,7 +638,7 @@ public final class AppLockContextImpl: AppLockContext {
     public func lock() {
         self.updateLockState { state in
             var state = state
-            state.isManuallyLocked = true
+            state.isLocked = true
             return state
         }
         
@@ -599,36 +652,31 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.temporarilyDisableAnimations()
         
-        let _ = self.secretPasscodesTimeoutCheck(state: self.currentStateValue).start(completed: {
-            self.updateLockState { state in
-                var state = state
-                
-                state.unlockAttempts = nil
-                
-                state.isManuallyLocked = false
-                
-                var bootTimestamp: Int32 = 0
-                let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-                let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
-                state.applicationActivityTimestamp = timestamp
-                
-                return state
-            }
+        let _ = self.secretPasscodesTimeoutCheck().start(completed: {
+            let _ = self.appContextIsReady!.start(completed: {
+                self.updateLockState { state in
+                    var state = state
+                    
+                    state.unlockAttempts = nil
+                    
+                    state.isLocked = false
+                    
+                    state.applicationActivityTimestamp = MonotonicTimestamp()
+                    
+                    return state
+                }
+            })
         })
     }
     
     public func failedUnlockAttempt() {
         self.updateLockState { state in
             var state = state
-            var unlockAttempts = state.unlockAttempts ?? UnlockAttempts(count: 0, timestamp: MonotonicTimestamp(bootTimestamp: 0, uptime: 0))
+            var unlockAttempts = state.unlockAttempts ?? UnlockAttempts(count: 0, timestamp: MonotonicTimestamp())
             
             unlockAttempts.count += 1
             
-            var bootTimestamp: Int32 = 0
-            let uptime = getDeviceUptimeSeconds(&bootTimestamp)
-            let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
-            
-            unlockAttempts.timestamp = timestamp
+            unlockAttempts.timestamp = MonotonicTimestamp()
             state.unlockAttempts = unlockAttempts
             return state
         }
@@ -656,7 +704,9 @@ public final class AppLockContextImpl: AppLockContext {
     }
     
     // passing state (and not getting through self.currentState.get()) so we have value before it could be changed for instance by following updateApplicationActivityTimestamp() calls
-    private func secretPasscodesTimeoutCheck(state: LockState) -> Signal<Void, NoError> {
+    public func secretPasscodesTimeoutCheck() -> Signal<Void, NoError> {
+        assert(Queue.mainQueue().isCurrent())
+        let state = self.currentStateValue
         return self.secretPasscodesDeactivateOnCondition { sp in
             return sp.timeout != nil && isSecretPasscodeTimedout(timeout: sp.timeout!, state: state)
         }
@@ -667,9 +717,9 @@ public final class AppLockContextImpl: AppLockContext {
         assert(self.applicationBindings.isMainApp)
         
         self.temporarilyDisableAnimationsTimer?.invalidate()
-        self.animationsTemporarilyDisabledForCoverUp = true
+        _animationsTemporarilyDisabledForCoverUp = true
         self.temporarilyDisableAnimationsTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
-            self?.animationsTemporarilyDisabledForCoverUp = false
+            _animationsTemporarilyDisabledForCoverUp = false
             self?.temporarilyDisableAnimationsTimer = nil
         }, queue: .mainQueue())
         self.temporarilyDisableAnimationsTimer?.start()

@@ -104,20 +104,26 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     initializeAccountManagement()
     let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
     
-    var ptgSecretPasscodes: PtgSecretPasscodes?
+    var ptgSecretPasscodes: PtgSecretPasscodes!
+    var loggingSettings: LoggingSettings!
     
     let semaphore: DispatchSemaphore = DispatchSemaphore(value: 0)
     let _ = accountManager.transaction({ transaction in
-        return PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
-    }).start(next: { result in
-        ptgSecretPasscodes = result
+        ptgSecretPasscodes = PtgSecretPasscodes(transaction).withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        loggingSettings = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
+    }).start(completed: {
         semaphore.signal()
     })
-    
     semaphore.wait()
+    
+    Logger.shared.logToFile = loggingSettings.logToFile
+    Logger.shared.logToConsole = loggingSettings.logToConsole
+    Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
     
     let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
     let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+    
+    let allHidableAccountIds = ptgSecretPasscodes.allHidableAccountIds()
     
     var itemsByAccount: [Int64: [(Int64, Friend)]] = [:]
     var itemOrder: [(Int64, Int64)] = []
@@ -130,6 +136,9 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
                 continue
             }
             guard let accountId = Int64(identifier[identifier.startIndex ..< index]) else {
+                continue
+            }
+            if allHidableAccountIds.contains(AccountRecordId(rawValue: accountId)) {
                 continue
             }
             guard let peerId = Int64(identifier[identifier.index(after: index)...]) else {
@@ -145,7 +154,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     var friendsByAccount: [Signal<[ParsedPeer], NoError>] = []
     for (accountId, items) in itemsByAccount {
-        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, initialPeerIdsExcludedFromUnreadCounters: ptgSecretPasscodes!.inactiveSecretChatPeerIds(accountId: AccountRecordId(rawValue: accountId)), transaction: { postbox, transaction -> [ParsedPeer] in
+        friendsByAccount.append(accountTransaction(rootPath: rootPath, id: AccountRecordId(rawValue: accountId), encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, initialPeerIdsExcludedFromUnreadCounters: ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: AccountRecordId(rawValue: accountId)), transaction: { postbox, transaction -> [ParsedPeer] in
             guard let state = transaction.getState() as? AuthorizedAccountState else {
                 return []
             }

@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  BAZEL_USER_ROOT: "/private/var/tmp/_bazel_telegram" # use canonical bazel root
+  BAZEL_USER_ROOT: "/private/var/tmp/_bazel_containerhost" # use canonical bazel root
 
 jobs:
   build:
@@ -25,10 +25,9 @@ jobs:
       - name: Create canonical source directory
         run: |
           set -x
-          sudo mkdir /Users/telegram
-          sudo chown -R $(whoami) /Users/telegram
-          cp -R $GITHUB_WORKSPACE /Users/telegram/
-          mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
+          sudo mkdir -p /Users/Shared
+          cp -R $GITHUB_WORKSPACE /Users/Shared/
+          mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/telegram-ios
 
       - name: Bazel cache
         uses: actions/cache@v3
@@ -53,7 +52,7 @@ jobs:
           set -x
 
           # source code paths are included in the final binary, so we need to make them stable across builds
-          SOURCE_DIR=/Users/telegram/telegram-ios
+          SOURCE_DIR=/Users/Shared/telegram-ios
 
           cd $SOURCE_DIR
 
@@ -100,7 +99,7 @@ jobs:
           echo "$PROVISIONING_PROFILE_WIDGET_DATA" | base64 -di - > "$PROVISIONING_PATH/Widget.mobileprovision"
 
           # build the app
-          python3 build-system/Make/Make.py \
+          python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
             --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \

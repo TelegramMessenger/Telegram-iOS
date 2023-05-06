@@ -599,6 +599,7 @@ private final class ChatsToRemoveSearchItemNode: ItemListControllerSearchNode {
             animationCache: self.context.animationCache,
             animationRenderer: self.context.animationRenderer,
             filter: [.excludeRecent, .doNotSearchMessages],
+            requestPeerType: nil,
             location: .chatList(groupId: EngineChatList.Group(.root)),
             displaySearchFilters: false,
             hasDownloads: false,

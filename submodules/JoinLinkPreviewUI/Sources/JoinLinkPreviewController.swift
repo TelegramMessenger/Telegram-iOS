@@ -23,7 +23,7 @@ public final class JoinLinkPreviewController: ViewController {
     private var isRequest = false
     private var isGroup = false
     private let navigateToPeer: (EnginePeer, ChatPeekTimeout?) -> Void
-    private let parentNavigationController: NavigationController?
+    private weak var parentNavigationController: NavigationController?
     private var resolvedState: ExternalJoiningChatState?
     private var presentationData: PresentationData
     

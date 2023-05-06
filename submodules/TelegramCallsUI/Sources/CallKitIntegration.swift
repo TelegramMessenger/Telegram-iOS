@@ -73,7 +73,9 @@ public final class CallKitIntegration {
     func startCall(context: AccountContext, peerId: PeerId, phoneNumber: String?, localContactId: String?, isVideo: Bool, displayTitle: String) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle)
-            self.donateIntent(peerId: peerId, displayTitle: displayTitle, localContactId: localContactId)
+            if !context.immediateIsHidable {
+                self.donateIntent(peerId: peerId, displayTitle: displayTitle, localContactId: localContactId)
+            }
         }
     }
     

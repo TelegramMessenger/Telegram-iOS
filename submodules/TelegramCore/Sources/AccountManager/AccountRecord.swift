@@ -103,4 +103,32 @@ public final class AccountRecord<Attribute: AccountRecordAttribute>: Equatable, 
         }
         return true
     }
+    
+    public var isLoggedOut: Bool {
+        return self.attributes.contains(where: { attribute in
+            if case .loggedOut = attribute as? TelegramAccountRecordAttribute {
+                return true
+            } else {
+                return false
+            }
+        })
+    }
+    
+    public var sortIndex: Int32? {
+        for attribute in self.attributes {
+            if case let .sortOrder(sortOrder) = attribute as? TelegramAccountRecordAttribute {
+                return sortOrder.order
+            }
+        }
+        return nil
+    }
+    
+    public static func <(lhs: AccountRecord, rhs: AccountRecord) -> Bool {
+        let lSortIndex = lhs.sortIndex ?? 0
+        let rSortIndex = rhs.sortIndex ?? 0
+        if lSortIndex != rSortIndex {
+            return lSortIndex < rSortIndex
+        }
+        return lhs.id < rhs.id
+    }
 }

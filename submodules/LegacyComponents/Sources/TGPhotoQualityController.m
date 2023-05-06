@@ -106,6 +106,8 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
 - (void)dealloc
 {
     [self cleanupVideoPreviews];
+    
+    [_disposable dispose];
 }
 
 - (void)loadView

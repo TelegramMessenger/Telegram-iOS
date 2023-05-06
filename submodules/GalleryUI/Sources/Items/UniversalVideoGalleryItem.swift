@@ -486,7 +486,7 @@ final class MoreHeaderButton: HighlightableButtonNode {
 }
 
 @available(iOS 15.0, *)
-private final class PictureInPictureContentImpl: NSObject, PictureInPictureContent, AVPictureInPictureControllerDelegate {
+public final class PictureInPictureContentImpl: NSObject, PictureInPictureContent, AVPictureInPictureControllerDelegate {
     private final class PlaybackDelegate: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
         private let node: UniversalVideoNode
         private var statusDisposable: Disposable?
@@ -575,7 +575,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
 
     private weak var overlayController: OverlayMediaController?
     private weak var mediaManager: MediaManager?
-    private var pictureInPictureController: AVPictureInPictureController?
+    public private(set) var pictureInPictureController: AVPictureInPictureController?
     private var contentDelegate: PlaybackDelegate?
     private let node: UniversalVideoNode
     private let willBegin: (PictureInPictureContentImpl) -> Void
@@ -672,7 +672,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
     }
 
 
-    var videoNode: ASDisplayNode {
+    public var videoNode: ASDisplayNode {
         return self.node
     }
 
@@ -1131,7 +1131,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             let mediaManager = item.context.sharedContext.mediaManager
             
-            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
+            let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery, sourceAccountId: item.context.account.id)
             let videoScale: CGFloat
             if item.content is WebEmbedVideoContent {
                 videoScale = 1.0
@@ -2110,7 +2110,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 expandImpl?()
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
-            })
+            }, sourceAccountId: self.context.account.id)
 
             let playbackRate = self.playbackRate
 
@@ -2121,7 +2121,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 switch contentInfo {
                     case let .message(message):
-                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
+                        let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { [weak baseNavigationController] controller, ready in
                             if let baseNavigationController = baseNavigationController {
                                 baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                             }
@@ -2208,7 +2208,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported(), isNativePictureInPictureSupported {
                 self.disablePictureInPicturePlaceholder = true
 
-                let overlayVideoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .overlay)
+                let overlayVideoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .overlay, sourceAccountId: self.context.account.id)
                 let absoluteRect = videoNode.view.convert(videoNode.view.bounds, to: nil)
                 overlayVideoNode.frame = absoluteRect
                 overlayVideoNode.updateLayout(size: absoluteRect.size, transition: .immediate)
@@ -2295,7 +2295,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     expandImpl?()
                 }, close: { [weak mediaManager] in
                     mediaManager?.setOverlayVideoNode(nil)
-                })
+                }, sourceAccountId: self.context.account.id)
 
                 let playbackRate = self.playbackRate
 
@@ -2306,7 +2306,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                     switch contentInfo {
                         case let .message(message):
-                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { controller, ready in
+                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil)), playbackRate: playbackRate, replaceRootController: { [weak baseNavigationController] controller, ready in
                                 if let baseNavigationController = baseNavigationController {
                                     baseNavigationController.replaceTopController(controller, animated: false, ready: ready)
                                 }

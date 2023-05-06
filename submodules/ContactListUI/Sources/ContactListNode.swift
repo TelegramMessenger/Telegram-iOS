@@ -912,8 +912,8 @@ public final class ContactListNode: ASDisplayNode {
         let contactsWarningSuppressed = Promise<(Bool, Bool)>()
         contactsWarningSuppressed.set(.single((false, false))
         |> then(
-            combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]))
-            |> map { noticeView, preferences -> (Bool, Bool) in
+            combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.isHidable)
+            |> map { noticeView, preferences, isHidableAccount -> (Bool, Bool) in
                 let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                 let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
                 let suppressed: Bool
@@ -923,7 +923,7 @@ public final class ContactListNode: ASDisplayNode {
                 } else {
                     suppressed = false
                 }
-                return (suppressed, !synchronizeDeviceContacts)
+                return (suppressed, !synchronizeDeviceContacts || isHidableAccount)
             }
         ))
         

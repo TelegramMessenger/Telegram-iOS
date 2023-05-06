@@ -92,7 +92,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let hasDownloads: Bool
     private var interaction: ChatListSearchInteraction?
     private let openMessage: (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void
-    private let navigationController: NavigationController?
+    private weak var navigationController: NavigationController?
     
     private let dimNode: ASDisplayNode
     let filterContainerNode: ChatListSearchFiltersContainerNode

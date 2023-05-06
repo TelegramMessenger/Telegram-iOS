@@ -17,7 +17,7 @@ public enum PasscodeSetupControllerMode {
     case secretEntry(modal: Bool, PasscodeEntryFieldType)
 }
 
-public final class PasscodeSetupController: ViewController, ReactiveToPasscodeSwitch {
+public final class PasscodeSetupController: ViewController, ReactiveToPasscodeSwitch, ReactivatableInput {
     private var controllerNode: PasscodeSetupControllerNode {
         return self.displayNode as! PasscodeSetupControllerNode
     }

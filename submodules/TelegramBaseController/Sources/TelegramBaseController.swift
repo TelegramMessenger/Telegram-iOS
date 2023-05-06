@@ -164,7 +164,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             strongSelf.tempVoicePlaylistEnded?()
                         }
                     }
-                    strongSelf.requestLayout(transition: strongSelf.context.sharedContext.animationsTemporarilyDisabledForCoverUp ? .immediate : .animated(duration: 0.4, curve: .spring))
+                    strongSelf.requestLayout(transition: _animationsTemporarilyDisabledForCoverUp ? .immediate : .animated(duration: 0.4, curve: .spring))
                 }
                 strongSelf.playlistLocation = playlistStateAndType?.1.playlistLocation
             })

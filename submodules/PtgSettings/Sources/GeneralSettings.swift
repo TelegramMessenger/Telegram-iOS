@@ -7,25 +7,23 @@ public struct PtgSettings: Codable, Equatable {
     public let showPeerId: Bool
     public let suppressForeignAgentNotice: Bool
     public let enableForeignAgentNoticeSearchFiltering: Bool // makes sense only if suppressForeignAgentNotice is true
-    public let enableLiveText: Bool
     public let preferAppleVoiceToText: Bool
-    public let isOriginallyInstalledViaTestFlightOrForDevelopment: Bool?
+    public let isTestingEnvironment: Bool?
     
     public static var defaultSettings: PtgSettings {
-        return PtgSettings(showPeerId: true, suppressForeignAgentNotice: true, enableForeignAgentNoticeSearchFiltering: true, enableLiveText: false, preferAppleVoiceToText: false, isOriginallyInstalledViaTestFlightOrForDevelopment: nil)
+        return PtgSettings(showPeerId: true, suppressForeignAgentNotice: true, enableForeignAgentNoticeSearchFiltering: true, preferAppleVoiceToText: false, isTestingEnvironment: nil)
     }
     
     public var effectiveEnableForeignAgentNoticeSearchFiltering: Bool {
         return self.suppressForeignAgentNotice && self.enableForeignAgentNoticeSearchFiltering
     }
     
-    public init(showPeerId: Bool, suppressForeignAgentNotice: Bool, enableForeignAgentNoticeSearchFiltering: Bool, enableLiveText: Bool, preferAppleVoiceToText: Bool, isOriginallyInstalledViaTestFlightOrForDevelopment: Bool?) {
+    public init(showPeerId: Bool, suppressForeignAgentNotice: Bool, enableForeignAgentNoticeSearchFiltering: Bool, preferAppleVoiceToText: Bool, isTestingEnvironment: Bool?) {
         self.showPeerId = showPeerId
         self.suppressForeignAgentNotice = suppressForeignAgentNotice
         self.enableForeignAgentNoticeSearchFiltering = enableForeignAgentNoticeSearchFiltering
-        self.enableLiveText = enableLiveText
         self.preferAppleVoiceToText = preferAppleVoiceToText
-        self.isOriginallyInstalledViaTestFlightOrForDevelopment = isOriginallyInstalledViaTestFlightOrForDevelopment
+        self.isTestingEnvironment = isTestingEnvironment
     }
     
     public init(from decoder: Decoder) throws {
@@ -34,9 +32,8 @@ public struct PtgSettings: Codable, Equatable {
         self.showPeerId = (try container.decodeIfPresent(Int32.self, forKey: "spi") ?? 1) != 0
         self.suppressForeignAgentNotice = (try container.decodeIfPresent(Int32.self, forKey: "sfan") ?? 1) != 0
         self.enableForeignAgentNoticeSearchFiltering = (try container.decodeIfPresent(Int32.self, forKey: "efansf") ?? 1) != 0
-        self.enableLiveText = (try container.decodeIfPresent(Int32.self, forKey: "elt") ?? 0) != 0
         self.preferAppleVoiceToText = (try container.decodeIfPresent(Int32.self, forKey: "pavtt") ?? 0) != 0
-        self.isOriginallyInstalledViaTestFlightOrForDevelopment = try container.decodeIfPresent(Int32.self, forKey: "oitf").flatMap({ $0 != 0 })
+        self.isTestingEnvironment = try container.decodeIfPresent(Int32.self, forKey: "test").flatMap({ $0 != 0 })
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -45,9 +42,8 @@ public struct PtgSettings: Codable, Equatable {
         try container.encode((self.showPeerId ? 1 : 0) as Int32, forKey: "spi")
         try container.encode((self.suppressForeignAgentNotice ? 1 : 0) as Int32, forKey: "sfan")
         try container.encode((self.enableForeignAgentNoticeSearchFiltering ? 1 : 0) as Int32, forKey: "efansf")
-        try container.encode((self.enableLiveText ? 1 : 0) as Int32, forKey: "elt")
         try container.encode((self.preferAppleVoiceToText ? 1 : 0) as Int32, forKey: "pavtt")
-        try container.encodeIfPresent(self.isOriginallyInstalledViaTestFlightOrForDevelopment.flatMap({ ($0 ? 1 : 0) as Int32 }), forKey: "oitf")
+        try container.encodeIfPresent(self.isTestingEnvironment.flatMap({ ($0 ? 1 : 0) as Int32 }), forKey: "test")
     }
     
     public init(_ entry: PreferencesEntry?) {

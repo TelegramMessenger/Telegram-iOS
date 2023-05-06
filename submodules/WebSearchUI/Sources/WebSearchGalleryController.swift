@@ -96,7 +96,7 @@ class WebSearchGalleryController: ViewController {
     }
     
     private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
-    private let baseNavigationController: NavigationController?
+    private weak var baseNavigationController: NavigationController?
     
     init(context: AccountContext, peer: EnginePeer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
         self.context = context
