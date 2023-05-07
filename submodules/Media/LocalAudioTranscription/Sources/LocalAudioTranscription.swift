@@ -24,24 +24,15 @@ public func transcribeAudio(path: String, locale: String, audioDuration: Int32) 
                     case .authorized:
                         // only one simultaneous task allowed
                         previousTask?.cancel()
-
+                        
                         guard let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: locale)), speechRecognizer.isAvailable else {
                             subscriber.putNext(nil)
                             subscriber.putCompletion()
-
+                            
                             return
                         }
-                            speechRecognizerValue.defaultTaskHint = .dictation
-                            sharedRecognizers[locale] = speechRecognizerValue
-                            speechRecognizer = speechRecognizerValue
-
-                            if locale == "en-US" {
-                                speechRecognizer.supportsOnDeviceRecognition = true
-                            } else {
-                                speechRecognizer.supportsOnDeviceRecognition = false
-                            }
-                            speechRecognizer.supportsOnDeviceRecognition = true
-                        }
+                        
+                        speechRecognizer.defaultTaskHint = .dictation
                         
                         let tempFilePath = NSTemporaryDirectory() + "\(UInt64.random(in: 0 ... UInt64.max)).m4a"
                         let _ = try? FileManager.default.copyItem(atPath: path, toPath: tempFilePath)
@@ -53,13 +44,14 @@ public func transcribeAudio(path: String, locale: String, audioDuration: Int32) 
                         if #available(iOS 13.0, *) {
                             // on-device recognition allows full recognition of audio > 1 min
                             request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
-                        request.shouldReportPartialResults = false
+                        }
+                        request.shouldReportPartialResults = true
                         
                         // during on-device recognition the result text is delivered in multiple parts
                         var accumulatedString = ""
                         var lastResultString = ""
                         var lastEndingTimestamp = 0.0
-
+                        
                         let task = speechRecognizer.recognitionTask(with: request, resultHandler: { result, error in
                             if let result = result {
                                 if let lastSegment = result.bestTranscription.segments.last {
@@ -69,7 +61,7 @@ public func transcribeAudio(path: String, locale: String, audioDuration: Int32) 
                                     lastEndingTimestamp = lastSegment.timestamp + lastSegment.duration
                                 }
                                 lastResultString = result.bestTranscription.formattedString
-
+                                
                                 var maybeCutMark = ""
                                 if result.isFinal {
                                     if #available(iOS 13.0, *), request.requiresOnDeviceRecognition {
@@ -77,19 +69,19 @@ public func transcribeAudio(path: String, locale: String, audioDuration: Int32) 
                                         maybeCutMark = " ✂"
                                     }
                                 }
-
+                                
                                 subscriber.putNext(LocallyTranscribedAudio(text: accumulatedString + result.bestTranscription.formattedString + maybeCutMark, isFinal: result.isFinal))
                                 
                                 if result.isFinal {
                                     subscriber.putCompletion()
-
+                                    
                                     let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                                 }
                             } else {
                                 print("transcribeAudio: locale: \(locale), error: \(String(describing: error))")
                                 
                                 subscriber.putError(error!)
-
+                                
                                 let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                             }
                         })
@@ -97,7 +89,7 @@ public func transcribeAudio(path: String, locale: String, audioDuration: Int32) 
                         disposable.set(ActionDisposable {
                             task.cancel()
                         })
-
+                        
                         previousTask = task
                     @unknown default:
                         subscriber.putNext(nil)

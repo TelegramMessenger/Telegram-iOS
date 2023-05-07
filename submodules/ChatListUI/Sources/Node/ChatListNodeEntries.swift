@@ -25,7 +25,7 @@ enum ChatListNodeEntrySortIndex: Comparable {
     case additionalCategory(Int)
     case sectionHeader
     case contact(id: EnginePeer.Id, presence: EnginePeer.Presence)
-
+    
     static func <(lhs: ChatListNodeEntrySortIndex, rhs: ChatListNodeEntrySortIndex) -> Bool {
         switch lhs {
         case let .index(lhsIndex):
@@ -271,18 +271,18 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return true
         }
     }
-
+    
     struct ContactEntryData: Equatable {
         var presentationData: ChatListPresentationData
         var peer: EnginePeer
         var presence: EnginePeer.Presence
-
+        
         init(presentationData: ChatListPresentationData, peer: EnginePeer, presence: EnginePeer.Presence) {
             self.presentationData = presentationData
             self.peer = peer
             self.presence = presence
         }
-
+        
         static func ==(lhs: ContactEntryData, rhs: ContactEntryData) -> Bool {
             if lhs.presentationData !== rhs.presentationData {
                 return false
@@ -296,7 +296,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return true
         }
     }
-
+    
     case HeaderEntry
     case PeerEntry(PeerEntryData)
     case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
@@ -511,14 +511,14 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
 struct ChatListContactPeer {
     var peer: EnginePeer
     var presence: EnginePeer.Presence
-
+    
     init(peer: EnginePeer, presence: EnginePeer.Presence) {
         self.peer = peer
         self.presence = presence
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer]) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, notice: ChatListNotice?, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation, contacts: [ChatListContactPeer], hiddenPeerIds: Set<EnginePeer.Id>) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     if !view.hasEarlier {
@@ -533,7 +533,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             result.append(.SectionHeader(presentationData: state.presentationData, displayHide: !view.items.isEmpty))
         }
     }
-
+    
     var pinnedIndexOffset: UInt16 = 0
     
     if !view.hasLater, case .chatList = mode {
@@ -804,7 +804,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             }) {
                 result.append(.EmptyIntro(presentationData: state.presentationData))
             }
-
+            
             if let notice {
                 result.append(.Notice(presentationData: state.presentationData, notice: notice))
             }

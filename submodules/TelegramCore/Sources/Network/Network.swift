@@ -1081,7 +1081,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                 requestStartedUptime = getDeviceUptimeSeconds(nil)
             }
             
-            request.completed = { (boxedResponse, timestamp, error) -> () in
+            request.completed = { (boxedResponse, responseInfo, error) -> () in
                 if let error = error {
                     subscriber.putError(error)
                 } else {
@@ -1094,11 +1094,11 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                     }
                 }
                 
-                if let requestStartedUptime, let strongSelf = self, !strongSelf.isTrustedTimeSet {
+                if let requestStartedUptime, let strongSelf = self, !strongSelf.isTrustedTimeSet, let responseInfo {
                     let requestCompletedUptime = getDeviceUptimeSeconds(nil)
                     // checking request duration to make sure timestamp is recent
                     if requestCompletedUptime - requestStartedUptime < 10 {
-                        let _ = strongSelf.trustedTime.swap((timestamp, requestCompletedUptime))
+                        let _ = strongSelf.trustedTime.swap((responseInfo.timestamp, requestCompletedUptime))
                         assert(strongSelf.mtProto.messageServiceQueue().isCurrentQueue())
                         strongSelf.isTrustedTimeSet = true
                     }

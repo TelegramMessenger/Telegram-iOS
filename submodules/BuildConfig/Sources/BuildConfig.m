@@ -492,12 +492,4 @@ API_AVAILABLE(ios(10))
     });
 }
 
-+ (bool)iCloudEnabled {
-    return APP_CONFIG_ICLOUD_ENABLED;
-}
-
-+ (bool)siriEnabled {
-    return APP_CONFIG_SIRI_ENABLED;
-}
-
 @end

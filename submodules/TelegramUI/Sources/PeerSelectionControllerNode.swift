@@ -36,10 +36,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let forwardedMessageIds: [EngineMessage.Id]
     private let hasTypeHeaders: Bool
     private let requestPeerType: [ReplyMarkupButtonRequestPeerType]?
-
+    
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private let  presentationInterfaceStatePromise = ValuePromise<ChatPresentationInterfaceState>()
-
+    
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
     var inProgress: Bool = false
@@ -55,7 +55,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let emptyTitleNode: ImmediateTextNode
     private let emptyTextNode: ImmediateTextNode
     private let emptyButtonNode: SolidRoundedButtonNode
-
+    
     private let toolbarBackgroundNode: NavigationBackgroundNode?
     private let toolbarSeparatorNode: ASDisplayNode?
     private let segmentedControlNode: SegmentedControlNode?
@@ -66,7 +66,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var contactListNode: ContactListNode?
     let chatListNode: ChatListNode?
     let mainContainerNode: ChatListContainerNode?
-
+        
     private var contactListActive = false
     
     private var searchDisplayController: SearchDisplayController?
@@ -100,10 +100,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
     
     private var isEmpty = false
-
+    
     private var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) {
         return (self.presentationData, self.presentationDataPromise.get())
     }
+    
+    private let contactListNodeReadyDisposable = MetaDisposable()
     
     init(context: AccountContext, controller: PeerSelectionControllerImpl, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: EnginePeer.Id?, hasFilters: Bool, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, hasCreation: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
@@ -117,7 +119,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.forwardedMessageIds = forwardedMessageIds
         self.hasTypeHeaders = hasTypeHeaders
         self.requestPeerType = requestPeerType
-
+        
         self.presentationData = presentationData
         
         self.animationCache = context.animationCache
@@ -127,7 +129,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(forwardedMessageIds) }
         self.presentationInterfaceStatePromise.set(self.presentationInterfaceState)
-
+        
         if let _ = self.requestPeerType {
             self.requirementsBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
             self.requirementsSeparatorNode = ASDisplayNode()
@@ -140,31 +142,31 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.requirementsSeparatorNode = nil
             self.requirementsTextNode = nil
         }
-
+        
         self.emptyTitleNode = ImmediateTextNode()
         self.emptyTitleNode.displaysAsynchronously = false
         self.emptyTitleNode.maximumNumberOfLines = 0
         self.emptyTitleNode.isHidden = true
         self.emptyTitleNode.textAlignment = .center
         self.emptyTitleNode.lineSpacing = 0.25
-
+        
         self.emptyTextNode = ImmediateTextNode()
         self.emptyTextNode.displaysAsynchronously = false
         self.emptyTextNode.maximumNumberOfLines = 0
         self.emptyTextNode.isHidden = true
         self.emptyTextNode.lineSpacing = 0.25
-
+        
         self.emptyAnimationNode = DefaultAnimatedStickerNodeImpl()
         self.emptyAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListNoResults"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.emptyAnimationNode.isHidden = true
         self.emptyAnimationSize = CGSize(width: 120.0, height: 120.0)
-
+        
         self.emptyButtonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), cornerRadius: 11.0, gloss: true)
         self.emptyButtonNode.isHidden = true
         self.emptyButtonNode.pressed = {
             createNewGroup?()
         }
-
+        
         if hasChatListSelector && hasContactSelector {
             self.toolbarBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
             
@@ -194,14 +196,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         } else {
             chatListLocation = .chatList(groupId: .root)
         }
-
+        
         let chatListMode: ChatListNodeMode
         if let requestPeerType = self.requestPeerType {
             chatListMode = .peerType(type: requestPeerType, hasCreate: hasCreation)
         } else {
             chatListMode = .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil, displayAutoremoveTimeout: false)
         }
-
+       
         if hasFilters {
             self.mainContainerNode = ChatListContainerNode(context: context, location: chatListLocation, chatListMode: chatListMode, previewing: false, controlsHistoryPreload: false, isInlineMode: false, presentationData: presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in
             }, filterEmptyAction: { _ in
@@ -212,7 +214,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.mainContainerNode = nil
             self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
         }
-
+    
         super.init()
         
         self.setViewBlock({
@@ -222,7 +224,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.chatListNode?.additionalCategorySelected = { _ in
             createNewGroup?()
         }
-
+                
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.chatListNode?.selectionCountChanged = { [weak self] count in
@@ -260,7 +262,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 strongSelf.contentOffsetChanged?(offset)
             }
         }
-
+           
         self.mainContainerNode?.contentOffsetChanged = { [weak self] offset in
             guard let strongSelf = self else {
                 return
@@ -284,7 +286,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, actualNavigationBarHeight: actualNavigationBarHeight, transition: .immediate)
             }
         }
-
+        
         if let mainContainerNode = self.mainContainerNode {
             mainContainerNode.displayFilterLimit = { [weak self] in
                 guard let strongSelf = self else {
@@ -305,7 +307,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         if let chatListNode = self.chatListNode {
             self.addSubnode(chatListNode)
         }
-
+                
         if hasChatListSelector && hasContactSelector {
             self.segmentedControlNode!.selectedIndexChanged = { [weak self] index in
                 self?.indexChanged(index)
@@ -320,13 +322,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.chatListNode?.addSubnode(requirementsBackgroundNode)
             self.chatListNode?.addSubnode(requirementsSeparatorNode)
             self.chatListNode?.addSubnode(requirementsTextNode)
-
+            
             self.addSubnode(self.emptyAnimationNode)
             self.addSubnode(self.emptyTitleNode)
             self.addSubnode(self.emptyTextNode)
             self.addSubnode(self.emptyButtonNode)
         }
-
+        
         if !hasChatListSelector && hasContactSelector {
             self.indexChanged(1)
         }
@@ -353,9 +355,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
 
             let presentationData = strongSelf.presentationData
-
+            
             let peerIds = strongSelf.selectedPeers.0.map { $0.id }
-
+            
             let forwardOptions: Signal<ChatControllerSubject.ForwardOptions, NoError>
             forwardOptions = strongSelf.presentationInterfaceStatePromise.get()
             |> map { state -> ChatControllerSubject.ForwardOptions in
@@ -365,7 +367,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.context.account.peerId), subject: .forwardedMessages(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
-
+            
             let messageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
             let messagesCount: Signal<Int, NoError>
             if let chatController = chatController as? ChatControllerImpl, messageIds.count > 1 {
@@ -379,15 +381,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             } else {
                 messagesCount = .single(1)
             }
-
+            
             let accountPeerId = strongSelf.context.account.peerId
             let items = combineLatest(forwardOptions, strongSelf.context.account.postbox.messagesAtIds(messageIds), messagesCount)
             |> map { forwardOptions, messages, messagesCount -> [ContextMenuItem] in
                 var items: [ContextMenuItem] = []
-
+                
                 var hasCaptions = false
                 var uniquePeerIds = Set<PeerId>()
-
+                
                 var hasOther = false
                 var hasNotOwnMessages = false
                 for message in messages {
@@ -400,7 +402,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                             hasNotOwnMessages = true
                         }
                     }
-
+                    
                     var isDice = false
                     var isMusic = false
                     for media in message.media {
@@ -420,12 +422,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         hasOther = true
                     }
                 }
-
+                
                 let canHideNames = hasNotOwnMessages && hasOther
-
+                
                 let hideNames = forwardOptions.hideNames
                 let hideCaptions = forwardOptions.hideCaptions
-
+                
                 if !"".isEmpty { // check if seecret chat
                 } else {
                     if canHideNames {
@@ -444,7 +446,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 return updated
                             })
                         })))
-
+                        
                         items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames, icon: { theme in
                             if hideNames {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
@@ -459,10 +461,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 return updated
                             })
                         })))
-
+                        
                         items.append(.separator)
                     }
-
+                    
                     if hasCaptions {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowCaption, icon: { theme in
                             if hideCaptions {
@@ -481,7 +483,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 return updated
                             })
                         })))
-
+                        
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
                             if hideCaptions {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
@@ -499,11 +501,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 return updated
                             })
                         })))
-
+                        
                         items.append(.separator)
                     }
                 }
-
+                
                 items.append(.action(ContextMenuActionItem(text: messagesCount == 1 ? presentationData.strings.Conversation_ForwardOptions_SendMessage : presentationData.strings.Conversation_ForwardOptions_SendMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak chatController] c, f in
                     guard let strongSelf = self else {
                         return
@@ -517,7 +519,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
 
                     f(.default)
                 })))
-
+                
                 return items
             }
 
@@ -632,7 +634,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         }
                     }
                 }
-
+                
                 let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text?.string ?? "", link: link, apply: { [weak self] link in
                     if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
                         if let link = link {
@@ -664,12 +666,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             guard let textInputNode = textInputPanelNode.textInputNode else {
                 return
             }
-
+            
             var hasEntityKeyboard = false
             if case .media = strongSelf.presentationInterfaceState.inputMode {
                 hasEntityKeyboard = true
             }
-
+            
             let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, canSendWhenOnline: false, completion: {
             }, sendMessage: { [weak textInputPanelNode] mode in
                 switch mode {
@@ -725,7 +727,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     deinit {
         self.contactListNodeReadyDisposable.dispose()
     }
-
+    
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.updateThemeAndStrings()
@@ -742,7 +744,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.presentationInterfaceState = presentationInterfaceState
         self.presentationInterfaceStatePromise.set(presentationInterfaceState)
-
+        
         if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
             textInputPanelNode.updateInputTextState(presentationInterfaceState.interfaceState.effectiveInputState, animated: transition.isAnimated)
         }
@@ -791,7 +793,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             return (selectedPeers, selectedPeerMap)
         }
     }
-
+    
     func beginSelection() {
         if let _ = self.textInputPanelNode {
         } else {
@@ -799,7 +801,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             forwardAccessoryPanelNode.interfaceInteraction = self.interfaceInteraction
             self.addSubnode(forwardAccessoryPanelNode)
             self.forwardAccessoryPanelNode = forwardAccessoryPanelNode
-
+            
             let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) }, makeEntityInputView: {
                 return nil
             })
@@ -808,10 +810,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
-
+                
                 let effectiveInputText = strongSelf.presentationInterfaceState.interfaceState.composeInputState.inputText
                 let forwardOptionsState = strongSelf.presentationInterfaceState.interfaceState.forwardOptionsState
-
+                
                 let (selectedPeers, selectedPeerMap) = strongSelf.selectedPeers
                 if !selectedPeers.isEmpty {
                     strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState)
@@ -849,7 +851,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
         }
     }
-
+    
     private func updateThemeAndStrings() {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.searchDisplayController?.updatePresentationData(self.presentationData)
@@ -949,12 +951,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             chatListNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
             chatListNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         }
-
+        
         if let mainContainerNode = self.mainContainerNode {
             transition.updateFrame(node: mainContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             mainContainerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: actualNavigationBarHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, insets: insets, isReorderingFilters: false, isEditing: false, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, transition: transition)
         }
-
+        
         if let requestPeerTypes = self.requestPeerType, let requestPeerType = requestPeerTypes.first {
             if self.isEmpty {
                 self.chatListNode?.isHidden = true
@@ -962,7 +964,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 self.requirementsTextNode?.isHidden = true
                 self.requirementsSeparatorNode?.isHidden = true
                 self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
-
+                
                 var emptyTitle: String
                 var emptyText: String
                 var emptyButtonText: String
@@ -1000,14 +1002,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     }
                     emptyButtonText = self.presentationData.strings.RequestPeer_CreateNewGroup
                 }
-
+                
                 self.emptyTitleNode.attributedText = NSAttributedString(string: emptyTitle, font: Font.semibold(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                 self.emptyTextNode.attributedText = NSAttributedString(string: emptyText, font: Font.regular(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-
+                
                 let padding: CGFloat = 44.0
                 let emptyTitleSize = self.emptyTitleNode.updateLayout(CGSize(width: layout.size.width - insets.left * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
                 let emptyTextSize = self.emptyTextNode.updateLayout(CGSize(width: layout.size.width - insets.left * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-
+                
                 let emptyAnimationHeight = self.emptyAnimationSize.height
                 let emptyAnimationSpacing: CGFloat = 12.0
                 let emptyTextSpacing: CGFloat = 17.0
@@ -1019,7 +1021,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 }
                 let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSize.height + emptyTextSpacing + emptyButtonSpacing + emptyButtonHeight
                 let emptyAnimationY = floorToScreenPixels((layout.size.height - emptyTotalHeight) / 2.0)
-
+                
                 if !emptyButtonText.isEmpty {
                     let buttonPadding: CGFloat = 30.0
                     self.emptyButtonNode.title = emptyButtonText
@@ -1030,13 +1032,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 } else {
                     self.emptyButtonNode.isHidden = true
                 }
-
+                
                 let textTransition = ContainedViewLayoutTransition.immediate
                 textTransition.updateFrame(node: self.emptyAnimationNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - self.emptyAnimationSize.width) / 2.0), y: emptyAnimationY), size: self.emptyAnimationSize))
                 textTransition.updateFrame(node: self.emptyTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - emptyTitleSize.width) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
                 textTransition.updateFrame(node: self.emptyTextNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - emptyTextSize.width) / 2.0), y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
                 self.emptyAnimationNode.updateLayout(size: self.emptyAnimationSize)
-
+                
                 self.emptyAnimationNode.isHidden = false
                 self.emptyTitleNode.isHidden = false
                 self.emptyTextNode.isHidden = false
@@ -1044,20 +1046,20 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             } else if let requirementsBackgroundNode = self.requirementsBackgroundNode, let requirementsSeparatorNode = self.requirementsSeparatorNode, let requirementsTextNode = self.requirementsTextNode, let requirementsText = stringForRequestPeerType(strings: self.presentationData.strings, peerType: requestPeerType, offset: true) {
                 let requirements = NSMutableAttributedString(string: self.presentationData.strings.RequestPeer_Requirements + "\n", font: Font.semibold(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
                 requirements.append(NSAttributedString(string: requirementsText, font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor))
-
+                
                 requirementsTextNode.attributedText = requirements
                 let sideInset: CGFloat = 16.0
                 let verticalInset: CGFloat = 11.0
                 let requirementsSize = requirementsTextNode.updateLayout(CGSize(width: layout.size.width - insets.left - insets.right - sideInset * 2.0, height: .greatestFiniteMagnitude))
-
+                
                 let requirementsBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: actualNavigationBarHeight), size: CGSize(width: layout.size.width, height: requirementsSize.height + verticalInset * 2.0))
                 insets.top += requirementsBackgroundFrame.height
-
+                
                 requirementsBackgroundNode.update(size: requirementsBackgroundFrame.size, transition: transition)
                 transition.updateFrame(node: requirementsBackgroundNode, frame: requirementsBackgroundFrame)
-
+                
                 transition.updateFrame(node: requirementsSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: requirementsBackgroundFrame.maxY - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
-
+                
                 requirementsTextNode.frame = CGRect(origin: CGPoint(x: insets.left + sideInset, y: requirementsBackgroundFrame.minY + verticalInset), size: requirementsSize)
             }
         }
@@ -1087,11 +1089,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         self.navigationBar?.setSecondaryContentNode(nil, animated: true)
-
+        
         if self.chatListNode?.supernode != nil || self.mainContainerNode?.supernode != nil {
             self.chatListNode?.accessibilityElementsHidden = true
             self.mainContainerNode?.accessibilityElementsHidden = true
-
+            
             let chatListLocation: ChatListControllerLocation
             if let forumPeerId = self.forumPeerId {
                 chatListLocation = .forum(peerId: forumPeerId)
@@ -1117,14 +1119,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         }
                         var updated = false
                         var count = 0
-
+                        
                         let chatListNode: ChatListNode?
                         if let mainContainerNode = strongSelf.mainContainerNode {
                             chatListNode = mainContainerNode.currentItemNode
                         } else {
                             chatListNode = strongSelf.chatListNode
                         }
-
+                        
                         chatListNode?.updateState { state in
                             if state.editing {
                                 updated = true
@@ -1203,7 +1205,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
             contactListNode.accessibilityElementsHidden = true
-
+            
             var categories: ContactsSearchCategories = [.cloudContacts]
             if self.hasGlobalSearch {
                 categories.insert(.global)
@@ -1277,15 +1279,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if self.chatListNode?.supernode != nil || self.mainContainerNode?.supernode != nil {
                 self.chatListNode?.accessibilityElementsHidden = false
                 self.mainContainerNode?.accessibilityElementsHidden = false
-
+                
                 self.navigationBar?.setSecondaryContentNode(self.controller?.tabContainerNode, animated: true)
                 self.controller?.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
-
+                
                 searchDisplayController.deactivate(placeholder: placeholderNode)
                 self.searchDisplayController = nil
             } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
                 contactListNode.accessibilityElementsHidden = false
-
+                
                 self.controller?.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
                 searchDisplayController.deactivate(placeholder: placeholderNode)
                 self.searchDisplayController = nil
@@ -1319,7 +1321,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     }
                     self.recursivelyEnsureDisplaySynchronously(true)
                     contactListNode.enableUpdates = true
-
+                    
                     if let (layout, _, _) = self.containerLayout {
                         self.controller?.containerLayoutUpdated(layout, transition: .immediate)
                     }
@@ -1377,7 +1379,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                     }
                                 }
                                 strongSelf.recursivelyEnsureDisplaySynchronously(true)
-
+                                
                                 if let (layout, _, _) = strongSelf.containerLayout {
                                     strongSelf.controller?.containerLayoutUpdated(layout, transition: .immediate)
                                 }
@@ -1393,7 +1395,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                             mainContainerNode.removeFromSupernode()
                         }
                         self.recursivelyEnsureDisplaySynchronously(true)
-
+                        
                         if let (layout, _, _) = self.containerLayout {
                             self.controller?.containerLayoutUpdated(layout, transition: .immediate)
                         }
@@ -1410,7 +1412,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     self.insertSubnode(chatListNode, aboveSubnode: contactListNode)
                 }
                 contactListNode.removeFromSupernode()
-
+                
                 if let (layout, _, _) = self.containerLayout {
                     self.controller?.containerLayoutUpdated(layout, transition: .immediate)
                 }
@@ -1424,7 +1426,7 @@ func stringForAdminRights(strings: PresentationStrings, adminRights: TelegramCha
     func append(_ string: String) {
         rights.append("•  \(string)")
     }
-
+    
     if isChannel {
         if adminRights.rights.contains(.canChangeInfo) {
             append(strings.RequestPeer_Requirement_Channel_Rights_Info)
@@ -1500,7 +1502,7 @@ func stringForAdminRights(strings: PresentationStrings, adminRights: TelegramCha
 
 private func stringForRequestPeerType(strings: PresentationStrings, peerType: ReplyMarkupButtonRequestPeerType, offset: Bool) -> String? {
     var lines: [String] = []
-
+    
     func append(_ string: String) {
         if offset {
             lines.append("  •  \(string)")
@@ -1508,7 +1510,7 @@ private func stringForRequestPeerType(strings: PresentationStrings, peerType: Re
             lines.append("•  \(string)")
         }
     }
-
+    
     switch peerType {
     case let .user(user):
         if let isPremium = user.isPremium {
@@ -1639,18 +1641,18 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
     let sourceRect: CGRect?
-
+    
     let navigationController: NavigationController? = nil
-
+    
     let passthroughTouches: Bool
-
+    
     init(controller: ViewController, sourceNode: ASDisplayNode?, sourceRect: CGRect? = nil, passthroughTouches: Bool) {
         self.controller = controller
         self.sourceNode = sourceNode
         self.sourceRect = sourceRect
         self.passthroughTouches = passthroughTouches
     }
-
+    
     func transitionInfo() -> ContextControllerTakeControllerInfo? {
         let sourceNode = self.sourceNode
         let sourceRect = self.sourceRect
@@ -1662,7 +1664,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
             }
         })
     }
-
+    
     func animatedIn() {
     }
 }

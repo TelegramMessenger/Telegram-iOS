@@ -418,16 +418,18 @@ final class MutableChatListView {
     fileprivate var additionalItemEntries: [MutableChatListAdditionalItemEntry] = []
     
     private var currentHiddenPeerIds = Set<PeerId>()
-
-    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    
+    private let inactiveSecretChatPeerIds: Set<PeerId>
+    
+    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, inactiveSecretChatPeerIds: Set<PeerId>) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
         self.aroundIndex = aroundIndex
         self.summaryComponents = summaryComponents
         self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
-
+        
         self.currentHiddenPeerIds = postbox.hiddenChatIds
-
+        
         var spaces: [ChatListViewSpace] = [
             .group(groupId: self.groupId, pinned: .notPinned, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
         ]
@@ -481,17 +483,20 @@ final class MutableChatListView {
                     if let entry = postbox.chatListTable.earlierEntryInfos(groupId: groupId, index: upperBound, messageHistoryTable: postbox.messageHistoryTable, peerChatInterfaceStateTable: postbox.peerChatInterfaceStateTable, count: 1).first {
                         switch entry {
                             case let .message(index, messageIndex):
+                                if self.inactiveSecretChatPeerIds.contains(index.messageIndex.id.peerId) {
+                                    upperBound = (entry.index, true)
+                                    continue inner
+                                }
                                 if let messageIndex = messageIndex, !postbox.isChatHidden(peerId: messageIndex.id.peerId) {
-                                        foundIndices.append((index, messageIndex))
-                                        if index.pinningIndex == nil {
-                                            unpinnedCount += 1
-                                        }
-
-                                        if unpinnedCount >= maxCount {
-                                            break inner
-                                        }
+                                    foundIndices.append((index, messageIndex))
+                                    if index.pinningIndex == nil {
+                                        unpinnedCount += 1
                                     }
-
+                                    
+                                    if unpinnedCount >= maxCount {
+                                        break inner
+                                    }
+                                    
                                     upperBound = (entry.index, true)
                                 } else {
                                     upperBound = (entry.index.predecessor, true)
@@ -573,7 +578,7 @@ final class MutableChatListView {
             self.currentHiddenPeerIds = hiddenChatIds
             hasFilterChanges = true
         }
-
+        
         if transaction.updatedGlobalNotificationSettings && self.filterPredicate != nil {
             self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: self.aroundIndex, summaryComponents: self.summaryComponents, halfLimit: self.count)
             self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
@@ -599,7 +604,7 @@ final class MutableChatListView {
             if hasFilterChanges {
                 invalidatedGroups = true
             }
-
+            
             if invalidatedGroups {
                 self.reloadGroups(postbox: postbox)
                 hasChanges = true
@@ -804,7 +809,7 @@ public final class ChatListView: Equatable {
         
         self.additionalItemEntries = additionalItemEntries
     }
-
+    
     public static func ==(lhs: ChatListView, rhs: ChatListView) -> Bool {
         if lhs.groupId != rhs.groupId {
             return false

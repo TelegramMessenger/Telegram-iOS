@@ -15,7 +15,7 @@ public final class AnimationNode: ASDisplayNode {
             }
         }
     }
-
+    
     public var didPlay = false
     public var completion: (() -> Void)?
     private var internalCompletion: (() -> Void)?
@@ -32,7 +32,7 @@ public final class AnimationNode: ASDisplayNode {
         
         super.init()
         
-        self.setViewBlock({
+        self.setViewBlock({ [weak self] in
             var animation: Animation?
             if let animationName {
                 if let url = getAppBundle().url(forResource: animationName, withExtension: "json"), let maybeAnimation = Animation.filepath(url.path) {
@@ -116,13 +116,13 @@ public final class AnimationNode: ASDisplayNode {
     public func setProgress(_ progress: CGFloat) {
         self.animationView()?.currentProgress = progress
     }
-
+    
     public func animate(from: CGFloat, to: CGFloat, completion: @escaping () -> Void) {
         self.animationView()?.play(fromProgress: from, toProgress: to, completion: { _ in
             completion()
         })
     }
-
+    
     public func setAnimation(name: String, colors: [String: UIColor]? = nil) {
         self.currentParams = (name, colors)
         if let url = getAppBundle().url(forResource: name, withExtension: "json"), let animation = Animation.filepath(url.path) {
@@ -136,7 +136,7 @@ public final class AnimationNode: ASDisplayNode {
             }
         }
     }
-
+    
     public func setColors(colors: [String: UIColor]) {
         for (key, value) in colors {
             self.animationView()?.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))

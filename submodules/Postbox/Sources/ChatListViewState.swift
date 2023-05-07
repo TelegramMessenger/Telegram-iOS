@@ -57,18 +57,15 @@ enum ChatListViewSpace: Hashable {
     }
 }
 
-private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, predicate: ChatListFilterPredicate?, inactiveSecretChatPeerIds: Set<PeerId>) -> (ChatListIntermediateEntry) -> Bool {
+private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, predicate: ChatListFilterPredicate, inactiveSecretChatPeerIds: Set<PeerId>) -> (ChatListIntermediateEntry) -> Bool {
     let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
     return { entry in
+        if inactiveSecretChatPeerIds.contains(entry.index.messageIndex.id.peerId) {
+            return false
+        }
         switch entry {
         case let .message(index, _):
-            if inactiveSecretChatPeerIds.contains(index.messageIndex.id.peerId) {
-                return false
-            }
             if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
-                guard let predicate = predicate else {
-                    return true
-                }
                 var isUnread: Bool
                 if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
                     isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.effectiveUnreadCount ?? 0) > 0
@@ -193,9 +190,12 @@ private final class ChatListViewSpaceState {
             
             let predicate: ((ChatListIntermediateEntry) -> Bool)?
             if let filterPredicate = filterPredicate {
-                predicate = mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: filterPredicate)
+                predicate = mappedChatListFilterPredicate(postbox: postbox, currentTransaction: currentTransaction, groupId: groupId, predicate: filterPredicate, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)
             } else if postbox.hasHiddenChatIds {
                 predicate = { entry in
+                    if inactiveSecretChatPeerIds.contains(entry.index.messageIndex.id.peerId) {
+                        return false
+                    }
                     if postbox.isChatHidden(peerId: entry.index.messageIndex.id.peerId) {
                         return false
                     } else {
@@ -203,9 +203,14 @@ private final class ChatListViewSpaceState {
                     }
                 }
             } else {
-                predicate = nil
+                predicate = { entry in
+                    if inactiveSecretChatPeerIds.contains(entry.index.messageIndex.id.peerId) {
+                        return false
+                    }
+                    return true
+                }
             }
-
+            
             if case .includePinnedAsUnpinned = pinned {
                 let unpinnedLowerBound: MutableChatListEntryIndex
                 let unpinnedUpperBound: MutableChatListEntryIndex
@@ -422,7 +427,7 @@ private final class ChatListViewSpaceState {
                         if inactiveSecretChatPeerIds.contains(index.messageIndex.id.peerId) {
                             continue inner
                         }
-
+                        
                         var updatedIndex = index
                         if case .includePinnedAsUnpinned = pinned {
                             updatedIndex = ChatListIndex(pinningIndex: nil, messageIndex: index.messageIndex)
@@ -566,7 +571,7 @@ private final class ChatListViewSpaceState {
                 }
                 
                 assert(!inactiveSecretChatPeerIds.contains(entryPeer.id))
-
+                
                 let settingsChange = transaction.currentUpdatedPeerNotificationSettings[entryNotificationsPeerId]
                 if settingsChange != nil || transaction.updatedPeerThreadsSummaries.contains(entryNotificationsPeerId) {
                     var isUnread: Bool
@@ -610,7 +615,7 @@ private final class ChatListViewSpaceState {
                         if inactiveSecretChatPeerIds.contains(associatedId) {
                             continue
                         }
-
+                        
                         if let associatedPeer = postbox.peerTable.get(associatedId) {
                             peers.append(associatedPeer)
                         }
@@ -824,7 +829,7 @@ private final class ChatListViewSpaceState {
                 }
                 
                 assert(!inactiveSecretChatPeerIds.contains(entryPeer.id))
-
+                
                 let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, threadId: nil, namespace: filterMessageTagSummary.addCount.namespace)]
                 let updatedActionsSummary = transaction.currentUpdatedMessageActionsSummaries[PendingMessageActionsSummaryKey(type: filterMessageTagSummary.subtractCount.type, peerId: entryPeer.id, namespace: filterMessageTagSummary.subtractCount.namespace)]
                 
@@ -876,7 +881,7 @@ private final class ChatListViewSpaceState {
                         if inactiveSecretChatPeerIds.contains(associatedId) {
                             continue
                         }
-
+                        
                         if let associatedPeer = postbox.peerTable.get(associatedId) {
                             peers.append(associatedPeer)
                         }

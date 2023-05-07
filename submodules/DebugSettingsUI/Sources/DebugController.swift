@@ -52,6 +52,7 @@ private enum DebugControllerSection: Int32 {
     case videoExperiments
     case videoExperiments2
     case info
+    case ptg
 }
 
 private enum DebugControllerEntry: ItemListNodeEntry {
@@ -105,6 +106,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetTranslationStates
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
+    case ptgResetPasscodeAttempts
     
     var section: ItemListSectionId {
         switch self {
@@ -128,6 +130,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.videoExperiments2.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
+        case .ptgResetPasscodeAttempts:
+            return DebugControllerSection.ptg.rawValue
         }
     }
     
@@ -233,6 +237,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 103
         case .versionInfo:
             return 104
+        case .ptgResetPasscodeAttempts:
+            return 1001
         }
     }
     
@@ -832,16 +838,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 guard let context = arguments.context, context.sharedContext.applicationBindings.isMainApp else {
                     return
                 }
-
+                
                 let allStats: Signal<Data, NoError> = Signal { subscriber in
                     DispatchQueue.global().async {
                         let log = collectRawStorageUsageReport(containerPath: context.sharedContext.applicationBindings.containerPath)
                         subscriber.putNext(log.data(using: .utf8) ?? Data())
                     }
-
+                    
                     return EmptyDisposable
                 }
-
+                
                 let _ = (allStats
                 |> deliverOnMainQueue).start(next: { allStatsData in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -964,7 +970,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .resetNotifications:
             return ItemListActionItem(presentationData: presentationData, title: "Reset Notifications", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 UIApplication.shared.unregisterForRemoteNotifications()
-
+                
                 if let context = arguments.context {
                     let controller = textAlertController(context: context, title: nil, text: "Now restart the app", actions: [TextAlertAction(type: .genericAction, title: "OK", action: {})])
                     arguments.presentController(controller, nil)
@@ -1321,6 +1327,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
             let bundleBuild = bundle.infoDictionary?[kCFBundleVersionKey as String] ?? ""
             return ItemListTextItem(presentationData: presentationData, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild))"), sectionId: self.section)
+        case .ptgResetPasscodeAttempts:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Secret Passcode Attempts", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let passcodeAttemptAccounter = arguments.context?.sharedContext.passcodeAttemptAccounter else {
+                    return
+                }
+                passcodeAttemptAccounter.debugResetAllCounters()
+            })
         }
     }
 }
@@ -1330,20 +1343,20 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
     
-    if sharedContext.currentPtgSettings.with({ $0.isOriginallyInstalledViaTestFlightOrForDevelopment == true }) && Bundle.isTestFlightOrDevelopment {
+    if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
         //    entries.append(.testStickerImport(presentationData.theme))
         entries.append(.sendLogs(presentationData.theme))
         //entries.append(.sendOneLog(presentationData.theme))
         entries.append(.sendShareLogs)
-            entries.append(.sendGroupCallLogs)
+        entries.append(.sendGroupCallLogs)
         entries.append(.sendNotificationLogs(presentationData.theme))
-            entries.append(.sendCriticalLogs(presentationData.theme))
+        entries.append(.sendCriticalLogs(presentationData.theme))
         entries.append(.sendAllLogs)
-    entries.append(.sendStorageStats)
+        entries.append(.sendStorageStats)
         if isMainApp {
             entries.append(.accounts(presentationData.theme))
         }
-
+        
         entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
         entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
         entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
@@ -1382,11 +1395,11 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))
         }
-        entries.append(.restorePurchases(presentationData.theme))
-
+//        entries.append(.restorePurchases(presentationData.theme))
+        
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)
-
+        
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
@@ -1414,6 +1427,10 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
     }
     entries.append(.versionInfo(presentationData.theme))
+    
+    if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
+        entries.append(.ptgResetPasscodeAttempts)
+    }
     
     return entries
 }
@@ -1483,7 +1500,7 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         if let context {
             useBetaFeatures = context.account.network.useBetaFeatures
         }
-
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData, useBetaFeatures: useBetaFeatures), style: .blocks)
         

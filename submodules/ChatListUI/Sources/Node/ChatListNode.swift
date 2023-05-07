@@ -100,7 +100,7 @@ public final class ChatListNodeInteraction {
     let openPremiumIntro: () -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
-
+    
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
@@ -568,10 +568,10 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     if let peer = peer.peers[peer.peerId] {
                         chatPeer = peer
                     }
-
+                    
                     let peerContent: ContactsPeerItemPeer = .peer(peer: itemPeer, chatPeer: chatPeer)
                     let status: ContactsPeerItemStatus = .none
-
+                    
                     return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
                         presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
                         sortOrder: presentationData.nameSortOrder,
@@ -620,12 +620,12 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                 ), directionHint: entry.directionHint)
             case let .ContactEntry(contactEntry):
                 let header: ChatListSearchItemHeader? = nil
-
+                
                 var status: ContactsPeerItemStatus = .none
                 status = .presence(contactEntry.presence, contactEntry.presentationData.dateTimeFormat)
-
+            
                 let presentationData = contactEntry.presentationData
-
+            
                 let peerContent: ContactsPeerItemPeer = .peer(peer: contactEntry.peer, chatPeer: contactEntry.peer)
 
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
@@ -869,10 +869,10 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         if let peer = peer.peers[peer.peerId] {
                             chatPeer = peer
                         }
-
+                        
                         let peerContent: ContactsPeerItemPeer = .peer(peer: itemPeer, chatPeer: chatPeer)
                         let status: ContactsPeerItemStatus = .none
-
+                        
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
                             presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
                             sortOrder: presentationData.nameSortOrder,
@@ -921,12 +921,12 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 ), directionHint: entry.directionHint)
             case let .ContactEntry(contactEntry):
                 let header: ChatListSearchItemHeader? = nil
-
+                
                 var status: ContactsPeerItemStatus = .none
                 status = .presence(contactEntry.presence, contactEntry.presentationData.dateTimeFormat)
-
+            
                 let presentationData = contactEntry.presentationData
-
+            
                 let peerContent: ContactsPeerItemPeer = .peer(peer: contactEntry.peer, chatPeer: contactEntry.peer)
 
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
@@ -1167,21 +1167,21 @@ public final class ChatListNode: ListView {
     public var reachedSelectionLimit: ((Int32) -> Void)?
     
     private var ptgSettingsDisposable: Disposable?
-
+    
     private let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
-
+    
     private var visibleTopInset: CGFloat?
     private var originalTopInset: CGFloat?
     
     public var passthroughPeerSelection = false
-
+    
     let hideArhiveIntro = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private let chatFolderUpdates = Promise<ChatFolderUpdates?>()
     private var pollFilterUpdatesDisposable: Disposable?
     private var chatFilterUpdatesDisposable: Disposable?
-
-    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
+    
+    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>? = nil) {
         self.context = context
         self.location = location
         self.chatListFilter = chatListFilter
@@ -1193,7 +1193,7 @@ public final class ChatListNode: ListView {
         
         let inactiveSecretChatPeerIds = inactiveSecretChatPeerIds ?? context.inactiveSecretChatPeerIds
         self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
-
+        
         var isSelecting = false
         if case .peers(_, true, _, _, _) = mode {
             isSelecting = true
@@ -1516,7 +1516,7 @@ public final class ChatListNode: ListView {
                 guard let self, let result else {
                     return
                 }
-
+                
                 self.push?(ChatFolderLinkPreviewScreen(context: self.context, subject: .updates(result), contents: result.chatFolderLinkContents))
             })
         }, hideChatFolderUpdates: { [weak self] in
@@ -1529,7 +1529,7 @@ public final class ChatListNode: ListView {
                 guard let self, let result else {
                     return
                 }
-
+                
                 if let localFilterId = result.chatFolderLinkContents.localFilterId {
                     let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: localFilterId).start()
                 }
@@ -1598,7 +1598,7 @@ public final class ChatListNode: ListView {
         } else {
             displayArchiveIntro = .single(false)
         }
-
+    
         let suggestedChatListNotice: Signal<ChatListNotice?, NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil {
             suggestedChatListNotice = .single(nil)
@@ -1648,7 +1648,7 @@ public final class ChatListNode: ListView {
                                         break
                                     }
                                 }
-
+                                
                                 return nil
                             } else {
                                 return nil
@@ -1663,14 +1663,14 @@ public final class ChatListNode: ListView {
         } else {
             suggestedChatListNotice = .single(nil)
         }
-
+        
         let storageInfo: Signal<Double?, NoError>
         if !"".isEmpty, case .chatList(groupId: .root) = location, chatListFilter == nil {
             let totalSizeSignal = combineLatest(context.account.postbox.mediaBox.storageBox.totalSize(), context.account.postbox.mediaBox.cacheStorageBox.totalSize())
             |> map { a, b -> Int64 in
                 return a + b
             }
-
+            
             storageInfo = totalSizeSignal
             |> take(1)
             |> mapToSignal { initialSize -> Signal<Double?, NoError> in
@@ -1679,32 +1679,32 @@ public final class ChatListNode: ListView {
                 #else
                 let fractionLimit: Double = 0.3
                 #endif
-
+                
                 let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
                 let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
-
+                
                 let initialFraction: Double
                 if deviceFreeSpace != 0 && initialSize != 0 {
                     initialFraction = Double(initialSize) / Double(deviceFreeSpace + initialSize)
                 } else {
                     initialFraction = 0.0
                 }
-
+                
                 let initialReportSize: Double?
                 if initialFraction > fractionLimit {
                     initialReportSize = Double(initialSize)
                 } else {
                     initialReportSize = nil
                 }
-
+                
                 final class ReportState {
                     var lastSize: Int64
-
+                    
                     init(lastSize: Int64) {
                         self.lastSize = lastSize
                     }
                 }
-
+                
                 let state = Atomic(value: ReportState(lastSize: initialSize))
                 let updatedReportSize: Signal<Double?, NoError> = Signal { subscriber in
                     let disposable = totalSizeSignal.start(next: { size in
@@ -1718,30 +1718,30 @@ public final class ChatListNode: ListView {
                         }
                         if updatedSize >= 0 {
                             let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
-
+                            
                             let updatedFraction: Double
                             if deviceFreeSpace != 0 && updatedSize != 0 {
                                 updatedFraction = Double(updatedSize) / Double(deviceFreeSpace + updatedSize)
                             } else {
                                 updatedFraction = 0.0
                             }
-
+                            
                             let updatedReportSize: Double?
                             if updatedFraction > fractionLimit {
                                 updatedReportSize = Double(updatedSize)
                             } else {
                                 updatedReportSize = nil
                             }
-
+                            
                             subscriber.putNext(updatedReportSize)
                         }
                     })
-
+                    
                     return ActionDisposable {
                         disposable.dispose()
                     }
                 }
-
+                
                 return .single(initialReportSize)
                 |> then(
                     updatedReportSize
@@ -1750,7 +1750,7 @@ public final class ChatListNode: ListView {
         } else {
             storageInfo = .single(nil)
         }
-
+        
         let currentPeerId: EnginePeer.Id = context.account.peerId
 
         /*let contactList: Signal<EngineContactList?, NoError>
@@ -1762,7 +1762,7 @@ public final class ChatListNode: ListView {
         }
         let _ = contactList*/
 
-
+        
         /*let emptyInitialView = ChatListNodeView(
             originalList: EngineChatList(
                 items: [],
@@ -1777,7 +1777,7 @@ public final class ChatListNode: ListView {
             filter: nil
         )
         let _ = previousView.swap(emptyInitialView)
-
+        
         let _ = (preparedChatListNodeViewTransition(from: nil, to: emptyInitialView, reason: .initial, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: nil, searchMode: false)
         |> map { mappedChatListNodeViewListTransition(context: context, nodeInteraction: nodeInteraction, location: location, filterData: nil, mode: mode, isPeerEnabled: nil, transition: $0) }).start(next: { [weak self] value in
             guard let self else {
@@ -1785,7 +1785,7 @@ public final class ChatListNode: ListView {
             }
             let _ = self.enqueueTransition(value).start()
         })*/
-
+        
         let contacts: Signal<[ChatListContactPeer], NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil {
             contacts = ApplicationSpecificNotice.displayChatListContacts(accountManager: context.sharedContext.accountManager)
@@ -1794,8 +1794,8 @@ public final class ChatListNode: ListView {
                 if value {
                     return .single([])
                 }
-
-                return context.engine.messages.chatList(group: .root, count: 10)
+                
+                return context.engine.messages.chatList(group: .root, count: 10, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                 |> map { chatList -> Bool in
                     if chatList.items.count >= 5 {
                         return true
@@ -1808,7 +1808,7 @@ public final class ChatListNode: ListView {
                     if hasChats {
                         return .single([])
                     }
-
+                    
                     return context.engine.data.subscribe(
                         TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)
                     )
@@ -1844,6 +1844,18 @@ public final class ChatListNode: ListView {
         } else {
             contacts = .single([])
         }
+        
+        let currentRecordId = self.context.account.id
+        let hiddenPeerIds = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+        |> map { sharedData -> Set<EnginePeer.Id> in
+            let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+            if let activeFakePasscodeSettings = fakePasscodeHolder.activeFakePasscodeSettings() {
+                if let accountActions = activeFakePasscodeSettings.accountActions.first(where: { $0.peerId == currentPeerId && $0.recordId == currentRecordId }) {
+                    return Set(accountActions.chatsToRemove.filter({ $0.removalType == .hide }).map({ $0.peerId }))
+                }
+            }
+            return Set()
+        }
 
         let chatListNodeViewTransition = combineLatest(
             queue: viewProcessingQueue,
@@ -1855,9 +1867,10 @@ public final class ChatListNode: ListView {
             chatListViewUpdate,
             self.chatFolderUpdates.get() |> distinctUntilChanged,
             self.statePromise.get(),
-            contacts
+            contacts,
+            hiddenPeerIds
         )
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, chatFolderUpdates, state, contacts) -> Signal<ChatListNodeListViewTransition, NoError> in
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, chatFolderUpdates, state, contacts, hiddenPeerIds) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
@@ -1872,8 +1885,8 @@ public final class ChatListNode: ListView {
             } else {
                 notice = nil
             }
-
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts)
+            
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts, hiddenPeerIds: hiddenPeerIds)
             var isEmpty = true
             var entries = rawEntries.filter { entry in
                 switch entry {
@@ -1894,7 +1907,7 @@ public final class ChatListNode: ListView {
                             if peer.id.isReplies {
                                 return false
                             }
-
+                            
                             switch peer {
                             case let .user(user):
                                 if user.botInfo != nil {
@@ -1989,7 +2002,7 @@ public final class ChatListNode: ListView {
                                 return false
                             }
                         }
-
+                        
                         isEmpty = false
                         return true
                     case let .peerType(peerTypes, _):
@@ -2131,7 +2144,7 @@ public final class ChatListNode: ListView {
             if isEmpty {
                 entries = [.HeaderEntry]
             }
-
+            
             let processedView = ChatListNodeView(originalList: update.list, filteredEntries: entries, isLoading: isLoading, filter: filter)
             let previousView = previousView.swap(processedView)
             let previousState = previousState.swap(state)
@@ -2230,7 +2243,7 @@ public final class ChatListNode: ListView {
                 var doesIncludeArchive = false
                 var doesIncludeHiddenByDefaultArchive = false
                 var doesIncludeNotice = false
-
+                
                 var doesIncludeHiddenThread = false
                 for entry in processedView.filteredEntries {
                     if case let .PeerEntry(peerEntry) = entry {
@@ -2315,7 +2328,7 @@ public final class ChatListNode: ListView {
             
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
             |> map {
-                if context.sharedContext.animationsTemporarilyDisabledForCoverUp {
+                if _animationsTemporarilyDisabledForCoverUp {
                     return ChatListNodeViewTransition(chatListView: $0.chatListView, deleteItems: $0.deleteItems, insertEntries: $0.insertEntries, updateEntries: $0.updateEntries, options: [.LowLatency, .Synchronous], scrollToItem: $0.scrollToItem, stationaryItemRange: $0.stationaryItemRange, adjustScrollToFirstItem: $0.adjustScrollToFirstItem, animateCrossfade: false)
                 } else {
                     return $0
@@ -2826,12 +2839,21 @@ public final class ChatListNode: ListView {
             return strongSelf.isSelectionGestureEnabled
         }
         self.view.addGestureRecognizer(selectionRecognizer)
+        
+        self.ptgSettingsDisposable = context.sharedContext.ptgSettings.start(next: { [weak self] next in
+            self?.updateState { state in
+                var state = state
+                state.presentationData = ChatListPresentationData(theme: state.presentationData.theme, fontSize: state.presentationData.fontSize, strings: state.presentationData.strings, dateTimeFormat: state.presentationData.dateTimeFormat, nameSortOrder: state.presentationData.nameSortOrder, nameDisplayOrder: state.presentationData.nameDisplayOrder, disableAnimations: state.presentationData.disableAnimations, suppressForeignAgentNotice: next.suppressForeignAgentNotice)
+                return state
+            }
+        })
     }
     
     deinit {
         self.chatListDisposable.dispose()
         self.activityStatusesDisposable?.dispose()
         self.updatedFilterDisposable.dispose()
+        self.ptgSettingsDisposable?.dispose()
         self.pollFilterUpdatesDisposable?.dispose()
         self.chatFilterUpdatesDisposable?.dispose()
     }
@@ -2845,7 +2867,7 @@ public final class ChatListNode: ListView {
     
     private func pollFilterUpdates() {
         self.chatFolderUpdates.set(.single(nil))
-
+        
         /*guard let chatListFilter, case let .filter(id, _, _, data) = chatListFilter, data.isShared else {
             self.chatFolderUpdates.set(.single(nil))
             return
@@ -2859,7 +2881,7 @@ public final class ChatListNode: ListView {
             self.chatFolderUpdates.set(.single(result))
         })*/
     }
-
+    
     private func resetFilter() {
         if let chatListFilter = self.chatListFilter {
             self.updatedFilterDisposable.set((self.context.engine.peers.updatedChatListFilters()
@@ -3264,7 +3286,7 @@ public final class ChatListNode: ListView {
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true
-
+            
             self.dequeueTransition()
         }
     }

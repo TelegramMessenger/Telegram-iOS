@@ -498,7 +498,7 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                 presentControllerImpl?(accountsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             } else {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerInCurrentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.SecretPasscodeSettings_AtLeastOneAccountMustRemainUnhidden), elevatedLayout: false, action: { _ in return false }))
+                presentControllerInCurrentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.SecretPasscodeSettings_AtLeastOneAccountMustRemainUnhidden, timeout: nil), elevatedLayout: false, action: { _ in return false }))
             }
         })
     }, removeAccount: { accountId in
@@ -524,7 +524,7 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                 }
                 
                 // this filter enables selection of archived chats
-                let chatListFilter: ChatListFilter = .filter(id: -1, title: "", emoticon: nil, data: ChatListFilterData(categories: [.contacts, .nonContacts], excludeMuted: false, excludeRead: false, excludeArchived: false, includePeers: ChatListFilterIncludePeers(), excludePeers: []))
+                let chatListFilter: ChatListFilter = .filter(id: -1, title: "", emoticon: nil, data: ChatListFilterData(isShared: false, hasSharedLinks: false, categories: [.contacts, .nonContacts], excludeMuted: false, excludeRead: false, excludeArchived: false, includePeers: ChatListFilterIncludePeers(), excludePeers: []))
                 
                 let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(title: presentationData.strings.SecretPasscode_SecretChatsSelectionTitle, searchPlaceholder: presentationData.strings.ChatListFilter_AddChatsTitle, selectedChats: selectedChats, additionalCategories: nil, chatListFilters: chatListFilters, chatListNodeFilter: chatListFilter, chatListNodePeersFilter: [.excludeUsers, .excludeGroups, .excludeChannels, .excludeBots, .excludeSavedMessages], omitTokenList: true, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds)), options: [], filters: [], alwaysEnabled: true))
 

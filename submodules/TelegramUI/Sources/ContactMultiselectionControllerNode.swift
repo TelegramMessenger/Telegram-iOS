@@ -105,7 +105,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             let chatListFilters = chatSelection.chatListFilters
             
             placeholder = placeholderValue
-            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
+            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), chatListFilter: chatSelection.chatListNodeFilter, previewing: false, fillPreloadItems: false, mode: .peers(filter: chatSelection.chatListNodePeersFilter ?? [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, inactiveSecretChatPeerIds: chatSelection.inactiveSecretChatPeerIds)
             chatListNode.passthroughPeerSelection = true
             chatListNode.disabledPeerSelected = { peer, _ in
                 attemptDisabledItemSelection?(peer)
@@ -149,7 +149,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         } else {
             self.navigationBar?.additionalContentNode.addSubnode(self.tokenListNode)
         }
-
+        
         switch self.contentNode {
         case let .contacts(contactsNode):
             contactsNode.openPeer = { [weak self] peer, _ in

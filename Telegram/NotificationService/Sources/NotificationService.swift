@@ -453,7 +453,7 @@ private struct NotificationContent: CustomStringConvertible {
     
     var suppressForeignAgentNotice: Bool = false
     var messageType: String?
-
+    
     init(isLockedMessage: String?) {
         self.isLockedMessage = isLockedMessage
     }
@@ -533,7 +533,7 @@ private struct NotificationContent: CustomStringConvertible {
                 content.body = body
             }
         }
-
+        
         if !content.title.isEmpty || !content.subtitle.isEmpty || !content.body.isEmpty {
             if let isLockedMessage = self.isLockedMessage {
                 content.body = isLockedMessage
@@ -737,13 +737,22 @@ private final class NotificationServiceHandler {
             return nil
         }
 
+        let excludeAccountIds = self.accountManager.transaction { transaction in
+            return PtgSecretPasscodes(transaction)//.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath)
+        }
+        |> map { ptgSecretPasscodes in
+            return ptgSecretPasscodes.allHidableAccountIds()
+        }
+        
         let _ = (combineLatest(queue: self.queue,
-            self.accountManager.accountRecords(),
+            self.accountManager.accountRecords(excludeAccountIds: excludeAccountIds),
             self.accountManager.sharedData(keys: [
                 ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
                 ApplicationSpecificSharedDataKeys.voiceCallSettings,
                 ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings,
-                SharedDataKeys.loggingSettings
+                SharedDataKeys.loggingSettings,
+                ApplicationSpecificSharedDataKeys.ptgSettings,
+                ApplicationSpecificSharedDataKeys.ptgSecretPasscodes
             ])
         )
         |> take(1)
@@ -754,7 +763,7 @@ private final class NotificationServiceHandler {
             let loggingSettings = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
             Logger.shared.logToFile = loggingSettings.logToFile
             Logger.shared.logToConsole = loggingSettings.logToConsole
-
+            
             var automaticMediaDownloadSettings: MediaAutoDownloadSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
                 automaticMediaDownloadSettings = value
@@ -788,20 +797,48 @@ private final class NotificationServiceHandler {
                 voiceCallSettings = VoiceCallSettings.defaultSettings
             }
 
+            let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            
             guard let strongSelf = self, let recordId = recordId else {
                 Logger.shared.log("NotificationService \(episode)", "Couldn't find a matching decryption key")
 
                 let content = NotificationContent(isLockedMessage: nil)
                 updateCurrentContent(content)
-                completed()
+                
+                if let strongSelf = self {
+                    // probably this notification is from hidable account, then notify main app through UserDefaults about this suppressed notification
+                    // this allows to react to a call or new message for non-current account
+                    // this only happens when app is in foreground, because when app is in background all notifications are unregistered for hidable accounts
+                    let _ = (strongSelf.accountManager.accountRecords(excludeAccountIds: .single(ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath).inactiveAccountIds()))
+                    |> take(1)).start(next: { records in
+                        if let keyId = notificationPayloadKeyId(data: payloadData) {
+                            outer: for listRecord in records.records {
+                                for attribute in listRecord.attributes {
+                                    if case let .backupData(backupData) = attribute {
+                                        if let notificationEncryptionKeyId = backupData.data?.notificationEncryptionKeyId {
+                                            if keyId == notificationEncryptionKeyId {
+                                                if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
+                                                    appGroupUserDefaults.set("\(listRecord.id.int64):\(UInt32.random(in: 0 ... UInt32.max))", forKey: "suppressedNotificationForAccounId")
+                                                }
+                                                break outer
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        completed()
+                    })
+                } else {
+                    completed()
+                }
 
                 return
             }
 
-            let ptgSecretPasscodes = PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
-
             let allSecretPasscodeSecretChatPeerIds = ptgSecretPasscodes.allSecretChatPeerIds(accountId: recordId)
-
+            
             let _ = (standaloneStateManager(
                 accountManager: strongSelf.accountManager,
                 networkArguments: networkArguments,
@@ -985,7 +1022,13 @@ private final class NotificationServiceHandler {
                             break
                         }
                     } else {
-                        if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId, !allSecretPasscodeSecretChatPeerIds.contains(peerId) {
+                        if let _ = payloadJson["aps"] as? [String: Any], let peerId = peerId, allSecretPasscodeSecretChatPeerIds.contains(peerId) {
+                            // notify main app through UserDefaults about this suppressed notification
+                            // this allows to react to new message for non-current account
+                            if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
+                                appGroupUserDefaults.set("\(recordId.int64):\(UInt32.random(in: 0 ... UInt32.max))", forKey: "suppressedNotificationForAccounId")
+                            }
+                        } else if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
                                 if let topicTitleValue = payloadJson["topic_title"] as? String {
@@ -1006,7 +1049,7 @@ private final class NotificationServiceHandler {
                                 completed()
                                 return
                             }
-
+                            
                             let ptgSettings = PtgSettings(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSettings])
                             content.suppressForeignAgentNotice = ptgSettings.suppressForeignAgentNotice
 
@@ -1146,6 +1189,7 @@ private final class NotificationServiceHandler {
                                         voipPayload["phoneNumber"] = phoneNumber
                                     }
 
+                                    assert(!ptgSecretPasscodes.allHidableAccountIds().contains(recordId))
                                     if #available(iOS 14.5, *), voiceCallSettings.enableSystemIntegration {
                                         Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
                                         let content = NotificationContent(isLockedMessage: nil)
@@ -1164,6 +1208,9 @@ private final class NotificationServiceHandler {
                                         } else {
                                             content.body = "Incoming Call"
                                         }
+                                        
+                                        // needed to show incoming call for non-current account when app is in foreground, or when incoming call notification is tapped
+                                        content.userInfo = voipPayload
                                         
                                         updateCurrentContent(content)
                                         completed()
@@ -1218,9 +1265,9 @@ private final class NotificationServiceHandler {
                                                             var data = Data()
                                                             var missingRanges = RangeSet<Int64>(0 ..< Int64.max)
                                                         }
-
+                                                        
                                                         let collectedData = Atomic<DataValue>(value: DataValue())
-
+                                                        
                                                         return standaloneMultipartFetch(
                                                             postbox: stateManager.postbox,
                                                             network: stateManager.network,
@@ -1250,7 +1297,7 @@ private final class NotificationServiceHandler {
                                                                 var isCompleted = false
                                                                 let _ = collectedData.modify { current in
                                                                     let current = current
-
+                                                                    
                                                                     let fillRange = Int(offset) ..< (Int(offset) + data.count)
                                                                     if current.data.count < fillRange.upperBound {
                                                                         current.data.count = fillRange.upperBound
@@ -1260,7 +1307,7 @@ private final class NotificationServiceHandler {
                                                                         data.copyBytes(to: bytes.advanced(by: Int(offset)), from: Int(dataRange.lowerBound) ..< Int(dataRange.upperBound))
                                                                     }
                                                                     current.missingRanges.remove(contentsOf: Int64(fillRange.lowerBound) ..< Int64(fillRange.upperBound))
-
+                                                                    
                                                                     if current.missingRanges.isEmpty {
                                                                         isCompleted = true
                                                                     }
@@ -1391,7 +1438,7 @@ private final class NotificationServiceHandler {
                                                 }
 
                                                 Logger.shared.log("NotificationService \(episode)", "Unread count: \(value.0), isCurrentAccount: \(isCurrentAccount)")
-
+                                                
                                                 Logger.shared.log("NotificationService \(episode)", "mediaAttachment: \(String(describing: mediaAttachment)), mediaData: \(String(describing: mediaData?.count))")
 
                                                 if let image = mediaAttachment as? TelegramMediaImage, let resource = largestImageRepresentation(image.representations)?.resource {
@@ -1450,7 +1497,7 @@ private final class NotificationServiceHandler {
                                                         }
                                                     }
                                                 }
-
+                                                
                                                 if content.suppressForeignAgentNotice && content.messageType == nil {
                                                     if mediaAttachment is TelegramMediaImage {
                                                         content.messageType = presentationStrings?.messagePhoto ?? "Photo"
@@ -1489,7 +1536,7 @@ private final class NotificationServiceHandler {
                                     stateManager.network.shouldKeepConnection.set(.single(true))
                                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                                         Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
-
+                                        
                                         pollSignal = standalonePollChannelOnce(
                                             accountPeerId: stateManager.accountPeerId,
                                             postbox: stateManager.postbox,
@@ -1512,7 +1559,7 @@ private final class NotificationServiceHandler {
                                             }
                                         }
                                         |> restartIfError
-
+                                        
                                         pollSignal = signal
                                     }
                                 }

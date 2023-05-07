@@ -187,7 +187,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 } else {
                     status = .none
                 }
-
+            
                 var isMuted = false
                 if let notificationSettings = peer.notificationSettings {
                     if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
@@ -207,7 +207,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     }
                 }
-
+                
                 var badge: ContactsPeerItemBadge?
                 if peer.unreadCount > 0 {
                     badge = ContactsPeerItemBadge(count: peer.unreadCount, type: isMuted ? .inactive : .active)
@@ -950,7 +950,7 @@ private struct DownloadItem: Equatable {
     }
 }
 
-public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
+final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let context: AccountContext
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
@@ -961,7 +961,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
     private let key: ChatListSearchPaneKey
     private let tagMask: EngineMessage.Tags?
     private let location: ChatListControllerLocation
-    private let navigationController: NavigationController?
+    private weak var navigationController: NavigationController?
     
     private let recentListNode: ListView
     private let shimmerNode: ChatListSearchShimmerNode
@@ -995,11 +995,11 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
     private var mediaStatusDisposable: Disposable?
     private var playlistPreloadDisposable: Disposable?
     
-    public var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
+    private var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
     private var playlistLocation: SharedMediaPlaylistLocation?
     
     private var mediaAccessoryPanelContainer: PassthroughContainerNode
-    public var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
+    private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     private var dismissingPanel: ASDisplayNode?
     
     private let emptyResultsTitleNode: ImmediateTextNode
@@ -1025,10 +1025,10 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
     }
     
     private var hiddenMediaDisposable: Disposable?
-
+  
     private var searchQueryDisposable: Disposable?
     private var searchOptionsDisposable: Disposable?
-
+    
     init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
         self.animationCache = animationCache
@@ -1046,7 +1046,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
         }
         self.peersFilter = peersFilter
         self.requestPeerType = requestPeerType
-
+        
         let tagMask: EngineMessage.Tags?
         switch key {
             case .chats:
@@ -1522,7 +1522,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                 var threadsData: [EngineMessage.Id: MessageHistoryThreadData]
                 var totalCount: Int32
                 var matchesOnlyBcOfFAN: Set<MessageId>
-
+                
                 init(messages: [EngineMessage], readCounters: [EnginePeer.Id: EnginePeerReadCounters], threadsData: [EngineMessage.Id: MessageHistoryThreadData], totalCount: Int32, matchesOnlyBcOfFAN: Set<MessageId>) {
                     self.messages = messages
                     self.readCounters = readCounters
@@ -1558,7 +1558,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                         let (result, updatedState) = resultData
                         
                         let matchesOnlyBcOfFAN = context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages, query: finalQuery) : []
-
+                        
                         mappedResults.append(ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues { EnginePeerReadCounters(state: $0, isMuted: false) }, threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN))
                     }
                     return mappedResults
@@ -1581,20 +1581,20 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                                 |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
                                 |> map { result, updatedState -> (ChatListSearchMessagesResult, Bool) in
                                     var matchesOnlyBcOfFAN = searchContext.result.matchesOnlyBcOfFAN
-
+                                    
                                     let shouldTryLoadMore: Bool
                                     if context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
                                         let alreadyKnownIds = Set(searchContext.result.messages.lazy.map { $0.id })
-
+                                        
                                         let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages.filter { !alreadyKnownIds.contains($0.id) }, query: finalQuery)
                                         matchesOnlyBcOfFAN.formUnion(newMatchesOnlyBcOfFAN)
-
+                                        
                                         let allNewResultsMatchOnlyBcOfFAN = matchesOnlyBcOfFAN.count - searchContext.result.matchesOnlyBcOfFAN.count == result.messages.count - alreadyKnownIds.count && result.messages.count - alreadyKnownIds.count > 0
                                         shouldTryLoadMore = allNewResultsMatchOnlyBcOfFAN
                                     } else {
                                         shouldTryLoadMore = false
                                     }
-
+                                    
                                     return (ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues { EnginePeerReadCounters(state: $0, isMuted: false) }, threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN), shouldTryLoadMore)
                                 }
                                 |> mapToSignal { foundMessages, shouldTryLoadMore -> Signal<([FoundRemoteMessages], Bool), NoError> in
@@ -1604,7 +1604,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                                         previous[i] = updated
                                         return (previous, true)
                                     }
-
+                                    
                                     if shouldTryLoadMore && foundMessages.hasMore {
                                         Queue.mainQueue().async {
                                             if let strongSelf = self {
@@ -1612,7 +1612,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                                             }
                                         }
                                     }
-
+                                    
                                     return .complete()
                                 }
                             } else {
@@ -1644,11 +1644,11 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                             }
                             return (resultContexts, true)
                         }
-
+                        
                         for i in 0 ..< foundMessages.count {
                             let allResultsMatchOnlyBcOfFAN = foundMessages[i].matchesOnlyBcOfFAN.count == foundMessages[i].messages.count && foundMessages[i].messages.count > 0
                             let shouldTryLoadMore = allResultsMatchOnlyBcOfFAN
-
+                            
                             if shouldTryLoadMore && foundMessages[i].hasMore {
                                 Queue.mainQueue().async {
                                     if let strongSelf = self {
@@ -1658,7 +1658,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                                 break
                             }
                         }
-
+                        
                         var result: [FoundRemoteMessages] = []
                         for i in 0 ..< foundMessages.count {
                             result.append(FoundRemoteMessages(messages: foundMessages[i].messages, readCounters: foundMessages[i].readStates, threadsData: foundMessages[i].threadInfo, totalCount: foundMessages[i].totalCount, matchesOnlyBcOfFAN: foundMessages[i].matchesOnlyBcOfFAN))
@@ -1734,7 +1734,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                         guard !peer.isDeleted && peer.id != context.account.peerId else {
                             return false
                         }
-
+                        
                         var match = false
                         for peerType in requestPeerType {
                             if match {
@@ -1855,7 +1855,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                         guard !peersFilter.contains(.excludeSavedMessages) || peer.id != accountPeer.id else { return false }
                         guard !peersFilter.contains(.excludeSecretChats) || peer.id.namespace != Namespaces.Peer.SecretChat else { return false }
                         guard !peersFilter.contains(.onlyPrivateChats) || peer.id.namespace == Namespaces.Peer.CloudUser else { return false }
-
+                        
                         if peersFilter.contains(.onlyGroups) {
                             var isGroup: Bool = false
                             if case let .channel(peer) = peer, case .group = peer.info {
@@ -1867,7 +1867,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                                 return false
                             }
                         }
-
+                        
                         if peersFilter.contains(.onlyChannels) {
                             if case let .channel(peer) = peer, case .broadcast = peer.info {
                                 return true
@@ -1875,14 +1875,14 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                                 return false
                             }
                         }
-
+                        
                         if peersFilter.contains(.excludeChannels) {
                             if case let .channel(peer) = peer, case .broadcast = peer.info {
                                 return false
                             }
                         }
                     }
-
+                    
                     return true
                 }
                 
@@ -2076,7 +2076,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                     }
                 }
                 
-                if case .chats = key, !peersFilter.contains(.excludeRecent), isViablePhoneNumber(finalQuery) {
+                if case .chats = key, !peersFilter.contains(.excludeRecent), isViablePhoneNumber(finalQuery), !context.immediateIsHidable {
                     entries.append(.addContact(finalQuery, presentationData.theme, presentationData.strings))
                 }
                 
@@ -2313,7 +2313,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         let previousSelectedMessages = Atomic<Set<EngineMessage.Id>?>(value: nil)
         let previousExpandGlobalSearch = Atomic<Bool>(value: false)
-
+        
         self.searchQueryDisposable = (searchQuery
         |> deliverOnMainQueue).start(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
             self?.searchQueryValue = query
@@ -2326,13 +2326,13 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
             self?.searchOptionsValue = options
         })
 
-
+        
         self.searchDisposable.set((foundItems
         |> deliverOnMainQueue).start(next: { [weak self] foundItems in
             if let strongSelf = self {
                 let previousSelectedMessageIds = previousSelectedMessages.swap(strongSelf.selectedMessages)
                 let previousExpandGlobalSearch = previousExpandGlobalSearch.swap(strongSelf.searchStateValue.expandGlobalSearch)
-
+                
                 var entriesAndFlags = foundItems?.0
                 
                 let isSearching = foundItems?.1 ?? false
@@ -2368,7 +2368,7 @@ public final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPane
                 
                 let selectionChanged = (previousSelectedMessageIds == nil) != (strongSelf.selectedMessages == nil)
                 let expandGlobalSearchChanged = previousExpandGlobalSearch != strongSelf.searchStateValue.expandGlobalSearch
-
+                
                 let animated = selectionChanged || expandGlobalSearchChanged
                 let firstTime = previousEntries == nil
                 var transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags != nil, isEmpty: !isSearching && (entriesAndFlags?.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, requestPeerType: requestPeerType, location: location, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture, location in

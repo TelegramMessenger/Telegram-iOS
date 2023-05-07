@@ -193,24 +193,24 @@ private func collectDirectoryUsageReportRecursive(path: String, indent: String, 
 
 public func collectRawStorageUsageReport(containerPath: String) -> String {
     var log = ""
-
+    
     let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
     let documentsSize = statForDirectory(path: documentsPath)
     log.append("Documents (\(documentsPath)): \(documentsSize)\n")
     collectDirectoryUsageReportRecursive(path: documentsPath, indent: "  ", log: &log)
-
+    
     let systemCachePath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0]
     let systemCacheSize = statForDirectory(path: systemCachePath)
     log.append("System Cache (\(systemCachePath)): \(systemCacheSize)\n")
-
+    
     let containerSize = statForDirectory(path: containerPath)
     log.append("Container (\(containerPath)): \(containerSize)\n")
     collectDirectoryUsageReportRecursive(path: containerPath, indent: "  ", log: &log)
-
+    
     return log
 }
 
-func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUsageStats, NoError> {
+func _internal_collectStorageUsageStats(account: Account, excludePeerIds: Signal<Set<PeerId>, NoError>) -> Signal<AllStorageUsageStats, NoError> {
     /*let additionalStats = Signal<Int64, NoError> { subscriber in
         DispatchQueue.global().async {
             var totalSize: Int64 = 0
@@ -285,7 +285,7 @@ func _internal_collectStorageUsageStats(account: Account) -> Signal<AllStorageUs
         
         return EmptyDisposable
     }*/
-
+    
     let additionalStats = account.postbox.mediaBox.cacheStorageBox.totalSize() |> take(1)
     
     return combineLatest(
@@ -370,7 +370,7 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
                                 matches = true
                             }
                         }
-
+                        
                         if matches, let message = transaction.getMessage(id) {
                             result[id] = message
                         }
@@ -378,7 +378,7 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
                 }
             }
         }
-
+        
         return result
     }
 }
@@ -396,7 +396,7 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                 includeIds.append(data)
             }
         }
-
+        
         var excludeResourceIds = Set<MediaResourceId>()
         for message in excludeMessages {
             extractMediaResourceIds(message: message, resourceIds: &excludeResourceIds)
@@ -407,7 +407,7 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                 excludeIds.append(data)
             }
         }
-
+        
         var mappedContentTypes: [UInt8] = []
         for item in categories {
             switch item {
@@ -426,12 +426,12 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
             case .misc:
                 mappedContentTypes.append(MediaResourceUserContentType.other.rawValue)
                 mappedContentTypes.append(MediaResourceUserContentType.audioVideoMessage.rawValue)
-
+                
                 // Legacy value for Gif
                 mappedContentTypes.append(5)
             }
         }
-
+        
         mediaBox.storageBox.remove(peerId: peerId, contentTypes: mappedContentTypes, includeIds: includeIds, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
             for id in ids {
@@ -462,7 +462,7 @@ func _internal_clearStorage(account: Account, peerId: EnginePeer.Id?, categories
                     }
                     
                     mediaBox.cacheStorageBox.reset()
-
+                    
                     subscriber.putCompletion()
                 } else {
                     subscriber.putCompletion()
@@ -488,7 +488,7 @@ func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, inclu
                 includeIds.append(data)
             }
         }
-
+        
         var excludeResourceIds = Set<MediaResourceId>()
         for message in excludeMessages {
             extractMediaResourceIds(message: message, resourceIds: &excludeResourceIds)
@@ -499,10 +499,10 @@ func _internal_clearStorage(account: Account, peerIds: Set<EnginePeer.Id>, inclu
                 excludeIds.append(data)
             }
         }
-
+        
         mediaBox.storageBox.remove(peerIds: peerIds, includeIds: includeIds, excludeIds: excludeIds, completion: { ids in
             var resourceIds: [MediaResourceId] = []
-
+            
             for id in ids {
                 if let value = String(data: id, encoding: .utf8) {
                     resourceIds.append(MediaResourceId(value))
@@ -563,14 +563,14 @@ private func extractMediaResourceIds(message: Message, resourceIds: inout Set<Me
 
 func _internal_clearStorage(account: Account, messages: [Message]) -> Signal<Never, NoError> {
     let mediaBox = account.postbox.mediaBox
-
+    
     return Signal { subscriber in
         DispatchQueue.global().async {
             var resourceIds = Set<MediaResourceId>()
             for message in messages {
                 extractMediaResourceIds(message: message, resourceIds: &resourceIds)
             }
-
+            
             var removeIds: [Data] = []
             for resourceId in resourceIds {
                 if let id = resourceId.stringRepresentation.data(using: .utf8) {

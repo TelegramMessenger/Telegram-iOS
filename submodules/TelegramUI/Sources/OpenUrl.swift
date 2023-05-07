@@ -872,8 +872,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             section = .devices
                         case "password":
                             section = .twoStepAuth
+                        #if DEBUG
                         case "enable_log":
                             section = .enableLog
+                        #endif
                         default:
                             break
                         }
@@ -917,19 +919,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             } else {
                 let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
                 |> take(1)
-                |> map { sharedData, accessChallengeData -> WebBrowserSettings in
-                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
-
+                |> map { sharedData -> WebBrowserSettings in
                     var settings: WebBrowserSettings
                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
                         settings = current
                     } else {
                         settings = .defaultSettings
-                    }
-                    if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil && settings.defaultWebBrowser == nil {
-                            settings = WebBrowserSettings(defaultWebBrowser: "safari")
-                        }
                     }
                     return settings
                 }
@@ -938,7 +933,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 if let metrics = navigationController?.validLayout?.metrics, case .compact = metrics.widthClass {
                     isCompact = true
                 }
-
+                
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in
                     if settings.defaultWebBrowser == nil {

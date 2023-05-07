@@ -542,6 +542,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             case .twoStepAuth:
                 break
             case .enableLog:
+                #if DEBUG
                 if let navigationController = navigationController {
                     let _ = updateLoggingSettings(accountManager: context.sharedContext.accountManager, {
                         $0.withUpdatedLogToFile(true)
@@ -554,6 +555,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         navigationController.setViewControllers(controllers, animated: true)
                     }
                 }
+                #else
+                break
+                #endif
             }
         case let .premiumOffer(reference):
             dismissInput()

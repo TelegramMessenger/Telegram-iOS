@@ -245,7 +245,7 @@ public extension TelegramEngine {
         public func updatePeerMuteSetting(peerId: PeerId, threadId: Int64?, muteInterval: Int32?) -> Signal<Void, NoError> {
             return _internal_updatePeerMuteSetting(account: self.account, peerId: peerId, threadId: threadId, muteInterval: muteInterval)
         }
-
+        
         public func updateMultiplePeerMuteSettings(peerIds: [EnginePeer.Id], muted: Bool) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 for peerId in peerIds {
@@ -457,7 +457,7 @@ public extension TelegramEngine {
         public func addChannelMember(peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
             return _internal_addChannelMember(account: self.account, peerId: peerId, memberId: memberId)
         }
-
+        
         public func sendBotRequestedPeer(messageId: MessageId, buttonId: Int32, requestedPeerId: PeerId) -> Signal<Void, SendBotRequestedPeerError> {
             return _internal_sendBotRequestedPeer(account: self.account, peerId: messageId.peerId, messageId: messageId, buttonId: buttonId, requestedPeerId: requestedPeerId)
         }
@@ -530,7 +530,7 @@ public extension TelegramEngine {
         public func updatedChatListFilters() -> Signal<[ChatListFilter], NoError> {
             return _internal_updatedChatListFilters(postbox: self.account.postbox, hiddenIds: self.account.viewTracker.hiddenChatListFilterIds)
         }
-
+        
         public func chatListFiltersAreSynced() -> Signal<Bool, NoError> {
             return _internal_chatListFiltersAreSynced(postbox: self.account.postbox)
         }
@@ -650,18 +650,22 @@ public extension TelegramEngine {
         public func updatePeerDescription(peerId: PeerId, description: String?) -> Signal<Void, UpdatePeerDescriptionError> {
             return _internal_updatePeerDescription(account: self.account, peerId: peerId, description: description)
         }
-
+        
         public func updateBotName(peerId: PeerId, name: String) -> Signal<Void, UpdateBotInfoError> {
             return _internal_updateBotName(account: self.account, peerId: peerId, name: name)
         }
-
+        
         public func updateBotAbout(peerId: PeerId, about: String) -> Signal<Void, UpdateBotInfoError> {
             return _internal_updateBotAbout(account: self.account, peerId: peerId, about: about)
         }
-
-        public func getChatListPeers(filterPredicate: ChatListFilterPredicate) -> Signal<[EnginePeer], NoError> {
-            return self.account.postbox.transaction { transaction -> [EnginePeer] in
-                return transaction.getChatListPeers(groupId: .root, filterPredicate: filterPredicate, additionalFilter: nil).map(EnginePeer.init)
+        
+        public func getChatListPeers(filterPredicate: ChatListFilterPredicate, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>) -> Signal<[EnginePeer], NoError> {
+            return inactiveSecretChatPeerIds
+            |> take(1)
+            |> mapToSignal { inactiveSecretChatPeerIds in
+                return self.account.postbox.transaction { transaction -> [EnginePeer] in
+                    return transaction.getChatListPeers(groupId: .root, filterPredicate: filterPredicate, additionalFilter: nil, inactiveSecretChatPeerIds: inactiveSecretChatPeerIds).map(EnginePeer.init)
+                }
             }
         }
 
@@ -676,16 +680,16 @@ public extension TelegramEngine {
                             return false
                         }
                     }
-
+                    
                     var peerIds: [PeerId] = []
                     if predicate != nil {
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true))
-                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
+                        peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: predicate, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
                     } else {
                         if isArchived {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: Namespaces.PeerGroup.archive, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
                         } else {
-                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true))
+                            peerIds.append(contentsOf: transaction.getUnreadChatListPeerIds(groupId: .root, filterPredicate: nil, additionalFilter: additionalFilter, stopOnFirstMatch: true, inactiveSecretChatPeerIds: []))
                         }
                     }
 
@@ -1068,31 +1072,31 @@ public extension TelegramEngine {
                 |> ignoreValues
             }
         }
-
+        
         public func exportChatFolder(filterId: Int32, title: String, peerIds: [PeerId]) -> Signal<ExportedChatFolderLink, ExportChatFolderError> {
             return _internal_exportChatFolder(account: self.account, filterId: filterId, title: title, peerIds: peerIds)
         }
-
+        
         public func getExportedChatFolderLinks(id: Int32) -> Signal<[ExportedChatFolderLink]?, NoError> {
             return _internal_getExportedChatFolderLinks(account: self.account, id: id)
         }
-
+        
         public func editChatFolderLink(filterId: Int32, link: ExportedChatFolderLink, title: String?, peerIds: [EnginePeer.Id]?, revoke: Bool) -> Signal<ExportedChatFolderLink, EditChatFolderLinkError> {
             return _internal_editChatFolderLink(account: self.account, filterId: filterId, link: link, title: title, peerIds: peerIds, revoke: revoke)
         }
-
+        
         public func deleteChatFolderLink(filterId: Int32, link: ExportedChatFolderLink) -> Signal<Never, RevokeChatFolderLinkError> {
             return _internal_deleteChatFolderLink(account: self.account, filterId: filterId, link: link)
         }
-
+        
         public func checkChatFolderLink(slug: String) -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> {
             return _internal_checkChatFolderLink(account: self.account, slug: slug)
         }
-
+        
         public func joinChatFolderLink(slug: String, peerIds: [EnginePeer.Id]) -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> {
             return _internal_joinChatFolderLink(account: self.account, slug: slug, peerIds: peerIds)
         }
-
+        
         public func pollChatFolderUpdates(folderId: Int32) -> Signal<Never, NoError> {
             let signal = _internal_pollChatFolderUpdatesOnce(account: self.account, folderId: folderId)
             return (
@@ -1104,7 +1108,7 @@ public extension TelegramEngine {
             )
             |> restart
         }
-
+        
         public func subscribedChatFolderUpdates(folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
             return _internal_subscribedChatFolderUpdates(account: self.account, folderId: folderId)
         }
@@ -1112,15 +1116,15 @@ public extension TelegramEngine {
         public func joinAvailableChatsInFolder(updates: ChatFolderUpdates, peerIds: [EnginePeer.Id]) -> Signal<Never, JoinChatFolderLinkError> {
             return _internal_joinAvailableChatsInFolder(account: self.account, updates: updates, peerIds: peerIds)
         }
-
+        
         public func hideChatFolderUpdates(folderId: Int32) -> Signal<Never, NoError> {
             return _internal_hideChatFolderUpdates(account: self.account, folderId: folderId)
         }
-
+        
         public func leaveChatFolder(folderId: Int32, removePeerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
             return _internal_leaveChatFolder(account: self.account, folderId: folderId, removePeerIds: removePeerIds)
         }
-
+        
         public func requestLeaveChatFolderSuggestions(folderId: Int32) -> Signal<[EnginePeer.Id], NoError> {
             return _internal_requestLeaveChatFolderSuggestions(account: self.account, folderId: folderId)
         }

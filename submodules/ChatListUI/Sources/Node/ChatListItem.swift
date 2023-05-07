@@ -528,12 +528,12 @@ private final class CachedChatListSearchResult {
 private final class CachedCustomTextEntities {
     let text: String
     let textEntities: [MessageTextEntity]
-
+    
     init(text: String, textEntities: [MessageTextEntity]) {
         self.text = text
         self.textEntities = textEntities
     }
-
+    
     func matches(text: String) -> Bool {
         if self.text != text {
             return false
@@ -946,7 +946,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var cachedChatListText: (String, String)?
     private var cachedChatListSearchResult: CachedChatListSearchResult?
     private var cachedCustomTextEntities: CachedCustomTextEntities?
-
+    
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams, countersSize: CGFloat)?
     
     private var isHighlighted: Bool = false
@@ -1189,7 +1189,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.forwardedIconNode.isLayerBacked = true
         self.forwardedIconNode.displaysAsynchronously = false
         self.forwardedIconNode.displayWithoutProcessing = true
-
+        
         self.pinnedIconNode = ASImageNode()
         self.pinnedIconNode.isLayerBacked = true
         self.pinnedIconNode.displaysAsynchronously = false
@@ -1358,7 +1358,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.avatarVideoNode = videoNode
                             }
                             videoNode.update(peer: peer, photo: photo, size: CGSize(width: 60.0, height: 60.0))
-
+                            
                             if strongSelf.hierarchyTrackingLayer == nil {
                                 let hierarchyTrackingLayer = HierarchyTrackingLayer()
                                 hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
@@ -1384,7 +1384,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             strongSelf.hierarchyTrackingLayer?.removeFromSuperlayer()
                             strongSelf.hierarchyTrackingLayer = nil
-                        }
+                        }                 
                         strongSelf.updateVideoVisibility()
                     } else {
                         if let photo = peer.largeProfileImage, photo.hasVideo {
@@ -1517,7 +1517,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let currentChatListText = self.cachedChatListText
         let currentChatListSearchResult = self.cachedChatListSearchResult
         let currentCustomTextEntities = self.cachedCustomTextEntities
-
+        
         return { item, params, first, last, firstWithHeader, nextIsPinned in
             let titleFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
             let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
@@ -1683,7 +1683,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentCredibilityIconContent: EmojiStatusComponent.Content?
             var currentSecretIconImage: UIImage?
             var currentForwardedIcon: UIImage?
-
+            
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
             
@@ -1796,7 +1796,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var chatListText: (String, String)?
             var chatListSearchResult: CachedChatListSearchResult?
             var customTextEntities: CachedCustomTextEntities?
-
+            
             let contentImageSide: CGFloat = max(10.0, min(20.0, floor(item.presentationData.fontSize.baseDisplaySize * 18.0 / 17.0)))
             let contentImageSize = CGSize(width: contentImageSide, height: contentImageSide)
             let contentImageSpacing: CGFloat = 2.0
@@ -1806,7 +1806,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32, isUnread: Bool)?
             
             var displayForwardedIcon = false
-
+            
             switch contentData {
                 case let .chat(itemPeer, _, _, _, text, spoilers, customEmojiRanges, firstMessage_):
                     var isUser = false
@@ -1868,7 +1868,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
                         }
                         
-                        var entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
+                        var entities = (firstMessage_!._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
                             switch entity.type {
                             case .Spoiler, .CustomEmoji:
                                 return true
@@ -1878,7 +1878,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 return false
                             }
                         }
-
+                        
                         if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.peerId.id._internalGetInt64Value() == 777000 {
                             if let cached = currentCustomTextEntities, cached.matches(text: message.text) {
                                 customTextEntities = cached
@@ -1890,20 +1890,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 customTextEntities = CachedCustomTextEntities(text: message.text, textEntities: entities)
                             }
                         }
-
+                        
                         if let customTextEntities, !customTextEntities.textEntities.isEmpty {
                             entities.append(contentsOf: customTextEntities.textEntities)
                         }
-
+                        
                         let messageString: NSAttributedString
-                        if !message.text.isEmpty && entities.count > 0 {
-                            var messageText = message.text
+                        if !firstMessage_!.text.isEmpty && entities.count > 0 {
+                            var messageText = firstMessage_!.text
                             var entities = entities
                             if !"".isEmpty, let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                                 messageText = translation.text
                                 entities = translation.entities
                             }
-
+                            
                             messageString = foldLineBreaks(stringWithAppliedEntities(messageText, entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: italicTextFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message._asMessage()))
                         } else if spoilers != nil || customEmojiRanges != nil {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
@@ -1985,7 +1985,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
                             displayForwardedIcon = true
                         }
-
+                
                         var displayMediaPreviews = true
                         if message._asMessage().containsSecretMedia {
                             displayMediaPreviews = false
@@ -2070,7 +2070,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if displayForwardedIcon {
                 currentForwardedIcon = PresentationResourcesChatList.forwardedIcon(item.presentationData.theme)
             }
-
+            
             if let currentForwardedIcon {
                 textLeftCutout += currentForwardedIcon.size.width
                 if !contentImageSpecs.isEmpty {
@@ -2079,7 +2079,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     textLeftCutout += contentImageTrailingSpace
                 }
             }
-
+            
             for i in 0 ..< contentImageSpecs.count {
                 if i != 0 {
                     textLeftCutout += contentImageSpacing
@@ -2433,11 +2433,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if item.interaction.isInlineMode {
                 titleLeftCutout = 22.0
             }
-
+            
             if let titleAttributedStringValue = titleAttributedString, titleAttributedStringValue.length == 0 {
                 titleAttributedString = NSAttributedString(string: " ", font: titleFont, textColor: theme.titleColor)
             }
-
+                        
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
             var titleCutout: TextNodeCutout?
             if !titleLeftCutout.isZero {
@@ -3234,7 +3234,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.compoundHighlightingNode?.alpha = 0.0
                             strongSelf.dustNode?.alpha = 0.0
                             strongSelf.forwardedIconNode.alpha = 0.0
-
+                            
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.textNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
@@ -3279,7 +3279,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     inputActivitiesApply?()
                     
                     var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: floor((measureLayout.size.height - contentImageSize.height) / 2.0))
-
+                    
                     if let currentForwardedIcon = currentForwardedIcon {
                         strongSelf.forwardedIconNode.image = currentForwardedIcon
                         if strongSelf.forwardedIconNode.supernode == nil {
@@ -3290,7 +3290,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if strongSelf.forwardedIconNode.supernode != nil {
                         strongSelf.forwardedIconNode.removeFromSupernode()
                     }
-
+                    
                     var validMediaIds: [EngineMedia.Id] = []
                     for (message, media, mediaSize) in contentImageSpecs {
                         var mediaId = media.id
@@ -3363,7 +3363,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         lastLineRect = CGRect(origin: CGPoint(), size: titleLayout.size)
                     }
-
+                    
                     if let currentCredibilityIconContent = currentCredibilityIconContent {
                         let credibilityIconView: ComponentHostView<Empty>
                         if let current = strongSelf.credibilityIconView {
@@ -3528,7 +3528,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private func updateVideoVisibility() {
         let isVisible = self.visibilityStatus && self.trackingIsInHierarchy
         self.avatarVideoNode?.updateVisibility(isVisible)
-
+      
         if let videoNode = self.avatarVideoNode {
             videoNode.updateLayout(size: self.avatarNode.frame.size, cornerRadius: self.avatarNode.frame.size.width / 2.0, transition: .immediate)
             videoNode.frame = self.avatarNode.bounds

@@ -17,9 +17,6 @@ private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
         #if targetEnvironment(simulator)
         return EmptyDisposable
         #else
-        if !BuildConfig.iCloudEnabled() {
-            return EmptyDisposable
-        }
         let container = CKContainer.default()
         let publicDatabase = container.database(with: .public)
         let recordId = CKRecord.ID(recordName: "emergency-datacenter-\(prefix)")

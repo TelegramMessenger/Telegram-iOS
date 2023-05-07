@@ -58,14 +58,47 @@ jobs:
           echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
           echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
 
-          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          # prepare temporary keychain
+          export MY_KEYCHAIN="$RUNNER_TEMP/temp.keychain"
+          export MY_KEYCHAIN_PASSWORD="secret"
+          security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
+          security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
+          security set-keychain-settings "$MY_KEYCHAIN"
+          security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
+
+          # install certificates
+          SIGNING_CERTIFICATE_PATH="$RUNNER_TEMP/signing_certificate.p12"
+          echo "$SIGNING_CERTIFICATE_P12_DATA" | base64 -d -i - > "$SIGNING_CERTIFICATE_PATH"
+          security import "$SIGNING_CERTIFICATE_PATH" -k "$MY_KEYCHAIN" -P "$SIGNING_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
+
+          # use the official release configuration
+          rm -rf $HOME/telegram-configuration
+          mkdir -p $HOME/telegram-configuration
+          cp build-system/appstore-configuration.json $HOME/telegram-configuration/
+
+          # prepare provisioning profiles
+          PROVISIONING_PATH=$HOME/telegram-configuration/provisioning/profiles
+          mkdir -p $PROVISIONING_PATH
+
+          echo "$PROVISIONING_PROFILE_APP_DATA" | base64 -d -i - > "$PROVISIONING_PATH/Telegram.mobileprovision"
+          echo "$PROVISIONING_PROFILE_BROADCAST_UPLOAD_DATA" | base64 -d -i - > "$PROVISIONING_PATH/BroadcastUpload.mobileprovision"
+          echo "$PROVISIONING_PROFILE_INTENTS_DATA" | base64 -d -i - > "$PROVISIONING_PATH/Intents.mobileprovision"
+          echo "$PROVISIONING_PROFILE_NOTIFICATION_CONTENT_DATA" | base64 -d -i - > "$PROVISIONING_PATH/NotificationContent.mobileprovision"
+          echo "$PROVISIONING_PROFILE_NOTIFICATION_SERVICE_DATA" | base64 -d -i - > "$PROVISIONING_PATH/NotificationService.mobileprovision"
+          echo "$PROVISIONING_PROFILE_SHARE_DATA" | base64 -d -i - > "$PROVISIONING_PATH/Share.mobileprovision"
+          echo "$PROVISIONING_PROFILE_WATCH_APP_DATA" | base64 -d -i - > "$PROVISIONING_PATH/WatchApp.mobileprovision"
+          echo "$PROVISIONING_PROFILE_WATCH_EXTENSION_DATA" | base64 -d -i - > "$PROVISIONING_PATH/WatchExtension.mobileprovision"
+          echo "$PROVISIONING_PROFILE_WIDGET_DATA" | base64 -d -i - > "$PROVISIONING_PATH/Widget.mobileprovision"
+
+          # build the app
           python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
-            --configurationPath="build-system/appstore-configuration.json" \
-            --codesigningInformationPath=build-system/fake-codesigning \
-            --configuration=release_arm64 \
-            --buildNumber="$BUILD_NUMBER"
+            --configurationPath="$HOME/telegram-configuration/appstore-configuration.json" \
+            --codesigningInformationPath="$HOME/telegram-configuration/provisioning" \
+            --buildNumber=$BUILD_NUMBER \
+            --configuration=release_arm64
 
           # collect ipa
           OUTPUT_PATH="build/artifacts"
@@ -115,12 +148,23 @@ jobs:
           asset_name: Telegram.DSYMs.zip
           asset_content_type: application/zip
 
+#      - name: Release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          tag_name: build-${{ env.BUILD_NUMBER }}
+#          name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+#          draft: false
+#          prerelease: false
+#          files: |
+#            /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
+#            /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
+
       - name: Deploy to App Store Connect
         env:
           APP_STORE_CONNECT_USERNAME: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_STORE_CONNECT_PASSWORD: ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
         run: |
           xcrun altool --upload-app --type ios \
-            --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
+            --file /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa \
             --username "$APP_STORE_CONNECT_USERNAME" \
             --password "$APP_STORE_CONNECT_PASSWORD"

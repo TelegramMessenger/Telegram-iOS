@@ -10,9 +10,9 @@ import TelegramUIPreferences
 import TelegramCore
 
 public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> {
-    return context.engine.peers.updatedChatListFilters()
-    |> distinctUntilChanged
-    |> mapToSignal { filters -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
+    return combineLatest(context.engine.peers.updatedChatListFilters(), context.inactiveSecretChatPeerIds)
+    |> distinctUntilChanged(isEqual: { $0 == $1 })
+    |> mapToSignal { filters, inactiveSecretChatPeerIds -> Signal<(Int, [(ChatListFilter, Int, Bool)]), NoError> in
         var unreadCountItems: [UnreadMessageCountsItem] = []
         unreadCountItems.append(.totalInGroup(.root))
         var additionalPeerIds = Set<PeerId>()
@@ -24,7 +24,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                 additionalGroupIds.insert(Namespaces.PeerGroup.archive)
             }
         }
-
+        
         // fixes unread count on folders to include secret chats
         return context.account.postbox.transaction { transaction -> [PeerId: Set<PeerId>] in
             var peerIds = Set<PeerId>()
@@ -39,7 +39,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
         }
         |> mapToSignal { associatedPeerIds in
             additionalPeerIds.formUnion(associatedPeerIds.values.flatMap { $0 })
-
+            
             if !additionalPeerIds.isEmpty {
                 for peerId in additionalPeerIds {
                     unreadCountItems.append(.peer(id: peerId, handleThreads: true))
@@ -48,33 +48,33 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
             for groupId in additionalGroupIds {
                 unreadCountItems.append(.totalInGroup(groupId))
             }
-
-        let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.globalNotifications]))
+            
+            let globalNotificationsKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.globalNotifications]))
             let unreadKey: PostboxViewKey = .unreadCounts(items: unreadCountItems)
             var keys: [PostboxViewKey] = []
-        keys.append(globalNotificationsKey)
+            keys.append(globalNotificationsKey)
             keys.append(unreadKey)
             for peerId in additionalPeerIds {
                 keys.append(.basicPeer(peerId))
             }
-
+            
             return context.account.postbox.combinedView(keys: keys)
             |> map { view -> (Int, [(ChatListFilter, Int, Bool)]) in
                 guard let unreadCounts = view.views[unreadKey] as? UnreadMessageCountsView else {
                     return (0, [])
                 }
-
-            var globalNotificationSettings: GlobalNotificationSettingsSet
-            if let settingsView = view.views[globalNotificationsKey] as? PreferencesView, let settings = settingsView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
-                globalNotificationSettings = settings.effective
-            } else {
-                globalNotificationSettings = GlobalNotificationSettings.defaultSettings.effective
-            }
-
+                
+                var globalNotificationSettings: GlobalNotificationSettingsSet
+                if let settingsView = view.views[globalNotificationsKey] as? PreferencesView, let settings = settingsView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
+                    globalNotificationSettings = settings.effective
+                } else {
+                    globalNotificationSettings = GlobalNotificationSettings.defaultSettings.effective
+                }
+                
                 var result: [(ChatListFilter, Int, Bool)] = []
-
+                
                 var peerTagAndCount: [PeerId: (PeerSummaryCounterTags, Int, Bool, PeerGroupId?, Bool)] = [:]
-
+                
                 var totalStates: [PeerGroupId: ChatListTotalUnreadState] = [:]
                 for entry in unreadCounts.entries {
                     switch entry {
@@ -86,34 +86,34 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                         if let state = state, state.isUnread {
                             if let peerView = view.views[.basicPeer(peerId)] as? BasicPeerView, let peer = peerView.peer {
                                 let tag = context.account.postbox.seedConfiguration.peerSummaryCounterTags(peer, peerView.isContact)
-
+                                
                                 var peerCount = Int(state.count)
                                 if state.isUnread {
                                     peerCount = max(1, peerCount)
                                 }
-
-                            var isMuted = false
-                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                if case .muted = notificationSettings.muteState {
-                                    isMuted = true
-                                } else if case .default = notificationSettings.muteState {
-                                    if let peer = peerView.peer {
-                                        if peer is TelegramUser {
-                                            isMuted = !globalNotificationSettings.privateChats.enabled
-                                        } else if peer is TelegramGroup {
-                                            isMuted = !globalNotificationSettings.groupChats.enabled
-                                        } else if let channel = peer as? TelegramChannel {
-                                            switch channel.info {
-                                            case .group:
+                                
+                                var isMuted = false
+                                if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                    if case .muted = notificationSettings.muteState {
+                                        isMuted = true
+                                    } else if case .default = notificationSettings.muteState {
+                                        if let peer = peerView.peer {
+                                            if peer is TelegramUser {
+                                                isMuted = !globalNotificationSettings.privateChats.enabled
+                                            } else if peer is TelegramGroup {
                                                 isMuted = !globalNotificationSettings.groupChats.enabled
-                                            case .broadcast:
-                                                isMuted = !globalNotificationSettings.channels.enabled
+                                            } else if let channel = peer as? TelegramChannel {
+                                                switch channel.info {
+                                                case .group:
+                                                    isMuted = !globalNotificationSettings.groupChats.enabled
+                                                case .broadcast:
+                                                    isMuted = !globalNotificationSettings.channels.enabled
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                            if isMuted {
+                                if isMuted {
                                     peerTagAndCount[peerId] = (tag, peerCount, false, peerView.groupId, true)
                                 } else {
                                     peerTagAndCount[peerId] = (tag, peerCount, true, peerView.groupId, false)
@@ -122,9 +122,9 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                         }
                     }
                 }
-
+                
                 let totalBadge = 0
-
+                
                 for filter in filters {
                     var count = 0
                     var unmutedUnreadCount = 0
@@ -145,7 +145,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                         if data.categories.contains(.channels) {
                             tags.append(.channel)
                         }
-
+                        
                         if let totalState = totalStates[.root] {
                             for tag in tags {
                                 if data.excludeMuted {
@@ -224,14 +224,14 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                         let excludeAssociatedPeerIds = associatedPeerIds.filter({ data.excludePeers.contains($0.key) }).values.flatMap { $0 }
                         for peerId in Set(data.excludePeers).union(excludeAssociatedPeerIds) {
                             if let (tag, peerCount, _, groupIdValue, isMuted) = peerTagAndCount[peerId], peerCount != 0, let groupId = groupIdValue {
-                            var matches = false
+                                var matches = false
                                 if tags.contains(tag) {
-                                matches = true
+                                    matches = true
                                     if isMuted && data.excludeMuted {
                                         matches = false
                                     }
                                 }
-
+                                
                                 if matches {
                                     let matchesGroup: Bool
                                     switch groupId {
@@ -256,7 +256,7 @@ public func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatL
                     }
                     result.append((filter, max(0, count), unmutedUnreadCount > 0))
                 }
-
+                
                 return (totalBadge, result)
             }
         }

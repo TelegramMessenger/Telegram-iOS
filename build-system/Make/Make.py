@@ -469,6 +469,12 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
         profile_source.copy_profiles_to_destination(destination_path=additional_codesigning_output_path + '/profiles')
         profile_source.copy_certificates_to_destination(destination_path=additional_codesigning_output_path + '/certs')
 
+    if build_configuration.is_non_dev_account:
+        return ResolvedCodesigningData(
+            aps_environment="",
+            use_xcode_managed_codesigning=profile_source.use_xcode_managed_codesigning()
+        )
+
     return ResolvedCodesigningData(
         aps_environment=profile_source.resolve_aps_environment(),
         use_xcode_managed_codesigning=profile_source.use_xcode_managed_codesigning()
@@ -554,8 +560,8 @@ def generate_project(bazel, arguments):
         disable_extensions = arguments.disableExtensions
     if arguments.disableProvisioningProfiles is not None:
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
-    if arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
-        disable_extensions = True
+#    if arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
+#        disable_extensions = True
     if arguments.generateDsym is not None:
         generate_dsym = arguments.generateDsym
     if arguments.target is not None:

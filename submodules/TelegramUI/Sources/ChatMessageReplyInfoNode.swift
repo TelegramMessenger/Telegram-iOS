@@ -35,7 +35,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         let animationCache: AnimationCache?
         let animationRenderer: MultiAnimationRenderer?
         let associatedData: ChatMessageItemAssociatedData
-
+        
         init(
             presentationData: ChatPresentationData,
             strings: PresentationStrings,
@@ -118,7 +118,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             
             let message_ = arguments.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: arguments.message) : arguments.message
-
+            
             let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
             
             let placeholderColor: UIColor = arguments.message.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
@@ -172,9 +172,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let messageText: NSAttributedString
             if isText {
-                var text = arguments.message.text
-                var messageEntities = arguments.message.textEntitiesAttribute?.entities ?? []
-
+                var text = message_.text
+                var messageEntities = message_.textEntitiesAttribute?.entities ?? []
+                
                 if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty {
                     for attribute in arguments.message.attributes {
                         if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
@@ -184,7 +184,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         }
                     }
                 }
-
+                    
                 let entities = messageEntities.filter { entity in
                     if case .Strikethrough = entity.type {
                         return true

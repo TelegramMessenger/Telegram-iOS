@@ -9,7 +9,7 @@ def remove_directory(path):
     if os.path.isdir(path):
         shutil.rmtree(path)
 
-def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
+def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_startup_arguments, bazel_app_arguments, target_name):
     if '/' in target_name:
         app_target_spec = target_name.split('/')[0] + '/' + target_name.split('/')[1] + ':' + target_name.split('/')[1]
         app_target = target_name
@@ -20,6 +20,7 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
         app_target_clean = app_target.replace('/', '_')
 
     bazel_generate_arguments = [build_environment.bazel_path]
+    bazel_generate_arguments += bazel_startup_arguments
     bazel_generate_arguments += ['run', '//Telegram:Telegram_xcodeproj']
     bazel_generate_arguments += ['--override_repository=build_configuration={}'.format(configuration_path)]
     if disable_extensions:
@@ -38,6 +39,8 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
     if os.path.isfile(xcodeproj_bazelrc):
         os.unlink(xcodeproj_bazelrc)
     with open(xcodeproj_bazelrc, 'w') as file:
+        for argument in bazel_startup_arguments:
+            file.write('startup ' + argument + '\n')
         for argument in project_bazel_arguments:
             file.write('build ' + argument + '\n')
 
@@ -47,7 +50,7 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
     call_executable(['open', xcodeproj_path])
 
 
-def generate_tulsi(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
+def generate_tulsi(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_startup_arguments, bazel_app_arguments, target_name):
     project_path = os.path.join(build_environment.base_path, 'build-input/gen/project')
 
     if '/' in target_name:
@@ -183,7 +186,7 @@ def generate_tulsi(build_environment: BuildEnvironment, disable_extensions, disa
     call_executable(['open', xcodeproj_path])
 
 
-def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
-    generate_xcodeproj(build_environment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name)
-    #generate_tulsi(build_environment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name)
+def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_startup_arguments, bazel_app_arguments, target_name):
+    generate_xcodeproj(build_environment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_startup_arguments, bazel_app_arguments, target_name)
+    #generate_tulsi(build_environment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_startup_arguments, bazel_app_arguments, target_name)
 

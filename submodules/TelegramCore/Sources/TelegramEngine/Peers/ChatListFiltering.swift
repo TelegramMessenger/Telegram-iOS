@@ -519,7 +519,7 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                             }
                         }
                     }
-
+                    
                     for peer in pinnedPeers {
                         var peerId: PeerId?
                         switch peer {
@@ -559,7 +559,7 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                             }
                         }
                     }
-
+                    
                     for peer in pinnedPeers {
                         var peerId: PeerId?
                         switch peer {
@@ -893,18 +893,18 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
     }
 }
 
-struct ChatListFiltersState: Codable, Equatable {
+public struct ChatListFiltersState: Codable, Equatable {
     struct ChatListFilterUpdates: Codable, Equatable {
         struct MemberCount: Codable, Equatable {
             var id: PeerId
             var count: Int32
         }
-
+        
         var folderId: Int32
         var timestamp: Int32
         var peerIds: [PeerId]
         var memberCounts: [MemberCount]
-
+        
         init(folderId: Int32, timestamp: Int32, peerIds: [PeerId], memberCounts: [MemberCount]) {
             self.folderId = folderId
             self.timestamp = timestamp
@@ -912,14 +912,14 @@ struct ChatListFiltersState: Codable, Equatable {
             self.memberCounts = memberCounts
         }
     }
-
-    var filters: [ChatListFilter]
-    var remoteFilters: [ChatListFilter]?
+    
+    public var filters: [ChatListFilter]
+    public var remoteFilters: [ChatListFilter]?
     
     var updates: [ChatListFilterUpdates]
     
-    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil, updates: [])
-
+    public static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil, updates: [])
+    
     fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?, updates: [ChatListFilterUpdates]) {
         self.filters = filters
         self.remoteFilters = remoteFilters
@@ -941,7 +941,7 @@ struct ChatListFiltersState: Codable, Equatable {
         try container.encodeIfPresent(self.remoteFilters, forKey: "remoteFilters")
         try container.encode(self.updates, forKey: "updates")
     }
-
+    
     mutating func normalize() {
         if self.updates.isEmpty {
             return
@@ -971,9 +971,9 @@ func _internal_updateChatListFiltersInteractively(postbox: Postbox, _ f: @escapi
                 hasUpdates = true
             }
             updated = updatedFilters
-
+            
             state.normalize()
-
+            
             return PreferencesEntry(state)
         })
         if hasUpdates {

@@ -1,3 +1,5 @@
+import PtgSecretPasscodes
+
 import Foundation
 import Intents
 import TelegramPresentationData
@@ -32,6 +34,8 @@ final class UnauthorizedApplicationContext {
     let rootController: AuthorizationSequenceController
     
     let isReady = Promise<Bool>()
+    
+    let isReadyAndPresented = Promise<Bool>()
     
     var authorizationCompleted: Bool = false
 
@@ -97,7 +101,7 @@ final class AuthorizedApplicationContext {
     
     let rootController: TelegramRootController
     let notificationController: NotificationContainerController
-
+    
     private let scheduledCallPeerDisposable = MetaDisposable()
     private var scheduledOpenExternalUrl: URL?
         
@@ -127,34 +131,57 @@ final class AuthorizedApplicationContext {
     }
     
     var applicationBadge: Signal<Int32, NoError> {
+        // app badge should reflect unread count only for accounts that do not hide because this value will be out of app control when app is not running and thus it could reveal hidden account existence
+        
+        return self.context.sharedContext.allHidableAccountIds
+        |> mapToSignal { [weak self] allHidableAccountIds in
+            guard let strongSelf = self else {
+                return .single(0)
+            }
+            if !allHidableAccountIds.contains(strongSelf.context.account.id) {
+                return Self.totalUnreadCount(context: strongSelf.context)
+            } else {
+                return strongSelf.context.sharedContext.activeAccountContexts
+                |> mapToSignal { activeAccountContexts in
+                    if let context = activeAccountContexts.accounts.first(where: { !allHidableAccountIds.contains($0.0) })?.1 {
+                        return Self.totalUnreadCount(context: context)
+                    } else {
+                        return .single(0)
+                    }
+                }
+            }
+        }
+    }
+    
+    private static func totalUnreadCount(context: AccountContext) -> Signal<Int32, NoError> {
         // badge on app icon should not include unread messages from secret chats from secret passcodes
         // regardless whether they are active or not
         // inactive are already excluded, here we subtract unread messages of active secret chats
-
-        let accountId = self.context.account.id
-        let activeSecretChatData = self.context.sharedContext.ptgSecretPasscodes
+        
+        let accountId = context.account.id
+        let activeSecretChatData = context.sharedContext.ptgSecretPasscodes
         |> map { ptgSecretPasscodes in
             return ptgSecretPasscodes.activeSecretChatPeerIds(accountId: accountId)
         }
         |> distinctUntilChanged
-        |> mapToSignal { [weak self] activeSecretChatPeerIds -> Signal<([Int], [EnginePeer.NotificationSettings]), NoError> in
-            guard let strongSelf = self else {
+        |> mapToSignal { [weak context] activeSecretChatPeerIds -> Signal<([Int], [EnginePeer.NotificationSettings]), NoError> in
+            guard let context else {
                 return .complete()
             }
-            return strongSelf.context.engine.data.subscribe(EngineDataList(
+            return context.engine.data.subscribe(EngineDataList(
                 activeSecretChatPeerIds.map(TelegramEngine.EngineData.Item.Messages.PeerUnreadCount.init)
             ), EngineDataList(
                 activeSecretChatPeerIds.map(TelegramEngine.EngineData.Item.Peer.NotificationSettings.init)
             ))
         }
-
-        let totalUnreadCountDisplayCategory = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        
+        let totalUnreadCountDisplayCategory = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> map { sharedData in
             let inAppSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? .defaultSettings
             return inAppSettings.totalUnreadCountDisplayCategory
         }
         |> distinctUntilChanged
-
+        
         let activeSecretChatUnreadCount = combineLatest(activeSecretChatData, totalUnreadCountDisplayCategory)
         |> map { activeSecretChatData, totalUnreadCountDisplayCategory -> Int32 in
             let (peerUnreadCount, peerNotificationSettings) = activeSecretChatData
@@ -172,14 +199,16 @@ final class AuthorizedApplicationContext {
             return Int32(activeUnreadCount)
         }
         |> distinctUntilChanged
-
-        return combineLatest(renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine), activeSecretChatUnreadCount)
+        
+        return combineLatest(renderedTotalUnreadCount(accountManager: context.sharedContext.accountManager, engine: context.engine), activeSecretChatUnreadCount)
         |> map {
             max($0.0 - $1, 0)
         }
     }
     
     let isReady = Promise<Bool>()
+    
+    let isReadyAndPresented = Promise<Bool>()
     
     private var presentationDataDisposable: Disposable?
     private var displayAlertsDisposable: Disposable?
@@ -195,7 +224,6 @@ final class AuthorizedApplicationContext {
         self.sharedApplicationContext = sharedApplicationContext
         
         setupLegacyComponents(context: context)
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.mainWindow = mainWindow
         
@@ -204,7 +232,7 @@ final class AuthorizedApplicationContext {
         self.showCallsTab = showCallsTab
         
         self.notificationController = NotificationContainerController(context: context)
-
+        
         self.rootController = TelegramRootController(context: context)
         
         self.rootController.globalOverlayControllersUpdated = { [weak self] in
@@ -295,7 +323,9 @@ final class AuthorizedApplicationContext {
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if value {
                 Logger.shared.log("ApplicationContext", "account logged out")
-                let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: false).start()
+                let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: false, getExcludedAccountIds: { transaction in
+                    return PtgSecretPasscodes(transaction).allHidableAccountIds()
+                }).start()
                 if let strongSelf = self {
                     strongSelf.rootController.currentWindow?.forEachController { controller in
                         if let controller = controller as? TermsOfServiceController {
@@ -349,7 +379,8 @@ final class AuthorizedApplicationContext {
             }
 
             if let strongSelf = self, let (messages, _, notify, threadData) = messageList.last, let firstMessage = messages.first {
-                if UIApplication.shared.applicationState == .active {
+                // allow time for secret passcodes deactivation when app brought to foreground
+                if UIApplication.shared.applicationState == .active && !_animationsTemporarilyDisabledForCoverUp {
                     let chatLocation: NavigateToChatControllerParams.Location
                     if let _ = threadData, let threadId = firstMessage.threadId {
                         chatLocation = .replyThread(ChatReplyThreadMessage(
@@ -391,28 +422,37 @@ final class AuthorizedApplicationContext {
                     }
                     
                     if let appLockContext = strongSelf.context.sharedContext.appLockContext as? AppLockContextImpl {
-                        let _ = (combineLatest(appLockContext.isCurrentlyLocked, strongSelf.context.inactiveSecretChatPeerIds)
+                        let _ = (combineLatest(appLockContext.isCurrentlyLocked, strongSelf.context.sharedContext.ptgSecretPasscodes)
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { locked, inactiveSecretChatPeerIds in
+                        |> deliverOnMainQueue).start(next: { locked, ptgSecretPasscodes in
                             guard let strongSelf = self else {
                                 return
                             }
                             
-                            // suppress in-app notifications for inactive secret chats
-                            if inactiveSecretChatPeerIds.contains(firstMessage.id.peerId) {
-                                return
-                            }
-
                             guard !locked else {
                                 return
                             }
+                            
+                            // suppress in-app notifications for inactive secret chats
+                            let inactiveSecretChatPeerIds = ptgSecretPasscodes.inactiveSecretChatPeerIds(accountId: strongSelf.context.account.id)
+                            if inactiveSecretChatPeerIds.contains(firstMessage.id.peerId) {
+                                return
+                            }
+                            
+                            let inactiveAccountIds = ptgSecretPasscodes.inactiveAccountIds()
+                            if inactiveAccountIds.contains(strongSelf.context.account.id) {
+                                return
+                            }
+                            
+                            let allHidableSecretChatPeerIds = ptgSecretPasscodes.allSecretChatPeerIds(accountId: strongSelf.context.account.id)
+                            
                             let isMuted = firstMessage.attributes.contains(where: { attribute in
                                 if let attribute = attribute as? NotificationInfoMessageAttribute {
                                     return attribute.flags.contains(.muted)
                                 } else {
                                     return false
                                 }
-                            })
+                            }) || allHidableSecretChatPeerIds.contains(firstMessage.id.peerId)
                             if !isMuted {
                                 if firstMessage.id.peerId == context.account.peerId, !firstMessage.flags.contains(.WasScheduled) {
                                 } else {
@@ -557,7 +597,9 @@ final class AuthorizedApplicationContext {
                         (strongSelf.rootController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                     }, completed: {
                         controller?.dismiss()
-                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true).start()
+                        let _ = logoutFromAccount(id: accountId, accountManager: accountManager, alreadyLoggedOutRemotely: true, getExcludedAccountIds: { transaction in
+                            return PtgSecretPasscodes(transaction).allHidableAccountIds()
+                        }).start()
                     })
                 }
                 
@@ -742,7 +784,9 @@ final class AuthorizedApplicationContext {
                     if isDropAuth {
                         actions = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.LogoutOptions_LogOut, action: {
                             if let strongSelf = self {
-                                let _ = logoutFromAccount(id: strongSelf.context.account.id, accountManager: strongSelf.context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
+                                let _ = logoutFromAccount(id: strongSelf.context.account.id, accountManager: strongSelf.context.sharedContext.accountManager, alreadyLoggedOutRemotely: false, getExcludedAccountIds: { transaction in
+                                    return PtgSecretPasscodes(transaction).allHidableAccountIds()
+                                }).start()
                             }
                         })]
                     } else {
@@ -762,10 +806,10 @@ final class AuthorizedApplicationContext {
         })
        
         let importableContacts = self.context.sharedContext.contactDataManager?.importable() ?? .single([:])
-        self.context.account.importableContacts.set(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings])
-        |> mapToSignal { preferences -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
+        self.context.account.importableContacts.set(combineLatest(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), self.context.isHidable)
+        |> mapToSignal { preferences, isHidableAccount -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
             let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? .defaultSettings
-            if settings.synchronizeContacts {
+            if settings.synchronizeContacts && !isHidableAccount {
                 return importableContacts
             } else {
                 return .single([:])
@@ -777,7 +821,6 @@ final class AuthorizedApplicationContext {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
-                    strongSelf.lockedCoveringView.updateTheme(presentationData.theme)
                     strongSelf.rootController.updateTheme(NavigationControllerTheme(presentationTheme: presentationData.theme))
                 }
             }
@@ -929,7 +972,7 @@ final class AuthorizedApplicationContext {
                 guard let peer = peer else {
                     return
                 }
-
+                
                 let chatLocation: NavigateToChatControllerParams.Location
                 if let threadId = threadId {
                     chatLocation = .replyThread(ChatReplyThreadMessage(
@@ -938,7 +981,7 @@ final class AuthorizedApplicationContext {
                 } else {
                     chatLocation = .peer(peer)
                 }
-
+                
                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) } : nil, activateInput: activateInput ? .text : nil))
             })
         }
@@ -968,10 +1011,10 @@ final class AuthorizedApplicationContext {
     }
     
     func switchAccount() {
-        let _ = (activeAccountsAndPeers(context: self.context)
+        let _ = (combineLatest(activeAccountsAndPeers(context: self.context), self.context.sharedContext.allHidableAccountIds)
         |> take(1)
-        |> map { primaryAndAccounts -> (AccountContext, EnginePeer, Int32)? in
-            return primaryAndAccounts.1.first
+        |> map { primaryAndAccounts, allHidableAccountIds -> (AccountContext, EnginePeer, Int32)? in
+            return primaryAndAccounts.1.first { !allHidableAccountIds.contains($0.0.account.id) }
         }
         |> map { accountAndPeer -> AccountContext? in
             if let (context, _, _) = accountAndPeer {

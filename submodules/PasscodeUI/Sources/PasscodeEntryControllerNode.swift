@@ -1,3 +1,5 @@
+import AppLockState
+
 import Foundation
 import UIKit
 import Display
@@ -63,7 +65,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
     
     var energyUsageSettings: EnergyUsageSettings = .default
     var energyUsageSettingsDisposable: Disposable?
-
+    
     init(accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, modalPresentation: Bool) {
         self.accountManager = accountManager
         self.presentationData = presentationData
@@ -77,7 +79,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         
         self.coverNode = ASDisplayNode()
         self.coverNode.backgroundColor = .black
-
+        
         self.backgroundImageNode = ASImageNode()
         self.backgroundImageNode.contentMode = .scaleToFill
 
@@ -142,7 +144,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         self.deleteButtonNode.setTitle(strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
         self.deleteButtonNode.accessibilityLabel = strings.Common_Delete
         self.deleteButtonNode.accessibilityTraits = [.button]
-
+        
         if let biometricsType = self.biometricsType {
             switch biometricsType {
                 case .touchId:
@@ -166,7 +168,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         if self.arguments.cancel != nil {
             self.addSubnode(self.cancelButtonNode)
         }
-
+        
         self.energyUsageSettingsDisposable = (accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             guard let self else {
@@ -181,7 +183,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         })
     }
-
+    
     deinit {
         self.energyUsageSettingsDisposable?.dispose()
     }
@@ -214,7 +216,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         }
     }
-
+    
     @objc private func biometricsPressed() {
         self.requestBiometrics?()
     }
@@ -235,7 +237,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         }
     }
     
-    public static func background(size: CGSize, wallpaper: TelegramWallpaper, theme: PresentationTheme, accountManager: AccountManager<TelegramAccountManagerTypes>) -> PasscodeBackground {
+    public static func background(size: CGSize, wallpaper: TelegramWallpaper, theme: PresentationTheme, accountManager: AccountManager<TelegramAccountManagerTypes>, coverNode: ASDisplayNode? = nil) -> PasscodeBackground {
         switch wallpaper {
             case let .color(colorValue):
                 let color = UIColor(argb: colorValue)
@@ -262,42 +264,43 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
                     color3 = baseColor.withMultiplied(hue: 1.029, saturation: 0.729, brightness: 1.231)
                     color4 = baseColor.withMultiplied(hue: 1.034, saturation: 0.583, brightness: 1.043)
                 }
-                self.coverNode.backgroundColor = color3
-                self.background = CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
+                coverNode?.backgroundColor = color3
+                return CustomPasscodeBackground(size: size, colors: [color1, color2, color3, color4], inverted: false)
             case let .gradient(gradient):
-                self.coverNode.backgroundColor = gradient.colors.first.flatMap { UIColor(rgb: $0) }
-                self.background = CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
+                coverNode?.backgroundColor = gradient.colors.first.flatMap { UIColor(rgb: $0) }
+                return CustomPasscodeBackground(size: size, colors: gradient.colors.compactMap { UIColor(rgb: $0) }, inverted: (gradient.settings.intensity ?? 0) < 0)
             case .image, .file:
-                if let image = chatControllerBackgroundImage(theme: self.theme, wallpaper: self.wallpaper, mediaBox: self.accountManager.mediaBox, composed: false, knockoutMode: false) {
-                    self.coverNode.backgroundColor = .black
-                    self.background = ImageBasedPasscodeBackground(image: image, size: size)
+                if let image = chatControllerBackgroundImage(theme: theme, wallpaper: wallpaper, mediaBox: accountManager.mediaBox, composed: false, knockoutMode: false) {
+                    coverNode?.backgroundColor = .black
+                    return ImageBasedPasscodeBackground(image: image, size: size)
                 } else {
-                    if case let .file(file) = self.wallpaper, !file.settings.colors.isEmpty {
-                        self.coverNode.backgroundColor = file.settings.colors.last.flatMap { UIColor(rgb: $0) }
-                        self.background = CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
+                    if case let .file(file) = wallpaper, !file.settings.colors.isEmpty {
+                        coverNode?.backgroundColor = file.settings.colors.last.flatMap { UIColor(rgb: $0) }
+                        return CustomPasscodeBackground(size: size, colors: file.settings.colors.compactMap { UIColor(rgb: $0) }, inverted: (file.settings.intensity ?? 0) < 0)
                     } else {
-                        self.coverNode.backgroundColor = self.theme.passcode.backgroundColors.bottomColor
-                        self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
+                        coverNode?.backgroundColor = theme.passcode.backgroundColors.bottomColor
+                        return GradientPasscodeBackground(size: size, backgroundColors: theme.passcode.backgroundColors.colors, buttonColor: theme.passcode.buttonColor)
                     }
                 }
             default:
-                self.coverNode.backgroundColor = self.theme.passcode.backgroundColors.bottomColor
-                self.background = GradientPasscodeBackground(size: size, backgroundColors: self.theme.passcode.backgroundColors.colors, buttonColor: self.theme.passcode.buttonColor)
+                coverNode?.backgroundColor = theme.passcode.backgroundColors.bottomColor
+                return GradientPasscodeBackground(size: size, backgroundColors: theme.passcode.backgroundColors.colors, buttonColor: theme.passcode.buttonColor)
+        }
     }
-
+    
     func updateBackground() {
         guard let validLayout = self.validLayout else {
             return
         }
-
+        
         let size = validLayout.size
         // added fix to prevent transparent passcode lock screen when rotating device
         if let background = self.background, background.size == size || background.makeBackgroundNode() is GradientBackgroundNode {
             return
         }
-
-        self.background = Self.background(size: size, wallpaper: self.wallpaper, theme: self.theme, accountManager: self.accountManager)
-
+        
+        self.background = Self.background(size: size, wallpaper: self.wallpaper, theme: self.theme, accountManager: self.accountManager, coverNode: self.coverNode)
+        
         if let background = self.background {
             self.backgroundCustomNode?.removeFromSupernode()
             self.backgroundCustomNode = nil
@@ -324,14 +327,16 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
     private func shouldWaitBeforeNextAttempt() -> Bool {
         if let attempts = self.invalidAttempts {
             if attempts.count >= 6 {
-                var bootTimestamp: Int32 = 0
-                let uptime = getDeviceUptimeSeconds(&bootTimestamp)
+                let timestamp = MonotonicTimestamp()
                 
-                if attempts.bootTimestamp != bootTimestamp {
+                if attempts.bootTimestamp.absDiff(with: timestamp.bootTimestamp) > 0.1 {
+                    return true
+                }
+                if timestamp.uptime < attempts.uptime {
                     return true
                 }
                 
-                if uptime - attempts.uptime < waitInterval {
+                if timestamp.uptime - attempts.uptime < waitInterval {
                     return true
                 } else {
                     return false
@@ -391,7 +396,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
             if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode {
                 gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-
+                
                 if self.energyUsageSettings.fullTranslucency {
                     gradientNode.animateEvent(transition: .animated(duration: 1.0, curve: .spring), extendAnimation: true, backwards: false, completion: {})
                 }
@@ -402,7 +407,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
     
     func animateIn(iconFrame: CGRect, completion: @escaping () -> Void = {}) {
         self.coverNode.isHidden = true
-
+        
         let effect = self.theme.overallDarkAppearance ? UIBlurEffect(style: .dark) : UIBlurEffect(style: .light)
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
@@ -413,11 +418,12 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         })
         self.backgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         if let gradientNode = self.backgroundCustomNode as? GradientBackgroundNode, self.energyUsageSettings.fullTranslucency {
-            gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            // animation here disabled to avoid flickering
+//            gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             if self.energyUsageSettings.fullTranslucency {
                 gradientNode.animateEvent(transition: .animated(duration: 0.35, curve: .spring), extendAnimation: false, backwards: false, completion: {})
             }
-            self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+//            self.backgroundDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         if !iconFrame.isEmpty {
             self.iconNode.animateIn(fromScale: 0.416)
@@ -437,7 +443,7 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
         
         self.titleNode.setAttributedText(NSAttributedString(string: self.strings.Passcode_AppLockedAlert.replacingOccurrences(of: "\n", with: " "), font: titleFont, textColor: .white), animation: .slideIn, completion: {
             self.coverNode.isHidden = false
-
+            
             self.subtitleNode.isHidden = false
             self.inputFieldNode.isHidden = false
             self.keyboardNode.isHidden = false
@@ -500,16 +506,16 @@ public final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         }
     }
-
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
         self.updateBackground()
-
+        
         let maxSide = max(layout.size.width, layout.size.height)
         let coverSize = CGSize(width: maxSide, height: maxSide)
         transition.updateFrame(node: self.coverNode, frame: CGRect(origin: CGPoint(x: round((layout.size.width - coverSize.width) / 2.0), y: round((layout.size.height - coverSize.height) / 2.0)), size: coverSize))
-
+            
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
         transition.updateFrame(node: self.backgroundImageNode, frame: bounds)
         transition.updateFrame(node: self.backgroundDimNode, frame: bounds)

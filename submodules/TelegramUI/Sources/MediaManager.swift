@@ -188,8 +188,6 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
-    var animationsTemporarilyDisabledForCoverUp: (() -> Bool)?
-
     init(accountManager: AccountManager<TelegramAccountManagerTypes>, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
         self.accountManager = accountManager
         self.inForeground = inForeground
@@ -507,7 +505,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                                     continueInstantVideoLoopAfterFinish = playlist.context.sharedContext.energyUsageSettings.autoplayVideo
                                     controlPlaybackWithProximity = playlist.context.sharedContext.currentMediaInputSettings.with({ $0.enableRaiseToSpeak })
                                 }
-
+                                
                                 let voiceMediaPlayer = SharedMediaPlayer(mediaManager: strongSelf, inForeground: strongSelf.inForeground, account: account, audioSession: strongSelf.audioSession, overlayMediaManager: strongSelf.overlayMediaManager, playlist: playlist, initialOrder: .reversed, initialLooping: .none, initialPlaybackRate: settings.voicePlaybackRate, playerIndex: nextPlayerIndex, controlPlaybackWithProximity: controlPlaybackWithProximity, type: type, continueInstantVideoLoopAfterFinish: continueInstantVideoLoopAfterFinish)
                                 strongSelf.voiceMediaPlayer = voiceMediaPlayer
                                 voiceMediaPlayer.playedToEnd = { [weak voiceMediaPlayer] in
@@ -522,7 +520,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                                         strongSelf.voiceMediaPlayer = nil
                                     }
                                 }
-
+                                
                                 var control = control
                                 if case .seek = control {
                                 } else if let timestamp = storedState?.timestamp {
@@ -550,7 +548,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                                         strongSelf.musicMediaPlayer = nil
                                     }
                                 }
-
+                                
                                 var control = control
                                 if case .seek = control {
                                 } else if let timestamp = storedState?.timestamp {

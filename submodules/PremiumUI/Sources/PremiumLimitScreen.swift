@@ -125,7 +125,7 @@ private class PremiumLimitAnimationComponent: Component {
             
             self.activeBackground = SimpleLayer()
             self.activeBackground.anchorPoint = CGPoint()
-
+            
             self.badgeView = UIView()
             self.badgeView.alpha = 0.0
             
@@ -253,7 +253,7 @@ private class PremiumLimitAnimationComponent: Component {
             
             let activityPosition: CGFloat = floor(containerFrame.width * component.badgeGraphPosition)
             let activeWidth: CGFloat = containerFrame.width - activityPosition
-
+            
             if !component.isPremiumDisabled {
                 self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight))
                 self.activeContainer.frame = CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight))
@@ -394,7 +394,7 @@ private class PremiumLimitAnimationComponent: Component {
                     lineNewValue = -self.activeContainer.bounds.width * 0.35
                 }
                 self.activeBackground.position = CGPoint(x: lineNewValue, y: 0.0)
-
+                
                 let badgeAnimation = CABasicAnimation(keyPath: "position.x")
                 badgeAnimation.duration = 4.5
                 badgeAnimation.fromValue = badgePreviousValue
@@ -605,17 +605,17 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                 )
                 
                 let activityPosition = floor(context.availableSize.width * component.badgeGraphPosition)
-
+                
                 var inactiveTitleOpacity: CGFloat = 1.0
                 var inactiveValueOpacity: CGFloat = 1.0
-
+                
                 if 12.0 + inactiveValue.size.width + 4.0 + inactiveTitle.size.width + 12.0 >= activityPosition - 8.0 {
                     inactiveTitleOpacity = 0.0
                     if 12.0 + inactiveValue.size.width + 12.0 >= activityPosition - 8.0 {
                         inactiveValueOpacity = 0.0
                     }
                 }
-
+                
                 context.add(inactiveTitle
                     .position(CGPoint(x: inactiveTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
                     .opacity(inactiveTitleOpacity)
@@ -800,7 +800,7 @@ private final class LimitSheetContent: CombinedComponent {
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                     badgeGraphPosition = badgePosition
-
+                
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxChatsInFolderNoPremiumText("\(limit)").string
@@ -819,7 +819,7 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
                     }
                     badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-
+                
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxChannelsNoPremiumText("\(limit)").string
@@ -828,11 +828,11 @@ private final class LimitSheetContent: CombinedComponent {
                     /*let count: Int32 = 5 + Int32("".count)// component.count
                     let limit: Int32 = 5 + Int32("".count)//state.limits.maxSharedFolderInviteLinks
                     let premiumLimit: Int32 = 100 + Int32("".count)//state.premiumLimits.maxSharedFolderInviteLinks*/
-
+                
                     let count: Int32 = component.count
                     let limit: Int32 = state.limits.maxSharedFolderInviteLinks
                     let premiumLimit: Int32 = state.premiumLimits.maxSharedFolderInviteLinks
-
+                
                     iconName = "Premium/Link"
                     badgeText = "\(count)"
                     string = count >= premiumLimit ? strings.Premium_MaxSharedFolderLinksFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderLinksText("\(limit)", "\(premiumLimit)").string
@@ -844,12 +844,12 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeGraphPosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
                     }
                     badgePosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
-
+                
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxSharedFolderLinksNoPremiumText("\(limit)").string
                     }
-
+                
                     buttonAnimationName = nil
                 case .membershipInSharedFolders:
                     let limit = state.limits.maxSharedFolderJoin
@@ -865,12 +865,12 @@ private final class LimitSheetContent: CombinedComponent {
                         badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
                     }
                     badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-
+                
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxSharedFolderMembershipNoPremiumText("\(limit)").string
                     }
-
+                
                     buttonAnimationName = nil
                 case .pins:
                     let limit = state.limits.maxPinnedChatCount
@@ -882,7 +882,7 @@ private final class LimitSheetContent: CombinedComponent {
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                     badgeGraphPosition = badgePosition
-
+                
                     if isPremiumDisabled {
                         badgeText = "\(limit)"
                         string = strings.Premium_MaxPinsNoPremiumText("\(limit)").string
@@ -911,11 +911,12 @@ private final class LimitSheetContent: CombinedComponent {
                     string = component.count >= premiumLimit ? strings.Premium_MaxAccountsFinalText("\(premiumLimit)").string : strings.Premium_MaxAccountsText("\(limit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    if component.count == limit {
-                        badgePosition = 0.5
-                    } else {
-                        badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
-                    }
+//                    if component.count == limit {
+//                        badgePosition = 0.5
+//                    } else {
+//                        badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
+//                    }
+                    badgePosition = 1.0
                     badgeGraphPosition = badgePosition
                     buttonAnimationName = "premium_addone"
                 

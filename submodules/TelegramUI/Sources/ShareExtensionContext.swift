@@ -66,7 +66,7 @@ public struct ShareRootControllerInitializationData {
     public let appVersion: String
     public let bundleData: Data?
     public let useBetaFeatures: Bool
-
+    
     public init(appBundleId: String, appBuildType: TelegramAppBuildType, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?, useBetaFeatures: Bool) {
         self.appBundleId = appBundleId
         self.appBuildType = appBuildType
@@ -122,7 +122,7 @@ public class ShareRootControllerImpl {
     private weak var navigationController: NavigationController?
     
     private let isAppLocked: Bool
-
+    
     public init(initializationData: ShareRootControllerInitializationData, getExtensionContext: @escaping () -> NSExtensionContext?, isAppLocked: Bool) {
         self.initializationData = initializationData
         self.getExtensionContext = getExtensionContext
@@ -219,7 +219,7 @@ public class ShareRootControllerImpl {
             let internalContext: InternalContext
             
             let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
-
+            
             initializeAccountManagement()
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
@@ -234,12 +234,15 @@ public class ShareRootControllerImpl {
                 semaphore.signal()
             })
             semaphore.wait()
-
+            
             initialPresentationDataAndSettings = initialPresentationDataAndSettings!.withUpdatedPtgSecretPasscodes(initialPresentationDataAndSettings!.ptgSecretPasscodes.withCheckedTimeoutUsingLockStateFile(rootPath: rootPath))
-
+            
+            var extraDelayToCatchUpChanges = false
+            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
                 internalContext.sharedContext.updatePtgSecretPasscodesPromise(.single(initialPresentationDataAndSettings!.ptgSecretPasscodes))
+                extraDelayToCatchUpChanges = true
             } else {
                 let presentationDataPromise = Promise<PresentationData>()
                 
@@ -248,6 +251,7 @@ public class ShareRootControllerImpl {
                 })
                 
                 let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: self.initializationData.useBetaFeatures, isICloudEnabled: false), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), firebaseSecretStream: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, appDelegate: nil)
+                appLockContext.sharedAccountContext = sharedContext
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -273,8 +277,8 @@ public class ShareRootControllerImpl {
                 
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
-                return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
-                    let accountRecords = Set(transaction.getRecords().map { record in
+                return combineLatest(extraDelayToCatchUpChanges ? sharedContext.activeAccountsWithInfo |> delay(0.2, queue: Queue.mainQueue()) : sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
+                    let accountRecords = Set(transaction.getRecords(initialPresentationDataAndSettings!.ptgSecretPasscodes.inactiveAccountIds()).map { record in
                         return record.id
                     })
                     let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
@@ -1107,7 +1111,7 @@ public class ShareRootControllerImpl {
                 guard let strongSelf = self else {
                     return
                 }
-
+                
                 if strongSelf.isAppLocked {
                     let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
                     let controller = standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Share_LockedTitle, text: presentationData.strings.Share_LockedDescription, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
@@ -1116,7 +1120,7 @@ public class ShareRootControllerImpl {
                     strongSelf.mainWindow?.present(controller, on: .root)
                     return
                 }
-
+                
                 displayShare()
             }
             

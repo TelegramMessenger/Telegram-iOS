@@ -226,8 +226,8 @@ public final class InitialPresentationDataAndSettings {
     public let experimentalUISettings: ExperimentalUISettings
     public let ptgSettings: PtgSettings
     public let ptgSecretPasscodes: PtgSecretPasscodes
-
-    public init(presentationData: PresentationData, automaticMediaDownloadSettings: MediaAutoDownloadSettings, autodownloadSettings: AutodownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, mediaDisplaySettings: MediaDisplaySettings, stickerSettings: StickerSettings, experimentalUISettings: ExperimentalUISettings) {
+    
+    public init(presentationData: PresentationData, automaticMediaDownloadSettings: MediaAutoDownloadSettings, autodownloadSettings: AutodownloadSettings, callListSettings: CallListSettings, inAppNotificationSettings: InAppNotificationSettings, mediaInputSettings: MediaInputSettings, mediaDisplaySettings: MediaDisplaySettings, stickerSettings: StickerSettings, experimentalUISettings: ExperimentalUISettings, ptgSettings: PtgSettings, ptgSecretPasscodes: PtgSecretPasscodes) {
         self.presentationData = presentationData
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         self.autodownloadSettings = autodownloadSettings
@@ -240,14 +240,16 @@ public final class InitialPresentationDataAndSettings {
         self.ptgSettings = ptgSettings
         self.ptgSecretPasscodes = ptgSecretPasscodes
     }
-
+    
     public func withUpdatedPtgSecretPasscodes(_ ptgSecretPasscodes: PtgSecretPasscodes) -> InitialPresentationDataAndSettings {
-        return InitialPresentationDataAndSettings(presentationData: self.presentationData, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, autodownloadSettings: self.autodownloadSettings, callListSettings: self.callListSettings, inAppNotificationSettings: self.inAppNotificationSettings, mediaInputSettings: self.mediaInputSettings, experimentalUISettings: self.experimentalUISettings, ptgSettings: self.ptgSettings, ptgSecretPasscodes: ptgSecretPasscodes)
+        return InitialPresentationDataAndSettings(presentationData: self.presentationData, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, autodownloadSettings: self.autodownloadSettings, callListSettings: self.callListSettings, inAppNotificationSettings: self.inAppNotificationSettings, mediaInputSettings: self.mediaInputSettings, mediaDisplaySettings: self.mediaDisplaySettings, stickerSettings: self.stickerSettings, experimentalUISettings: self.experimentalUISettings, ptgSettings: self.ptgSettings, ptgSecretPasscodes: ptgSecretPasscodes)
     }
 }
 
 public func currentPresentationDataAndSettings(accountManager: AccountManager<TelegramAccountManagerTypes>, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<InitialPresentationDataAndSettings, NoError> {
     struct InternalData {
+        var ptgSettings: PreferencesEntry?
+        var ptgSecretPasscodes: PreferencesEntry?
         var localizationSettings: PreferencesEntry?
         var presentationThemeSettings: PreferencesEntry?
         var automaticMediaDownloadSettings: PreferencesEntry?
@@ -259,8 +261,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         var experimentalUISettings: PreferencesEntry?
         var contactSynchronizationSettings: PreferencesEntry?
         var stickerSettings: PreferencesEntry?
-
+        
         init(
+            ptgSettings: PreferencesEntry?,
+            ptgSecretPasscodes: PreferencesEntry?,
             localizationSettings: PreferencesEntry?,
             presentationThemeSettings: PreferencesEntry?,
             automaticMediaDownloadSettings: PreferencesEntry?,
@@ -273,6 +277,8 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             contactSynchronizationSettings: PreferencesEntry?,
             stickerSettings: PreferencesEntry?
         ) {
+            self.ptgSettings = ptgSettings
+            self.ptgSecretPasscodes = ptgSecretPasscodes
             self.localizationSettings = localizationSettings
             self.presentationThemeSettings = presentationThemeSettings
             self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
@@ -286,8 +292,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
             self.stickerSettings = stickerSettings
         }
     }
-
+    
     return accountManager.transaction { transaction -> InternalData in
+        let ptgSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.ptgSettings)
+        let ptgSecretPasscodes = transaction.getSharedData(ApplicationSpecificSharedDataKeys.ptgSecretPasscodes)
         let localizationSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)
         let presentationThemeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings)
         let automaticMediaDownloadSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings)
@@ -299,8 +307,10 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         let experimentalUISettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings)
         let contactSynchronizationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)
         let stickerSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings)
-
+        
         return InternalData(
+            ptgSettings: ptgSettings,
+            ptgSecretPasscodes: ptgSecretPasscodes,
             localizationSettings: localizationSettings,
             presentationThemeSettings: presentationThemeSettings,
             automaticMediaDownloadSettings: automaticMediaDownloadSettings,
@@ -371,7 +381,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         } else {
             mediaDisplaySettings = MediaDisplaySettings.defaultSettings
         }
-
+        
         let stickerSettings: StickerSettings
         if let value = internalData.stickerSettings?.get(StickerSettings.self) {
             stickerSettings = value
@@ -380,7 +390,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         }
         
         let experimentalUISettings: ExperimentalUISettings = internalData.experimentalUISettings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-
+        
         let contactSettings: ContactSynchronizationSettings = internalData.contactSynchronizationSettings?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
         
         let effectiveTheme: PresentationThemeReference
@@ -427,7 +437,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager<Te
         
         let chatBubbleCorners = PresentationChatBubbleCorners(mainRadius: CGFloat(themeSettings.chatBubbleSettings.mainRadius), auxiliaryRadius: CGFloat(themeSettings.chatBubbleSettings.auxiliaryRadius), mergeBubbleCorners: themeSettings.chatBubbleSettings.mergeBubbleCorners)
         
-        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, mediaDisplaySettings: mediaDisplaySettings, stickerSettings: stickerSettings, experimentalUISettings: experimentalUISettings)
+        return InitialPresentationDataAndSettings(presentationData: PresentationData(strings: stringsValue, theme: theme, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji), automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, callListSettings: callListSettings, inAppNotificationSettings: inAppNotificationSettings, mediaInputSettings: mediaInputSettings, mediaDisplaySettings: mediaDisplaySettings, stickerSettings: stickerSettings, experimentalUISettings: experimentalUISettings, ptgSettings: PtgSettings(internalData.ptgSettings), ptgSecretPasscodes: PtgSecretPasscodes(internalData.ptgSecretPasscodes))
     }
 }
 
@@ -556,11 +566,11 @@ public func automaticEnergyUsageShouldBeOn(settings: MediaAutoDownloadSettings) 
     } else {
         return Signal { subscriber in
             subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
-
+            
             let observer = NotificationCenter.default.addObserver(forName: UIDevice.batteryLevelDidChangeNotification, object: nil, queue: OperationQueue.main, using: { _ in
                 subscriber.putNext(automaticEnergyUsageShouldBeOnNow(settings: settings))
             })
-
+            
             return ActionDisposable {
                 NotificationCenter.default.removeObserver(observer)
             }
@@ -724,6 +734,13 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
 }
 
 public func updatedPresentationData(accountManager: AccountManager<TelegramAccountManagerTypes>, applicationInForeground: Signal<Bool, NoError>, systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>) -> Signal<PresentationData, NoError> {
+    // made adjustments to reduce number of unneeded updates reported by this signal
+    
+    let systemUserInterfaceStyle = combineLatest(systemUserInterfaceStyle, applicationInForeground)
+    |> filter { $0.1 }
+    |> map { $0.0 }
+    |> distinctUntilChanged
+    
     return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.presentationThemeSettings, ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), systemUserInterfaceStyle)
     |> mapToSignal { sharedData, systemUserInterfaceStyle -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
@@ -749,12 +766,13 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
             currentWallpaper = theme.chat.defaultWallpaper
         }
         
-        return (.single(defaultServiceBackgroundColor)
-        |> then(chatServiceBackgroundColor(wallpaper: currentWallpaper, mediaBox: accountManager.mediaBox)))
-        |> mapToSignal { serviceBackgroundColor in
-            return applicationInForeground
-            |> mapToSignal { inForeground -> Signal<PresentationData, NoError> in
-                if inForeground {
+        // hack to use value from 'then' immediately if it is available synchronously
+        return combineLatest(.single(defaultServiceBackgroundColor)
+        |> then(chatServiceBackgroundColor(wallpaper: currentWallpaper, mediaBox: accountManager.mediaBox)), .single(0))
+        |> mapToSignal { serviceBackgroundColor, _ in
+//            return applicationInForeground
+//            |> mapToSignal { inForeground -> Signal<PresentationData, NoError> in
+//                if inForeground {
                     return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, systemUserInterfaceStyle: systemUserInterfaceStyle)
                     |> distinctUntilChanged
                     |> map { autoNightModeTriggered in
@@ -794,7 +812,7 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         if case .builtin = effectiveChatWallpaper {
                             effectiveChatWallpaper = defaultBuiltinWallpaper(data: .legacy, colors: legacyBuiltinWallpaperGradientColors.map(\.rgb))
                         }
-
+                        
                         if let colors = effectiveColors, colors.baseColor == .theme {
                             effectiveColors = nil
                         }
@@ -837,10 +855,10 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         
                         return PresentationData(strings: stringsValue, theme: themeValue, autoNightModeTriggered: autoNightModeTriggered, chatWallpaper: effectiveChatWallpaper, chatFontSize: chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: listsFontSize, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, nameSortOrder: nameSortOrder, reduceMotion: themeSettings.reduceMotion, largeEmoji: themeSettings.largeEmoji)
                     }
-                } else {
-                    return .complete()
-                }
-            }
+//                } else {
+//                    return .complete()
+//                }
+//            }
         }
     }
 }

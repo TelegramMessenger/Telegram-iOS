@@ -220,12 +220,13 @@ public func galleryItemForEntry(
                         }
                     }
                 }
-
+                
                 if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: file.duration.flatMap(Double.init)) {
                     entities = result
                 }
                                 
-                let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities, message: message)
+                let (text_, entities_) = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: text, entities: entities, media: message.media) : (text, entities)
+                let caption = galleryCaptionStringWithAppliedEntities(text_, entities: entities_, message: message)
                 return UniversalVideoGalleryItem(
                     context: context,
                     presentationData: presentationData,
@@ -411,7 +412,7 @@ private enum GalleryMessageHistoryView {
             return view.laterId != nil
         }
     }
-
+    
     var peerIsCopyProtected: Bool {
         switch self {
         case let .view(_, peerIsCopyProtected):
@@ -520,7 +521,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
     private var screenCaptureEventsDisposable: Disposable?
     
     private let generateStoreAfterDownload: ((Message, TelegramMediaFile) -> (() -> Void)?)?
-
+    
     public var centralItemUpdated: ((MessageId) -> Void)?
     public var onDidAppear: (() -> Void)?
     public var useSimpleAnimation: Bool = false
@@ -547,7 +548,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: file), peerId: message.id.peerId).start()
             }
         }
-
+        
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var performActionImpl: ((GalleryControllerInteractionTapAction) -> Void)?
@@ -666,7 +667,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 if let strongSelf = self {
                     if let view = view {
                         strongSelf.peerIsCopyProtected = view.peerIsCopyProtected
-
+                        
                         let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                         let configuration = GalleryConfiguration.with(appConfiguration: appConfiguration)
                         strongSelf.configuration = configuration
@@ -1164,7 +1165,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
         if let chatController = self.baseNavigationController?.topViewController as? ChatController {
             chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
         }
-
+        
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
             let message = self.entries[centralItemNode.index].message
             if let (media, _) = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media), !forceAway {
@@ -1213,7 +1214,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 })
             }
         })
-
+        
         let disableTapNavigation = !(self.context.sharedContext.currentMediaDisplaySettings.with { $0 }.showNextMediaOnTap)
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction, disableTapNavigation: disableTapNavigation)
         self.displayNodeDidLoad()
@@ -1248,7 +1249,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 if let chatController = strongSelf.baseNavigationController?.topViewController as? ChatController {
                     chatController.updatePushedTransition(0.0, transition: .animated(duration: 0.45, curve: .customSpring(damping: 180.0, initialVelocity: 0.0)))
                 }
-
+                
                 strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
                 })
             }
@@ -1314,7 +1315,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 var hiddenItem: (MessageId, Media)?
                 if let index = index {
                     let message = strongSelf.entries[index].message
-
+                                        
                     strongSelf.centralEntryStableId = message.stableId
                     if let (media, _) = mediaForMessage(message: message) {
                         hiddenItem = (message.id, media)
@@ -1520,7 +1521,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
         }
         
         self.accountInUseDisposable.set(self.context.sharedContext.setAccountUserInterfaceInUse(self.context.account.id))
-
+        
         self.actionInteraction?.updateCanReadHistory(false)
     }
     

@@ -202,7 +202,7 @@ final class PeerInfoScreenData {
     let threadData: MessageHistoryThreadData?
     let appConfiguration: AppConfiguration?
     let isPowerSavingEnabled: Bool?
-
+    
     init(
         peer: Peer?,
         chatPeer: Peer?,
@@ -458,7 +458,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         }
     )
     |> distinctUntilChanged
-
+    
     return combineLatest(
         context.account.viewTracker.peerView(peerId, updateData: true),
         accountsAndPeers,
@@ -480,9 +480,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         |> mapToSignal { settings -> Signal<Bool, NoError> in
             return automaticEnergyUsageShouldBeOn(settings: settings)
         }
-        |> distinctUntilChanged
+        |> distinctUntilChanged,
+        context.sharedContext.ptgSettings
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, ptgSettings -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -503,7 +504,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         if suggestions.contains(.setupPassword), let hasPassword, !hasPassword {
             suggestPasswordSetup = true
         }
-
+        
         let peer = peerView.peers[peerId]
         let globalSettings = TelegramGlobalSettings(
             suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber),
@@ -556,7 +557,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: isSettings)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
         let wasUpgradedGroup = Atomic<Bool?>(value: nil)
-
+        
         switch inputData {
         case .none, .settings:
             return .single(PeerInfoScreenData(
@@ -930,7 +931,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 threadData,
                 context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> Signal<PeerInfoScreenData, NoError> in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, ptgSettings, threadData, preferencesView -> Signal<PeerInfoScreenData, NoError> in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -951,7 +952,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     if group.migrationReference != nil, let previousValue, !previousValue {
                         return .never()
                     }
-
+                    
                     if case .creator = group.role {
                         canManageInvitations = true
                     } else if case let .admin(rights, _) = group.role, rights.rights.contains(.canInviteUsers) {
@@ -1362,7 +1363,7 @@ func peerInfoIsChatMuted(peer: Peer?, peerNotificationSettings: TelegramPeerNoti
         }
         return peerIsMuted
     }
-
+    
     var chatIsMuted = false
     if let threadNotificationSettings {
         if case .muted = threadNotificationSettings.muteState {

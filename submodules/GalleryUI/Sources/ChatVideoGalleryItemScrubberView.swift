@@ -24,7 +24,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private let infoNode: ASTextNode
     private let scrubberNode: MediaPlayerScrubbingNode
     private let shimmerEffectNode: ShimmerEffectForegroundNode
-
+    
     private let hapticFeedback = HapticFeedback()
     
     private var playbackStatus: MediaPlayerStatus?
@@ -34,7 +34,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private var scrubbingDisposable = MetaDisposable()
     private var chapterDisposable = MetaDisposable()
     private var loadingDisposable = MetaDisposable()
-
+    
     private var leftTimestampNodePushed = false
     private var rightTimestampNodePushed = false
     private var infoNodePushed = false
@@ -70,7 +70,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.chapters = chapters
         self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: scrubberBackgroundColor, foregroundColor: scrubberForegroundColor, bufferingColor: scrubberBufferingColor, chapters: chapters))
         self.shimmerEffectNode = ShimmerEffectForegroundNode()
-
+        
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode.alignment = .right
@@ -154,7 +154,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         transition.updateAlpha(node: self.leftTimestampNode, alpha: alpha)
         transition.updateAlpha(node: self.rightTimestampNode, alpha: alpha)
     }
-
+    
     private func updateScrubberVisibility(animated: Bool) {
         var collapsed = self.isCollapsed
         var alpha: CGFloat = 1.0
@@ -192,7 +192,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                     if status.duration < 1.0 {
                         strongSelf.isLoading = true
                         strongSelf.updateTimestampsVisibility(animated: true)
-
+                        
                         if strongSelf.shimmerEffectNode.supernode == nil {
                             strongSelf.scrubberNode.containerNode.addSubnode(strongSelf.shimmerEffectNode)
                         }
@@ -209,7 +209,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                     }
                 }
             }))
-
+            
             self.chapterDisposable.set((mappedStatus
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 if let strongSelf = self, status.duration > 1.0, strongSelf.chapters.count > 0 {
