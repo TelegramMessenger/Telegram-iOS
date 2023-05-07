@@ -679,6 +679,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         }
                     }
                 }), directionHint: entry.directionHint)
+            case let .EmptyChatSelectionList(presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyChatSelectionListItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
         }
     }
 }
@@ -1003,6 +1005,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         nodeInteraction.additionalCategorySelected(id)
                     }
                 ), directionHint: entry.directionHint)
+            case let .EmptyChatSelectionList(presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListEmptyChatSelectionListItem(theme: presentationData.theme, strings: presentationData.strings), directionHint: entry.directionHint)
         }
     }
 }
@@ -2143,6 +2147,9 @@ public final class ChatListNode: ListView {
             }
             if isEmpty {
                 entries = [.HeaderEntry]
+                if case .peers = mode {
+                    entries.append(.EmptyChatSelectionList(presentationData: self.currentState.presentationData))
+                }
             }
             
             let processedView = ChatListNodeView(originalList: update.list, filteredEntries: entries, isLoading: isLoading, filter: filter)
@@ -3105,7 +3112,7 @@ public final class ChatListNode: ListView {
                                 } else {
                                     break loop
                                 }
-                            case .ArchiveIntro, .EmptyIntro, .SectionHeader, .Notice, .HeaderEntry, .AdditionalCategory:
+                            case .ArchiveIntro, .EmptyIntro, .SectionHeader, .Notice, .HeaderEntry, .AdditionalCategory, .EmptyChatSelectionList:
                                 break
                             }
                         }

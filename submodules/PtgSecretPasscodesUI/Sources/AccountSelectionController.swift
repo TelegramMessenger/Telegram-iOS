@@ -71,7 +71,7 @@ private func accountSelectionControllerEntries(presentationData: PresentationDat
     return entries
 }
 
-public func accountSelectionController(context: AccountContext, areItemsDisclosable: Bool, accountSelected: @escaping (AccountContext) -> Void) -> ViewController {
+public func accountSelectionController(context: AccountContext, areItemsDisclosable: Bool, excludeAccountIds: Set<AccountRecordId>, accountSelected: @escaping (AccountContext) -> Void) -> ViewController {
     let arguments = AccountSelectionControllerArguments(selectAccount: { selectedContext in
         accountSelected(selectedContext)
     })
@@ -86,7 +86,7 @@ public func accountSelectionController(context: AccountContext, areItemsDisclosa
         })
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.SecretPasscode_AccountSelectionTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: accountSelectionControllerEntries(presentationData: presentationData, accounts: accountsAndPeers.1.map({ ($0.0, $0.1) }), areItemsDisclosable: areItemsDisclosable), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: accountSelectionControllerEntries(presentationData: presentationData, accounts: accountsAndPeers.1.map({ ($0.0, $0.1) }).filter({ !excludeAccountIds.contains($0.0.account.id) }), areItemsDisclosable: areItemsDisclosable), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }

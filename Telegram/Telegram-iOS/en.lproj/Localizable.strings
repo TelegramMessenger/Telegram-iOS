@@ -94,6 +94,8 @@
 "Share.LockedTitle" = "Unlock Telegram";
 "Share.LockedDescription" = "Open and unlock Telegram to share.";
 
+"ChatList.EmptyChatSelectionList" = "No chats to select.";
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Notifications

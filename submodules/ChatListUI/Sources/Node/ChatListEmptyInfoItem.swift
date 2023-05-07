@@ -275,3 +275,100 @@ class ChatListSectionHeaderNode: ListViewItemNode {
     }
 }
 
+class ChatListEmptyChatSelectionListItem: ListViewItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    
+    let selectable: Bool = false
+    
+    init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+    }
+    
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+        async {
+            let node = ChatListEmptyChatSelectionListItemNode()
+            
+            let (nodeLayout, apply) = node.asyncLayout()(self, params, false)
+            
+            node.insets = nodeLayout.insets
+            node.contentSize = nodeLayout.contentSize
+            
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { _ in
+                        apply()
+                    })
+                })
+            }
+        }
+    }
+    
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+        Queue.mainQueue().async {
+            assert(node() is ChatListEmptyChatSelectionListItemNode)
+            if let nodeValue = node() as? ChatListEmptyChatSelectionListItemNode {
+                let layout = nodeValue.asyncLayout()
+                async {
+                    let (nodeLayout, apply) = layout(self, params, nextItem == nil)
+                    Queue.mainQueue().async {
+                        completion(nodeLayout, { _ in
+                            apply()
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+class ChatListEmptyChatSelectionListItemNode: ListViewItemNode {
+    private var item: ChatListEmptyChatSelectionListItem?
+    
+    private let textNode: TextNode
+    
+    required init() {
+        self.textNode = TextNode()
+        
+        super.init(layerBacked: false, dynamicBounce: false)
+        
+        self.addSubnode(self.textNode)
+    }
+    
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+        let layout = self.asyncLayout()
+        let (_, apply) = layout(item as! ChatListEmptyChatSelectionListItem, params, nextItem == nil)
+        apply()
+    }
+    
+    func asyncLayout() -> (_ item: ChatListEmptyChatSelectionListItem, _ params: ListViewItemLayoutParams, _ isLast: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        
+        return { item, params, last in
+            let baseWidth = params.width - params.leftInset - params.rightInset
+            
+            let topInset: CGFloat = 24.0
+            let bottomInset: CGFloat = 24.0
+            
+            let string = NSMutableAttributedString(string: item.strings.ChatList_EmptyChatSelectionList, font: Font.medium(17.0), textColor: item.theme.list.itemSecondaryTextColor)
+            
+            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: string, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: .greatestFiniteMagnitude), alignment: .center))
+            
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: topInset + textLayout.0.size.height + bottomInset), insets: UIEdgeInsets())
+            
+            return (layout, { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.item = item
+                
+                let _ = textLayout.1()
+                strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: topInset), size: textLayout.0.size)
+                
+                strongSelf.contentSize = layout.contentSize
+                strongSelf.insets = layout.insets
+            })
+        }
+    }
+}

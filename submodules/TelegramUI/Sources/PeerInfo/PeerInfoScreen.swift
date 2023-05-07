@@ -8183,7 +8183,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                                 
                                 let _ = (updatePtgSecretPasscodes(strongSelf.context.sharedContext.accountManager, { current in
-                                    let newSecretPasscode = PtgSecretPasscode(passcode: newPasscode)
+                                    let newSecretPasscode = PtgSecretPasscode(passcode: newPasscode, active: true)
                                     return PtgSecretPasscodes(secretPasscodes: current.secretPasscodes + [newSecretPasscode])
                                 })
                                 |> deliverOnMainQueue).start(completed: { [weak self] in

@@ -127,3 +127,5 @@
 
 "Share.LockedTitle" = "Разблакіруйце Telegram";
 "Share.LockedDescription" = "Адкрыйце і разблакіруйце Telegram, каб абагуліць.";
+
+"ChatList.EmptyChatSelectionList" = "Няма чатаў для выбару.";
