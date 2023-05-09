@@ -213,7 +213,12 @@ final class StoryItemContentComponent: Component {
                             if self.videoNode != nil {
                                 self.updateVideoPlaybackProgress()
                             } else {
+                                #if DEBUG && false
+                                let currentProgressTimerLimit: Double = 5 * 60.0
+                                #else
                                 let currentProgressTimerLimit: Double = 5.0
+                                #endif
+                                
                                 var currentProgressTimerValue = self.currentProgressTimerValue + 1.0 / 60.0
                                 currentProgressTimerValue = max(0.0, min(currentProgressTimerLimit, currentProgressTimerValue))
                                 self.currentProgressTimerValue = currentProgressTimerValue

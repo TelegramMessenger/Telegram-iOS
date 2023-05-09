@@ -29,6 +29,8 @@ public final class MessageInputPanelComponent: Component {
     public let reactionAction: (UIView) -> Void
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
+    public let displayGradient: Bool
+    public let bottomInset: CGFloat
     
     public init(
         externalState: ExternalState,
@@ -41,7 +43,9 @@ public final class MessageInputPanelComponent: Component {
         attachmentAction: @escaping () -> Void,
         reactionAction: @escaping (UIView) -> Void,
         audioRecorder: ManagedAudioRecorder?,
-        videoRecordingStatus: InstantVideoControllerRecordingStatus?
+        videoRecordingStatus: InstantVideoControllerRecordingStatus?,
+        displayGradient: Bool,
+        bottomInset: CGFloat
     ) {
         self.externalState = externalState
         self.context = context
@@ -54,6 +58,8 @@ public final class MessageInputPanelComponent: Component {
         self.reactionAction = reactionAction
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
+        self.displayGradient = displayGradient
+        self.bottomInset = bottomInset
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -75,6 +81,12 @@ public final class MessageInputPanelComponent: Component {
         if lhs.videoRecordingStatus !== rhs.videoRecordingStatus {
             return false
         }
+        if lhs.displayGradient != rhs.displayGradient {
+            return false
+        }
+        if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
         return true
     }
     
@@ -83,7 +95,12 @@ public final class MessageInputPanelComponent: Component {
     }
     
     public final class View: UIView {
-        private let fieldBackgroundView: UIImageView
+        private let fieldBackgroundView: BlurredBackgroundView
+        private let vibrancyEffectView: UIVisualEffectView
+        private let gradientView: UIImageView
+        private let bottomGradientView: UIView
+        
+        private let placeholder = ComponentView<Empty>()
         
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
@@ -103,10 +120,22 @@ public final class MessageInputPanelComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            self.fieldBackgroundView = UIImageView()
+            self.fieldBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.5), enableBlur: true)
+            
+            let style: UIBlurEffect.Style = .dark
+            let blurEffect = UIBlurEffect(style: style)
+            let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
+            let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+            self.vibrancyEffectView = vibrancyEffectView
+            
+            self.gradientView = UIImageView()
+            self.bottomGradientView = UIView()
             
             super.init(frame: frame)
             
+            self.addSubview(self.bottomGradientView)
+            self.addSubview(self.gradientView)
+            self.fieldBackgroundView.addSubview(self.vibrancyEffectView)
             self.addSubview(self.fieldBackgroundView)
         }
         
@@ -136,15 +165,41 @@ public final class MessageInputPanelComponent: Component {
         }
         
         func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let baseHeight: CGFloat = 44.0
-            let insets = UIEdgeInsets(top: 5.0, left: 41.0, bottom: 5.0, right: 41.0)
-            let fieldCornerRadius: CGFloat = 16.0
+            let insets = UIEdgeInsets(top: 14.0, left: 50.0, bottom: 6.0, right: 50.0)
+            let baseFieldHeight: CGFloat = 40.0
             
             self.component = component
             self.state = state
             
-            if self.fieldBackgroundView.image == nil {
-                self.fieldBackgroundView.image = generateStretchableFilledCircleImage(diameter: fieldCornerRadius * 2.0, color: nil, strokeColor: UIColor(white: 1.0, alpha: 0.16), strokeWidth: 1.0, backgroundColor: nil)
+            let hasMediaRecording = component.audioRecorder != nil || component.videoRecordingStatus != nil
+            
+            let topGradientHeight: CGFloat = 32.0
+            if self.gradientView.image == nil {
+                let baseAlpha: CGFloat = 0.7
+                
+                self.gradientView.image = generateImage(CGSize(width: insets.left + insets.right + baseFieldHeight, height: topGradientHeight + insets.top + baseFieldHeight + insets.bottom), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    
+                    var locations: [CGFloat] = []
+                    var colors: [CGColor] = []
+                    let numStops = 10
+                    for i in 0 ..< numStops {
+                        let step = 1.0 - CGFloat(i) / CGFloat(numStops - 1)
+                        locations.append((1.0 - step))
+                        let alphaStep: CGFloat = pow(step, 1.5)
+                        colors.append(UIColor.black.withAlphaComponent(alphaStep * baseAlpha).cgColor)
+                    }
+                    
+                    if let gradient = CGGradient(colorsSpace: context.colorSpace, colors: colors as CFArray, locations: &locations) {
+                        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
+                    }
+                    
+                    context.setBlendMode(.copy)
+                    context.setFillColor(UIColor.clear.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: insets.left, y: topGradientHeight + insets.top), size: CGSize(width: baseFieldHeight, height: baseFieldHeight)).insetBy(dx: 3.0, dy: 3.0))
+                })?.resizableImage(withCapInsets: UIEdgeInsets(top: topGradientHeight + insets.top + baseFieldHeight * 0.5, left: insets.left + baseFieldHeight * 0.5, bottom: insets.bottom + baseFieldHeight * 0.5, right: insets.right + baseFieldHeight * 0.5))
+                
+                self.bottomGradientView.backgroundColor = UIColor.black.withAlphaComponent(baseAlpha)
             }
             
             let availableTextFieldSize = CGSize(width: availableSize.width - insets.left - insets.right, height: availableSize.height - insets.top - insets.bottom)
@@ -154,17 +209,45 @@ public final class MessageInputPanelComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(TextFieldComponent(
                     externalState: self.textFieldExternalState,
-                    placeholder: "Reply Privately..."
+                    placeholder: ""
+                )),
+                environment: {},
+                containerSize: availableTextFieldSize
+            )
+            
+            let placeholderSize = self.placeholder.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: "Reply Privately",
+                    font: Font.regular(17.0),
+                    color: .white
                 )),
                 environment: {},
                 containerSize: availableTextFieldSize
             )
             
             let fieldFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: availableSize.width - insets.left - insets.right, height: textFieldSize.height))
-            transition.setFrame(view: self.fieldBackgroundView, frame: fieldFrame)
-            transition.setAlpha(view: self.fieldBackgroundView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
+            transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldFrame.size))
+            transition.setAlpha(view: self.vibrancyEffectView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
             
-            //let rightFieldInset: CGFloat = 34.0
+            transition.setFrame(view: self.fieldBackgroundView, frame: fieldFrame)
+            self.fieldBackgroundView.update(size: fieldFrame.size, cornerRadius: baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)
+            
+            let gradientFrame = CGRect(origin: CGPoint(x: 0.0, y: -topGradientHeight), size: CGSize(width: availableSize.width, height: topGradientHeight + fieldFrame.maxY + insets.bottom))
+            transition.setFrame(view: self.gradientView, frame: gradientFrame)
+            transition.setFrame(view: self.bottomGradientView, frame: CGRect(origin: CGPoint(x: 0.0, y: gradientFrame.maxY), size: CGSize(width: availableSize.width, height: component.bottomInset)))
+            transition.setAlpha(view: self.gradientView, alpha: component.displayGradient ? 1.0 : 0.0)
+            transition.setAlpha(view: self.bottomGradientView, alpha: component.displayGradient ? 1.0 : 0.0)
+
+            let placeholderFrame = CGRect(origin: CGPoint(x: 16.0, y: floor((fieldFrame.height - placeholderSize.height) * 0.5)), size: placeholderSize)
+            if let placeholderView = self.placeholder.view {
+                if placeholderView.superview == nil {
+                    placeholderView.layer.anchorPoint = CGPoint()
+                    self.vibrancyEffectView.contentView.addSubview(placeholderView)
+                }
+                transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
+                placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
+            }
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height + insets.top + insets.bottom)
             
@@ -189,15 +272,15 @@ public final class MessageInputPanelComponent: Component {
                         }
                         self.component?.attachmentAction()
                     }
-                ).minSize(CGSize(width: 41.0, height: baseHeight))),
+                ).minSize(CGSize(width: 41.0, height: baseFieldHeight))),
                 environment: {},
-                containerSize: CGSize(width: 41.0, height: baseHeight)
+                containerSize: CGSize(width: 41.0, height: baseFieldHeight)
             )
             if let attachmentButtonView = self.attachmentButton.view {
                 if attachmentButtonView.superview == nil {
                     self.addSubview(attachmentButtonView)
                 }
-                transition.setFrame(view: attachmentButtonView, frame: CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5), y: size.height - baseHeight + floor((baseHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize))
+                transition.setFrame(view: attachmentButtonView, frame: CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5), y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize))
             }
             
             let inputActionButtonSize = self.inputActionButton.update(
@@ -251,7 +334,7 @@ public final class MessageInputPanelComponent: Component {
                 if inputActionButtonView.superview == nil {
                     self.addSubview(inputActionButtonView)
                 }
-                transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: size.width - insets.right + floorToScreenPixels((insets.right - inputActionButtonSize.width) * 0.5), y: size.height - baseHeight + floorToScreenPixels((baseHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
+                transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: size.width - insets.right + floorToScreenPixels((insets.right - inputActionButtonSize.width) * 0.5), y: size.height - insets.bottom - baseFieldHeight + floorToScreenPixels((baseFieldHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
             }
             var fieldIconNextX = fieldFrame.maxX - 2.0
             let stickerButtonSize = self.stickerButton.update(
@@ -279,7 +362,7 @@ public final class MessageInputPanelComponent: Component {
                 transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
                 transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
                 
-                transition.setAlpha(view: stickerButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
+                transition.setAlpha(view: stickerButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording) ? 0.0 : 1.0)
                 transition.setScale(view: stickerButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
                 
                 fieldIconNextX -= stickerButtonSize.width + 2.0
@@ -310,22 +393,17 @@ public final class MessageInputPanelComponent: Component {
                 transition.setPosition(view: reactionButtonView, position: reactionIconFrame.center)
                 transition.setBounds(view: reactionButtonView, bounds: CGRect(origin: CGPoint(), size: reactionIconFrame.size))
                 
-                transition.setAlpha(view: reactionButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
+                transition.setAlpha(view: reactionButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording) ? 0.0 : 1.0)
                 transition.setScale(view: reactionButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
                 
                 fieldIconNextX -= reactionButtonSize.width + 2.0
             }
             
-            /*if let image = self.reactionIconView.image {
-                let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - image.size.width, y: fieldFrame.minY + floor((fieldFrame.height - image.size.height) * 0.5)), size: image.size)
-                transition.setPosition(view: self.reactionIconView, position: stickerIconFrame.center)
-                transition.setBounds(view: self.reactionIconView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
-                
-                transition.setAlpha(view: self.reactionIconView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
-                transition.setScale(view: self.reactionIconView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
-                
-                fieldIconNextX -= image.size.width + 4.0
-            }*/
+            self.fieldBackgroundView.updateColor(color: self.textFieldExternalState.isEditing ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
+            transition.setAlpha(view: self.fieldBackgroundView, alpha: hasMediaRecording ? 0.0 : 1.0)
+            if let placeholderView = self.placeholder.view {
+                placeholderView.isHidden = self.textFieldExternalState.hasText
+            }
             
             component.externalState.isEditing = self.textFieldExternalState.isEditing
             component.externalState.hasText = self.textFieldExternalState.hasText
@@ -353,7 +431,8 @@ public final class MessageInputPanelComponent: Component {
                     component: AnyComponent(MediaRecordingPanelComponent(
                         audioRecorder: component.audioRecorder,
                         videoRecordingStatus: component.videoRecordingStatus,
-                        cancelFraction: self.mediaCancelFraction
+                        cancelFraction: self.mediaCancelFraction,
+                        insets: insets
                     )),
                     environment: {},
                     containerSize: size

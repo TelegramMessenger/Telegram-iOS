@@ -22,14 +22,16 @@ public final class StoryListContext {
         public let isSeen: Bool
         public let seenCount: Int
         public let seenPeers: [EnginePeer]
+        public let privacy: EngineStoryPrivacy?
         
-        public init(id: Int64, timestamp: Int32, media: EngineMedia, isSeen: Bool, seenCount: Int, seenPeers: [EnginePeer]) {
+        public init(id: Int64, timestamp: Int32, media: EngineMedia, isSeen: Bool, seenCount: Int, seenPeers: [EnginePeer], privacy: EngineStoryPrivacy?) {
             self.id = id
             self.timestamp = timestamp
             self.media = media
             self.isSeen = isSeen
             self.seenCount = seenCount
             self.seenPeers = seenPeers
+            self.privacy = privacy
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -49,6 +51,9 @@ public final class StoryListContext {
                 return false
             }
             if lhs.seenPeers != rhs.seenPeers {
+                return false
+            }
+            if lhs.privacy != rhs.privacy {
                 return false
             }
             return true
@@ -228,7 +233,8 @@ public final class StoryListContext {
                                             media: item.media,
                                             isSeen: true,
                                             seenCount: item.seenCount,
-                                            seenPeers: item.seenPeers
+                                            seenPeers: item.seenPeers,
+                                            privacy: item.privacy
                                         )
                                         itemSets[i] = PeerItemSet(
                                             peerId: itemSets[i].peerId,
@@ -307,7 +313,7 @@ public final class StoryListContext {
                                         
                                         for apiStory in apiStories {
                                             switch apiStory {
-                                            case let .storyItem(flags, id, date, _, _, media, _, recentViewers, viewCount):
+                                            case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
                                                 let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                                                 if let parsedMedia = parsedMedia {
                                                     var seenPeers: [EnginePeer] = []
@@ -318,13 +324,46 @@ public final class StoryListContext {
                                                             }
                                                         }
                                                     }
+                                                    
+                                                    var parsedPrivacy: EngineStoryPrivacy?
+                                                    if let privacy = privacy {
+                                                        var base: EngineStoryPrivacy.Base = .everyone
+                                                        var additionalPeerIds: [EnginePeer.Id] = []
+                                                        for rule in privacy {
+                                                            switch rule {
+                                                            case .privacyValueAllowAll:
+                                                                base = .everyone
+                                                            case .privacyValueAllowContacts:
+                                                                base = .contacts
+                                                            case .privacyValueAllowCloseFriends:
+                                                                base = .closeFriends
+                                                            case let .privacyValueAllowUsers(users):
+                                                                for id in users {
+                                                                    additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
+                                                                }
+                                                            case let .privacyValueAllowChatParticipants(chats):
+                                                                for id in chats {
+                                                                    if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                                        additionalPeerIds.append(peer.id)
+                                                                    } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                                        additionalPeerIds.append(peer.id)
+                                                                    }
+                                                                }
+                                                            default:
+                                                                break
+                                                            }
+                                                        }
+                                                        parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
+                                                    }
+                                                    
                                                     let item = StoryListContext.Item(
                                                         id: id,
                                                         timestamp: date,
                                                         media: EngineMedia(parsedMedia),
                                                         isSeen: (flags & (1 << 4)) == 0,
                                                         seenCount: viewCount.flatMap(Int.init) ?? 0,
-                                                        seenPeers: seenPeers
+                                                        seenPeers: seenPeers,
+                                                        privacy: parsedPrivacy
                                                     )
                                                     if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
                                                         parsedItemSets[parsedItemSets.count - 1].items.append(item)
@@ -425,7 +464,7 @@ public final class StoryListContext {
                             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(apiUserId))
                             for apiStory in apiStories {
                                 switch apiStory {
-                                case let .storyItem(flags, id, date, _, _, media, _, recentViewers, viewCount):
+                                case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
                                     let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                                     if let parsedMedia = parsedMedia {
                                         var seenPeers: [EnginePeer] = []
@@ -436,13 +475,46 @@ public final class StoryListContext {
                                                 }
                                             }
                                         }
+                                        
+                                        var parsedPrivacy: EngineStoryPrivacy?
+                                        if let privacy = privacy {
+                                            var base: EngineStoryPrivacy.Base = .everyone
+                                            var additionalPeerIds: [EnginePeer.Id] = []
+                                            for rule in privacy {
+                                                switch rule {
+                                                case .privacyValueAllowAll:
+                                                    base = .everyone
+                                                case .privacyValueAllowContacts:
+                                                    base = .contacts
+                                                case .privacyValueAllowCloseFriends:
+                                                    base = .closeFriends
+                                                case let .privacyValueAllowUsers(users):
+                                                    for id in users {
+                                                        additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
+                                                    }
+                                                case let .privacyValueAllowChatParticipants(chats):
+                                                    for id in chats {
+                                                        if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                            additionalPeerIds.append(peer.id)
+                                                        } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                            additionalPeerIds.append(peer.id)
+                                                        }
+                                                    }
+                                                default:
+                                                    break
+                                                }
+                                            }
+                                            parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
+                                        }
+                                        
                                         let item = StoryListContext.Item(
                                             id: id,
                                             timestamp: date,
                                             media: EngineMedia(parsedMedia),
                                             isSeen: (flags & (1 << 4)) == 0,
                                             seenCount: viewCount.flatMap(Int.init) ?? 0,
-                                            seenPeers: seenPeers
+                                            seenPeers: seenPeers,
+                                            privacy: parsedPrivacy
                                         )
                                         if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
                                             parsedItemSets[parsedItemSets.count - 1].items.append(item)

@@ -33,7 +33,7 @@ final class StoryAvatarInfoComponent: Component {
         private weak var state: EmptyComponentState?
         
 		override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 18.0))
             
 			super.init(frame: frame)
             

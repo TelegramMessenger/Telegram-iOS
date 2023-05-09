@@ -280,6 +280,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.scrollNode.addSubnode(self.actionsContainerNode)
         self.actionsContainerNode.addSubnode(self.additionalActionsStackNode)
         self.actionsContainerNode.addSubnode(self.actionsStackNode)
+        
+        #if DEBUG
+        //self.addSubnode(self.contentRectDebugNode)
+        #endif
 
         self.scroller.delegate = self
         
@@ -609,7 +613,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                         }
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.Chat_PremiumReactionToastTitle, undoText: presentationData.strings.Chat_PremiumReactionToastAction, customAction: { [weak controller] in
+                        let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Chat_PremiumReactionToastTitle, undoText: presentationData.strings.Chat_PremiumReactionToastAction, customAction: { [weak controller] in
                             controller?.premiumReactionsSelected?()
                         }), elevatedLayout: false, position: position, animateInAsReplacement: animateInAsReplacement, action: { _ in true })
                         strongSelf.currentUndoController = undoController

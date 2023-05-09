@@ -819,7 +819,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         }
         
         if !view.hasLater {
-            if case let .peers(_, _, additionalCategories, _, _) = mode {
+            if case let .peers(_, _, additionalCategories, _, _, _) = mode {
                 var index = 0
                 for category in additionalCategories.reversed() {
                     result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))

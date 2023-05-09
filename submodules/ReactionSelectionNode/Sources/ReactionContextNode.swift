@@ -232,7 +232,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private weak var animationTargetView: UIView?
     private var animationHideNode: Bool = false
     
+    public var displayTail: Bool = true
+    
     private var didAnimateIn: Bool = false
+    public private(set) var isAnimatingOut: Bool = false
+    public private(set) var isAnimatingOutToReaction: Bool = false
     
     public var contentHeight: CGFloat {
         return self.currentContentHeight
@@ -1179,6 +1183,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             isLeftAligned: isLeftAligned,
             isMinimized: self.highlightedReaction != nil && !self.highlightedByHover,
             isCoveredByInput: isCoveredByInput,
+            displayTail: self.displayTail,
             transition: transition
         )
         
@@ -1654,6 +1659,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func animateOut(to targetAnchorRect: CGRect?, animatingOutToReaction: Bool) {
+        self.isAnimatingOut = true
+        
         self.backgroundNode.animateOut()
         
         for (_, itemNode) in self.visibleItemNodes {
@@ -1760,6 +1767,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+        self.isAnimatingOutToReaction = true
+        
         var foundItemNode: ReactionNode?
         for (_, itemNode) in self.visibleItemNodes {
             if let itemNode = itemNode as? ReactionNode, itemNode.item.reaction.rawValue == value {

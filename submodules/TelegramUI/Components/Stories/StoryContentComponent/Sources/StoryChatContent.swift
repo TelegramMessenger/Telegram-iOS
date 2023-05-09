@@ -37,7 +37,7 @@ public enum StoryChatContent {
                                 peer: author
                             ))
                         },
-                        targetMessageId: nil,
+                        peerId: itemSet.peerId,
                         storyItem: item,
                         preload: nil,
                         delete: { [weak storyList] in

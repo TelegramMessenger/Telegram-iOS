@@ -22,7 +22,7 @@ import StoryContainerScreen
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
-    case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory], chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool)
+    case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory], chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool, displayPresence: Bool)
     case peerType(type: [ReplyMarkupButtonRequestPeerType], hasCreate: Bool)
 }
 
@@ -405,7 +405,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
                             interaction: nodeInteraction
                         ), directionHint: entry.directionHint)
-                    case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout):
+                    case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
@@ -488,7 +488,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var header: ChatListSearchItemHeader?
                         switch mode {
-                        case let .peers(_, _, additionalCategories, _, _):
+                        case let .peers(_, _, additionalCategories, _, _, _):
                             if !additionalCategories.isEmpty {
                                 let headerType: ChatListSearchItemHeaderType
                                 if case .action = additionalCategories[0].appearance {
@@ -505,7 +505,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var status: ContactsPeerItemStatus = .none
                         if isSelecting, let itemPeer = itemPeer {
-                            if let (string, multiline, isActive, icon) = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isMuted: isRemovedFromTotalUnreadCount, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, hasUnseenMentions: hasUnseenMentions, chatListFilters: filters, displayAutoremoveTimeout: displayAutoremoveTimeout, autoremoveTimeout: peerEntry.autoremoveTimeout) {
+                            if displayPresence, let presence = presence {
+                                status = .presence(presence, presentationData.dateTimeFormat)
+                            } else if let (string, multiline, isActive, icon) = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isMuted: isRemovedFromTotalUnreadCount, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, hasUnseenMentions: hasUnseenMentions, chatListFilters: filters, displayAutoremoveTimeout: displayAutoremoveTimeout, autoremoveTimeout: peerEntry.autoremoveTimeout) {
                                 status = .custom(string: string, multiline: multiline, isActive: isActive, icon: icon)
                             } else {
                                 status = .none
@@ -749,7 +751,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             hiddenOffset: threadInfo?.isHidden == true && !revealed,
                             interaction: nodeInteraction
                     ), directionHint: entry.directionHint)
-                    case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout):
+                    case let .peers(filter, isSelecting, _, filters, displayAutoremoveTimeout, displayPresence):
                         let itemPeer = peer.chatMainPeer
                         var chatPeer: EnginePeer?
                         if let peer = peer.peers[peer.peerId] {
@@ -786,7 +788,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             
                         var header: ChatListSearchItemHeader?
                         switch mode {
-                        case let .peers(_, _, additionalCategories, _, _):
+                        case let .peers(_, _, additionalCategories, _, _, _):
                             if !additionalCategories.isEmpty {
                                 let headerType: ChatListSearchItemHeaderType
                                 if case .action = additionalCategories[0].appearance {
@@ -803,7 +805,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         
                         var status: ContactsPeerItemStatus = .none
                         if isSelecting, let itemPeer = itemPeer {
-                            if let (string, multiline, isActive, icon) = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isMuted: isRemovedFromTotalUnreadCount, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, hasUnseenMentions: hasUnseenMentions, chatListFilters: filters, displayAutoremoveTimeout: displayAutoremoveTimeout, autoremoveTimeout: peerEntry.autoremoveTimeout) {
+                            if displayPresence, let presence = presence {
+                                status = .presence(presence, presentationData.dateTimeFormat)
+                            } else if let (string, multiline, isActive, icon) = statusStringForPeerType(accountPeerId: context.account.peerId, strings: presentationData.strings, peer: itemPeer, isMuted: isRemovedFromTotalUnreadCount, isUnread: combinedReadState?.isUnread ?? false, isContact: isContact, hasUnseenMentions: hasUnseenMentions, chatListFilters: filters, displayAutoremoveTimeout: displayAutoremoveTimeout, autoremoveTimeout: peerEntry.autoremoveTimeout) {
                                 status = .custom(string: string, multiline: multiline, isActive: isActive, icon: icon)
                             } else {
                                 status = .none
@@ -1191,7 +1195,7 @@ public final class ChatListNode: ListView {
         self.animationRenderer = animationRenderer
         
         var isSelecting = false
-        if case .peers(_, true, _, _, _) = mode {
+        if case .peers(_, true, _, _, _, _) = mode {
             isSelecting = true
         }
         
@@ -1555,7 +1559,7 @@ public final class ChatListNode: ListView {
         let currentRemovingItemId = self.currentRemovingItemId
         
         let savedMessagesPeer: Signal<EnginePeer?, NoError>
-        if case let .peers(filter, _, _, _, _) = mode, filter.contains(.onlyWriteable), case .chatList = location, self.chatListFilter == nil {
+        if case let .peers(filter, _, _, _, _, _) = mode, filter.contains(.onlyWriteable), case .chatList = location, self.chatListFilter == nil {
             savedMessagesPeer = context.account.postbox.loadedPeerWithId(context.account.peerId)
             |> map(Optional.init)
             |> map { peer in
@@ -1882,7 +1886,7 @@ public final class ChatListNode: ListView {
                     case .chatList:
                         isEmpty = false
                         return true
-                    case let .peers(filter, _, _, _, _):
+                    case let .peers(filter, _, _, _, _, _):
                         guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
                         guard !filter.contains(.excludeSavedMessages) || !peer.peerId.isReplies else { return false }
                         guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
@@ -3721,10 +3725,12 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
     } else if case let .user(user) = peer {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
             return (strings.ChatList_PeerTypeBot, false, false, nil)
-        } else if isContact {
-            return (strings.ChatList_PeerTypeContact, false, false, nil)
         } else {
-            return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+            if isContact {
+                return (strings.ChatList_PeerTypeContact, false, false, nil)
+            } else {
+                return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+            }
         }
     } else if case .secretChat = peer {
         if isContact {

@@ -297,7 +297,7 @@ open class BlurredBackgroundView: UIView {
 
     private var enableBlur: Bool
 
-    private var effectView: UIVisualEffectView?
+    public private(set) var effectView: UIVisualEffectView?
     private let backgroundView: UIView
 
     private var validLayout: (CGSize, CGFloat)?

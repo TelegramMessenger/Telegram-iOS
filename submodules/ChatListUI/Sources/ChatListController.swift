@@ -1358,7 +1358,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     context: self.context,
                     initialFocusedId: AnyHashable(peerId),
                     initialContent: initialContent,
-                    transitionIn: nil
+                    transitionIn: nil,
+                    transitionOut: { _ in
+                        return nil
+                    }
                 )
                 self.push(storyContainerScreen)
             })
@@ -2412,7 +2415,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             context: self.context,
                             initialFocusedId: AnyHashable(peer.id),
                             initialContent: initialContent,
-                            transitionIn: transitionIn
+                            transitionIn: transitionIn,
+                            transitionOut: { [weak self] peerId in
+                                guard let self else {
+                                    return nil
+                                }
+                                
+                                if let storyPeerListView = self.storyPeerListView?.view as? StoryPeerListComponent.View {
+                                    if let transitionView = storyPeerListView.transitionViewForItem(peerId: peerId) {
+                                        return StoryContainerScreen.TransitionOut(
+                                            destinationView: transitionView,
+                                            destinationRect: transitionView.bounds,
+                                            destinationCornerRadius: transitionView.bounds.height * 0.5
+                                        )
+                                    }
+                                }
+                                
+                                return nil
+                            }
                         )
                         self.push(storyContainerScreen)
                     })

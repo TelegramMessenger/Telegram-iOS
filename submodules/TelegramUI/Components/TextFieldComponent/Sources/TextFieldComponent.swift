@@ -73,7 +73,7 @@ public final class TextFieldComponent: Component {
             
             self.textView = UITextView(frame: CGRect(), textContainer: self.textContainer)
             self.textView.translatesAutoresizingMaskIntoConstraints = false
-            self.textView.textContainerInset = UIEdgeInsets(top: 6.0, left: 8.0, bottom: 7.0, right: 8.0)
+            self.textView.textContainerInset = UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: 8.0)
             self.textView.backgroundColor = nil
             self.textView.layer.isOpaque = false
             self.textView.keyboardAppearance = .dark

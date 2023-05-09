@@ -16,15 +16,18 @@ public final class MediaRecordingPanelComponent: Component {
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
     public let cancelFraction: CGFloat
+    public let insets: UIEdgeInsets
     
     public init(
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
-        cancelFraction: CGFloat
+        cancelFraction: CGFloat,
+        insets: UIEdgeInsets
     ) {
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
         self.cancelFraction = cancelFraction
+        self.insets = insets
     }
     
     public static func ==(lhs: MediaRecordingPanelComponent, rhs: MediaRecordingPanelComponent) -> Bool {
@@ -35,6 +38,9 @@ public final class MediaRecordingPanelComponent: Component {
             return false
         }
         if lhs.cancelFraction != rhs.cancelFraction {
+            return false
+        }
+        if lhs.insets != rhs.insets {
             return false
         }
         return true
@@ -234,7 +240,7 @@ public final class MediaRecordingPanelComponent: Component {
                 if indicatorView.superview == nil {
                     self.addSubview(indicatorView)
                 }
-                transition.setFrame(view: indicatorView, frame: CGRect(origin: CGPoint(x: 3.0, y: floor((availableSize.height - indicatorSize.height) * 0.5)), size: indicatorSize))
+                transition.setFrame(view: indicatorView, frame: CGRect(origin: CGPoint(x: 3.0, y: component.insets.top + floor((availableSize.height - component.insets.top - component.insets.bottom - indicatorSize.height) * 0.5)), size: indicatorSize))
             }
             
             let timerTextSize = self.timerText.update(
@@ -248,7 +254,7 @@ public final class MediaRecordingPanelComponent: Component {
                     self.addSubview(timerTextView)
                     timerTextView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
                 }
-                let timerTextFrame = CGRect(origin: CGPoint(x: 38.0, y: floor((availableSize.height - timerTextSize.height) * 0.5)), size: timerTextSize)
+                let timerTextFrame = CGRect(origin: CGPoint(x: 38.0, y: component.insets.top + floor((availableSize.height - component.insets.top - component.insets.bottom - timerTextSize.height) * 0.5)), size: timerTextSize)
                 transition.setPosition(view: timerTextView, position: CGPoint(x: timerTextFrame.minX, y: timerTextFrame.midY))
                 timerTextView.bounds = CGRect(origin: CGPoint(), size: timerTextFrame.size)
             }
@@ -266,7 +272,7 @@ public final class MediaRecordingPanelComponent: Component {
                 containerSize: CGSize(width: max(30.0, availableSize.width - 100.0), height: 44.0)
             )
             
-            var textFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - cancelTextSize.width) * 0.5), y: floor((availableSize.height - cancelTextSize.height) * 0.5)), size: cancelTextSize)
+            var textFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - cancelTextSize.width) * 0.5), y: component.insets.top + floor((availableSize.height - component.insets.top - component.insets.bottom - cancelTextSize.height) * 0.5)), size: cancelTextSize)
             
             let bandingStart: CGFloat = 0.0
             let bandedOffset = abs(component.cancelFraction) - bandingStart

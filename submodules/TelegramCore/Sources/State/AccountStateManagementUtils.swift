@@ -4336,7 +4336,7 @@ func replayFinalState(
                         switch storyItem {
                         case let .storyItemDeleted(id):
                             storyUpdates.append(InternalStoryUpdate.deleted(id))
-                        case let .storyItem(flags, id, date, _, _, media, _, recentViewers, viewCount):
+                        case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
                             let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                             if let parsedMedia = parsedMedia {
                                 var seenPeers: [EnginePeer] = []
@@ -4347,13 +4347,46 @@ func replayFinalState(
                                         }
                                     }
                                 }
+                                
+                                var parsedPrivacy: EngineStoryPrivacy?
+                                if let privacy = privacy {
+                                    var base: EngineStoryPrivacy.Base = .everyone
+                                    var additionalPeerIds: [EnginePeer.Id] = []
+                                    for rule in privacy {
+                                        switch rule {
+                                        case .privacyValueAllowAll:
+                                            base = .everyone
+                                        case .privacyValueAllowContacts:
+                                            base = .contacts
+                                        case .privacyValueAllowCloseFriends:
+                                            base = .closeFriends
+                                        case let .privacyValueAllowUsers(users):
+                                            for id in users {
+                                                additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
+                                            }
+                                        case let .privacyValueAllowChatParticipants(chats):
+                                            for id in chats {
+                                                if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                    additionalPeerIds.append(peer.id)
+                                                } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                    additionalPeerIds.append(peer.id)
+                                                }
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    }
+                                    parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
+                                }
+                                
                                 storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: StoryListContext.Item(
                                     id: id,
                                     timestamp: date,
                                     media: EngineMedia(parsedMedia),
                                     isSeen: (flags & (1 << 4)) == 0,
                                     seenCount: viewCount.flatMap(Int.init) ?? 0,
-                                    seenPeers: seenPeers
+                                    seenPeers: seenPeers,
+                                    privacy: parsedPrivacy
                                 )))
                             }
                         }
