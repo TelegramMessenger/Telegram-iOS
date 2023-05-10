@@ -566,6 +566,8 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
                     current = info.phoneNumber
                 case .voiceMessages:
                     current = info.voiceMessages
+                case .bio:
+                    current = info.bio
             }
 
             present(.push, selectivePrivacySettingsController(context: context, kind: kind, current: current, callSettings: callSettings != nil ? (info.voiceCallsP2P, callSettings!.0) : nil, voipConfiguration: callSettings?.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings, _ in
@@ -740,23 +742,11 @@ private func dataSearchableItems(context: AccountContext) -> [SettingsSearchable
         SettingsSearchableItem(id: .data(7), title: strings.ChatSettings_AutoDownloadReset, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoDownloadReset), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .automaticDownloadReset)
         }),
-        /*SettingsSearchableItem(id: .data(8), title: strings.ChatSettings_AutoPlayGifs, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayGifs), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
-            presentDataSettings(context, present, .autoplayGifs)
-        }),*/
-        /*SettingsSearchableItem(id: .data(9), title: strings.ChatSettings_AutoPlayVideos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_AutoplayVideos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.ChatSettings_AutoPlayTitle], present: { context, _, present in
-            presentDataSettings(context, present, .autoplayVideos)
-        }),*/
         SettingsSearchableItem(id: .data(10), title: strings.CallSettings_UseLessData, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_CallsUseLessData), icon: icon, breadcrumbs: [strings.Settings_ChatSettings, strings.Settings_CallSettings], present: { context, _, present in
             present(.push, voiceCallDataSavingController(context: context))
         }),
-        /*SettingsSearchableItem(id: .data(11), title: strings.Settings_SaveIncomingPhotos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_SaveIncomingPhotos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            present(.push, saveIncomingMediaController(context: context))
-        }),*/
         SettingsSearchableItem(id: .data(12), title: strings.Settings_SaveEditedPhotos, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_SaveEditedPhotos), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             presentDataSettings(context, present, .saveEditedPhotos)
-        }),
-        SettingsSearchableItem(id: .data(13), title: strings.ChatSettings_DownloadInBackground, alternate: synonyms(strings.SettingsSearch_Synonyms_Data_DownloadInBackground), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
-            presentDataSettings(context, present, .downloadInBackground)
         }),
         SettingsSearchableItem(id: .data(14), title: strings.ChatSettings_OpenLinksIn, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatSettings_OpenLinksIn), icon: icon, breadcrumbs: [strings.Settings_ChatSettings], present: { context, _, present in
             present(.push, webBrowserSettingsController(context: context))
@@ -831,9 +821,6 @@ private func appearanceSearchableItems(context: AccountContext) -> [SettingsSear
         }),
         SettingsSearchableItem(id: .appearance(6), title: strings.Appearance_ColorTheme, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_ColorTheme), icon: icon, breadcrumbs: [strings.Settings_Appearance], present: { context, _, present in
             presentAppearanceSettings(context, present, .accentColor)
-        }),
-        SettingsSearchableItem(id: .appearance(8), title: strings.Appearance_ReduceMotion, alternate: synonyms(strings.SettingsSearch_Synonyms_Appearance_Animations), icon: icon, breadcrumbs: [strings.Settings_Appearance, strings.Appearance_Other], present: { context, _, present in
-            presentAppearanceSettings(context, present, .animations)
         })
     ]
 }

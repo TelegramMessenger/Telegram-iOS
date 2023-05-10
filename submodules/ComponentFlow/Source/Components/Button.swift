@@ -149,6 +149,7 @@ public final class Button: Component {
         override init(frame: CGRect) {
             self.contentView = ComponentHostView<Empty>()
             self.contentView.isUserInteractionEnabled = false
+            self.contentView.layer.allowsGroupOpacity = true
             
             super.init(frame: frame)
             

@@ -10,7 +10,9 @@ import ChatPresentationInterfaceState
 
 public final class MessageInputActionButtonComponent: Component {
     public enum Mode {
+        case none
         case send
+        case apply
         case voiceInput
         case videoInput
     }
@@ -214,7 +216,9 @@ public final class MessageInputActionButtonComponent: Component {
             var microphoneAlpha: CGFloat = 0.0
             
             switch component.mode {
-            case .send:
+            case .none:
+                break
+            case .send, .apply:
                 sendAlpha = 1.0
             case .videoInput, .voiceInput:
                 microphoneAlpha = 1.0
@@ -244,7 +248,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .send, .voiceInput:
+                    case .none, .send, .apply, .voiceInput:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

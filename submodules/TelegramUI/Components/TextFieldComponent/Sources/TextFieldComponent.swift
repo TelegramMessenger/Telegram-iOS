@@ -27,13 +27,16 @@ public final class TextFieldComponent: Component {
     
     public let externalState: ExternalState
     public let placeholder: String
+    public let placeholderAlignment: NSTextAlignment
     
     public init(
         externalState: ExternalState,
-        placeholder: String
+        placeholder: String,
+        placeholderAlignment: NSTextAlignment
     ) {
         self.externalState = externalState
         self.placeholder = placeholder
+        self.placeholderAlignment = placeholderAlignment
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
@@ -41,6 +44,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.placeholderAlignment != rhs.placeholderAlignment {
             return false
         }
         return true
@@ -145,7 +151,7 @@ public final class TextFieldComponent: Component {
             
             let placeholderSize = self.placeholder.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: component.placeholder, font: Font.regular(17.0), color: UIColor(white: 1.0, alpha: 0.25))),
+                component: AnyComponent(Text(text: component.placeholder, font: Font.regular(17.0), color: UIColor(white: 1.0, alpha: 0.4))),
                 environment: {},
                 containerSize: availableSize
             )
@@ -156,7 +162,22 @@ public final class TextFieldComponent: Component {
                     self.insertSubview(placeholderView, belowSubview: self.textView)
                 }
                 
-                let placeholderFrame = CGRect(origin: CGPoint(x: self.textView.textContainerInset.left + 5.0, y: self.textView.textContainerInset.top), size: placeholderSize)
+                var placeholderAlignment = component.placeholderAlignment
+                if self.textView.isFirstResponder {
+                    placeholderAlignment = .natural
+                }
+                let placeholderOriginX: CGFloat
+                switch placeholderAlignment {
+                case .left, .natural:
+                    placeholderOriginX = self.textView.textContainerInset.left + 5.0
+                case .center, .justified:
+                    placeholderOriginX = floor((size.width - placeholderSize.width) / 2.0)
+                case .right:
+                    placeholderOriginX = availableSize.width - self.textView.textContainerInset.left - 5.0 - placeholderSize.width
+                @unknown default:
+                    placeholderOriginX = self.textView.textContainerInset.left + 5.0
+                }
+                let placeholderFrame = CGRect(origin: CGPoint(x: placeholderOriginX, y: self.textView.textContainerInset.top), size: placeholderSize)
                 placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                 

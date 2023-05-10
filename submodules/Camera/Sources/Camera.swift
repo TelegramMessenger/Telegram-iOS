@@ -4,7 +4,7 @@ import AVFoundation
 
 private final class CameraContext {
     private let queue: Queue
-    private let session = AVCaptureSession()
+    private let session: AVCaptureSession
     private let device: CameraDevice
     private let input = CameraInput()
     private let output = CameraOutput()
@@ -27,20 +27,32 @@ private final class CameraContext {
         }
     }
     
-    private let filter = CameraTestFilter()
+    var simplePreviewView: CameraSimplePreviewView? {
+        didSet {
+            if let oldValue {
+                Queue.mainQueue().async {
+                    oldValue.session = nil
+                    self.simplePreviewView?.session = self.session
+                }
+            }
+        }
+    }
     
     private var videoOrientation: AVCaptureVideoOrientation?
-    init(queue: Queue, configuration: Camera.Configuration, metrics: Camera.Metrics) {
+    init(queue: Queue, session: AVCaptureSession, configuration: Camera.Configuration, metrics: Camera.Metrics, previewView: CameraSimplePreviewView?) {
         self.queue = queue
+        self.session = session
         self.initialConfiguration = configuration
+        self.simplePreviewView = previewView
         
         self.device = CameraDevice()
-        self.device.configure(for: self.session, position: configuration.position)
-        
         self.configure {
-            self.session.sessionPreset = configuration.preset
+            self.device.configure(for: self.session, position: configuration.position)
             self.input.configure(for: self.session, device: self.device, audio: configuration.audio)
             self.output.configure(for: self.session, configuration: configuration)
+            
+            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: 60)
+            self.output.configureVideoStabilization()
         }
         
         self.output.processSampleBuffer = { [weak self] pixelBuffer, connection in
@@ -126,7 +138,9 @@ private final class CameraContext {
             self.changingPosition = true
             self.device.configure(for: self.session, position: targetPosition)
             self.input.configure(for: self.session, device: self.device, audio: self.initialConfiguration.audio)
-            self.queue.after(0.7) {
+            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: 60)
+            self.output.configureVideoStabilization()
+            self.queue.after(0.5) {
                 self.changingPosition = false
             }
         }
@@ -137,6 +151,8 @@ private final class CameraContext {
             self.input.invalidate(for: self.session)
             self.device.configure(for: self.session, position: position)
             self.input.configure(for: self.session, device: self.device, audio: self.initialConfiguration.audio)
+            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: 60)
+            self.output.configureVideoStabilization()
         }
     }
     
@@ -170,14 +186,6 @@ private final class CameraContext {
     
     func setFlashMode(_ mode: Camera.FlashMode) {
         self._flashMode = mode
-        
-//        if mode == .on {
-//            self.output.faceLandmarks = true
-//            //self.output.activeFilter = self.filter
-//        } else if mode == .off {
-//            self.output.faceLandmarks = false
-//            //self.output.activeFilter = nil
-//        }
     }
     
     func setZoomLevel(_ zoomLevel: CGFloat) {
@@ -185,7 +193,7 @@ private final class CameraContext {
     }
     
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
-        return self.output.takePhoto(orientation: self.videoOrientation ?? .portrait, flashMode: .off) //self._flashMode)
+        return self.output.takePhoto(orientation: self.videoOrientation ?? .portrait, flashMode: self._flashMode)
     }
     
     public func startRecording() -> Signal<Double, NoError> {
@@ -214,13 +222,15 @@ public final class Camera {
         let audio: Bool
         let photo: Bool
         let metadata: Bool
+        let preferredFps: Double
         
-        public init(preset: Preset, position: Position, audio: Bool, photo: Bool, metadata: Bool) {
+        public init(preset: Preset, position: Position, audio: Bool, photo: Bool, metadata: Bool, preferredFps: Double) {
             self.preset = preset
             self.position = position
             self.audio = audio
             self.photo = photo
             self.metadata = metadata
+            self.preferredFps = preferredFps
         }
     }
     
@@ -231,11 +241,16 @@ public final class Camera {
     
     public let metrics: Camera.Metrics
     
-    public init(configuration: Camera.Configuration = Configuration(preset: .hd1920x1080, position: .back, audio: true, photo: false, metadata: false)) {
+    public init(configuration: Camera.Configuration = Configuration(preset: .hd1920x1080, position: .back, audio: true, photo: false, metadata: false, preferredFps: 60.0), previewView: CameraSimplePreviewView? = nil) {
         self.metrics = Camera.Metrics(model: DeviceModel.current)
         
+        let session = AVCaptureSession()
+        if let previewView {
+            previewView.session = session
+        }
+        
         self.queue.async {
-            let context = CameraContext(queue: self.queue, configuration: configuration, metrics: self.metrics)
+            let context = CameraContext(queue: self.queue, session: session, configuration: configuration, metrics: self.metrics, previewView: previewView)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -443,7 +458,21 @@ public final class Camera {
             }
         }
     }
-
+    
+    public func attachSimplePreviewView(_ view: CameraSimplePreviewView) {
+        let viewRef: Unmanaged<CameraSimplePreviewView> = Unmanaged.passRetained(view)
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.simplePreviewView = viewRef.takeUnretainedValue()
+                viewRef.release()
+            } else {
+                Queue.mainQueue().async {
+                    viewRef.release()
+                }
+            }
+        }
+    }
+    
     public var detectedCodes: Signal<[CameraCode], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

@@ -576,7 +576,7 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         let interfaceController: TGPhotoDrawingInterfaceController
         
         init(context: AccountContext, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?) {
-            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, entitiesView: entitiesView)
+            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, drawingView: nil, entitiesView: entitiesView)
             self.interfaceController = interfaceController
             self.drawingView = interfaceController.drawingView
             self.drawingEntitiesView = interfaceController.entitiesView

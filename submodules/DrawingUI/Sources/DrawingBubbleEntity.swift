@@ -214,7 +214,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
         selectionView.setNeedsLayout()
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }

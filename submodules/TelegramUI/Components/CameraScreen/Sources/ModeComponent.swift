@@ -14,19 +14,24 @@ extension CameraMode {
     }
 }
 
+private let buttonSize = CGSize(width: 55.0, height: 44.0)
+
 final class ModeComponent: Component {
     let availableModes: [CameraMode]
     let currentMode: CameraMode
     let updatedMode: (CameraMode) -> Void
+    let tag: AnyObject?
     
     init(
         availableModes: [CameraMode],
         currentMode: CameraMode,
-        updatedMode: @escaping (CameraMode) -> Void
+        updatedMode: @escaping (CameraMode) -> Void,
+        tag: AnyObject?
     ) {
         self.availableModes = availableModes
         self.currentMode = currentMode
         self.updatedMode = updatedMode
+        self.tag = tag
     }
     
     static func ==(lhs: ModeComponent, rhs: ModeComponent) -> Bool {
@@ -39,7 +44,7 @@ final class ModeComponent: Component {
         return true
     }
     
-    final class View: UIView {
+    final class View: UIView, ComponentTaggedView {
         private var component: ModeComponent?
         
         final class ItemView: HighlightTrackingButton {
@@ -69,6 +74,16 @@ final class ModeComponent: Component {
         private var containerView = UIView()
         private var itemViews: [ItemView] = []
         
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
         init() {
             super.init(frame: CGRect())
             
@@ -80,6 +95,21 @@ final class ModeComponent: Component {
         required init?(coder aDecoder: NSCoder) {
             preconditionFailure()
         }
+        
+        private var animatedOut = false
+        func animateOutToEditor(transition: Transition) {
+            self.animatedOut = true
+            
+            transition.setAlpha(view: self.containerView, alpha: 0.0)
+            transition.setSublayerTransform(view: self.containerView, transform: CATransform3DMakeTranslation(0.0, -buttonSize.height, 0.0))
+        }
+        
+        func animateInFromEditor(transition: Transition) {
+            self.animatedOut = false
+            
+            transition.setAlpha(view: self.containerView, alpha: 1.0)
+            transition.setSublayerTransform(view: self.containerView, transform: CATransform3DIdentity)
+        }
                 
         func update(component: ModeComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.component = component
@@ -87,7 +117,6 @@ final class ModeComponent: Component {
             let updatedMode = component.updatedMode
             
             let spacing: CGFloat = 14.0
-            let buttonSize = CGSize(width: 55.0, height: 44.0)
       
             var i = 0
             var itemFrame = CGRect(origin: .zero, size: buttonSize)

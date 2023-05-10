@@ -12,7 +12,8 @@ struct MediaPreset {
     }
     
     var hasAudio: Bool {
-        return !self.audioSettings.isEmpty
+        return false
+        //return !self.audioSettings.isEmpty
     }
 }
 
@@ -132,7 +133,12 @@ final class VideoRecorder {
         }
     }
     
+    private var skippedCount = 0
     func appendVideo(sampleBuffer: CMSampleBuffer) {
+        if self.skippedCount < 2 {
+            self.skippedCount += 1
+            return
+        }
         self.queue.async {
             guard let assetWriter = self.assetWriter, let videoInput = self.videoInput, (self.isRecording || self.isStopping) && !self.finishedWriting else {
                 return

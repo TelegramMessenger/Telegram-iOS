@@ -137,7 +137,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     
     private let pencilInteraction: UIInteraction?
         
-    init(size: CGSize) {
+    public init(size: CGSize) {
         self.imageSize = size
         self.screenSize = size
         
@@ -175,10 +175,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         
         super.init(frame: CGRect(origin: .zero, size: size))
     
-        Queue.mainQueue().async {
-            self.loadTemplates()
-        }
-        
         if #available(iOS 12.1, *), let pencilInteraction = self.pencilInteraction as? UIPencilInteraction {
             pencilInteraction.delegate = self
             self.addInteraction(pencilInteraction)

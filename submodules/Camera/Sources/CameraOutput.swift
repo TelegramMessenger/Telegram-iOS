@@ -64,9 +64,9 @@ final class CameraOutput: NSObject {
     override init() {
         super.init()
 
-        self.videoOutput.alwaysDiscardsLateVideoFrames = true;
-        self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA] as [String : Any]
-        //[kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
+        self.videoOutput.alwaysDiscardsLateVideoFrames = false
+        //self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA] as [String : Any]
+        self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
         
         self.faceLandmarksOutput.outputFaceObservations = { [weak self] observations in
             if let self {
@@ -105,6 +105,16 @@ final class CameraOutput: NSObject {
     func invalidate(for session: AVCaptureSession) {
         for output in session.outputs {
             session.removeOutput(output)
+        }
+    }
+    
+    func configureVideoStabilization() {
+        if let videoDataOutputConnection = self.videoOutput.connection(with: .video), videoDataOutputConnection.isVideoStabilizationSupported {
+            if #available(iOS 13.0, *) {
+                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematicExtended
+            } else {
+                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematic
+            }
         }
     }
     
@@ -215,26 +225,26 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
             }
         }
         
-        let finalSampleBuffer: CMSampleBuffer = sampleBuffer
-        if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) {
-            var finalVideoPixelBuffer = videoPixelBuffer
-            if let filter = self.activeFilter {
-                if !filter.isPrepared {
-                    filter.prepare(with: formatDescription, outputRetainedBufferCountHint: 3)
-                }
-                
-                guard let filteredBuffer = filter.render(pixelBuffer: finalVideoPixelBuffer) else {
-                    return
-                }
-                finalVideoPixelBuffer = filteredBuffer
-            }
-            self.processSampleBuffer?(finalVideoPixelBuffer, connection)
-        }
+//        let finalSampleBuffer: CMSampleBuffer = sampleBuffer
+//        if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) {
+//            var finalVideoPixelBuffer = videoPixelBuffer
+//            if let filter = self.activeFilter {
+//                if !filter.isPrepared {
+//                    filter.prepare(with: formatDescription, outputRetainedBufferCountHint: 3)
+//                }
+//
+//                guard let filteredBuffer = filter.render(pixelBuffer: finalVideoPixelBuffer) else {
+//                    return
+//                }
+//                finalVideoPixelBuffer = filteredBuffer
+//            }
+//            self.processSampleBuffer?(finalVideoPixelBuffer, connection)
+//        }
         
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording || videoRecorder.isStopping {
             let mediaType = sampleBuffer.type
             if mediaType == kCMMediaType_Video {
-                videoRecorder.appendVideo(sampleBuffer: finalSampleBuffer)
+                videoRecorder.appendVideo(sampleBuffer: sampleBuffer)
             } else if mediaType == kCMMediaType_Audio {
                 videoRecorder.appendAudio(sampleBuffer: sampleBuffer)
             }

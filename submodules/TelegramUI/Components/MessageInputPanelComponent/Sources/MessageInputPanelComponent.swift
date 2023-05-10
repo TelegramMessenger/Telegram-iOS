@@ -10,6 +10,10 @@ import TelegramPresentationData
 import ChatPresentationInterfaceState
 
 public final class MessageInputPanelComponent: Component {
+    public enum Style {
+        case story
+        case editor
+    }
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
@@ -22,11 +26,13 @@ public final class MessageInputPanelComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let style: Style
+    public let placeholder: String
     public let presentController: (ViewController) -> Void
     public let sendMessageAction: () -> Void
-    public let setMediaRecordingActive: (Bool, Bool, Bool) -> Void
-    public let attachmentAction: () -> Void
-    public let reactionAction: (UIView) -> Void
+    public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
+    public let attachmentAction: (() -> Void)?
+    public let reactionAction: ((UIView) -> Void)?
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
     
@@ -35,11 +41,13 @@ public final class MessageInputPanelComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        style: Style,
+        placeholder: String,
         presentController: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
-        setMediaRecordingActive: @escaping (Bool, Bool, Bool) -> Void,
-        attachmentAction: @escaping () -> Void,
-        reactionAction: @escaping (UIView) -> Void,
+        setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
+        attachmentAction: (() -> Void)?,
+        reactionAction: ((UIView) -> Void)?,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?
     ) {
@@ -47,6 +55,8 @@ public final class MessageInputPanelComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.style = style
+        self.placeholder = placeholder
         self.presentController = presentController
         self.sendMessageAction = sendMessageAction
         self.setMediaRecordingActive = setMediaRecordingActive
@@ -69,6 +79,12 @@ public final class MessageInputPanelComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
+        if lhs.style != rhs.style {
+            return false
+        }
+        if lhs.placeholder != rhs.placeholder {
+            return false
+        }
         if lhs.audioRecorder !== rhs.audioRecorder {
             return false
         }
@@ -84,6 +100,7 @@ public final class MessageInputPanelComponent: Component {
     
     public final class View: UIView {
         private let fieldBackgroundView: UIImageView
+        private let fieldBackgroundEffectView: UIVisualEffectView
         
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
@@ -104,10 +121,9 @@ public final class MessageInputPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.fieldBackgroundView = UIImageView()
+            self.fieldBackgroundEffectView = UIVisualEffectView()
             
             super.init(frame: frame)
-            
-            self.addSubview(self.fieldBackgroundView)
         }
         
         required init?(coder: NSCoder) {
@@ -137,14 +153,34 @@ public final class MessageInputPanelComponent: Component {
         
         func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let baseHeight: CGFloat = 44.0
-            let insets = UIEdgeInsets(top: 5.0, left: 41.0, bottom: 5.0, right: 41.0)
+            var insets = UIEdgeInsets(top: 5.0, left: 7.0, bottom: 5.0, right: 7.0)
+            if let _ = component.attachmentAction {
+                insets.left = 41.0
+            }
+            if let _ = component.setMediaRecordingActive {
+                insets.right = 41.0
+            }
             let fieldCornerRadius: CGFloat = 16.0
             
             self.component = component
             self.state = state
             
-            if self.fieldBackgroundView.image == nil {
-                self.fieldBackgroundView.image = generateStretchableFilledCircleImage(diameter: fieldCornerRadius * 2.0, color: nil, strokeColor: UIColor(white: 1.0, alpha: 0.16), strokeWidth: 1.0, backgroundColor: nil)
+            var placeholderAlignment: NSTextAlignment
+            switch component.style {
+            case .story:
+                if self.fieldBackgroundView.superview == nil {
+                    self.fieldBackgroundView.image = generateStretchableFilledCircleImage(diameter: fieldCornerRadius * 2.0, color: nil, strokeColor: UIColor(white: 1.0, alpha: 0.16), strokeWidth: 1.0, backgroundColor: nil)
+                    self.insertSubview(self.fieldBackgroundView, at: 0)
+                }
+                placeholderAlignment = .natural
+            case .editor:
+                if self.fieldBackgroundEffectView.superview == nil {
+                    self.fieldBackgroundEffectView.clipsToBounds = true
+                    self.fieldBackgroundEffectView.layer.cornerRadius = fieldCornerRadius
+                    self.fieldBackgroundEffectView.effect = UIBlurEffect(style: .dark)
+                    self.insertSubview(self.fieldBackgroundEffectView, at: 0)
+                }
+                placeholderAlignment = .center
             }
             
             let availableTextFieldSize = CGSize(width: availableSize.width - insets.left - insets.right, height: availableSize.height - insets.top - insets.bottom)
@@ -154,15 +190,22 @@ public final class MessageInputPanelComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(TextFieldComponent(
                     externalState: self.textFieldExternalState,
-                    placeholder: "Reply Privately..."
+                    placeholder: component.placeholder,
+                    placeholderAlignment: placeholderAlignment
                 )),
                 environment: {},
                 containerSize: availableTextFieldSize
             )
+            if self.textFieldExternalState.isEditing {
+                insets.right = 41.0
+            }
             
             let fieldFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: availableSize.width - insets.left - insets.right, height: textFieldSize.height))
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldFrame)
             transition.setAlpha(view: self.fieldBackgroundView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
+            
+            transition.setFrame(view: self.fieldBackgroundEffectView, frame: fieldFrame)
+            transition.setAlpha(view: self.fieldBackgroundEffectView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
             
             //let rightFieldInset: CGFloat = 34.0
             
@@ -176,40 +219,48 @@ public final class MessageInputPanelComponent: Component {
                 transition.setAlpha(view: textFieldView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
             }
             
-            let attachmentButtonSize = self.attachmentButton.update(
-                transition: transition,
-                component: AnyComponent(Button(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Chat/Input/Text/IconAttachment",
-                        tintColor: .white
-                    )),
-                    action: { [weak self] in
-                        guard let self else {
-                            return
+            if let attachmentAction = component.attachmentAction {
+                let attachmentButtonSize = self.attachmentButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Chat/Input/Text/IconAttachment",
+                            tintColor: .white
+                        )),
+                        action: {
+                            attachmentAction()
                         }
-                        self.component?.attachmentAction()
+                    ).minSize(CGSize(width: 41.0, height: baseHeight))),
+                    environment: {},
+                    containerSize: CGSize(width: 41.0, height: baseHeight)
+                )
+                if let attachmentButtonView = self.attachmentButton.view {
+                    if attachmentButtonView.superview == nil {
+                        self.addSubview(attachmentButtonView)
                     }
-                ).minSize(CGSize(width: 41.0, height: baseHeight))),
-                environment: {},
-                containerSize: CGSize(width: 41.0, height: baseHeight)
-            )
-            if let attachmentButtonView = self.attachmentButton.view {
-                if attachmentButtonView.superview == nil {
-                    self.addSubview(attachmentButtonView)
+                    transition.setFrame(view: attachmentButtonView, frame: CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5), y: size.height - baseHeight + floor((baseHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize))
                 }
-                transition.setFrame(view: attachmentButtonView, frame: CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5), y: size.height - baseHeight + floor((baseHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize))
             }
             
+            
+            let inputActionButtonMode: MessageInputActionButtonComponent.Mode
+            if case .editor = component.style {
+                inputActionButtonMode = self.textFieldExternalState.isEditing ? .apply : .none
+            } else {
+                inputActionButtonMode = self.textFieldExternalState.hasText ? .send : (self.currentMediaInputIsVoice ? .voiceInput : .videoInput)
+            }
             let inputActionButtonSize = self.inputActionButton.update(
                 transition: transition,
                 component: AnyComponent(MessageInputActionButtonComponent(
-                    mode: self.textFieldExternalState.hasText ? .send : (self.currentMediaInputIsVoice ? .voiceInput : .videoInput),
+                    mode: inputActionButtonMode,
                     action: { [weak self] mode, action, sendAction in
                         guard let self else {
                             return
                         }
                         
                         switch mode {
+                        case .none:
+                            break
                         case .send:
                             if case .up = action {
                                 if case .text("") = self.getSendMessageInput() {
@@ -217,8 +268,12 @@ public final class MessageInputPanelComponent: Component {
                                     self.component?.sendMessageAction()
                                 }
                             }
+                        case .apply:
+                            if case .up = action {
+                                self.component?.sendMessageAction()
+                            }
                         case .voiceInput, .videoInput:
-                            self.component?.setMediaRecordingActive(action == .down, mode == .videoInput, sendAction)
+                            self.component?.setMediaRecordingActive?(action == .down, mode == .videoInput, sendAction)
                         }
                     },
                     switchMediaInputMode: { [weak self] in
@@ -251,69 +306,80 @@ public final class MessageInputPanelComponent: Component {
                 if inputActionButtonView.superview == nil {
                     self.addSubview(inputActionButtonView)
                 }
-                transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: size.width - insets.right + floorToScreenPixels((insets.right - inputActionButtonSize.width) * 0.5), y: size.height - baseHeight + floorToScreenPixels((baseHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
-            }
-            var fieldIconNextX = fieldFrame.maxX - 2.0
-            let stickerButtonSize = self.stickerButton.update(
-                transition: transition,
-                component: AnyComponent(Button(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Chat/Input/Text/AccessoryIconStickers",
-                        tintColor: .white
-                    )),
-                    action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.component?.attachmentAction()
-                    }
-                ).minSize(CGSize(width: 32.0, height: 32.0))),
-                environment: {},
-                containerSize: CGSize(width: 32.0, height: 32.0)
-            )
-            if let stickerButtonView = self.stickerButton.view {
-                if stickerButtonView.superview == nil {
-                    self.addSubview(stickerButtonView)
+                let inputActionButtonOriginX: CGFloat
+                if component.setMediaRecordingActive != nil || self.textFieldExternalState.isEditing {
+                    inputActionButtonOriginX = size.width - insets.right + floorToScreenPixels((insets.right - inputActionButtonSize.width) * 0.5)
+                } else {
+                    inputActionButtonOriginX = size.width
                 }
-                let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldFrame.minY + floor((fieldFrame.height - stickerButtonSize.height) * 0.5)), size: stickerButtonSize)
-                transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
-                transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
-                
-                transition.setAlpha(view: stickerButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
-                transition.setScale(view: stickerButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
-                
-                fieldIconNextX -= stickerButtonSize.width + 2.0
+                transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - baseHeight + floorToScreenPixels((baseHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
+            }
+        
+            var fieldIconNextX = fieldFrame.maxX - 2.0
+            if case .story = component.style {
+                let stickerButtonSize = self.stickerButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Chat/Input/Text/AccessoryIconStickers",
+                            tintColor: .white
+                        )),
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.component?.attachmentAction?()
+                        }
+                    ).minSize(CGSize(width: 32.0, height: 32.0))),
+                    environment: {},
+                    containerSize: CGSize(width: 32.0, height: 32.0)
+                )
+                if let stickerButtonView = self.stickerButton.view {
+                    if stickerButtonView.superview == nil {
+                        self.addSubview(stickerButtonView)
+                    }
+                    let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldFrame.minY + floor((fieldFrame.height - stickerButtonSize.height) * 0.5)), size: stickerButtonSize)
+                    transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
+                    transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
+                    
+                    transition.setAlpha(view: stickerButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
+                    transition.setScale(view: stickerButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                    
+                    fieldIconNextX -= stickerButtonSize.width + 2.0
+                }
             }
             
-            let reactionButtonSize = self.reactionButton.update(
-                transition: transition,
-                component: AnyComponent(Button(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Chat/Input/Text/AccessoryIconReaction",
-                        tintColor: .white
-                    )),
-                    action: { [weak self] in
-                        guard let self, let reactionButtonView = self.reactionButton.view else {
-                            return
+            if let reactionAction = component.reactionAction {
+                let reactionButtonSize = self.reactionButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Chat/Input/Text/AccessoryIconReaction",
+                            tintColor: .white
+                        )),
+                        action: { [weak self] in
+                            guard let self, let reactionButtonView = self.reactionButton.view else {
+                                return
+                            }
+                            reactionAction(reactionButtonView)
                         }
-                        self.component?.reactionAction(reactionButtonView)
+                    ).minSize(CGSize(width: 32.0, height: 32.0))),
+                    environment: {},
+                    containerSize: CGSize(width: 32.0, height: 32.0)
+                )
+                if let reactionButtonView = self.reactionButton.view {
+                    if reactionButtonView.superview == nil {
+                        self.addSubview(reactionButtonView)
                     }
-                ).minSize(CGSize(width: 32.0, height: 32.0))),
-                environment: {},
-                containerSize: CGSize(width: 32.0, height: 32.0)
-            )
-            if let reactionButtonView = self.reactionButton.view {
-                if reactionButtonView.superview == nil {
-                    self.addSubview(reactionButtonView)
+                    let reactionIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - reactionButtonSize.width, y: fieldFrame.minY + 1.0 + floor((fieldFrame.height - reactionButtonSize.height) * 0.5)), size: reactionButtonSize)
+                    transition.setPosition(view: reactionButtonView, position: reactionIconFrame.center)
+                    transition.setBounds(view: reactionButtonView, bounds: CGRect(origin: CGPoint(), size: reactionIconFrame.size))
+                    
+                    transition.setAlpha(view: reactionButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
+                    transition.setScale(view: reactionButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                    
+                    fieldIconNextX -= reactionButtonSize.width + 2.0
                 }
-                let reactionIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - reactionButtonSize.width, y: fieldFrame.minY + 1.0 + floor((fieldFrame.height - reactionButtonSize.height) * 0.5)), size: reactionButtonSize)
-                transition.setPosition(view: reactionButtonView, position: reactionIconFrame.center)
-                transition.setBounds(view: reactionButtonView, bounds: CGRect(origin: CGPoint(), size: reactionIconFrame.size))
-                
-                transition.setAlpha(view: reactionButtonView, alpha: self.textFieldExternalState.hasText ? 0.0 : 1.0)
-                transition.setScale(view: reactionButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
-                
-                fieldIconNextX -= reactionButtonSize.width + 2.0
             }
             
             /*if let image = self.reactionIconView.image {

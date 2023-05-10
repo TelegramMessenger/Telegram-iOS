@@ -206,7 +206,7 @@ final class DrawingVectorEntityView: DrawingEntityView {
         }
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }

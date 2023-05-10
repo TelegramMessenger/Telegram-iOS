@@ -250,7 +250,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             let entitiesData = self.entitiesData
             return entitiesData != initialEntitiesData
         } else {
-            return !self.entities.isEmpty
+            let filteredEntities = self.entities.filter { !($0 is DrawingMediaEntity) }
+            return !filteredEntities.isEmpty
         }
     }
     
@@ -266,6 +267,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             while true {
                 var occupied = false
                 for case let view as DrawingEntityView in self.subviews {
+                    if view is DrawingMediaEntityView {
+                        continue
+                    }
                     let location = view.entity.center
                     let distance = sqrt(pow(location.x - position.x, 2) + pow(location.y - position.y, 2))
                     if distance < minimalDistance {
@@ -344,7 +348,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     @discardableResult
-    func add(_ entity: DrawingEntity, announce: Bool = true) -> DrawingEntityView {
+    public func add(_ entity: DrawingEntity, announce: Bool = true) -> DrawingEntityView {
         let view = entity.makeView(context: self.context)
         view.containerView = self
         
@@ -462,6 +466,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private func clear(animated: Bool = false) {
         if animated {
             for case let view as DrawingEntityView in self.subviews {
+                if view is DrawingMediaEntityView {
+                    continue
+                }
                 if let selectionView = view.selectionView {
                     selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak selectionView] _ in
                         selectionView?.removeFromSuperview()
@@ -477,6 +484,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             
         } else {
             for case let view as DrawingEntityView in self.subviews {
+                if view is DrawingMediaEntityView {
+                    continue
+                }
                 view.selectionView?.removeFromSuperview()
                 view.removeFromSuperview()
             }
@@ -489,7 +499,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
-    func getView(for uuid: UUID) -> DrawingEntityView? {
+    public func getView(for uuid: UUID) -> DrawingEntityView? {
         for case let view as DrawingEntityView in self.subviews {
             if view.entity.uuid == uuid {
                 return view
@@ -544,6 +554,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     func selectEntity(_ entity: DrawingEntity?) {
+        if entity is DrawingMediaEntity {
+            return
+        }
         if entity !== self.selectedEntityView?.entity {
             if let selectedEntityView = self.selectedEntityView {
                 if let textEntityView = selectedEntityView as? DrawingTextEntityView, textEntityView.isEditing {
@@ -565,14 +578,15 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         if let entity = entity, let entityView = self.getView(for: entity.uuid) {
             self.selectedEntityView = entityView
             
-            let selectionView = entityView.makeSelectionView()
-            selectionView.tapped = { [weak self, weak entityView] in
-                if let strongSelf = self, let entityView = entityView {
-                    strongSelf.requestedMenuForEntityView(entityView, strongSelf.subviews.last === entityView)
+            if let selectionView = entityView.makeSelectionView() {
+                selectionView.tapped = { [weak self, weak entityView] in
+                    if let strongSelf = self, let entityView = entityView {
+                        strongSelf.requestedMenuForEntityView(entityView, strongSelf.subviews.last === entityView)
+                    }
                 }
+                entityView.selectionView = selectionView
+                self.selectionContainerView?.addSubview(selectionView)
             }
-            entityView.selectionView = selectionView
-            self.selectionContainerView?.addSubview(selectionView)
             entityView.update()
         }
         
@@ -616,14 +630,24 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return self.selectedEntityView != nil
     }
     
+    public func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+        if !self.hasSelection, let mediaEntityView = self.subviews.first(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView {
+            mediaEntityView.handlePan(gestureRecognizer)
+        }
+    }
+    
     public func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
-        if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
+        if !self.hasSelection, let mediaEntityView = self.subviews.first(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView {
+            mediaEntityView.handlePinch(gestureRecognizer)
+        } else if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             selectionView.handlePinch(gestureRecognizer)
         }
     }
     
     public func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
-        if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
+        if !self.hasSelection, let mediaEntityView = self.subviews.first(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView {
+            mediaEntityView.handleRotate(gestureRecognizer)
+        } else if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             selectionView.handleRotate(gestureRecognizer)
         }
     }
@@ -725,7 +749,7 @@ public class DrawingEntityView: UIView {
         return self.point(inside: point, with: nil)
     }
     
-    func makeSelectionView() -> DrawingEntitySelectionView {
+    func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }

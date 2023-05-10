@@ -392,6 +392,7 @@ final class CaptureControlsComponent: Component {
             let location = gestureRecognizer.location(in: self)
             switch gestureRecognizer.state {
             case .began:
+                self.hapticFeedback.impact(.click05)
                 self.component?.shutterPressed()
                 self.component?.swipeHintUpdated(.zoom)
                 self.shutterUpdateOffset.invoke((0.0, .immediate))
@@ -405,6 +406,7 @@ final class CaptureControlsComponent: Component {
                     }
                     self.shutterUpdateOffset.invoke((blobOffset, .spring(duration: 0.5)))
                 } else {
+                    self.hapticFeedback.impact(.light)
                     self.component?.shutterReleased()
                     self.shutterUpdateOffset.invoke((0.0, .spring(duration: 0.3)))
                 }
@@ -416,7 +418,6 @@ final class CaptureControlsComponent: Component {
         private let hapticFeedback = HapticFeedback()
         
         private var didFlip = false
-        
         private var wasBanding: Bool?
         private var panBlobState: ShutterBlobView.BlobState?
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
@@ -498,12 +499,43 @@ final class CaptureControlsComponent: Component {
             return true
         }
         
-        func animateIn() {
-          
+        private var animatedOut = false
+        func animateOutToEditor(transition: Transition) {
+            self.animatedOut = true
+            
+            if let view = self.galleryButtonView.view {
+                transition.setScale(view: view, scale: 0.1)
+                transition.setAlpha(view: view, alpha: 0.0)
+            }
+            
+            if let view = self.flipButtonView.view {
+                transition.setScale(view: view, scale: 0.1)
+                transition.setAlpha(view: view, alpha: 0.0)
+            }
+            
+            if let view = self.shutterButtonView.view {
+                transition.setScale(view: view, scale: 0.1)
+                transition.setAlpha(view: view, alpha: 0.0)
+            }
         }
         
-        func animateOut() {
+        func animateInFromEditor(transition: Transition) {
+            self.animatedOut = false
 
+            if let view = self.galleryButtonView.view {
+                transition.setScale(view: view, scale: 1.0)
+                transition.setAlpha(view: view, alpha: 1.0)
+            }
+            
+            if let view = self.flipButtonView.view {
+                transition.setScale(view: view, scale: 1.0)
+                transition.setAlpha(view: view, alpha: 1.0)
+            }
+            
+            if let view = self.shutterButtonView.view {
+                transition.setScale(view: view, scale: 1.0)
+                transition.setAlpha(view: view, alpha: 1.0)
+            }
         }
 
         func update(component: CaptureControlsComponent, state: State, availableSize: CGSize, transition: Transition) -> CGSize {
@@ -529,11 +561,12 @@ final class CaptureControlsComponent: Component {
             let galleryButtonSize = self.galleryButtonView.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    Button(
+                    CameraButton(
                         content: AnyComponent(
                             Image(
                                 image: state.cachedAssetImage?.1,
-                                size: CGSize(width: 50.0, height: 50.0)
+                                size: CGSize(width: 50.0, height: 50.0),
+                                contentMode: .scaleAspectFill
                             )
                         ),
                         action: {
@@ -585,15 +618,16 @@ final class CaptureControlsComponent: Component {
             let flipButtonSize = self.flipButtonView.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    Button(
+                    CameraButton(
                         content: AnyComponent(
                             FlipButtonContentComponent(action: flipAnimationAction)
                         ),
+                        minSize: CGSize(width: 44.0, height: 44.0),
                         action: {
                             component.flipTapped()
                             flipAnimationAction.invoke(Void())
                         }
-                    ).minSize(CGSize(width: 44.0, height: 44.0))
+                    )
                 ),
                 environment: {},
                 containerSize: availableSize
@@ -678,15 +712,6 @@ final class CaptureControlsComponent: Component {
             
             self.leftGuide.cornerRadius = guideSize.height / 2.0
             self.rightGuide.cornerRadius = guideSize.height / 2.0
-            
-            if let screenTransition = transition.userData(CameraScreenTransition.self) {
-                switch screenTransition {
-                case .animateIn:
-                    self.animateIn()
-                case .animateOut:
-                    self.animateOut()
-                }
-            }
             
             return size
         }

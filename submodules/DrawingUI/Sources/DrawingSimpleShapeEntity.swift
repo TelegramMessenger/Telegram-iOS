@@ -227,7 +227,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         selectionView.transform = CGAffineTransformMakeRotation(self.shapeEntity.rotation)
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }

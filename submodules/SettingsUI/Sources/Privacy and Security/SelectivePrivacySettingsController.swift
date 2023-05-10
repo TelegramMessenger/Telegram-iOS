@@ -20,6 +20,7 @@ enum SelectivePrivacySettingsKind {
     case forwards
     case phoneNumber
     case voiceMessages
+    case bio
 }
 
 private enum SelectivePrivacySettingType {
@@ -644,6 +645,11 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             settingInfoText = presentationData.strings.Privacy_VoiceMessages_CustomHelp
             disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
             enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
+        case .bio:
+            settingTitle = presentationData.strings.Privacy_Bio_WhoCanSeeMyBio
+            settingInfoText = presentationData.strings.Privacy_Bio_CustomHelp
+            disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
+            enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
     }
     
     if case .forwards = kind {
@@ -827,6 +833,8 @@ func selectivePrivacySettingsController(
                     title = strings.PrivacyLastSeenSettings_AlwaysShareWith_Title
                 case .voiceMessages:
                     title = strings.Privacy_VoiceMessages_AlwaysAllow_Title
+                case .bio:
+                    title = strings.Privacy_Bio_AlwaysShareWith_Title
             }
         } else {
             switch kind {
@@ -844,6 +852,8 @@ func selectivePrivacySettingsController(
                     title = strings.PrivacyLastSeenSettings_NeverShareWith_Title
                 case .voiceMessages:
                     title = strings.Privacy_VoiceMessages_NeverAllow_Title
+                case .bio:
+                    title = strings.Privacy_Bio_NeverShareWith_Title
             }
         }
         var peerIds: [EnginePeer.Id: SelectivePrivacyPeer] = [:]
@@ -1080,6 +1090,8 @@ func selectivePrivacySettingsController(
                 title = presentationData.strings.Privacy_PhoneNumber
             case .voiceMessages:
                 title = presentationData.strings.Privacy_VoiceMessages
+            case .bio:
+                title = presentationData.strings.Privacy_Bio
         }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName ?? "", phoneNumber: phoneNumber, peer: peer, publicPhoto: publicPhoto), style: .blocks, animateChanges: true)
@@ -1160,6 +1172,8 @@ func selectivePrivacySettingsController(
                     type = .phoneNumber
                 case .voiceMessages:
                     type = .voiceMessages
+                case .bio:
+                    type = .bio
             }
             
             let updateSettingsSignal = context.engine.privacy.updateSelectiveAccountPrivacySettings(type: type, settings: settings)

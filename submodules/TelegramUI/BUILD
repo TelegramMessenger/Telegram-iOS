@@ -361,6 +361,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
         "//submodules/TelegramUI/Components/Stories/StoryContentComponent",
         "//submodules/TelegramUI/Components/CameraScreen",
+        "//submodules/TelegramUI/Components/MediaEditorScreen",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/ICloudResources",
         "//submodules/TelegramUI/Components/LegacyCamera",

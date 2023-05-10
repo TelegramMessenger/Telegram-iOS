@@ -8,6 +8,51 @@ import MetalKit
 import CoreMedia
 import Vision
 
+public class CameraSimplePreviewView: UIView {
+    var videoPreviewLayer: AVCaptureVideoPreviewLayer {
+        guard let layer = layer as? AVCaptureVideoPreviewLayer else {
+            fatalError()
+        }
+        return layer
+    }
+    
+    var session: AVCaptureSession? {
+        get {
+            return self.videoPreviewLayer.session
+        }
+        set {
+            self.videoPreviewLayer.session = newValue
+        }
+    }
+    
+    public var isEnabled: Bool = true {
+        didSet {
+            self.videoPreviewLayer.connection?.isEnabled = self.isEnabled
+        }
+    }
+    
+    public override class var layerClass: AnyClass {
+        return AVCaptureVideoPreviewLayer.self
+    }
+    
+    @available(iOS 13.0, *)
+    public var isPreviewing: Signal<Bool, NoError> {
+        return Signal { [weak self] subscriber in
+            guard let self else {
+                return EmptyDisposable
+            }
+            subscriber.putNext(self.videoPreviewLayer.isPreviewing)
+            let observer = self.videoPreviewLayer.observe(\.isPreviewing, options: [.new], changeHandler: { view, _ in
+                subscriber.putNext(view.isPreviewing)
+            })
+            return ActionDisposable {
+                observer.invalidate()
+            }
+        }
+        |> distinctUntilChanged
+    }
+}
+
 public class CameraPreviewView: MTKView {
     private let queue = DispatchQueue(label: "CameraPreview", qos: .userInitiated, attributes: [], autoreleaseFrequency: .workItem)
     private let commandQueue: MTLCommandQueue
