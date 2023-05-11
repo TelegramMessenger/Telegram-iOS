@@ -17,6 +17,8 @@ import AccountUtils
 import UndoUI
 import TelegramIntents
 import WidgetKit
+import GeneratedSources
+import PresentationDataUtils
 import PtgSecretPasscodes
 
 private final class SecretPasscodeControllerArguments {
@@ -508,6 +510,15 @@ public func secretPasscodeController(context: AccountContext, passcode: String) 
                     // reset imported contacts that are not in contact list, it does not delete existing contacts
                     let _ = selectedContext.engine.contacts.resetSavedContacts().start()
                     
+                    let _ = (areThereAnyWidgetsContainingChatsFromAccount(id: selectedContext.account.id)
+                    |> deliverOnMainQueue).start(next: { result in
+                        if result {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let alert = textAlertController(context: context, title: nil, text: presentationData.strings.SecretPasscode_SomeWidgetContainsChatsFromJustAddedAccount, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                            presentControllerImpl?(alert, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        }
+                    })
+                    
                     accountsController?.dismiss()
                 }
                 
@@ -766,4 +777,58 @@ public func hideAllSecrets(accountManager: AccountManager<TelegramAccountManager
         let updated = current.secretPasscodes.map { $0.withUpdated(active: false) }
         return PtgSecretPasscodes(secretPasscodes: updated)
     }).start()
+}
+
+private func areThereAnyWidgetsContainingChatsFromAccount(id accountId: AccountRecordId) -> Signal<Bool, NoError> {
+    if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+        return Signal { subscriber in
+            WidgetCenter.shared.getCurrentConfigurations { result in
+                func friendAccountId(_ item: Friend) -> AccountRecordId? {
+                    guard let identifier = item.identifier else {
+                        return nil
+                    }
+                    guard let index = identifier.firstIndex(of: ":") else {
+                        return nil
+                    }
+                    guard let accountIdValue = Int64(identifier[identifier.startIndex ..< index]) else {
+                        return nil
+                    }
+                    return AccountRecordId(rawValue: accountIdValue)
+                }
+                
+                var found = false
+                
+                if case let .success(infos) = result {
+                    outer: for info in infos {
+                        if let configuration = info.configuration as? SelectFriendsIntent {
+                            if let items = configuration.friends {
+                                for item in items {
+                                    if friendAccountId(item) == accountId {
+                                        found = true
+                                        break outer
+                                    }
+                                }
+                            }
+                        } else if let configuration = info.configuration as? SelectAvatarFriendsIntent {
+                            if let items = configuration.friends {
+                                for item in items {
+                                    if friendAccountId(item) == accountId {
+                                        found = true
+                                        break outer
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                subscriber.putNext(found)
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+    } else {
+        return .single(false)
+    }
 }

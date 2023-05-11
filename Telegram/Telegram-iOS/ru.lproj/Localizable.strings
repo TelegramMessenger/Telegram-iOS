@@ -119,6 +119,7 @@
 "SecretPasscode.SecretChatDeleted" = "Удален";
 "SecretPasscode.AccountListTitle" = "Аккаунты";
 "SecretPasscode.AccountSelectionTitle" = "Выберите аккаунт";
+"SecretPasscode.SomeWidgetContainsChatsFromJustAddedAccount" = "Внимание! По крайней мере в одном из ваших виджетов есть чат(ы) из только что добавленного аккаунта. Для защиты этого аккаунта удалите все эти чаты из конфигурации виджетов.";
 
 "FunctionalityUnavailableForHidableAccounts" = "Эта функция недоступна для скрываемых аккаунтов.";
 "ContactsSyncHelpForHidableAccounts" = "В скрытых аккаунтах контакты не синхронизируются.";

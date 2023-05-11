@@ -85,6 +85,7 @@
 "SecretPasscode.SecretChatDeleted" = "Deleted";
 "SecretPasscode.AccountListTitle" = "Accounts";
 "SecretPasscode.AccountSelectionTitle" = "Select Account";
+"SecretPasscode.SomeWidgetContainsChatsFromJustAddedAccount" = "Attention! At least one of your widgets includes chat(s) from the account you just added. To protect this account, remove all these chats from the widget configuration.";
 
 "FunctionalityUnavailableForHidableAccounts" = "This functionality is not available for hiding accounts.";
 "ContactsSyncHelpForHidableAccounts" = "Contacts are not synced in hiding accounts.";

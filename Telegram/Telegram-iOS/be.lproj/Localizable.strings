@@ -119,6 +119,7 @@
 "SecretPasscode.SecretChatDeleted" = "Выдален";
 "SecretPasscode.AccountListTitle" = "Акаўнты";
 "SecretPasscode.AccountSelectionTitle" = "Абярыце акаўнт";
+"SecretPasscode.SomeWidgetContainsChatsFromJustAddedAccount" = "Увага! Прынамсі ў адным з вашых віджэтаў ёсць чат(ы) з толькі што дададзенага акаўнта. Для абароны гэтага акаўнта выдаліце ўсе гэтыя чаты з канфігурацыі віджэтаў.";
 
 "FunctionalityUnavailableForHidableAccounts" = "Гэта функцыя недаступная для хаваных акаўнтаў.";
 "ContactsSyncHelpForHidableAccounts" = "У хаваных акаўнтах кантакты не сінхранізуюцца.";

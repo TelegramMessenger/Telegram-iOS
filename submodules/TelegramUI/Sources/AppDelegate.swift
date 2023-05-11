@@ -1531,6 +1531,8 @@ extension UserDefaults {
         let _ = self.urlSession(identifier: "\(baseAppBundleId).backroundSession")
         
         if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
+            appGroupUserDefaults.removeObject(forKey: "suppressedNotificationForAccounId")
+            
             var suppressedNotificationForAccounIdObserver: NSKeyValueObservation?
             
             let _ = self.isInForegroundPromise.get().start(next: { isInForeground in
@@ -1540,6 +1542,8 @@ extension UserDefaults {
                     suppressedNotificationForAccounIdObserver = appGroupUserDefaults.observe(\.suppressedNotificationForAccounId, options: [.new], changeHandler: { _, change in
                         if let accountIdString = (change.newValue as? String)?.components(separatedBy: ":").first, let rawAccountId = Int64(accountIdString) {
                             self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts([AccountRecordId(rawValue: rawAccountId)])
+                            // remove traces
+                            appGroupUserDefaults.removeObject(forKey: "suppressedNotificationForAccounId")
                         }
                     })
                     
