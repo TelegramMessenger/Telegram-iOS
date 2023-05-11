@@ -1539,7 +1539,7 @@ extension UserDefaults {
                     // this allows to react to a call or new message for non-current account
                     suppressedNotificationForAccounIdObserver = appGroupUserDefaults.observe(\.suppressedNotificationForAccounId, options: [.new], changeHandler: { _, change in
                         if let accountIdString = (change.newValue as? String)?.components(separatedBy: ":").first, let rawAccountId = Int64(accountIdString) {
-                            processNotificationsInNonCurrentAccounts(onlyForAccountId: AccountRecordId(rawValue: rawAccountId))
+                            self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts([AccountRecordId(rawValue: rawAccountId)])
                         }
                     })
                     
@@ -1548,26 +1548,7 @@ extension UserDefaults {
                         // for hidable accounts all notifications are unregistered when app is in background
                         // this also updates badge counter in case of new messages in hidable secret chat in normal non-current account
                         // even for normal non-current accounts if iOS Call Integration is disabled and new call comes, or if new message comes, when app is in background, if we do not tap notification but just open app, this will show incoming call window or update badge counter on Settings tab
-                        processNotificationsInNonCurrentAccounts(onlyForAccountId: nil)
-                    }
-                    
-                    func processNotificationsInNonCurrentAccounts(onlyForAccountId: AccountRecordId?) {
-                        let _ = (self.sharedContextPromise.get()
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-                            guard sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) else {
-                                return
-                            }
-                            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { activeAccounts in
-                                for (_, context, _) in activeAccounts.accounts {
-                                    if context.account.id != activeAccounts.primary?.account.id && (onlyForAccountId == nil || context.account.id == onlyForAccountId) {
-                                        sharedApplicationContext.notificationManager.beginPollingState(account: context.account)
-                                    }
-                                }
-                            })
-                        })
+                        self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(nil)
                     }
                 } else {
                     suppressedNotificationForAccounIdObserver?.invalidate()
@@ -1588,13 +1569,8 @@ extension UserDefaults {
                 let newlyRevealedAccountIds = lastInactiveAccountIds.subtracting(inactiveAccountsIds)
                 lastInactiveAccountIds = inactiveAccountsIds
                 
-                guard !newlyRevealedAccountIds.isEmpty && sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) else {
-                    return
-                }
-                for (_, context, _) in activeAccounts.accounts {
-                    if context.account.id != activeAccounts.primary?.account.id && newlyRevealedAccountIds.contains(context.account.id) {
-                        sharedApplicationContext.notificationManager.beginPollingState(account: context.account)
-                    }
+                if !newlyRevealedAccountIds.isEmpty {
+                    self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(newlyRevealedAccountIds)
                 }
             })
         })
@@ -2149,6 +2125,12 @@ extension UserDefaults {
         |> deliverOnMainQueue).start(next: { sharedApplicationContext, useCallKitIntegration in
             guard useCallKitIntegration else {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is disabled")
+                if #available(iOS 13.0, *) {
+                    assertionFailure()
+                } else {
+                    // On iOS before 13, telegram servers do not send regular push notification for incoming calls when call integration is disabled?! But they always send voip-push, even when integration is disabled and voip pushes are deregistered via telegram API?
+                    self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts([accountId])
+                }
                 completion()
                 return
             }
@@ -2614,8 +2596,8 @@ extension UserDefaults {
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
                 // for incoming call to non-current account when iOS Call Integration is turned off, this will show incoming call window
                 // (the app was in background when a call came in, so notification was shown. here we are handling a tap on this notification.)
-                if response.notification.request.content.userInfo["call_id"] != nil {
-                    self.handleNotification(response.notification.request.content.userInfo)
+                if response.notification.request.content.userInfo["call_id"] != nil, let accountId {
+                    self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts([accountId])
                 } else if let (peerId, threadId) = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
                     if response.notification.request.content.categoryIdentifier == "c" {
@@ -2796,21 +2778,19 @@ extension UserDefaults {
     
     @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        // for incoming call to non-current account when iOS Call Integration is turned off, this will show incoming call window
-        // for message notification for non-current account this will update badge counter on Settings
-        self.handleNotification(notification.request.content.userInfo)
-        
-        // if this is a call, no need to show notification
-        if notification.request.content.userInfo["call_id"] != nil {
-            completionHandler([])
-            return
-        }
-        
         let _ = (accountIdFromNotification(notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if let context = self.contextValue {
                 if let accountId = accountId, context.context.account.id != accountId {
-                    completionHandler([.alert])
+                    // for incoming call to non-current account when iOS Call Integration is turned off, this will show incoming call window
+                    // for message notification for non-current account this will update badge counter on Settings tab
+                    self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts([accountId])
+                    if notification.request.content.userInfo["call_id"] != nil {
+                        // if this is a call, no need to show notification
+                        completionHandler([])
+                    } else {
+                        completionHandler([.alert])
+                    }
                     return
                 }
             }
@@ -2828,13 +2808,21 @@ extension UserDefaults {
         completionHandler()
     }
     
-    private func handleNotification(_ dict: [AnyHashable: Any]) {
-        Logger.shared.log("App \(self.episodeId)", "handleNotification: \(dict)")
+    private func checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(_ accountIds: Set<AccountRecordId>?) {
+        Logger.shared.log("App \(self.episodeId)", "checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts: \(accountIds ?? [])")
         
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            sharedApplicationContext.notificationManager.addNotification(dict)
+            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { activeAccounts in
+                for (_, context, _) in activeAccounts.accounts {
+                    if context.account.id != activeAccounts.primary?.account.id && accountIds?.contains(context.account.id) ?? true {
+                        sharedApplicationContext.notificationManager.beginPollingState(account: context.account)
+                    }
+                }
+            })
         })
     }
     
