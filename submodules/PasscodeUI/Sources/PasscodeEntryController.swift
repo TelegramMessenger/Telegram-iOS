@@ -1,5 +1,3 @@
-import FakePasscode
-
 import Foundation
 import UIKit
 import Display
@@ -166,85 +164,35 @@ public final class PasscodeEntryController: ViewController {
                 return
             }
     
-            let _ = (strongSelf.accountManager.transaction { transaction -> (Bool, Bool, FakePasscodeSettings?) in
-                let fakePasscodeHolder = FakePasscodeSettingsHolder(transaction)
-                
-                let (succeed, updatedAccessChallenge, updatedFakePasscodeHolder) = ptgCheckPasscode(passcode: passcode, secondaryUnlock: false, accessChallenge: strongSelf.challengeData, fakePasscodeHolder: fakePasscodeHolder)
-                
-                if let updatedAccessChallenge = updatedAccessChallenge {
-                    transaction.setAccessChallengeData(updatedAccessChallenge)
-                }
-                
-                if let updatedFakePasscodeHolder = updatedFakePasscodeHolder {
-                    updateFakePasscodeSettingsInternal(transaction: transaction) { _ in
-                        return updatedFakePasscodeHolder
-                    }
-                }
-                
-                let passcodeSwitched = updatedFakePasscodeHolder != nil // true -> fake, fake -> true, or fake -> another fake
-                let unlockedWithFakePasscode = updatedFakePasscodeHolder?.unlockedWithFakePasscode() ?? (succeed && fakePasscodeHolder.unlockedWithFakePasscode())
-                
-                if succeed {
-                    if unlockedWithFakePasscode {
-                        addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: true))
-                    }
-                } else {
-                    addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: false))
-                }
-                
-                let fakePasscodeToActivate = (passcodeSwitched && unlockedWithFakePasscode) ? updatedFakePasscodeHolder!.activeFakePasscodeSettings()! : nil
-                
-                return (succeed, passcodeSwitched, fakePasscodeToActivate)
+            var succeed = false
+            switch strongSelf.challengeData {
+                case .none:
+                    succeed = true
+                case let .numericalPassword(code):
+                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
+                case let .plaintextPassword(code):
+                    succeed = passcode == code
             }
-            |> deliverOnMainQueue).start(next: { succeed, passcodeSwitched, fakePasscodeToActivate in
-                if succeed {
-                    let completeUnlock = {
-                        if let completed = strongSelf.completed {
-                            completed()
-                        } else {
-                            strongSelf.appLockContext.unlock()
-                        }
-                        
-                        let isMainApp = strongSelf.applicationBindings.isMainApp
-                        let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
-                            if isMainApp {
-                                return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
-                            } else {
-                                return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
-                            }
-                        }).start()
-                    }
-                    
-                    if passcodeSwitched {
-                        strongSelf.window?.forEachController { controller in
-                            if let controller = controller as? ReactiveToPasscodeSwitch {
-                                controller.passcodeSwitched()
-                            }
-                            if let controller = (controller as? TabBarController)?.currentController as? ReactiveToPasscodeSwitch {
-                                controller.passcodeSwitched()
-                            }
-                            if let actionSheet = controller as? ActionSheetController {
-                                actionSheet.dismiss(animated: false)
-                            }
-                        }
-                    }
-                    
-                    if let fakePasscodeToActivate = fakePasscodeToActivate, let sharedAccountContext = strongSelf.sharedAccountContext {
-                        let beforeUnlockTaskCounter = PendingTaskCounter()
-                        fakePasscodeToActivate.activate(sharedAccountContext: sharedAccountContext, beforeUnlockTaskCounter: beforeUnlockTaskCounter)
-                        
-                        let _ = (beforeUnlockTaskCounter.completed()
-                        |> deliverOnMainQueue).start(next: {
-                            completeUnlock()
-                        })
-                    } else {
-                        completeUnlock()
-                    }
+            
+            if succeed {
+                if let completed = strongSelf.completed {
+                    completed()
                 } else {
-                    strongSelf.appLockContext.failedUnlockAttempt()
-                    strongSelf.controllerNode.animateError()
+                    strongSelf.appLockContext.unlock()
                 }
-            })
+                
+                let isMainApp = strongSelf.applicationBindings.isMainApp
+                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
+                    if isMainApp {
+                        return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                    } else {
+                        return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                    }
+                }).start()
+            } else {
+                strongSelf.appLockContext.failedUnlockAttempt()
+                strongSelf.controllerNode.animateError()
+            }
         }
         self.controllerNode.requestBiometrics = { [weak self] in
             if let strongSelf = self {

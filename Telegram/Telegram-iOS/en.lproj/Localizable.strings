@@ -2,13 +2,6 @@
 
 "Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";
 
-"PasscodeSettings.BadAttempts" = "Bad Passcode Attempts";
-"PasscodeSettings.BadAttempts.Help" = "See all bad passcode attempts";
-"PasscodeSettings.BadAttempts.AppLogin" = "App Login";
-"PasscodeSettings.BadAttempts.SettingsLogin" = "Settings Login";
-"PasscodeSettings.BadAttempts.FakePasscode" = "Fake Passcode";
-"PasscodeSettings.BadAttempts.Clear" = "Clear";
-
 "FakePasscodes.Common.DoNotShowAgain" = "Do not show again";
 
 "FakePasscodes.AccountActions.ChatsToRemove" = "Chats to Remove";

@@ -1,6 +1,6 @@
 import PtgForeignAgentNoticeSearchFiltering
 import PtgSettings
-import FakePasscodeUI
+import PtgSettingsUI
 
 import Foundation
 import UIKit

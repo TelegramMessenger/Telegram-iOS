@@ -10,7 +10,6 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/FakePasscode:FakePasscode",
         "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",
         
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",

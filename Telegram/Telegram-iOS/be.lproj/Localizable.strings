@@ -36,13 +36,6 @@
 
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версія %3$@";
 
-"PasscodeSettings.BadAttempts" = "Няўдалыя спробы ўвода кода";
-"PasscodeSettings.BadAttempts.Help" = "Паглядзіце ўсе няўдалыя спробы ўводу кода блакіроўкі.";
-"PasscodeSettings.BadAttempts.AppLogin" = "Разблакіроўка дадатка";
-"PasscodeSettings.BadAttempts.SettingsLogin" = "Уваход у налады кода блакіроўкі";
-"PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
-"PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
-
 "FakePasscodes.Common.DoNotShowAgain" = "Больш не паказваць";
 
 "FakePasscodes.AccountActions.ChatsToRemove" = "Чаты для выдалення";

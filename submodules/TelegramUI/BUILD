@@ -94,8 +94,8 @@ swift_library(
         "-Wl,-lswiftFoundation",
     ],
     deps = [
-        "//submodules/FakePasscode:FakePasscode",
         "//submodules/PtgSettings:PtgSettings",
+        "//submodules/PtgSettingsUI:PtgSettingsUI",
         "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",
         "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
         "//submodules/PtgSecretPasscodesUI:PtgSecretPasscodesUI",

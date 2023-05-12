@@ -1,5 +1,3 @@
-import FakePasscode
-
 import Foundation
 import UIKit
 import Display
@@ -1849,18 +1847,6 @@ public final class ChatListNode: ListView {
             contacts = .single([])
         }
         
-        let currentRecordId = self.context.account.id
-        let hiddenPeerIds = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-        |> map { sharedData -> Set<EnginePeer.Id> in
-            let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-            if let activeFakePasscodeSettings = fakePasscodeHolder.activeFakePasscodeSettings() {
-                if let accountActions = activeFakePasscodeSettings.accountActions.first(where: { $0.peerId == currentPeerId && $0.recordId == currentRecordId }) {
-                    return Set(accountActions.chatsToRemove.filter({ $0.removalType == .hide }).map({ $0.peerId }))
-                }
-            }
-            return Set()
-        }
-
         let chatListNodeViewTransition = combineLatest(
             queue: viewProcessingQueue,
             hideArchivedFolderByDefault,
@@ -1871,10 +1857,9 @@ public final class ChatListNode: ListView {
             chatListViewUpdate,
             self.chatFolderUpdates.get() |> distinctUntilChanged,
             self.statePromise.get(),
-            contacts,
-            hiddenPeerIds
+            contacts
         )
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, chatFolderUpdates, state, contacts, hiddenPeerIds) -> Signal<ChatListNodeListViewTransition, NoError> in
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, suggestedChatListNotice, savedMessagesPeer, updateAndFilter, chatFolderUpdates, state, contacts) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
@@ -1890,7 +1875,7 @@ public final class ChatListNode: ListView {
                 notice = nil
             }
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts, hiddenPeerIds: hiddenPeerIds)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, notice: notice, mode: mode, chatListLocation: location, contacts: contacts)
             var isEmpty = true
             var entries = rawEntries.filter { entry in
                 switch entry {

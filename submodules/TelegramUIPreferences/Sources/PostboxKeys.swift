@@ -45,8 +45,6 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case drawingSettings = 19
     case mediaDisplaySettings = 20
     
-    case fakePasscodeSettings = 100
-    case badPasscodeAttempts = 101
     case ptgSettings = 102
     case ptgSecretPasscodes = 103
     case ptgPasscodeAttempts = 104
@@ -75,8 +73,6 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let drawingSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.drawingSettings.rawValue)
     public static let mediaDisplaySettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.mediaDisplaySettings.rawValue)
     
-    public static let fakePasscodeSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.fakePasscodeSettings.rawValue)
-    public static let badPasscodeAttempts = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.badPasscodeAttempts.rawValue)
     public static let ptgSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgSettings.rawValue)
     public static let ptgSecretPasscodes = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgSecretPasscodes.rawValue)
     public static let ptgPasscodeAttempts = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.ptgPasscodeAttempts.rawValue)
