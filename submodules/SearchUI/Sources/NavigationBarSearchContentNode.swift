@@ -19,6 +19,8 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     private var disabledOverlay: ASDisplayNode?
     
     public private(set) var expansionProgress: CGFloat = 1.0
+    
+    public var additionalHeight: CGFloat = 0.0
 
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
@@ -125,7 +127,8 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         let (searchBarHeight, searchBarApply) = searchBarNodeLayout(placeholderString, compactPlaceholderString, CGSize(width: baseWidth, height: fieldHeight), visibleProgress, textColor, fillColor, backgroundColor, transition)
         searchBarApply()
         
-        let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0 + overscrollProgress * fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))
+        let _ = overscrollProgress
+        let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: size.height + (1.0 - visibleProgress) * fieldHeight - 8.0 - fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))
         transition.updateFrame(node: self.placeholderNode, frame: searchBarFrame)
         
         self.placeholderHeight = searchBarHeight
@@ -151,7 +154,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     }
     
     override public var nominalHeight: CGFloat {
-        return navigationBarSearchContentHeight
+        return navigationBarSearchContentHeight + self.additionalHeight
     }
     
     override public var mode: NavigationBarContentMode {

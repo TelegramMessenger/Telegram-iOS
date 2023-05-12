@@ -687,10 +687,6 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 self.currentSliceDisposable?.dispose()
                 if let focusedItemId = self.focusedItemId {
-                    if let item = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) {
-                        item.markAsSeen?()
-                    }
-                    
                     self.currentSliceDisposable = (component.initialItemSlice.update(
                         component.initialItemSlice,
                         focusedItemId

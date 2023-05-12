@@ -22,6 +22,7 @@ import LegacyComponents
 import LegacyMediaPickerUI
 import LegacyCamera
 import AvatarNode
+import LocalMediaResources
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -61,7 +62,7 @@ private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceh
     }
 }
 
-public final class TelegramRootController: NavigationController {
+public final class TelegramRootController: NavigationController, TelegramRootControllerInterface {
     private let context: AccountContext
     
     public var rootTabController: TabBarController?
@@ -270,7 +271,7 @@ public final class TelegramRootController: NavigationController {
                     item = TGMediaAsset(phAsset: asset)
                 }
                 let context = self.context
-                legacyStoryMediaEditor(context: self.context, item: item, getCaptionPanelView: { return nil }, completion: { [weak self] mediaResult in
+                legacyStoryMediaEditor(context: context, item: item, getCaptionPanelView: { return nil }, completion: { [weak self] mediaResult in
                     dismissCameraImpl?()
                     
                     guard let self else {
@@ -362,20 +363,49 @@ public final class TelegramRootController: NavigationController {
                             let options = PHImageRequestOptions()
                             options.deliveryMode = .highQualityFormat
                             options.isNetworkAccessAllowed = true
-                            PHImageManager.default().requestImageData(for: asset, options:options, resultHandler: { [weak self] data, _, _, _ in
-                                if let data, let image = UIImage(data: data) {
-                                    Queue.mainQueue().async {
-                                        let _ = (context.engine.messages.uploadStory(media: .image(dimensions: PixelDimensions(image.size), data: data), privacy: privacy)
-                                        |> deliverOnMainQueue).start(completed: {
+                            switch asset.mediaType {
+                            case .image:
+                                PHImageManager.default().requestImageData(for: asset, options:options, resultHandler: { [weak self] data, _, _, _ in
+                                    if let data, let image = UIImage(data: data) {
+                                        Queue.mainQueue().async {
                                             guard let self else {
                                                 return
                                             }
-                                            let _ = self
+                                            if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                                                storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), privacy: privacy)
+                                            }
                                             selectionController?.dismiss()
-                                        })
+                                            
+                                            /*let _ = (context.engine.messages.uploadStory(media: )
+                                            |> deliverOnMainQueue).start(completed: {
+                                                guard let self else {
+                                                    return
+                                                }
+                                                let _ = self
+                                                selectionController?.dismiss()
+                                            })*/
+                                        }
                                     }
+                                })
+                            case .video:
+                                let resource = VideoLibraryMediaResource(localIdentifier: asset.localIdentifier, conversion: VideoLibraryMediaResourceConversion.passthrough)
+                                
+                                if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                                    storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), privacy: privacy)
                                 }
-                            })
+                                selectionController?.dismiss()
+                                
+                                /*let _ = (context.engine.messages.uploadStory(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), privacy: privacy)
+                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = self
+                                    selectionController?.dismiss()
+                                })*/
+                            default:
+                                selectionController?.dismiss()
+                            }
                         }
                     })
                 }, present: { c, a in

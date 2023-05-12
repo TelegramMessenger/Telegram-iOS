@@ -86,8 +86,15 @@ public struct FetchManagerPriorityKey: Comparable {
     }
 }
 
-public enum FetchManagerLocation: Hashable {
+public enum FetchManagerLocation: Hashable, CustomStringConvertible {
     case chat(PeerId)
+    
+    public var description: String {
+        switch self {
+        case let .chat(peerId):
+            return "chat:\(peerId)"
+        }
+    }
 }
 
 public enum FetchManagerForegroundDirection {

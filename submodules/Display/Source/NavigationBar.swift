@@ -1395,7 +1395,6 @@ open class NavigationBar: ASDisplayNode {
         
         if let customHeaderContentView = self.customHeaderContentView {
             let headerSize = CGSize(width: size.width, height: nominalHeight)
-            //customHeaderContentView.update(size: headerSize, transition: transition)
             transition.updateFrame(view: customHeaderContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize))
         }
         
@@ -1732,11 +1731,14 @@ open class NavigationBar: ASDisplayNode {
         if let result = self.additionalContentNode.view.hitTest(self.view.convert(point, to: self.additionalContentNode.view), with: event) {
             return result
         }
+        
+        if self.frame.minY > -10.0, let customHeaderContentView = self.customHeaderContentView, let result = customHeaderContentView.hitTest(self.view.convert(point, to: customHeaderContentView), with: event) {
+            return result
+        }
 
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
-        
         
         if self.passthroughTouches && (result == self.view || result == self.buttonsContainerNode.view) {
             return nil

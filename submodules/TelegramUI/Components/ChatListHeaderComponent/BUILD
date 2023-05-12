@@ -16,9 +16,11 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUI/Components/ChatListTitleView",
         "//submodules/AccountContext",
+        "//submodules/TelegramCore",
         "//submodules/AppBundle",
         "//submodules/AsyncDisplayKit",
         "//submodules/AnimationUI",
+        "//submodules/TelegramUI/Components/Stories/StoryPeerListComponent",
     ],
     visibility = [
         "//visibility:public",

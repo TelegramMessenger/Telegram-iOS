@@ -107,11 +107,20 @@ public final class StoryListContext {
     
     public struct State: Equatable {
         public var itemSets: [PeerItemSet]
+        public var uploadProgress: CGFloat?
         public var loadMoreToken: LoadMoreToken?
         
-        public init(itemSets: [PeerItemSet], loadMoreToken: LoadMoreToken?) {
+        public init(itemSets: [PeerItemSet], uploadProgress: CGFloat?, loadMoreToken: LoadMoreToken?) {
             self.itemSets = itemSets
+            self.uploadProgress = uploadProgress
             self.loadMoreToken = loadMoreToken
+        }
+    }
+    
+    private final class UploadContext {
+        let disposable = MetaDisposable()
+        
+        init() {
         }
     }
     
@@ -127,6 +136,12 @@ public final class StoryListContext {
         private var updatesDisposable: Disposable?
         private var peerDisposables: [PeerId: Disposable] = [:]
         
+        private var uploadContexts: [UploadContext] = [] {
+            didSet {
+                self.stateValue.uploadProgress = self.uploadContexts.isEmpty ? nil : 0.0
+            }
+        }
+        
         private var stateValue: State {
             didSet {
                 self.state.set(.single(self.stateValue))
@@ -139,8 +154,20 @@ public final class StoryListContext {
             self.account = account
             self.scope = scope
             
-            self.stateValue = State(itemSets: [], loadMoreToken: LoadMoreToken(value: nil))
+            self.stateValue = State(itemSets: [], uploadProgress: nil, loadMoreToken: LoadMoreToken(value: nil))
             self.state.set(.single(self.stateValue))
+            
+            let _ = (account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(account.peerId)
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let peer else {
+                    return
+                }
+                self.stateValue = State(itemSets: [
+                    PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), items: [], totalCount: 0)
+                ], uploadProgress: nil, loadMoreToken: LoadMoreToken(value: nil))
+            })
             
             self.updatesDisposable = (account.stateManager.storyUpdates
             |> deliverOn(queue)).start(next: { [weak self] updates in
@@ -150,6 +177,11 @@ public final class StoryListContext {
                 
                 let _ = account.postbox.transaction({ transaction -> [PeerId: Peer] in
                     var peers: [PeerId: Peer] = [:]
+                    
+                    if let peer = transaction.getPeer(account.peerId) {
+                        peers[peer.id] = peer
+                    }
+                    
                     for update in updates {
                         switch update {
                         case let .added(peerId, _):
@@ -198,7 +230,21 @@ public final class StoryListContext {
                                     if let index = items.firstIndex(where: { $0.id == item.id }) {
                                         items.remove(at: index)
                                     }
-                                    items.append(item)
+                                    
+                                    if peerId == self.account.peerId {
+                                        items.append(Item(
+                                            id: item.id,
+                                            timestamp: item.timestamp,
+                                            media: item.media,
+                                            isSeen: false,
+                                            seenCount: item.seenCount,
+                                            seenPeers: item.seenPeers,
+                                            privacy: item.privacy
+                                        ))
+                                    } else {
+                                        items.append(item)
+                                    }
+                                    
                                     items.sort(by: { lhsItem, rhsItem in
                                         if lhsItem.timestamp != rhsItem.timestamp {
                                             return lhsItem.timestamp < rhsItem.timestamp
@@ -262,6 +308,12 @@ public final class StoryListContext {
                         }
                         return lhsItem.id > rhsItem.id
                     })
+                    
+                    if !itemSets.contains(where: { $0.peerId == self.account.peerId }) {
+                        if let peer = peers[self.account.peerId] {
+                            itemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), items: [], totalCount: 0), at: 0)
+                        }
+                    }
                     
                     self.stateValue.itemSets = itemSets
                 })
@@ -398,6 +450,21 @@ public final class StoryListContext {
             }
         }
         
+        func upload(media: EngineStoryInputMedia, privacy: EngineStoryPrivacy) {
+            let uploadContext = UploadContext()
+            self.uploadContexts.append(uploadContext)
+            uploadContext.disposable.set((_internal_uploadStory(account: self.account, media: media, privacy: privacy)
+            |> deliverOn(self.queue)).start(next: { _ in
+            }, completed: { [weak self, weak uploadContext] in
+                guard let `self` = self, let uploadContext = uploadContext else {
+                    return
+                }
+                if let index = self.uploadContexts.firstIndex(where: { $0 === uploadContext }) {
+                    self.uploadContexts.remove(at: index)
+                }
+            }))
+        }
+        
         func loadMore(refresh: Bool) {
             if self.isLoadingMore {
                 return
@@ -528,6 +595,12 @@ public final class StoryListContext {
                             }
                         }
                         
+                        if !parsedItemSets.contains(where: { $0.peerId == account.peerId }) {
+                            if let peer = transaction.getPeer(account.peerId) {
+                                parsedItemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), items: [], totalCount: 0), at: 0)
+                            }
+                        }
+                        
                         return (parsedItemSets, nextOffset.flatMap { LoadMoreToken(value: $0) })
                     }
                 }
@@ -589,7 +662,7 @@ public final class StoryListContext {
                     return lhsItem.id > rhsItem.id
                 })
                 
-                self.stateValue = State(itemSets: itemSets, loadMoreToken: result.1)
+                self.stateValue = State(itemSets: itemSets, uploadProgress: self.stateValue.uploadProgress, loadMoreToken: result.1)
             }))
         }
         
@@ -637,6 +710,12 @@ public final class StoryListContext {
     public func delete(id: Int64) {
         self.impl.with { impl in
             impl.delete(id: id)
+        }
+    }
+    
+    public func upload(media: EngineStoryInputMedia, privacy: EngineStoryPrivacy) {
+        self.impl.with { impl in
+            impl.upload(media: media, privacy: privacy)
         }
     }
 }
