@@ -54,6 +54,10 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         }
     }
     
+    public var isMedia: Bool {
+        return false
+    }
+    
     public init(content: Content) {
         self.uuid = UUID()
         self.content = content

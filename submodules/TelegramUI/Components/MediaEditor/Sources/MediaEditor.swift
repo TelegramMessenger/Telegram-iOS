@@ -7,7 +7,6 @@ import Photos
 import SwiftSignalKit
 import Display
 import TelegramCore
-import AccountContext
 import TelegramPresentationData
 
 public final class MediaEditor {
@@ -26,9 +25,7 @@ public final class MediaEditor {
         }
     }
 
-    private let context: AccountContext
     private let subject: Subject
-    private let renderer: MediaEditorRenderer
     private var player: AVPlayer?
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
@@ -36,14 +33,12 @@ public final class MediaEditor {
 
     public var values: MediaEditorValues {
         didSet {
-            self.updateRenderValues()
+            self.updateRenderChain()
         }
     }
     
-    private let enhancePass = EnhanceRenderPass()
-    private let sharpenPass = SharpenRenderPass()
-    private let blurPass = BlurRenderPass()
-    private let adjustmentsPass = AdjustmentsRenderPass()
+    private let renderer = MediaEditorRenderer()
+    private let renderChain = MediaEditorRenderChain()
     private let histogramCalculationPass = HistogramCalculationPass()
     
     private var textureSourceDisposable: Disposable?
@@ -58,15 +53,15 @@ public final class MediaEditor {
         }
     }
     
-    public let histogramPipe = ValuePipe<Data>()
+    private let histogramPromise = Promise<Data>()
     public var histogram: Signal<Data, NoError> {
-        return self.histogramPipe.signal()
+        return self.histogramPromise.get()
     }
 
-    var textureCache: CVMetalTextureCache!
+    private var textureCache: CVMetalTextureCache!
     
     public var hasPortraitMask: Bool {
-        return self.blurPass.maskTexture != nil
+        return self.renderChain.blurPass.maskTexture != nil
     }
     
     public var resultIsVideo: Bool {
@@ -78,8 +73,7 @@ public final class MediaEditor {
         return self.renderer.finalRenderedImage()
     }
     
-    public init(context: AccountContext, subject: Subject, values: MediaEditorValues? = nil) {
-        self.context = context
+    public init(subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
         self.subject = subject
         if let values {
             self.values = values
@@ -91,22 +85,22 @@ public final class MediaEditor {
                 cropScale: 1.0,
                 cropRotation: 0.0,
                 cropMirroring: false,
+                gradientColors: nil,
                 videoTrimRange: nil,
+                videoIsMuted: false,
                 drawing: nil,
                 toolValues: [:]
             )
         }
+
+        self.renderer.addRenderChain(self.renderChain)
+        if hasHistogram {
+            self.renderer.addRenderPass(self.histogramCalculationPass)
+        }
         
-        self.renderer = MediaEditorRenderer()
-        self.renderer.addRenderPass(self.enhancePass)
-        //self.renderer.addRenderPass(self.sharpenPass)
-        self.renderer.addRenderPass(self.blurPass)
-        self.renderer.addRenderPass(self.adjustmentsPass)
-        self.renderer.addRenderPass(self.histogramCalculationPass)
-                
         self.histogramCalculationPass.updated = { [weak self] data in
             if let self {
-                self.histogramPipe.putNext(data)
+                self.histogramPromise.set(.single(data))
             }
         }
     }
@@ -226,6 +220,7 @@ public final class MediaEditor {
                 self.renderer.textureSource = source
                 self.player = player
                 self.gradientColorsValue = (topColor, bottomColor)
+                self.setGradientColors([topColor, bottomColor])
                 
                 self.maybeGeneratePersonSegmentation(image)
                
@@ -252,6 +247,10 @@ public final class MediaEditor {
         self.setupSource()
     }
     
+    public func setCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) {
+        self.values = self.values.withUpdatedCrop(offset: offset, scale: scale, rotation: rotation, mirroring: mirroring)
+    }
+    
     public func getToolValue(_ key: EditorToolKey) -> Any? {
         return self.values.toolValues[key]
     }
@@ -260,11 +259,75 @@ public final class MediaEditor {
         var updatedToolValues = self.values.toolValues
         updatedToolValues[key] = value
         self.values = self.values.withUpdatedToolValues(updatedToolValues)
-        self.updateRenderValues()
+        self.updateRenderChain()
     }
     
-    func updateRenderValues() {
-        for (key, value) in self.values.toolValues {
+    public func setVideoIsMuted(_ videoIsMuted: Bool) {
+        self.player?.isMuted = videoIsMuted
+        self.values = self.values.withUpdatedVideoIsMuted(videoIsMuted)
+    }
+    
+    public func setGradientColors(_ gradientColors: [UIColor]) {
+        self.values = self.values.withUpdatedGradientColors(gradientColors: gradientColors)
+    }
+    
+    private func updateRenderChain() {
+        self.renderChain.update(values: self.values)
+        if let player = self.player, player.rate > 0.0 {
+        } else {
+            self.previewView?.scheduleFrame()
+        }
+    }
+    
+    private func maybeGeneratePersonSegmentation(_ image: UIImage?) {
+        if #available(iOS 15.0, *), let cgImage = image?.cgImage {
+            let faceRequest = VNDetectFaceRectanglesRequest { [weak self] request, _ in
+                guard let _ = request.results?.first as? VNFaceObservation else { return }
+                
+                let personRequest = VNGeneratePersonSegmentationRequest(completionHandler: { [weak self] request, error in
+                    if let self, let result = (request as? VNGeneratePersonSegmentationRequest)?.results?.first {
+                        Queue.mainQueue().async {
+                            self.renderChain.blurPass.maskTexture = pixelBufferToMTLTexture(pixelBuffer: result.pixelBuffer, textureCache: self.textureCache)
+                        }
+                    }
+                })
+                personRequest.qualityLevel = .accurate
+                personRequest.outputPixelFormat = kCVPixelFormatType_OneComponent8
+                
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                do {
+                    try handler.perform([personRequest])
+                } catch {
+                    print(error)
+                }
+            }
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            do {
+                try handler.perform([faceRequest])
+            } catch {
+                print(error)
+            }
+        }
+    }
+}
+
+final class MediaEditorRenderChain {
+    fileprivate let enhancePass = EnhanceRenderPass()
+    fileprivate let sharpenPass = SharpenRenderPass()
+    fileprivate let blurPass = BlurRenderPass()
+    fileprivate let adjustmentsPass = AdjustmentsRenderPass()
+    
+    var renderPasses: [RenderPass] {
+        return [
+            self.enhancePass,
+            self.sharpenPass,
+            self.blurPass,
+            self.adjustmentsPass
+        ]
+    }
+    
+    func update(values: MediaEditorValues) {
+        for (key, value) in values.toolValues {
             switch key {
             case .enhance:
                 if let value = value as? Float {
@@ -369,38 +432,6 @@ public final class MediaEditor {
                 self.adjustmentsPass.redCurve = redDataPoints
                 self.adjustmentsPass.greenCurve = greenDataPoints
                 self.adjustmentsPass.blueCurve = blueDataPoints
-            }
-        }
-        self.previewView?.scheduleFrame()
-    }
-    
-    private func maybeGeneratePersonSegmentation(_ image: UIImage?) {
-        if #available(iOS 15.0, *), let cgImage = image?.cgImage {
-            let faceRequest = VNDetectFaceRectanglesRequest { [weak self] request, _ in
-                guard let _ = request.results?.first as? VNFaceObservation else { return }
-                
-                let personRequest = VNGeneratePersonSegmentationRequest(completionHandler: { [weak self] request, error in
-                    if let self, let result = (request as? VNGeneratePersonSegmentationRequest)?.results?.first {
-                        Queue.mainQueue().async {
-                            self.blurPass.maskTexture = pixelBufferToMTLTexture(pixelBuffer: result.pixelBuffer, textureCache: self.textureCache)
-                        }
-                    }
-                })
-                personRequest.qualityLevel = .accurate
-                personRequest.outputPixelFormat = kCVPixelFormatType_OneComponent8
-                
-                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-                do {
-                    try handler.perform([personRequest])
-                } catch {
-                    print(error)
-                }
-            }
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([faceRequest])
-            } catch {
-                print(error)
             }
         }
     }

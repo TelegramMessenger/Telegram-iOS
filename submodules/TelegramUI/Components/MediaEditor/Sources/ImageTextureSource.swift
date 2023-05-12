@@ -36,8 +36,7 @@ final class ImageTextureSource: TextureSource {
     }
 }
 
-func pixelBufferToMTLTexture(pixelBuffer:CVPixelBuffer, textureCache: CVMetalTextureCache) -> MTLTexture?
-{
+func pixelBufferToMTLTexture(pixelBuffer: CVPixelBuffer, textureCache: CVMetalTextureCache) -> MTLTexture? {
     let width = CVPixelBufferGetWidth(pixelBuffer)
     let height = CVPixelBufferGetHeight(pixelBuffer)
 

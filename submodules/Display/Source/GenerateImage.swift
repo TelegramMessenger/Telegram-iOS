@@ -374,11 +374,11 @@ public enum GradientImageDirection {
     case horizontal
 }
 
-public func generateGradientImage(size: CGSize, colors: [UIColor], locations: [CGFloat], direction: GradientImageDirection = .vertical) -> UIImage? {
+public func generateGradientImage(size: CGSize, scale: CGFloat = 0.0, colors: [UIColor], locations: [CGFloat], direction: GradientImageDirection = .vertical) -> UIImage? {
     guard colors.count == locations.count else {
         return nil
     }
-    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    UIGraphicsBeginImageContextWithOptions(size, false, scale)
     if let context = UIGraphicsGetCurrentContext() {
         let gradientColors = colors.map { $0.cgColor } as CFArray
         let colorSpace = DeviceGraphicsContextSettings.shared.colorSpace

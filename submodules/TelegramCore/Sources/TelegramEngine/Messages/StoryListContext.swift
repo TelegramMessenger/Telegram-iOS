@@ -6,6 +6,7 @@ import SwiftSignalKit
 enum InternalStoryUpdate {
     case deleted(Int64)
     case added(peerId: PeerId, item: StoryListContext.Item)
+    case read([Int64])
 }
 
 public final class StoryListContext {
@@ -18,11 +19,19 @@ public final class StoryListContext {
         public let id: Int64
         public let timestamp: Int32
         public let media: EngineMedia
+        public let isSeen: Bool
+        public let seenCount: Int
+        public let seenPeers: [EnginePeer]
+        public let privacy: EngineStoryPrivacy?
         
-        public init(id: Int64, timestamp: Int32, media: EngineMedia) {
+        public init(id: Int64, timestamp: Int32, media: EngineMedia, isSeen: Bool, seenCount: Int, seenPeers: [EnginePeer], privacy: EngineStoryPrivacy?) {
             self.id = id
             self.timestamp = timestamp
             self.media = media
+            self.isSeen = isSeen
+            self.seenCount = seenCount
+            self.seenPeers = seenPeers
+            self.privacy = privacy
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -33,6 +42,18 @@ public final class StoryListContext {
                 return false
             }
             if lhs.media != rhs.media {
+                return false
+            }
+            if lhs.isSeen != rhs.isSeen {
+                return false
+            }
+            if lhs.seenCount != rhs.seenCount {
+                return false
+            }
+            if lhs.seenPeers != rhs.seenPeers {
+                return false
+            }
+            if lhs.privacy != rhs.privacy {
                 return false
             }
             return true
@@ -137,11 +158,16 @@ public final class StoryListContext {
                             }
                         case .deleted:
                             break
+                        case .read:
+                            break
                         }
                     }
                     return peers
                 }).start(next: { peers in
                     guard let self else {
+                        return
+                    }
+                    if self.isLoadingMore {
                         return
                     }
                     
@@ -151,7 +177,7 @@ public final class StoryListContext {
                         switch update {
                         case let .deleted(id):
                             for i in 0 ..< itemSets.count {
-                                if let index = itemSets[i].items.firstIndex(where: { $0.id != id }) {
+                                if let index = itemSets[i].items.firstIndex(where: { $0.id == id }) {
                                     var items = itemSets[i].items
                                     items.remove(at: index)
                                     itemSets[i] = PeerItemSet(
@@ -175,9 +201,9 @@ public final class StoryListContext {
                                     items.append(item)
                                     items.sort(by: { lhsItem, rhsItem in
                                         if lhsItem.timestamp != rhsItem.timestamp {
-                                            return lhsItem.timestamp > rhsItem.timestamp
+                                            return lhsItem.timestamp < rhsItem.timestamp
                                         }
-                                        return lhsItem.id > rhsItem.id
+                                        return lhsItem.id < rhsItem.id
                                     })
                                     itemSets[i] = PeerItemSet(
                                         peerId: itemSets[i].peerId,
@@ -194,6 +220,30 @@ public final class StoryListContext {
                                     items: [item],
                                     totalCount: 1
                                 ), at: 0)
+                            }
+                        case let .read(ids):
+                            for id in ids {
+                                for i in 0 ..< itemSets.count {
+                                    if let index = itemSets[i].items.firstIndex(where: { $0.id == id }) {
+                                        var items = itemSets[i].items
+                                        let item = items[index]
+                                        items[index] = Item(
+                                            id: item.id,
+                                            timestamp: item.timestamp,
+                                            media: item.media,
+                                            isSeen: true,
+                                            seenCount: item.seenCount,
+                                            seenPeers: item.seenPeers,
+                                            privacy: item.privacy
+                                        )
+                                        itemSets[i] = PeerItemSet(
+                                            peerId: itemSets[i].peerId,
+                                            peer: itemSets[i].peer,
+                                            items: items,
+                                            totalCount: items.count
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -263,10 +313,58 @@ public final class StoryListContext {
                                         
                                         for apiStory in apiStories {
                                             switch apiStory {
-                                            case let .storyItem(id, date, media):
+                                            case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
                                                 let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                                                 if let parsedMedia = parsedMedia {
-                                                    let item = StoryListContext.Item(id: id, timestamp: date, media: EngineMedia(parsedMedia))
+                                                    var seenPeers: [EnginePeer] = []
+                                                    if let recentViewers = recentViewers {
+                                                        for id in recentViewers {
+                                                            if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))) {
+                                                                seenPeers.append(EnginePeer(peer))
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    var parsedPrivacy: EngineStoryPrivacy?
+                                                    if let privacy = privacy {
+                                                        var base: EngineStoryPrivacy.Base = .everyone
+                                                        var additionalPeerIds: [EnginePeer.Id] = []
+                                                        for rule in privacy {
+                                                            switch rule {
+                                                            case .privacyValueAllowAll:
+                                                                base = .everyone
+                                                            case .privacyValueAllowContacts:
+                                                                base = .contacts
+                                                            case .privacyValueAllowCloseFriends:
+                                                                base = .closeFriends
+                                                            case let .privacyValueAllowUsers(users):
+                                                                for id in users {
+                                                                    additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
+                                                                }
+                                                            case let .privacyValueAllowChatParticipants(chats):
+                                                                for id in chats {
+                                                                    if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                                        additionalPeerIds.append(peer.id)
+                                                                    } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                                        additionalPeerIds.append(peer.id)
+                                                                    }
+                                                                }
+                                                            default:
+                                                                break
+                                                            }
+                                                        }
+                                                        parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
+                                                    }
+                                                    
+                                                    let item = StoryListContext.Item(
+                                                        id: id,
+                                                        timestamp: date,
+                                                        media: EngineMedia(parsedMedia),
+                                                        isSeen: (flags & (1 << 4)) == 0,
+                                                        seenCount: viewCount.flatMap(Int.init) ?? 0,
+                                                        seenPeers: seenPeers,
+                                                        privacy: parsedPrivacy
+                                                    )
                                                     if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
                                                         parsedItemSets[parsedItemSets.count - 1].items.append(item)
                                                         parsedItemSets[parsedItemSets.count - 1].totalCount = parsedItemSets[parsedItemSets.count - 1].items.count
@@ -366,10 +464,58 @@ public final class StoryListContext {
                             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(apiUserId))
                             for apiStory in apiStories {
                                 switch apiStory {
-                                case let .storyItem(id, date, media):
+                                case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
                                     let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                                     if let parsedMedia = parsedMedia {
-                                        let item = StoryListContext.Item(id: id, timestamp: date, media: EngineMedia(parsedMedia))
+                                        var seenPeers: [EnginePeer] = []
+                                        if let recentViewers = recentViewers {
+                                            for id in recentViewers {
+                                                if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))) {
+                                                    seenPeers.append(EnginePeer(peer))
+                                                }
+                                            }
+                                        }
+                                        
+                                        var parsedPrivacy: EngineStoryPrivacy?
+                                        if let privacy = privacy {
+                                            var base: EngineStoryPrivacy.Base = .everyone
+                                            var additionalPeerIds: [EnginePeer.Id] = []
+                                            for rule in privacy {
+                                                switch rule {
+                                                case .privacyValueAllowAll:
+                                                    base = .everyone
+                                                case .privacyValueAllowContacts:
+                                                    base = .contacts
+                                                case .privacyValueAllowCloseFriends:
+                                                    base = .closeFriends
+                                                case let .privacyValueAllowUsers(users):
+                                                    for id in users {
+                                                        additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
+                                                    }
+                                                case let .privacyValueAllowChatParticipants(chats):
+                                                    for id in chats {
+                                                        if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                            additionalPeerIds.append(peer.id)
+                                                        } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                            additionalPeerIds.append(peer.id)
+                                                        }
+                                                    }
+                                                default:
+                                                    break
+                                                }
+                                            }
+                                            parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
+                                        }
+                                        
+                                        let item = StoryListContext.Item(
+                                            id: id,
+                                            timestamp: date,
+                                            media: EngineMedia(parsedMedia),
+                                            isSeen: (flags & (1 << 4)) == 0,
+                                            seenCount: viewCount.flatMap(Int.init) ?? 0,
+                                            seenPeers: seenPeers,
+                                            privacy: parsedPrivacy
+                                        )
                                         if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
                                             parsedItemSets[parsedItemSets.count - 1].items.append(item)
                                         } else {
@@ -406,9 +552,9 @@ public final class StoryListContext {
                         
                         items.sort(by: { lhsItem, rhsItem in
                             if lhsItem.timestamp != rhsItem.timestamp {
-                                return lhsItem.timestamp > rhsItem.timestamp
+                                return lhsItem.timestamp < rhsItem.timestamp
                             }
-                            return lhsItem.id > rhsItem.id
+                            return lhsItem.id < rhsItem.id
                         })
                         
                         itemSets[index] = PeerItemSet(
@@ -418,6 +564,12 @@ public final class StoryListContext {
                             totalCount: items.count
                         )
                     } else {
+                        itemSet.items.sort(by: { lhsItem, rhsItem in
+                            if lhsItem.timestamp != rhsItem.timestamp {
+                                return lhsItem.timestamp < rhsItem.timestamp
+                            }
+                            return lhsItem.id < rhsItem.id
+                        })
                         itemSets.append(itemSet)
                     }
                 }

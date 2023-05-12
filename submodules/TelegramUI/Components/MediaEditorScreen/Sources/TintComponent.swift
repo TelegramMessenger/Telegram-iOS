@@ -311,7 +311,8 @@ final class TintComponent: Component {
                         startValue: 0.0,
                         isEnabled: currentColor != .clear,
                         trackColor: currentColor != .clear ? currentColor : .white,
-                        updateValue: { [weak state] value in
+                        displayValue: false,
+                        valueUpdated: { [weak state] value in
                             if let state {
                                 switch state.section {
                                 case .shadows:

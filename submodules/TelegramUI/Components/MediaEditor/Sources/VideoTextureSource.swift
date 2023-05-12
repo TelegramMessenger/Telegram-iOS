@@ -117,7 +117,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
             let displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
                 self?.handleUpdate()
             }), selector: #selector(DisplayLinkTarget.handleDisplayLinkUpdate(sender:)))
-            displayLink.preferredFramesPerSecond = 30
+            displayLink.preferredFramesPerSecond = 60
             displayLink.add(to: .main, forMode: .common)
             self.displayLink = displayLink
         }
@@ -171,14 +171,6 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
             self.update(forced: true)
             self.forceUpdate = false
         }
-    }
-    
-    func start() {
-
-    }
-    
-    func pause() {
-
     }
     
     func connect(to consumer: TextureConsumer) {

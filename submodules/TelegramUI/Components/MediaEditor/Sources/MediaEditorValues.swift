@@ -20,6 +20,19 @@ public enum EditorToolKey {
     case blur
     case curves
 }
+private let adjustmentToolsKeys: [EditorToolKey] = [
+    .enhance,
+    .brightness,
+    .contrast,
+    .saturation,
+    .warmth,
+    .fade,
+    .highlights,
+    .shadows,
+    .vignette,
+    .grain,
+    .sharpen
+]
 
 public struct TintValue: Equatable {
     public static let initial = TintValue(
@@ -288,32 +301,118 @@ public struct CurvesValue: Equatable {
 }
 
 public class MediaEditorValues {
-    let originalDimensions: PixelDimensions
-    let cropOffset: CGPoint
-    let cropSize: CGSize?
-    let cropScale: CGFloat
-    let cropRotation: CGFloat
-    let cropMirroring: Bool
+    public let originalDimensions: PixelDimensions
+    public let cropOffset: CGPoint
+    public let cropSize: CGSize?
+    public let cropScale: CGFloat
+    public let cropRotation: CGFloat
+    public let cropMirroring: Bool
     
-    let videoTrimRange: Range<Double>?
+    public let gradientColors: [UIColor]?
     
-    let drawing: UIImage?
-    let toolValues: [EditorToolKey: Any]
+    public let videoTrimRange: Range<Double>?
+    public let videoIsMuted: Bool
     
-    init(originalDimensions: PixelDimensions, cropOffset: CGPoint, cropSize: CGSize?, cropScale: CGFloat, cropRotation: CGFloat, cropMirroring: Bool, videoTrimRange: Range<Double>?, drawing: UIImage?, toolValues: [EditorToolKey: Any]) {
+    public let drawing: UIImage?
+    public let toolValues: [EditorToolKey: Any]
+    
+    init(
+        originalDimensions: PixelDimensions,
+        cropOffset: CGPoint,
+        cropSize: CGSize?,
+        cropScale: CGFloat,
+        cropRotation: CGFloat,
+        cropMirroring: Bool,
+        gradientColors: [UIColor]?,
+        videoTrimRange: Range<Double>?,
+        videoIsMuted: Bool,
+        drawing: UIImage?,
+        toolValues: [EditorToolKey: Any]
+    ) {
         self.originalDimensions = originalDimensions
         self.cropOffset = cropOffset
         self.cropSize = cropSize
         self.cropScale = cropScale
         self.cropRotation = cropRotation
         self.cropMirroring = cropMirroring
+        self.gradientColors = gradientColors
         self.videoTrimRange = videoTrimRange
+        self.videoIsMuted = videoIsMuted
         self.drawing = drawing
         self.toolValues = toolValues
     }
     
+    func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedGradientColors(gradientColors: [UIColor]) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedVideoIsMuted(_ videoIsMuted: Bool) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, drawing: self.drawing, toolValues: self.toolValues)
+    }
+    
     func withUpdatedToolValues(_ toolValues: [EditorToolKey: Any]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, videoTrimRange: self.videoTrimRange, drawing: self.drawing, toolValues: toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, toolValues: toolValues)
+    }
+}
+
+private let toolEpsilon: Float = 0.005
+public extension MediaEditorValues {
+    var hasAdjustments: Bool {
+        for key in adjustmentToolsKeys {
+            if let value = self.toolValues[key] as? Float, abs(value) > toolEpsilon {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var hasTint: Bool {
+        if let tintValue = self.toolValues[.shadowsTint] as? TintValue, tintValue.color != .clear && tintValue.intensity > toolEpsilon {
+            return true
+        } else if let tintValue = self.toolValues[.highlightsTint] as? TintValue, tintValue.color != .clear && tintValue.intensity > toolEpsilon {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    var hasBlur: Bool {
+        if let blurValue = self.toolValues[.blur] as? BlurValue, blurValue.mode != .off || blurValue.intensity > toolEpsilon {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    var hasCurves: Bool {
+        if let curvesValue = self.toolValues[.curves] as? CurvesValue, curvesValue != CurvesValue.initial {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    var requiresComposing: Bool {
+        if self.hasAdjustments {
+            return true
+        }
+        if self.hasTint {
+            return true
+        }
+        if self.hasBlur {
+            return true
+        }
+        if self.hasCurves {
+            return true
+        }
+        if self.drawing != nil {
+            return true
+        }
+        return false
     }
 }
 

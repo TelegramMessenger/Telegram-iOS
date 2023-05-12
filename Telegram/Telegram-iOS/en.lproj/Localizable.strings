@@ -963,6 +963,8 @@
 "PrivacySettings.LastSeenContactsMinus" = "My Contacts (-%@)";
 "PrivacySettings.LastSeenContactsMinusPlus" = "My Contacts (-%@, +%@)";
 "PrivacySettings.LastSeenNobodyPlus" = "Nobody (+%@)";
+"PrivacySettings.LastSeenCloseFriendsPlus" = "Close Friends (+%@)";
+"PrivacySettings.LastSeenCloseFriends" = "Close Friends";
 
 "PrivacySettings.SecurityTitle" = "SECURITY";
 

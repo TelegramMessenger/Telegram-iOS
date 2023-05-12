@@ -11,30 +11,6 @@ typedef struct {
     uint numberOfLUTs;
 } MediaEditorEnhanceLUTGeneratorParameters;
 
-METAL_FUNC half3 rgb2hsl(half3 inputColor) {
-    half3 color = saturate(inputColor);
-    
-    //Compute min and max component values
-    half MAX = max(color.r, max(color.g, color.b));
-    half MIN = min(color.r, min(color.g, color.b));
-    
-    //Make sure MAX > MIN to avoid division by zero later
-    MAX = max(MIN + 1e-6h, MAX);
-    
-    //Compute luminosity
-    half l = (MIN + MAX) / 2.0h;
-    
-    //Compute saturation
-    half s = (l < 0.5h ? (MAX - MIN) / (MIN + MAX) : (MAX - MIN) / (2.0h - MAX - MIN));
-    
-    //Compute hue
-    half h = (MAX == color.r ? (color.g - color.b) / (MAX - MIN) : (MAX == color.g ? 2.0h + (color.b - color.r) / (MAX - MIN) : 4.0h + (color.r - color.g) / (MAX - MIN)));
-    h /= 6.0h;
-    h = (h < 0.0h ? 1.0h + h : h);
-    
-    return half3(h, s, l);
-}
-
 fragment half rgbToLightnessFragmentShader(RasterizerData in [[ stage_in ]],
                                            texture2d<half, access::sample> sourceTexture [[ texture(0) ]],
                                            sampler colorSampler [[ sampler(0) ]],
@@ -45,10 +21,10 @@ fragment half rgbToLightnessFragmentShader(RasterizerData in [[ stage_in ]],
     return hsl.b;
 }
 
-kernel void CLAHEGenerateLUT(texture2d<float, access::write> outTexture [[texture(0)]],
-                             device uint * histogramBuffer [[buffer(0)]],
-                             constant MediaEditorEnhanceLUTGeneratorParameters & parameters [[buffer(1)]],
-                             uint gid [[thread_position_in_grid]])
+kernel void enhanceGenerateLUT(texture2d<float, access::write> outTexture [[texture(0)]],
+                               device uint * histogramBuffer [[buffer(0)]],
+                               constant MediaEditorEnhanceLUTGeneratorParameters & parameters [[buffer(1)]],
+                               uint gid [[thread_position_in_grid]])
 {
     if (gid >= parameters.numberOfLUTs) {
         return;
@@ -87,7 +63,7 @@ kernel void CLAHEGenerateLUT(texture2d<float, access::write> outTexture [[textur
     }
 }
 
-half CLAHELookup(texture2d<half, access::sample> lutTexture, sampler lutSamper, float index, float x) {
+half enhanceLookup(texture2d<half, access::sample> lutTexture, sampler lutSamper, float index, float x) {
     return lutTexture.sample(lutSamper, float2(x, (index + 0.5)/lutTexture.get_height())).r;
 }
 
@@ -130,10 +106,10 @@ fragment half4 enhanceColorLookupFragmentShader(RasterizerData in [[stage_in]],
     float srcVal = hslColor.b;
     float x = (srcVal * 255.0 + 0.5) / lutTexture.get_width();
     
-    half lutPlane1_ind1 = CLAHELookup(lutTexture, lutSampler, ty1 * tileGridSize.x + tx1, x);
-    half lutPlane1_ind2 = CLAHELookup(lutTexture, lutSampler, ty1 * tileGridSize.x + tx2, x);
-    half lutPlane2_ind1 = CLAHELookup(lutTexture, lutSampler, ty2 * tileGridSize.x + tx1, x);
-    half lutPlane2_ind2 = CLAHELookup(lutTexture, lutSampler, ty2 * tileGridSize.x + tx2, x);
+    half lutPlane1_ind1 = enhanceLookup(lutTexture, lutSampler, ty1 * tileGridSize.x + tx1, x);
+    half lutPlane1_ind2 = enhanceLookup(lutTexture, lutSampler, ty1 * tileGridSize.x + tx2, x);
+    half lutPlane2_ind1 = enhanceLookup(lutTexture, lutSampler, ty2 * tileGridSize.x + tx1, x);
+    half lutPlane2_ind2 = enhanceLookup(lutTexture, lutSampler, ty2 * tileGridSize.x + tx2, x);
     
     half res = (lutPlane1_ind1 * xa1_p + lutPlane1_ind2 * xa_p) * ya1 + (lutPlane2_ind1 * xa1_p + lutPlane2_ind2 * xa_p) * ya;
     

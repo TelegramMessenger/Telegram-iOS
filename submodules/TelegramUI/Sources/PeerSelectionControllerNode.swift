@@ -199,7 +199,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         if let requestPeerType = self.requestPeerType {
             chatListMode = .peerType(type: requestPeerType, hasCreate: hasCreation)
         } else {
-            chatListMode = .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil, displayAutoremoveTimeout: false)
+            chatListMode = .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil, displayAutoremoveTimeout: false, displayPresence: false)
         }
        
         if hasFilters {

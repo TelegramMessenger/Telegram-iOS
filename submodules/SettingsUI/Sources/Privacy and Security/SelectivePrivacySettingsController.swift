@@ -488,6 +488,7 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     let setting: SelectivePrivacySettingType
     let enableFor: [EnginePeer.Id: SelectivePrivacyPeer]
     let disableFor: [EnginePeer.Id: SelectivePrivacyPeer]
+    let enableForCloseFriends: Bool
     
     let saving: Bool
     
@@ -495,21 +496,24 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     let callP2PMode: SelectivePrivacySettingType?
     let callP2PEnableFor: [EnginePeer.Id: SelectivePrivacyPeer]?
     let callP2PDisableFor: [EnginePeer.Id: SelectivePrivacyPeer]?
+    let callP2PEnableForCloseFriends: Bool?
     let callIntegrationAvailable: Bool?
     let callIntegrationEnabled: Bool?
     let phoneDiscoveryEnabled: Bool?
         
     let uploadedPhoto: UIImage?
     
-    init(setting: SelectivePrivacySettingType, enableFor: [EnginePeer.Id: SelectivePrivacyPeer], disableFor: [EnginePeer.Id: SelectivePrivacyPeer], saving: Bool, callDataSaving: VoiceCallDataSaving?, callP2PMode: SelectivePrivacySettingType?, callP2PEnableFor: [EnginePeer.Id: SelectivePrivacyPeer]?, callP2PDisableFor: [EnginePeer.Id: SelectivePrivacyPeer]?, callIntegrationAvailable: Bool?, callIntegrationEnabled: Bool?, phoneDiscoveryEnabled: Bool?, uploadedPhoto: UIImage?) {
+    init(setting: SelectivePrivacySettingType, enableFor: [EnginePeer.Id: SelectivePrivacyPeer], disableFor: [EnginePeer.Id: SelectivePrivacyPeer], enableForCloseFriends: Bool, saving: Bool, callDataSaving: VoiceCallDataSaving?, callP2PMode: SelectivePrivacySettingType?, callP2PEnableFor: [EnginePeer.Id: SelectivePrivacyPeer]?, callP2PDisableFor: [EnginePeer.Id: SelectivePrivacyPeer]?, callP2PEnableForCloseFriends: Bool?, callIntegrationAvailable: Bool?, callIntegrationEnabled: Bool?, phoneDiscoveryEnabled: Bool?, uploadedPhoto: UIImage?) {
         self.setting = setting
         self.enableFor = enableFor
         self.disableFor = disableFor
+        self.enableForCloseFriends = enableForCloseFriends
         self.saving = saving
         self.callDataSaving = callDataSaving
         self.callP2PMode = callP2PMode
         self.callP2PEnableFor = callP2PEnableFor
         self.callP2PDisableFor = callP2PDisableFor
+        self.callP2PEnableForCloseFriends = callP2PEnableForCloseFriends
         self.callIntegrationAvailable = callIntegrationAvailable
         self.callIntegrationEnabled = callIntegrationEnabled
         self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
@@ -526,6 +530,9 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
         if lhs.disableFor != rhs.disableFor {
             return false
         }
+        if lhs.enableForCloseFriends != rhs.enableForCloseFriends {
+            return false
+        }
         if lhs.saving != rhs.saving {
             return false
         }
@@ -539,6 +546,9 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
             return false
         }
         if lhs.callP2PDisableFor != rhs.callP2PDisableFor {
+            return false
+        }
+        if lhs.callP2PEnableForCloseFriends != rhs.callP2PEnableForCloseFriends {
             return false
         }
         if lhs.callIntegrationAvailable != rhs.callIntegrationAvailable {
@@ -558,43 +568,51 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
     }
     
     func withUpdatedSetting(_ setting: SelectivePrivacySettingType) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedEnableFor(_ enableFor: [EnginePeer.Id: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedDisableFor(_ disableFor: [EnginePeer.Id: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+    }
+    
+    func withUpdatedEnableForCloseFriends(_ enableForCloseFriends: Bool) -> SelectivePrivacySettingsControllerState {
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedSaving(_ saving: Bool) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallP2PMode(_ mode: SelectivePrivacySettingType) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: mode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: mode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallP2PEnableFor(_ enableFor: [EnginePeer.Id: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: enableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: enableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallP2PDisableFor(_ disableFor: [EnginePeer.Id: SelectivePrivacyPeer]) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: disableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: disableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+    }
+    
+    func withUpdatedCallP2PEnableForCloseFriends(_ callP2PEnableForCloseFriends: Bool) -> SelectivePrivacySettingsControllerState {
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedCallsIntegrationEnabled(_ enabled: Bool) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: enabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: enabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedPhoneDiscoveryEnabled(_ phoneDiscoveryEnabled: Bool) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: phoneDiscoveryEnabled, uploadedPhoto: self.uploadedPhoto)
     }
     
     func withUpdatedUploadedPhoto(_ uploadedPhoto: UIImage?) -> SelectivePrivacySettingsControllerState {
-        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: uploadedPhoto)
+        return SelectivePrivacySettingsControllerState(setting: self.setting, enableFor: self.enableFor, disableFor: self.disableFor, enableForCloseFriends: self.enableForCloseFriends, saving: self.saving, callDataSaving: self.callDataSaving, callP2PMode: self.callP2PMode, callP2PEnableFor: self.callP2PEnableFor, callP2PDisableFor: self.callP2PDisableFor, callP2PEnableForCloseFriends: self.callP2PEnableForCloseFriends, callIntegrationAvailable: self.callIntegrationAvailable, callIntegrationEnabled: self.callIntegrationEnabled, phoneDiscoveryEnabled: self.phoneDiscoveryEnabled, uploadedPhoto: uploadedPhoto)
     }
 }
 
@@ -770,9 +788,11 @@ func selectivePrivacySettingsController(
     
     var initialEnableFor: [EnginePeer.Id: SelectivePrivacyPeer] = [:]
     var initialDisableFor: [EnginePeer.Id: SelectivePrivacyPeer] = [:]
+    var initialEnableForCloseFriends = false
     switch current {
-        case let .disableEveryone(enableFor):
+        case let .disableEveryone(enableFor, enableForCloseFriends):
             initialEnableFor = enableFor
+            initialEnableForCloseFriends = enableForCloseFriends
         case let .enableContacts(enableFor, disableFor):
             initialEnableFor = enableFor
             initialDisableFor = disableFor
@@ -781,11 +801,13 @@ func selectivePrivacySettingsController(
     }
     var initialCallP2PEnableFor: [EnginePeer.Id: SelectivePrivacyPeer]?
     var initialCallP2PDisableFor: [EnginePeer.Id: SelectivePrivacyPeer]?
+    var initialCallEnableForCloseFriends = false
     if let callCurrent = callSettings?.0 {
         switch callCurrent {
-            case let .disableEveryone(enableFor):
+            case let .disableEveryone(enableFor, enableForCloseFriends):
                 initialCallP2PEnableFor = enableFor
                 initialCallP2PDisableFor = [:]
+                initialCallEnableForCloseFriends = enableForCloseFriends
             case let .enableContacts(enableFor, disableFor):
                 initialCallP2PEnableFor = enableFor
                 initialCallP2PDisableFor = disableFor
@@ -795,7 +817,7 @@ func selectivePrivacySettingsController(
         }
     }
     
-    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, saving: false, callDataSaving: callSettings?.1.dataSaving, callP2PMode: callSettings != nil ? SelectivePrivacySettingType(callSettings!.0) : nil, callP2PEnableFor: initialCallP2PEnableFor, callP2PDisableFor: initialCallP2PDisableFor, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.1.enableSystemIntegration, phoneDiscoveryEnabled: phoneDiscoveryEnabled, uploadedPhoto: nil)
+    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, enableForCloseFriends: initialEnableForCloseFriends, saving: false, callDataSaving: callSettings?.1.dataSaving, callP2PMode: callSettings != nil ? SelectivePrivacySettingType(callSettings!.0) : nil, callP2PEnableFor: initialCallP2PEnableFor, callP2PDisableFor: initialCallP2PDisableFor, callP2PEnableForCloseFriends: initialCallEnableForCloseFriends, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.1.enableSystemIntegration, phoneDiscoveryEnabled: phoneDiscoveryEnabled, uploadedPhoto: nil)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -1128,21 +1150,21 @@ func selectivePrivacySettingsController(
                 case .contacts:
                     settings = SelectivePrivacySettings.enableContacts(enableFor: state.enableFor, disableFor: state.disableFor)
                 case .nobody:
-                    settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor)
+                    settings = SelectivePrivacySettings.disableEveryone(enableFor: state.enableFor, enableForCloseFriends: state.enableForCloseFriends)
             }
             
             if case .phoneNumber = kind, let value = state.phoneDiscoveryEnabled {
                 phoneDiscoveryEnabled = value
             }
             
-            if case .voiceCalls = kind, let callP2PMode = state.callP2PMode, let disableFor = state.callP2PDisableFor, let enableFor = state.callP2PEnableFor {
+            if case .voiceCalls = kind, let callP2PMode = state.callP2PMode, let disableFor = state.callP2PDisableFor, let enableFor = state.callP2PEnableFor, let enableForCloseFriends = state.callP2PEnableForCloseFriends {
                 switch callP2PMode {
                     case .everybody:
                         callP2PSettings = SelectivePrivacySettings.enableEveryone(disableFor: disableFor)
                     case .contacts:
                         callP2PSettings = SelectivePrivacySettings.enableContacts(enableFor: enableFor, disableFor: disableFor)
                     case .nobody:
-                        callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor)
+                        callP2PSettings = SelectivePrivacySettings.disableEveryone(enableFor: enableFor, enableForCloseFriends: enableForCloseFriends)
                 }
             }
             

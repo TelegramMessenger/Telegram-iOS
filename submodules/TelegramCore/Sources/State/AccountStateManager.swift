@@ -224,7 +224,7 @@ public final class AccountStateManager {
             return self.deletedMessagesPipe.signal()
         }
         
-        private let storyUpdatesPipe = ValuePipe<[InternalStoryUpdate]>()
+        fileprivate let storyUpdatesPipe = ValuePipe<[InternalStoryUpdate]>()
         public var storyUpdates: Signal<[InternalStoryUpdate], NoError> {
             return self.storyUpdatesPipe.signal()
         }
@@ -1636,6 +1636,12 @@ public final class AccountStateManager {
     var storyUpdates: Signal<[InternalStoryUpdate], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.storyUpdates.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    func injectStoryUpdates(updates: [InternalStoryUpdate]) {
+        self.impl.with { impl in
+            impl.storyUpdatesPipe.putNext(updates)
         }
     }
     

@@ -55,6 +55,10 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
     
     public var renderImage: UIImage?
     
+    public var isMedia: Bool {
+        return false
+    }
+    
     init(type: VectorType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
         self.isAnimated = false

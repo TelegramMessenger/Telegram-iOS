@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import LegacyComponents
 import MediaEditor
 
@@ -15,7 +16,9 @@ final class AdjustmentSliderComponent: Component {
     let startValue: Float
     let isEnabled: Bool
     let trackColor: UIColor?
-    let updateValue: (Float) -> Void
+    let displayValue: Bool
+    let valueUpdated: (Float) -> Void
+    let isTrackingUpdated: ((Bool) -> Void)?
     
     init(
         title: String,
@@ -25,7 +28,9 @@ final class AdjustmentSliderComponent: Component {
         startValue: Float,
         isEnabled: Bool,
         trackColor: UIColor?,
-        updateValue: @escaping (Float) -> Void
+        displayValue: Bool,
+        valueUpdated: @escaping (Float) -> Void,
+        isTrackingUpdated: ((Bool) -> Void)? = nil
     ) {
         self.title = title
         self.value = value
@@ -34,7 +39,9 @@ final class AdjustmentSliderComponent: Component {
         self.startValue = startValue
         self.isEnabled = isEnabled
         self.trackColor = trackColor
-        self.updateValue = updateValue
+        self.displayValue = displayValue
+        self.valueUpdated = valueUpdated
+        self.isTrackingUpdated = isTrackingUpdated
     }
     
     static func ==(lhs: AdjustmentSliderComponent, rhs: AdjustmentSliderComponent) -> Bool {
@@ -59,6 +66,9 @@ final class AdjustmentSliderComponent: Component {
         if lhs.trackColor != rhs.trackColor {
             return false
         }
+        if lhs.displayValue != rhs.displayValue {
+            return false
+        }
         return true
     }
     
@@ -81,6 +91,34 @@ final class AdjustmentSliderComponent: Component {
         func update(component: AdjustmentSliderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
+            
+            var internalIsTrackingUpdated: ((Bool) -> Void)?
+            if let isTrackingUpdated = component.isTrackingUpdated {
+                internalIsTrackingUpdated = { [weak self] isTracking in
+                    if let self {
+                        if isTracking {
+                            self.sliderView?.bordered = true
+                        } else {
+                            Queue.mainQueue().after(0.1) {
+                                self.sliderView?.bordered = false
+                            }
+                        }
+                        isTrackingUpdated(isTracking)
+                        let transition: Transition
+                        if isTracking {
+                            transition = .immediate
+                        } else {
+                            transition = .easeInOut(duration: 0.25)
+                        }
+                        if let titleView = self.title.view {
+                            transition.setAlpha(view: titleView, alpha: isTracking ? 0.0 : 1.0)
+                        }
+                        if let valueView = self.value.view {
+                            transition.setAlpha(view: valueView, alpha: isTracking ? 0.0 : 1.0)
+                        }
+                    }
+                }
+            }
                         
             let sliderView: TGPhotoEditorSliderView
             if let current = self.sliderView {
@@ -89,6 +127,7 @@ final class AdjustmentSliderComponent: Component {
             } else {
                 sliderView = TGPhotoEditorSliderView()
                 sliderView.backgroundColor = .clear
+                sliderView.startColor = UIColor(rgb: 0xffffff)
                 sliderView.enablePanHandling = true
                 sliderView.trackCornerRadius = 1.0
                 sliderView.lineSize = 2.0
@@ -101,6 +140,12 @@ final class AdjustmentSliderComponent: Component {
                 sliderView.layer.allowsGroupOpacity = true
                 self.sliderView = sliderView
                 self.addSubview(sliderView)
+            }
+            sliderView.interactionBegan = {
+                internalIsTrackingUpdated?(true)
+            }
+            sliderView.interactionEnded = {
+                internalIsTrackingUpdated?(false)
             }
             
             if component.isEnabled {
@@ -131,6 +176,34 @@ final class AdjustmentSliderComponent: Component {
                 transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: 21.0, y: 0.0), size: titleSize))
             }
             
+            let valueText: String
+            if component.displayValue {
+                if component.value > 0.005 {
+                    valueText = String(format: "+%.2f", component.value)
+                } else if component.value < -0.005 {
+                    valueText = String(format: "%.2f", component.value)
+                } else {
+                    valueText = ""
+                }
+            } else {
+                valueText = ""
+            }
+            
+            let valueSize = self.value.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    Text(text: valueText, font: Font.with(size: 14.0, traits: .monospacedNumbers), color: UIColor(rgb: 0xf8d74a))
+                ),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            if let valueView = self.value.view {
+                if valueView.superview == nil {
+                    self.addSubview(valueView)
+                }
+                transition.setFrame(view: valueView, frame: CGRect(origin: CGPoint(x: availableSize.width - 21.0 - valueSize.width, y: 0.0), size: valueSize))
+            }
+            
             return CGSize(width: availableSize.width, height: 52.0)
         }
         
@@ -138,7 +211,7 @@ final class AdjustmentSliderComponent: Component {
             guard let component = self.component, let sliderView = self.sliderView else {
                 return
             }
-            component.updateValue(Float(sliderView.value))
+            component.valueUpdated(Float(sliderView.value))
         }
     }
 
@@ -165,13 +238,16 @@ final class AdjustmentsComponent: Component {
     
     let tools: [AdjustmentTool]
     let valueUpdated: (EditorToolKey, Float) -> Void
+    let isTrackingUpdated: (Bool) -> Void
     
     init(
         tools: [AdjustmentTool],
-        valueUpdated: @escaping (EditorToolKey, Float) -> Void
+        valueUpdated: @escaping (EditorToolKey, Float) -> Void,
+        isTrackingUpdated: @escaping (Bool) -> Void
     ) {
         self.tools = tools
         self.valueUpdated = valueUpdated
+        self.isTrackingUpdated = isTrackingUpdated
     }
     
     static func ==(lhs: AdjustmentsComponent, rhs: AdjustmentsComponent) -> Bool {
@@ -205,6 +281,26 @@ final class AdjustmentsComponent: Component {
             self.state = state
             
             let valueUpdated = component.valueUpdated
+            let isTrackingUpdated: (EditorToolKey, Bool) -> Void = { [weak self] trackingTool, isTracking in
+                component.isTrackingUpdated(isTracking)
+                
+                if let self {
+                    for i in 0 ..< component.tools.count {
+                        let tool = component.tools[i]
+                        if tool.key != trackingTool && i < self.toolViews.count {
+                            if let view = self.toolViews[i].view {
+                                let transition: Transition
+                                if isTracking {
+                                    transition = .immediate
+                                } else {
+                                    transition = .easeInOut(duration: 0.25)
+                                }
+                                transition.setAlpha(view: view, alpha: isTracking ? 0.0 : 1.0)
+                            }
+                        }
+                    }
+                }
+            }
                         
             var sizes: [CGSize] = []
             for i in 0 ..< component.tools.count {
@@ -228,8 +324,12 @@ final class AdjustmentsComponent: Component {
                             startValue: tool.startValue,
                             isEnabled: true,
                             trackColor: nil,
-                            updateValue: { value in
+                            displayValue: true,
+                            valueUpdated: { value in
                                 valueUpdated(tool.key, value)
+                            },
+                            isTrackingUpdated: { isTracking in
+                                isTrackingUpdated(tool.key, isTracking)
                             }
                         )
                     ),

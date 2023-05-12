@@ -123,7 +123,7 @@ private final class EnhanceLUTGeneratorPass: RenderPass {
         self.calculation = calculation
         
         let pipelineDescriptor = MTLComputePipelineDescriptor()
-        pipelineDescriptor.computeFunction = library.makeFunction(name: "CLAHEGenerateLUT")
+        pipelineDescriptor.computeFunction = library.makeFunction(name: "enhanceGenerateLUT")
         
         do {
             self.pipelineState = try device.makeComputePipelineState(descriptor: pipelineDescriptor, options: .argumentInfo, reflection: nil)

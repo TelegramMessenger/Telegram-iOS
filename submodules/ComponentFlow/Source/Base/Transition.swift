@@ -73,6 +73,17 @@ public struct Transition {
             case easeInOut
             case spring
             case custom(Float, Float, Float, Float)
+            
+            public func solve(at offset: CGFloat) -> CGFloat {
+                switch self {
+                case .easeInOut:
+                    return listViewAnimationCurveEaseInOut(offset)
+                case .spring:
+                    return listViewAnimationCurveSystem(offset)
+                case let .custom(c1x, c1y, c2x, c2y):
+                    return bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), offset)
+                }
+            }
         }
 
         case none
@@ -421,7 +432,24 @@ public struct Transition {
         self.setTransform(layer: view.layer, transform: transform, completion: completion)
     }
     
+    public func setTransformAsKeyframes(view: UIView, transform: (CGFloat) -> CATransform3D, completion: ((Bool) -> Void)? = nil) {
+        self.setTransformAsKeyframes(layer: view.layer, transform: transform, completion: completion)
+    }
+    
     public func setTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)? = nil) {
+        let t = layer.presentation()?.transform ?? layer.transform
+        if CATransform3DEqualToTransform(t, transform) {
+            if let animation = layer.animation(forKey: "transform") as? CABasicAnimation, let toValue = animation.toValue as? NSValue {
+                if CATransform3DEqualToTransform(toValue.caTransform3DValue, transform) {
+                    completion?(true)
+                    return
+                }
+            } else {
+                completion?(true)
+                return
+            }
+        }
+        
         switch self.animation {
         case .none:
             layer.transform = transform
@@ -433,6 +461,7 @@ public struct Transition {
             } else {
                 previousValue = layer.transform
             }
+            
             layer.transform = transform
             layer.animate(
                 from: NSValue(caTransform3D: previousValue),
@@ -443,6 +472,59 @@ public struct Transition {
                 curve: curve,
                 removeOnCompletion: true,
                 additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setTransformAsKeyframes(layer: CALayer, transform: (CGFloat) -> CATransform3D, completion: ((Bool) -> Void)? = nil) {
+        let finalTransform = transform(1.0)
+        
+        let t = layer.presentation()?.transform ?? layer.transform
+        if CATransform3DEqualToTransform(t, finalTransform) {
+            if let animation = layer.animation(forKey: "transform") as? CABasicAnimation, let toValue = animation.toValue as? NSValue {
+                if CATransform3DEqualToTransform(toValue.caTransform3DValue, finalTransform) {
+                    completion?(true)
+                    return
+                }
+            } else {
+                completion?(true)
+                return
+            }
+        }
+        
+        switch self.animation {
+        case .none:
+            layer.transform = transform(1.0)
+            completion?(true)
+        case let .curve(duration, curve):
+            let framesPerSecond: CGFloat
+            if #available(iOS 15.0, *) {
+                framesPerSecond = duration * CGFloat(UIScreen.main.maximumFramesPerSecond)
+            } else {
+                framesPerSecond = 60.0
+            }
+            
+            let numValues = Int(framesPerSecond * duration)
+            if numValues == 0 {
+                layer.transform = transform(1.0)
+                completion?(true)
+                return
+            }
+            
+            var values: [AnyObject] = []
+            
+            for i in 0 ... numValues {
+                let t = curve.solve(at: CGFloat(i) / CGFloat(numValues))
+                values.append(NSValue(caTransform3D: transform(t)))
+            }
+            
+            layer.transform = transform(1.0)
+            layer.animateKeyframes(
+                values: values,
+                duration: duration,
+                keyPath: "transform",
+                removeOnCompletion: true,
                 completion: completion
             )
         }

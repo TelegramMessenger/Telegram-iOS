@@ -43,6 +43,10 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
     
     public var renderImage: UIImage?
     
+    public var isMedia: Bool {
+        return false
+    }
+    
     init(drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
         self.isAnimated = false

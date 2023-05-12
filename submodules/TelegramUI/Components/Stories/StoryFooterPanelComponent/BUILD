@@ -15,6 +15,9 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
+        "//submodules/AnimatedAvatarSetNode",
+        "//submodules/AccountContext",
+        "//submodules/TelegramCore",
     ],
     visibility = [
         "//visibility:public",

@@ -210,6 +210,7 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         self.backgroundColor = .clear
 
         self.framebufferOnly = true
+        self.colorPixelFormat = .bgra8Unorm
         
         self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
             self?.tick()
@@ -346,9 +347,10 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)
         
         renderEncoder.endEncoding()
-
-        commandBuffer.present(drawable)
+        drawable.present()
+         //commandBuffer.present(drawable)
         commandBuffer.commit()
+        commandBuffer.waitUntilScheduled()
     }
     
     override func layoutSubviews() {

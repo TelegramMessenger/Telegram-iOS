@@ -45,9 +45,11 @@ swift_library(
         "//submodules/TelegramUI/Components/LegacyInstantVideoController",
         "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/TelegramUI/Components/Stories/StoryFooterPanelComponent",
+        "//submodules/TelegramUI/Components/ShareWithPeersScreen",
         "//submodules/TelegramPresentationData",
         "//submodules/ReactionSelectionNode",
         "//submodules/ContextUI",
+        "//submodules/AvatarNode",
     ],
     visibility = [
         "//visibility:public",

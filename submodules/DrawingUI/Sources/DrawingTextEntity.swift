@@ -130,6 +130,10 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     public var renderImage: UIImage?
     public var renderSubEntities: [DrawingStickerEntity]?
     
+    public var isMedia: Bool {
+        return false
+    }
+    
     public class AnimationFrame: Codable {
         private enum CodingKeys: String, CodingKey {
             case timestamp

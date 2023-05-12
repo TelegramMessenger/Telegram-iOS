@@ -70,6 +70,10 @@ public final class DrawingMediaEntity: DrawingEntity, Codable {
         }
     }
     
+    public var isMedia: Bool {
+        return true
+    }
+    
     public init(content: Content, size: CGSize) {
         self.uuid = UUID()
         self.content = content
@@ -149,7 +153,7 @@ public final class DrawingMediaEntity: DrawingEntity, Codable {
     }
 }
 
-public final class DrawingMediaEntityView: DrawingEntityView {
+public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMediaView {
     private var mediaEntity: DrawingMediaEntity {
         return self.entity as! DrawingMediaEntity
     }
@@ -164,6 +168,7 @@ public final class DrawingMediaEntityView: DrawingEntityView {
         didSet {
             if let previewView = self.previewView {
                 previewView.isUserInteractionEnabled = false
+                previewView.layer.allowsEdgeAntialiasing = true
                 self.addSubview(previewView)
             }
         }
@@ -171,6 +176,8 @@ public final class DrawingMediaEntityView: DrawingEntityView {
     
     init(context: AccountContext, entity: DrawingMediaEntity) {
         super.init(context: context, entity: entity)
+        
+        self.layer.allowsEdgeAntialiasing = true
     }
     
     required init?(coder: NSCoder) {
@@ -224,25 +231,12 @@ public final class DrawingMediaEntityView: DrawingEntityView {
         if size.width > 0 && self.currentSize != size {
             self.currentSize = size
             self.previewView?.frame = CGRect(origin: .zero, size: size)
-//            let sideSize: CGFloat = size.width
-//            let boundingSize = CGSize(width: sideSize, height: sideSize)
-//
-//            let imageSize = self.dimensions.aspectFitted(boundingSize)
-//            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-//            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
-//            if let animationNode = self.animationNode {
-//                animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
-//                animationNode.updateLayout(size: imageSize)
-//
-//                if !self.didApplyVisibility {
-//                    self.didApplyVisibility = true
-//                    self.applyVisibility()
-//                }
-//            }
+
             self.update(animated: false)
         }
     }
             
+    public var updated: (() -> Void)?
     override func update(animated: Bool) {
         self.center = self.mediaEntity.position
         
@@ -256,6 +250,8 @@ public final class DrawingMediaEntityView: DrawingEntityView {
         self.previewView?.frame = self.bounds
     
         super.update(animated: animated)
+        
+        self.updated?()
     }
     
     override func updateSelectionView() {
@@ -319,242 +315,3 @@ public final class DrawingMediaEntityView: DrawingEntityView {
         self.update(animated: false)
     }
 }
-
-//final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
-//    private let border = SimpleShapeLayer()
-//    private let leftHandle = SimpleShapeLayer()
-//    private let rightHandle = SimpleShapeLayer()
-//
-//    private var panGestureRecognizer: UIPanGestureRecognizer!
-//
-//    override init(frame: CGRect) {
-//        let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
-//        let handles = [
-//            self.leftHandle,
-//            self.rightHandle
-//        ]
-//
-//        super.init(frame: frame)
-//
-//        self.backgroundColor = .clear
-//        self.isOpaque = false
-//
-//        self.border.lineCap = .round
-//        self.border.fillColor = UIColor.clear.cgColor
-//        self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
-//        self.border.shadowColor = UIColor.black.cgColor
-//        self.border.shadowRadius = 1.0
-//        self.border.shadowOpacity = 0.5
-//        self.border.shadowOffset = CGSize()
-//        self.layer.addSublayer(self.border)
-//
-//        for handle in handles {
-//            handle.bounds = handleBounds
-//            handle.fillColor = UIColor(rgb: 0x0a60ff).cgColor
-//            handle.strokeColor = UIColor(rgb: 0xffffff).cgColor
-//            handle.rasterizationScale = UIScreen.main.scale
-//            handle.shouldRasterize = true
-//
-//            self.layer.addSublayer(handle)
-//        }
-//
-//        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-//        panGestureRecognizer.delegate = self
-//        self.addGestureRecognizer(panGestureRecognizer)
-//        self.panGestureRecognizer = panGestureRecognizer
-//
-//        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-//            if let strongSelf = self, let entityView = strongSelf.entityView {
-//                entityView.onSnapToXAxis(snapped)
-//            }
-//        }
-//
-//        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-//            if let strongSelf = self, let entityView = strongSelf.entityView {
-//                entityView.onSnapToYAxis(snapped)
-//            }
-//        }
-//
-//        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-//            if let strongSelf = self, let entityView = strongSelf.entityView {
-//                entityView.onSnapToAngle(snappedAngle)
-//            }
-//        }
-//    }
-//
-//    required init?(coder: NSCoder) {
-//        fatalError("init(coder:) has not been implemented")
-//    }
-//
-//    var scale: CGFloat = 1.0 {
-//        didSet {
-//            self.setNeedsLayout()
-//        }
-//    }
-//
-//    override var selectionInset: CGFloat {
-//        return 18.0
-//    }
-//
-//    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-//        return true
-//    }
-//
-//    private let snapTool = DrawingEntitySnapTool()
-//
-//    private var currentHandle: CALayer?
-//    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-//        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
-//            return
-//        }
-//        let location = gestureRecognizer.location(in: self)
-//
-//        switch gestureRecognizer.state {
-//        case .began:
-//            self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
-//
-//            if let sublayers = self.layer.sublayers {
-//                for layer in sublayers {
-//                    if layer.frame.contains(location) {
-//                        self.currentHandle = layer
-//                        self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
-//                        return
-//                    }
-//                }
-//            }
-//            self.currentHandle = self.layer
-//        case .changed:
-//            let delta = gestureRecognizer.translation(in: entityView.superview)
-//            let parentLocation = gestureRecognizer.location(in: self.superview)
-//            let velocity = gestureRecognizer.velocity(in: entityView.superview)
-//
-//            var updatedPosition = entity.position
-//            var updatedScale = entity.scale
-//            var updatedRotation = entity.rotation
-//            if self.currentHandle === self.leftHandle || self.currentHandle === self.rightHandle {
-//                var deltaX = gestureRecognizer.translation(in: self).x
-//                if self.currentHandle === self.leftHandle {
-//                    deltaX *= -1.0
-//                }
-//                let scaleDelta = (self.bounds.size.width + deltaX * 2.0) / self.bounds.size.width
-//                updatedScale *= scaleDelta
-//
-//                let newAngle: CGFloat
-//                if self.currentHandle === self.leftHandle {
-//                    newAngle = atan2(self.center.y - parentLocation.y, self.center.x - parentLocation.x)
-//                } else {
-//                    newAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
-//                }
-//
-//             //   let delta = newAngle - updatedRotation
-//                updatedRotation = newAngle// self.snapTool.update(entityView: entityView, velocity: 0.0, delta: delta, updatedRotation: newAngle)
-//            } else if self.currentHandle === self.layer {
-//                updatedPosition.x += delta.x
-//                updatedPosition.y += delta.y
-//
-//                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
-//            }
-//
-//            entity.position = updatedPosition
-//            entity.scale = updatedScale
-//            entity.rotation = updatedRotation
-//            entityView.update()
-//
-//            gestureRecognizer.setTranslation(.zero, in: entityView)
-//        case .ended, .cancelled:
-//            self.snapTool.reset()
-//            if self.currentHandle != nil {
-//                self.snapTool.rotationReset()
-//            }
-//        default:
-//            break
-//        }
-//
-//        entityView.onPositionUpdated(entity.position)
-//    }
-//
-//    override func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
-//        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
-//            return
-//        }
-//
-//        switch gestureRecognizer.state {
-//        case .began, .changed:
-//            let scale = gestureRecognizer.scale
-//            entity.scale = entity.scale * scale
-//            entityView.update()
-//
-//            gestureRecognizer.scale = 1.0
-//        default:
-//            break
-//        }
-//    }
-//
-//    override func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
-//        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
-//            return
-//        }
-//
-//        let velocity = gestureRecognizer.velocity
-//        var updatedRotation = entity.rotation
-//        var rotation: CGFloat = 0.0
-//
-//        switch gestureRecognizer.state {
-//        case .began:
-//            self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
-//        case .changed:
-//            rotation = gestureRecognizer.rotation
-//            updatedRotation += rotation
-//
-//            gestureRecognizer.rotation = 0.0
-//        case .ended, .cancelled:
-//            self.snapTool.rotationReset()
-//        default:
-//            break
-//        }
-//
-//        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-//        entity.rotation = updatedRotation
-//        entityView.update()
-//
-//        entityView.onPositionUpdated(entity.position)
-//    }
-//
-//    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-//        return self.bounds.insetBy(dx: -22.0,  dy: -22.0).contains(point)
-//    }
-//
-//    override func layoutSubviews() {
-//        let inset = self.selectionInset - 10.0
-//
-//        let bounds = CGRect(origin: .zero, size: CGSize(width: entitySelectionViewHandleSize.width / self.scale, height: entitySelectionViewHandleSize.height / self.scale))
-//        let handleSize = CGSize(width: 9.0 / self.scale, height: 9.0 / self.scale)
-//        let handlePath = CGPath(ellipseIn: CGRect(origin: CGPoint(x: (bounds.width - handleSize.width) / 2.0, y: (bounds.height - handleSize.height) / 2.0), size: handleSize), transform: nil)
-//        let lineWidth = (1.0 + UIScreenPixel) / self.scale
-//
-//        let handles = [
-//            self.leftHandle,
-//            self.rightHandle
-//        ]
-//
-//        for handle in handles {
-//            handle.path = handlePath
-//            handle.bounds = bounds
-//            handle.lineWidth = lineWidth
-//        }
-//
-//        self.leftHandle.position = CGPoint(x: inset, y: self.bounds.midY)
-//        self.rightHandle.position = CGPoint(x: self.bounds.maxX - inset, y: self.bounds.midY)
-//
-//
-//        let radius = (self.bounds.width - inset * 2.0) / 2.0
-//        let circumference: CGFloat = 2.0 * .pi * radius
-//        let count = 10
-//        let relativeDashLength: CGFloat = 0.25
-//        let dashLength = circumference / CGFloat(count)
-//        self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
-//
-//        self.border.lineWidth = 2.0 / self.scale
-//        self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
-//    }
-//}

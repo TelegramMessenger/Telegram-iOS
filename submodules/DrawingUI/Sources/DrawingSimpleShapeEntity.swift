@@ -49,6 +49,10 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
     
     public var renderImage: UIImage?
     
+    public var isMedia: Bool {
+        return false
+    }
+    
     init(shapeType: ShapeType, drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
         self.isAnimated = false

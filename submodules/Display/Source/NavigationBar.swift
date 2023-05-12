@@ -297,7 +297,7 @@ open class BlurredBackgroundView: UIView {
 
     private var enableBlur: Bool
 
-    private var effectView: UIVisualEffectView?
+    public private(set) var effectView: UIVisualEffectView?
     private let backgroundView: UIView
 
     private var validLayout: (CGSize, CGFloat)?
@@ -1066,6 +1066,8 @@ open class NavigationBar: ASDisplayNode {
     private var transitionBackArrowNode: ASDisplayNode?
     private var transitionBadgeNode: ASDisplayNode?
     
+    public var secondaryContentHeight: CGFloat
+    
     public init(presentationData: NavigationBarPresentationData) {
         self.presentationData = presentationData
         self.stripeNode = ASDisplayNode()
@@ -1110,6 +1112,8 @@ open class NavigationBar: ASDisplayNode {
 
         self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.backgroundColor, enableBlur: self.presentationData.theme.enableBackgroundBlur)
         self.additionalContentNode = SparseNode()
+        
+        self.secondaryContentHeight = NavigationBar.defaultSecondaryContentHeight
         
         super.init()
 
@@ -1235,7 +1239,7 @@ open class NavigationBar: ASDisplayNode {
             self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
         }
         
-        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
+        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -1253,11 +1257,11 @@ open class NavigationBar: ASDisplayNode {
             case .expansion:
                 expansionHeight = contentNode.height
                 
-                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
+                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? (self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
                 contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - (appearsHidden ? 0.0 : additionalContentHeight) - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
-                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
+                        contentNodeFrame.origin.y += self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction
                     }
                 }
             }
@@ -1619,7 +1623,7 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let _ = self.secondaryContentNode {
-            result += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
+            result += self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction
         }
         
         return result

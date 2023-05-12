@@ -3150,7 +3150,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 if let firstLockedPremiumEmoji = firstLockedPremiumEmoji {
                     let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                    self.controllerInteraction.displayUndo(.sticker(context: context, file: firstLockedPremiumEmoji, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: { [weak self] in
+                    self.controllerInteraction.displayUndo(.sticker(context: context, file: firstLockedPremiumEmoji, loop: true, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }

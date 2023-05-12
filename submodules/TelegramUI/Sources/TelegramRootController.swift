@@ -22,6 +22,7 @@ import MediaEditorScreen
 import LegacyComponents
 import LegacyMediaPickerUI
 import LegacyCamera
+import AvatarNode
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -278,16 +279,89 @@ public final class TelegramRootController: NavigationController {
                     return .asset(asset)
                 }
             }
-            let controller = MediaEditorScreen(context: context, subject: subject, completion: { result in
-                switch result {
-                case let .image(image):
-                    if let data = image.jpegData(compressionQuality: 0.8) {
-                        let _ = context.engine.messages.uploadStory(media: .image(dimensions: PixelDimensions(image.size), data: data)).start()
-                    }
-                case .video:
-                    break
+            let controller = MediaEditorScreen(context: context, subject: subject, completion: { mediaResult, commit in
+                enum AdditionalCategoryId: Int {
+                    case everyone
+                    case contacts
+                    case closeFriends
                 }
-                dismissCameraImpl?()
+                
+                let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                
+                let additionalCategories: [ChatListNodeAdditionalCategory] = [
+                    ChatListNodeAdditionalCategory(
+                        id: AdditionalCategoryId.everyone.rawValue,
+                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), cornerRadius: nil, color: .blue),
+                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
+                        title: "Everyone",
+                        appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
+                    ),
+                    ChatListNodeAdditionalCategory(
+                        id: AdditionalCategoryId.contacts.rawValue,
+                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 1.0 * 0.8, cornerRadius: nil, color: .yellow),
+                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 0.6 * 0.8, cornerRadius: 6.0, circleCorners: true, color: .yellow),
+                        title: presentationData.strings.ChatListFolder_CategoryContacts,
+                        appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
+                    ),
+                    ChatListNodeAdditionalCategory(
+                        id: AdditionalCategoryId.closeFriends.rawValue,
+                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 1.0 * 0.6, cornerRadius: nil, color: .green),
+                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 0.6 * 0.6, cornerRadius: 6.0, circleCorners: true, color: .green),
+                        title: "Close Friends",
+                        appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
+                    )
+                ]
+                
+                let selectionController = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
+                    title: "Share Story",
+                    searchPlaceholder: "Search contacts",
+                    selectedChats: Set(),
+                    additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: Set([AdditionalCategoryId.everyone.rawValue])),
+                    chatListFilters: nil,
+                    displayPresence: true
+                )), options: [], filters: [.excludeSelf], alwaysEnabled: true, limit: 1000, reachedLimit: { _ in
+                }))
+                selectionController.navigationPresentation = .modal
+                self.pushViewController(selectionController)
+                
+                let _ = (selectionController.result
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak selectionController] result in
+                    guard case let .result(peerIds, additionalCategoryIds) = result else {
+                        selectionController?.dismiss()
+                        return
+                    }
+                    
+                    var privacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
+                    if additionalCategoryIds.contains(AdditionalCategoryId.everyone.rawValue) {
+                        privacy.base = .everyone
+                    } else if additionalCategoryIds.contains(AdditionalCategoryId.contacts.rawValue) {
+                        privacy.base = .contacts
+                    } else if additionalCategoryIds.contains(AdditionalCategoryId.closeFriends.rawValue) {
+                        privacy.base = .closeFriends
+                    }
+                    privacy.additionallyIncludePeers = peerIds.compactMap { id -> EnginePeer.Id? in
+                        switch id {
+                        case let .peer(peerId):
+                            return peerId
+                        default:
+                            return nil
+                        }
+                    }
+                    
+                    selectionController?.displayProgress = true
+                    
+                    switch mediaResult {
+                    case let .image(image):
+                        if let data = image.jpegData(compressionQuality: 0.8) {
+                            let _ = context.engine.messages.uploadStory(media: .image(dimensions: PixelDimensions(image.size), data: data), privacy: privacy).start()
+                        }
+                    case .video:
+                        break
+                    }
+                    dismissCameraImpl?()
+                    commit()
+                })
             })
             controller.sourceHint = .camera
             controller.cancelled = {

@@ -299,7 +299,8 @@ final class BlurComponent: Component {
                         startValue: 0.0,
                         isEnabled: state.value.mode != .off,
                         trackColor: nil,
-                        updateValue: { [weak state] value in
+                        displayValue: false,
+                        valueUpdated: { [weak state] value in
                             if let state {
                                 valueUpdated(state.value.withUpdatedIntensity(value))
                             }

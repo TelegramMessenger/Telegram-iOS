@@ -33,7 +33,7 @@ final class StoryAvatarInfoComponent: Component {
         private weak var state: EmptyComponentState?
         
 		override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 18.0))
             
 			super.init(frame: frame)
             
@@ -54,7 +54,8 @@ final class StoryAvatarInfoComponent: Component {
             self.avatarNode.setPeer(
                 context: component.context,
                 theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
-                peer: component.peer
+                peer: component.peer,
+                synchronousLoad: true
             )
             
             return size

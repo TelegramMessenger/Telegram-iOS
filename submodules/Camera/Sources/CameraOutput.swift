@@ -177,8 +177,8 @@ final class CameraOutput: NSObject {
         }
         
         let outputFileName = NSUUID().uuidString
-        let outputFileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(outputFileName).appendingPathExtension("mp4")
-        let outputFilePath = outputFileURL.absoluteString
+        let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
+        let outputFileURL = URL(fileURLWithPath: outputFilePath)
         let videoRecorder = VideoRecorder(preset: MediaPreset(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
             if case .success = result {
                 self?.recordingCompletionPipe.putNext(outputFilePath)

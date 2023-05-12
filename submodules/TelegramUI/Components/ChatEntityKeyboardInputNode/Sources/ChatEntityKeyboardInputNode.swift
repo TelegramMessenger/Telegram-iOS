@@ -657,7 +657,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                                     
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
-                        let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                        let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                         strongSelf.currentUndoOverlayController = controller
                         controllerInteraction.presentController(controller, nil)
                     },
@@ -692,7 +692,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                                         
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiPreview_CopyEmoji, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.EmojiPreview_CopyEmoji, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                             strongSelf.currentUndoOverlayController = controller
                             controllerInteraction.presentController(controller, nil)
                         }
@@ -831,7 +831,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 actionTitle = presentationData.strings.EmojiInput_PremiumEmojiToast_Action
                             }
                             
-                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: text, undoText: actionTitle, customAction: { [weak controllerInteraction] in
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: text, undoText: actionTitle, customAction: { [weak controllerInteraction] in
                                 guard let controllerInteraction = controllerInteraction else {
                                     return
                                 }
@@ -2321,7 +2321,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                             
                             if file.isPremiumEmoji && !hasPremium {
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                strongSelf.presentController?(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: {
+                                strongSelf.presentController?(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.EmojiInput_PremiumEmojiToast_Text, undoText: presentationData.strings.EmojiInput_PremiumEmojiToast_Action, customAction: {
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -2765,7 +2765,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                              |> deliverOnMainQueue).start(next: { result in
                                         switch result {
                                         case .generic:
-                                            interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: !isStarred ? presentationData.strings.Conversation_StickerAddedToFavorites : presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                            interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: !isStarred ? presentationData.strings.Conversation_StickerAddedToFavorites : presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                         case let .limitExceeded(limit, premiumLimit):
                                             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                             let text: String
@@ -2774,7 +2774,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                             } else {
                                                 text = presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                             }
-                                            interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { action in
+                                            interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { action in
                                                 if case .info = action {
                                                     let controller = PremiumIntroScreen(context: context, source: .savedStickers)
                                                     interaction.navigationController()?.pushViewController(controller)

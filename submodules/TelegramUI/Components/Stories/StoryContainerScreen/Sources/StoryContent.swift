@@ -41,9 +41,11 @@ public final class StoryContentItem {
     public let component: AnyComponent<StoryContentItem.Environment>
     public let centerInfoComponent: AnyComponent<Empty>?
     public let rightInfoComponent: AnyComponent<Empty>?
-    public let targetMessageId: EngineMessage.Id?
+    public let peerId: EnginePeer.Id?
+    public let storyItem: StoryListContext.Item?
     public let preload: Signal<Never, NoError>?
     public let delete: (() -> Void)?
+    public let markAsSeen: (() -> Void)?
     public let hasLike: Bool
     public let isMy: Bool
 
@@ -53,9 +55,11 @@ public final class StoryContentItem {
         component: AnyComponent<StoryContentItem.Environment>,
         centerInfoComponent: AnyComponent<Empty>?,
         rightInfoComponent: AnyComponent<Empty>?,
-        targetMessageId: EngineMessage.Id?,
+        peerId: EnginePeer.Id?,
+        storyItem: StoryListContext.Item?,
         preload: Signal<Never, NoError>?,
         delete: (() -> Void)?,
+        markAsSeen: (() -> Void)?,
         hasLike: Bool,
         isMy: Bool
     ) {
@@ -64,9 +68,11 @@ public final class StoryContentItem {
         self.component = component
         self.centerInfoComponent = centerInfoComponent
         self.rightInfoComponent = rightInfoComponent
-        self.targetMessageId = targetMessageId
+        self.peerId = peerId
+        self.storyItem = storyItem
         self.preload = preload
         self.delete = delete
+        self.markAsSeen = markAsSeen
         self.hasLike = hasLike
         self.isMy = isMy
     }

@@ -285,7 +285,7 @@ func _internal_updateSelectiveAccountPrivacySettings(account: Account, type: Upd
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         var rules: [Api.InputPrivacyRule] = []
         switch settings {
-            case let .disableEveryone(enableFor):
+            case let .disableEveryone(enableFor, enableForCloseFriends):
                 let enablePeers = apiUserAndGroupIds(peerIds: enableFor)
                 
                 if !enablePeers.users.isEmpty {
@@ -296,6 +296,9 @@ func _internal_updateSelectiveAccountPrivacySettings(account: Account, type: Upd
                 }
                 
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueDisallowAll)
+                if enableForCloseFriends {
+                    rules.append(.inputPrivacyValueAllowCloseFriends)
+                }
             case let .enableContacts(enableFor, disableFor):
                 let enablePeers = apiUserAndGroupIds(peerIds: enableFor)
                 let disablePeers = apiUserAndGroupIds(peerIds: disableFor)

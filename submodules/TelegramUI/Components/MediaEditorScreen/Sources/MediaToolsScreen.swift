@@ -18,7 +18,7 @@ import MessageInputPanelComponent
 
 private enum MediaToolsSection: Equatable {
     case adjustments
-    case highlights
+    case tint
     case blur
     case curves
 }
@@ -154,7 +154,7 @@ private final class MediaToolsScreenComponent: Component {
     final class State: ComponentState {
         enum ImageKey: Hashable {
             case adjustments
-            case highlights
+            case tint
             case blur
             case curves
             case done
@@ -168,7 +168,7 @@ private final class MediaToolsScreenComponent: Component {
                 switch key {
                 case .adjustments:
                     image = UIImage(bundleImageName: "Media Editor/Tools")!
-                case .highlights:
+                case .tint:
                     image = UIImage(bundleImageName: "Media Editor/Tint")!
                 case .blur:
                     image = UIImage(bundleImageName: "Media Editor/Blur")!
@@ -216,13 +216,14 @@ private final class MediaToolsScreenComponent: Component {
         private let buttonsContainerView = UIView()
         private let cancelButton = ComponentView<Empty>()
         private let adjustmentsButton = ComponentView<Empty>()
-        private let highlightsButton = ComponentView<Empty>()
+        private let tintButton = ComponentView<Empty>()
         private let blurButton = ComponentView<Empty>()
         private let curvesButton = ComponentView<Empty>()
         private let doneButton = ComponentView<Empty>()
         
         private let previewContainerView = UIView()
         private var optionsContainerView = UIView()
+        private var optionsBackgroundView = UIView()
         private var toolOptions = ComponentView<Empty>()
         private var toolScreen: ComponentView<Empty>?
         
@@ -237,7 +238,7 @@ private final class MediaToolsScreenComponent: Component {
             self.previewContainerView.clipsToBounds = true
             
             self.optionsContainerView.clipsToBounds = true
-            self.optionsContainerView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.9)
+            self.optionsBackgroundView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.9)
             
             super.init(frame: frame)
             
@@ -246,6 +247,7 @@ private final class MediaToolsScreenComponent: Component {
             self.addSubview(self.buttonsContainerView)
             self.addSubview(self.previewContainerView)
             self.previewContainerView.addSubview(self.optionsContainerView)
+            self.optionsContainerView.addSubview(self.optionsBackgroundView)
         }
         
         required init?(coder: NSCoder) {
@@ -255,7 +257,7 @@ private final class MediaToolsScreenComponent: Component {
         func animateInFromEditor() {
             let buttons = [
                 self.adjustmentsButton,
-                self.highlightsButton,
+                self.tintButton,
                 self.blurButton,
                 self.curvesButton
             ]
@@ -275,7 +277,7 @@ private final class MediaToolsScreenComponent: Component {
                 view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
             }
             
-            self.optionsContainerView.layer.animatePosition(from: CGPoint(x: 0.0, y: self.optionsContainerView.frame.height), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            self.optionsContainerView.layer.animatePosition(from: CGPoint(x: 0.0, y: self.optionsContainerView.frame.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
         }
         
         private var animatingOut = false
@@ -284,7 +286,7 @@ private final class MediaToolsScreenComponent: Component {
             
             let buttons = [
                 self.adjustmentsButton,
-                self.highlightsButton,
+                self.tintButton,
                 self.blurButton,
                 self.curvesButton
             ]
@@ -399,7 +401,7 @@ private final class MediaToolsScreenComponent: Component {
                 component: AnyComponent(Button(
                     content: AnyComponent(ToolIconComponent(
                         icon: state.image(.adjustments),
-                        isActive: false,
+                        isActive: mediaEditor?.values.hasAdjustments ?? false,
                         isSelected: component.section == .adjustments
                     )),
                     action: {
@@ -420,30 +422,30 @@ private final class MediaToolsScreenComponent: Component {
                 transition.setFrame(view: adjustmentsButtonView, frame: adjustmentsButtonFrame)
             }
             
-            let highlightsButtonSize = self.highlightsButton.update(
+            let tintButtonSize = self.tintButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
                     content: AnyComponent(ToolIconComponent(
-                        icon: state.image(.highlights),
-                        isActive: false,
-                        isSelected: component.section == .highlights
+                        icon: state.image(.tint),
+                        isActive: mediaEditor?.values.hasTint ?? false,
+                        isSelected: component.section == .tint
                     )),
                     action: {
-                        sectionUpdated(.highlights)
+                        sectionUpdated(.tint)
                     }
                 )),
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
-            let highlightsButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 2.5 + 5.0 - highlightsButtonSize.width / 2.0), y: buttonBottomInset),
-                size: highlightsButtonSize
+            let tintButtonFrame = CGRect(
+                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 2.5 + 5.0 - tintButtonSize.width / 2.0), y: buttonBottomInset),
+                size: tintButtonSize
             )
-            if let highlightsButtonView = self.highlightsButton.view {
-                if highlightsButtonView.superview == nil {
-                    self.buttonsContainerView.addSubview(highlightsButtonView)
+            if let tintButtonView = self.tintButton.view {
+                if tintButtonView.superview == nil {
+                    self.buttonsContainerView.addSubview(tintButtonView)
                 }
-                transition.setFrame(view: highlightsButtonView, frame: highlightsButtonFrame)
+                transition.setFrame(view: tintButtonView, frame: tintButtonFrame)
             }
             
             let blurButtonSize = self.blurButton.update(
@@ -451,7 +453,7 @@ private final class MediaToolsScreenComponent: Component {
                 component: AnyComponent(Button(
                     content: AnyComponent(ToolIconComponent(
                         icon: state.image(.blur),
-                        isActive: false,
+                        isActive: mediaEditor?.values.hasBlur ?? false,
                         isSelected: component.section == .blur
                     )),
                     action: {
@@ -477,7 +479,7 @@ private final class MediaToolsScreenComponent: Component {
                 component: AnyComponent(Button(
                     content: AnyComponent(ToolIconComponent(
                         icon: state.image(.curves),
-                        isActive: false,
+                        isActive: mediaEditor?.values.hasCurves ?? false,
                         isSelected: component.section == .curves
                     )),
                     action: {
@@ -623,6 +625,17 @@ private final class MediaToolsScreenComponent: Component {
                                 controller.mediaEditor.setToolValue(key, value: value)
                                 state?.updated()
                             }
+                        },
+                        isTrackingUpdated: { [weak self] isTracking in
+                            if let self {
+                                let transition: Transition
+                                if isTracking {
+                                    transition = .immediate
+                                } else {
+                                    transition = .easeInOut(duration: 0.25)
+                                }
+                                transition.setAlpha(view: self.optionsBackgroundView, alpha: isTracking ? 0.0 : 1.0)
+                            }
                         }
                     )),
                     environment: {},
@@ -630,7 +643,7 @@ private final class MediaToolsScreenComponent: Component {
                 )
                 screenSize = previewContainerFrame.size
                 self.toolScreen = nil
-            case .highlights:
+            case .tint:
                 self.curvesState = nil
                 optionsSize = self.toolOptions.update(
                     transition: optionsTransition,
@@ -763,6 +776,7 @@ private final class MediaToolsScreenComponent: Component {
                 size: optionsSize
             )
             transition.setFrame(view: self.optionsContainerView, frame: optionsBackgroundFrame)
+            transition.setFrame(view: self.optionsBackgroundView, frame: CGRect(origin: .zero, size: optionsBackgroundFrame.size))
             
             if let toolScreen = toolScreen {
                 let screenFrame = CGRect(origin: .zero, size: screenSize)

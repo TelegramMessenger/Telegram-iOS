@@ -28,8 +28,6 @@ protocol RenderPass: AnyObject {
 }
 
 protocol TextureSource {
-    func pause()
-    func start()
     func connect(to: TextureConsumer)
 }
 
@@ -46,12 +44,8 @@ protocol RenderTarget: AnyObject {
 
 final class MediaEditorRenderer: TextureConsumer {
     var textureSource: TextureSource? {
-        willSet {
-            self.textureSource?.pause()
-        }
         didSet {
             self.textureSource?.connect(to: self)
-            self.textureSource?.start()
         }
     }
     
@@ -69,7 +63,9 @@ final class MediaEditorRenderer: TextureConsumer {
     private var currentRotation: TextureRotation = .rotate0Degrees
     private var library: MTLLibrary?
     
-    private weak var finalTexture: MTLTexture?
+    var finalTexture: MTLTexture?
+    
+    var externalSemaphore: DispatchSemaphore?
     
     public init() {
         
@@ -88,7 +84,13 @@ final class MediaEditorRenderer: TextureConsumer {
         }
     }
     
-    func setup() {
+    func addRenderChain(_ renderChain: MediaEditorRenderChain) {
+        for renderPass in renderChain.renderPasses {
+            self.addRenderPass(renderPass)
+        }
+    }
+    
+    private func setup() {
         guard let device = self.renderTarget?.mtlDevice else {
             return
         }
@@ -112,9 +114,42 @@ final class MediaEditorRenderer: TextureConsumer {
         self.outputRenderPass.setup(device: device, library: defaultLibrary)
     }
     
+    private var currentDevice: MTLDevice?
+    func setupForComposer(composer: MediaEditorComposer) {
+        guard let device = composer.device else {
+            return
+        }
+        self.currentDevice = device
+        
+        let mainBundle = Bundle(for: MediaEditorRenderer.self)
+        guard let path = mainBundle.path(forResource: "MediaEditorBundle", ofType: "bundle") else {
+            return
+        }
+        guard let bundle = Bundle(path: path) else {
+            return
+        }
+        
+        guard let defaultLibrary = try? device.makeDefaultLibrary(bundle: bundle) else {
+            return
+        }
+        self.library = defaultLibrary
+        
+        self.commandQueue = device.makeCommandQueue()
+        self.commandQueue?.label = "Media Editor Command Queue"
+        self.renderPasses.forEach { $0.setup(device: device, library: defaultLibrary) }
+    }
+    
+    private var currentCommandBuffer: MTLCommandBuffer?
     func renderFrame() {
-        guard let renderTarget = self.renderTarget,
-              let device = renderTarget.mtlDevice,
+        let device: MTLDevice?
+        if let renderTarget = self.renderTarget {
+            device = renderTarget.mtlDevice
+        } else if let currentDevice = self.currentDevice {
+            device = currentDevice
+        } else {
+            device = nil
+        }
+        guard let device = device,
               let commandQueue = self.commandQueue,
               var texture = self.currentTexture else {
             return
@@ -133,13 +168,30 @@ final class MediaEditorRenderer: TextureConsumer {
                 texture = nextTexture
             }
         }
-        let _ = self.outputRenderPass.process(input: texture, rotation: rotation, device: device, commandBuffer: commandBuffer)
+        if self.renderTarget != nil {
+            let _ = self.outputRenderPass.process(input: texture, rotation: rotation, device: device, commandBuffer: commandBuffer)
+        }
         self.finalTexture = texture
         
         commandBuffer.addCompletedHandler { [weak self] _ in
             self?.semaphore.signal()
+            self?.externalSemaphore?.signal()
         }
-        commandBuffer.commit()
+        
+        if let _ = self.renderTarget {
+            commandBuffer.commit()
+            commandBuffer.waitUntilScheduled()
+        } else {
+            commandBuffer.commit()
+            commandBuffer.waitUntilCompleted()
+        }
+    }
+    
+    func commit() {
+        if let commandBuffer = self.currentCommandBuffer {
+            commandBuffer.commit()
+            self.currentCommandBuffer = nil
+        }
     }
     
     func consumeTexture(_ texture: MTLTexture, rotation: TextureRotation) {
