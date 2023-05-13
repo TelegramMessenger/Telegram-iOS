@@ -34,7 +34,7 @@
 "PasscodeSettings.FakePasscodeDeleteTitle" = "Удалить ложный код-пароль";
 "PasscodeSettings.FakePasscodeDeleteMessage" = "Вы точно хотите удалить этот ложный код-пароль?";
 
-"Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версия %3$@";
+"Settings.Version" = "Cloudballon %1$@ (%2$@)\nНа основе оригинального Telegram %3$@";
 
 "FakePasscodes.Common.DoNotShowAgain" = "Не показывать снова";
 

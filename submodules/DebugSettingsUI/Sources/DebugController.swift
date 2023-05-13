@@ -1426,7 +1426,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
     }
-    entries.append(.versionInfo(presentationData.theme))
+//    entries.append(.versionInfo(presentationData.theme))
     
     if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
         entries.append(.ptgResetPasscodeAttempts)

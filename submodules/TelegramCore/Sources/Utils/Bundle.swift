@@ -10,8 +10,8 @@ public extension Bundle {
         return (infoDictionary?[kCFBundleVersionKey as String] as? String) ?? "unknown"
     }
 
-    var ptgVersion: String {
-        return (infoDictionary?["PTelegramVersion"] as? String) ?? "unknown"
+    var originalVersion: String {
+        return (infoDictionary?["TelegramOriginalVersion"] as? String) ?? "unknown"
     }
     
     #if targetEnvironment(simulator)

@@ -1,6 +1,6 @@
 "PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Immediately";
 
-"Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";
+"Settings.Version" = "Cloudballon %1$@ (%2$@)\nBased on original Telegram %3$@";
 
 "FakePasscodes.Common.DoNotShowAgain" = "Do not show again";
 

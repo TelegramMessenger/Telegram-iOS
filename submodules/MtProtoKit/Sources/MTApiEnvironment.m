@@ -462,7 +462,7 @@ NSString *suffix = @"";
 #endif
         
         //SOURCE
-        NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@) %@", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"], suffix];
+        NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@) %@", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"TelegramOriginalVersion"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"TelegramOriginalBuild"], suffix];
         _appVersion = versionString;
         
         _systemLangCode = [[NSLocale preferredLanguages] objectAtIndex:0];

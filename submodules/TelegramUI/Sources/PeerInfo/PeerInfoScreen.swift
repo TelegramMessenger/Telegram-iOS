@@ -2198,9 +2198,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.versionLabelNode = ImmediateTextNode()
         self.versionLabelNode.maximumNumberOfLines = 2
         
-        let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.ptgVersion).string
-        self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(14.0), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
-        
         super.init()
         
         self.paneContainerNode.parentController = controller
@@ -9432,6 +9429,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
 
             if !self.state.isEditing {
+                let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.originalVersion).string
+                self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(self.presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
+                
                 let horizontalPadding = 20.0
                 var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
                 let size = self.versionLabelNode.updateLayout(frame.size)

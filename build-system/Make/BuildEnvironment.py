@@ -132,10 +132,6 @@ class BuildEnvironmentVersions:
                 raise Exception('Missing app version in {}'.format(configuration_path))
             else:
                 self.app_version = configuration_dict['app']
-            if configuration_dict['partisan'] is None:
-                raise Exception('Missing partisan version in {}'.format(configuration_path))
-            else:
-                self.partisan_version = configuration_dict['partisan']
             if configuration_dict['bazel'] is None:
                 raise Exception('Missing bazel version in {}'.format(configuration_path))
             else:
@@ -144,6 +140,14 @@ class BuildEnvironmentVersions:
                 raise Exception('Missing xcode version in {}'.format(configuration_path))
             else:
                 self.xcode_version = configuration_dict['xcode']
+            if configuration_dict['original'] is None:
+                raise Exception('Missing original version in {}'.format(configuration_path))
+            else:
+                self.original_version = configuration_dict['original']
+            if configuration_dict['original_build'] is None:
+                raise Exception('Missing original_build in {}'.format(configuration_path))
+            else:
+                self.original_build = configuration_dict['original_build']
 
 class BuildEnvironment:
     def __init__(
@@ -181,6 +185,7 @@ class BuildEnvironment:
                 exit(1)
 
         self.app_version = versions.app_version
-        self.partisan_version = versions.partisan_version
         self.xcode_version = versions.xcode_version
         self.bazel_version = versions.bazel_version
+        self.original_version = versions.original_version
+        self.original_build = versions.original_build

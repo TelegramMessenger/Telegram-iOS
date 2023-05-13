@@ -34,7 +34,7 @@
 "PasscodeSettings.FakePasscodeDeleteTitle" = "Выдаліць несапраўдны код блакіроўкі";
 "PasscodeSettings.FakePasscodeDeleteMessage" = "Вы дакладна хочаце выдаліць гэты несапраўдны код блакіроўкі?";
 
-"Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версія %3$@";
+"Settings.Version" = "Cloudballon %1$@ (%2$@)\nНа аснове арыгінальнага Telegram %3$@";
 
 "FakePasscodes.Common.DoNotShowAgain" = "Больш не паказваць";
 
