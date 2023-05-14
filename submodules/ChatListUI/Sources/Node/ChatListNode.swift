@@ -1184,6 +1184,12 @@ public final class ChatListNode: ListView {
     private var pollFilterUpdatesDisposable: Disposable?
     private var chatFilterUpdatesDisposable: Disposable?
     
+    public var scrollHeightTopInset: CGFloat {
+        didSet {
+            self.keepMinimalScrollHeightWithTopInset = self.scrollHeightTopInset
+        }
+    }
+    
     public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
         self.context = context
         self.location = location
@@ -1204,12 +1210,14 @@ public final class ChatListNode: ListView {
         
         self.theme = theme
         
+        self.scrollHeightTopInset = navigationBarSearchContentHeight
+        
         super.init()
         
         self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.verticalScrollIndicatorFollowsOverscroll = true
         
-        self.keepMinimalScrollHeightWithTopInset = navigationBarSearchContentHeight
+        self.keepMinimalScrollHeightWithTopInset = self.scrollHeightTopInset
         
         let nodeInteraction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
@@ -3140,7 +3148,7 @@ public final class ChatListNode: ListView {
                     case let .known(value) where abs(value) < .ulpOfOne:
                         offset = 0.0
                     default:
-                        offset = -navigationBarSearchContentHeight
+                        offset = -self.scrollHeightTopInset
                     }
                 }
                 scrollToItem = ListViewScrollToItem(index: 0, position: .top(offset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
@@ -3153,7 +3161,7 @@ public final class ChatListNode: ListView {
     
     var isNavigationHidden: Bool {
         switch self.visibleContentOffset() {
-        case let .known(value) where abs(value) < navigationBarSearchContentHeight - 1.0:
+        case let .known(value) where abs(value) < self.scrollHeightTopInset - 1.0:
             return false
         case .none:
             return false
@@ -3165,11 +3173,11 @@ public final class ChatListNode: ListView {
     var isNavigationInAFinalState: Bool {
         switch self.visibleContentOffset() {
         case let .known(value):
-            if value < navigationBarSearchContentHeight - 1.0 {
+            if value < self.scrollHeightTopInset - 1.0 {
                 if abs(value - 0.0) < 1.0 {
                     return true
                 }
-                if abs(value - navigationBarSearchContentHeight) < 1.0 {
+                if abs(value - self.scrollHeightTopInset) < 1.0 {
                     return true
                 }
                 return false
@@ -3187,9 +3195,9 @@ public final class ChatListNode: ListView {
         }
         var scrollToItem: ListViewScrollToItem?
         switch self.visibleContentOffset() {
-        case let .known(value) where abs(value) < navigationBarSearchContentHeight - 1.0:
+        case let .known(value) where abs(value) < self.scrollHeightTopInset - 1.0:
             if isNavigationHidden {
-                scrollToItem = ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+                scrollToItem = ListViewScrollToItem(index: 0, position: .top(-self.scrollHeightTopInset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
             }
         default:
             if !isNavigationHidden {

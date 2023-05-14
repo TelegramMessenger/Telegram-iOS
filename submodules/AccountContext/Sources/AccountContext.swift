@@ -742,6 +742,10 @@ public protocol RecentSessionsController: AnyObject {
 public protocol AttachmentFileController: AnyObject {
 }
 
+public protocol TelegramRootControllerInterface: NavigationController {
+    func openStoryCamera()
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }

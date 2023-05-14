@@ -66,6 +66,7 @@ private final class CameraScreenComponent: CombinedComponent {
     
     let context: AccountContext
     let camera: Camera
+    let changeMode: ActionSlot<CameraMode>
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -73,12 +74,14 @@ private final class CameraScreenComponent: CombinedComponent {
     init(
         context: AccountContext,
         camera: Camera,
+        changeMode: ActionSlot<CameraMode>,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
         completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
     ) {
         self.context = context
         self.camera = camera
+        self.changeMode = changeMode
         self.present = present
         self.push = push
         self.completion = completion
@@ -250,6 +253,10 @@ private final class CameraScreenComponent: CombinedComponent {
             let completion = component.completion
             
             let topControlInset: CGFloat = 20.0
+            
+            component.changeMode.connect({ [weak state] mode in
+                state?.updateCameraMode(mode)
+            })
             
             if case .none = state.cameraState.recording {
                 let cancelButton = cancelButton.update(
@@ -574,11 +581,11 @@ public class CameraScreen: ViewController {
         fileprivate let camera: Camera
 
         private var presentationData: PresentationData
-        private let hapticFeedback = HapticFeedback()
         private var validLayout: ContainerViewLayout?
         
         private var changingPositionDisposable: Disposable?
 
+        private let changeMode = ActionSlot<CameraMode>()
         private let completion = ActionSlot<Signal<CameraScreen.Result, NoError>>()
         
         private var effectivePreviewView: UIView {
@@ -728,18 +735,66 @@ public class CameraScreen: ViewController {
             }
         }
         
-        private var panStartLocation: CGPoint?
+        private var panTranslation: CGFloat?
+        private var previewInitialPosition: CGPoint?
+        private var controlsInitialPosition: CGPoint?
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-            let location = gestureRecognizer.location(in: self.view)
             switch gestureRecognizer.state {
             case .began:
-                self.panStartLocation = location
+                self.panTranslation = nil
+                self.previewInitialPosition = self.previewContainerView.center
+                self.controlsInitialPosition = self.componentHost.view?.center
             case .changed:
-                guard let _ = self.panStartLocation else {
-                    return
+                let translation = gestureRecognizer.translation(in: gestureRecognizer.view)
+                if !"".isEmpty {
+                    
+                } else {
+                    if abs(translation.x) > 50.0 && abs(translation.y) < 50.0, self.panTranslation == nil {
+                        self.changeMode.invoke(translation.x > 0.0 ? .photo : .video)
+                        gestureRecognizer.isEnabled = false
+                        gestureRecognizer.isEnabled = true
+                    } else if translation.y > 10.0 {
+                        self.panTranslation = translation.y
+                        if let previewInitialPosition = self.previewInitialPosition {
+                            self.previewContainerView.center = CGPoint(x: previewInitialPosition.x, y: previewInitialPosition.y + translation.y)
+                        }
+                        if let controlsInitialPosition = self.controlsInitialPosition, let view = self.componentHost.view {
+                            view.center = CGPoint(x: controlsInitialPosition.x, y: controlsInitialPosition.y + translation.y)
+                        }
+                        
+                        if self.backgroundEffectView.isHidden {
+                            self.backgroundEffectView.isHidden = false
+                            
+                            UIView.animate(withDuration: 0.25, animations: {
+                                self.backgroundEffectView.effect = nil
+                                self.backgroundDimView.alpha = 0.0
+                            })
+                        }
+                    }
                 }
-               // let translation = location.y - panStartLocation.y
-                
+            case .ended:
+                let velocity = gestureRecognizer.velocity(in: self.view)
+                if velocity.y > 1000.0 {
+                    self.controller?.requestDismiss(animated: true)
+                } else if let panTranslation = self.panTranslation, abs(panTranslation) > 300.0 {
+                    self.controller?.requestDismiss(animated: true)
+                } else {
+                    let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                    if let previewInitialPosition = self.previewInitialPosition {
+                        transition.setPosition(view: self.previewContainerView, position: previewInitialPosition)
+                    }
+                    if let controlsInitialPosition = self.controlsInitialPosition, let view = self.componentHost.view {
+                        transition.setPosition(view: view, position: controlsInitialPosition)
+                    }
+                    if !self.backgroundEffectView.isHidden {
+                        UIView.animate(withDuration: 0.25, animations: {
+                            self.backgroundEffectView.effect = UIBlurEffect(style: .dark)
+                            self.backgroundDimView.alpha = 1.0
+                        }, completion: { _ in
+                            self.backgroundEffectView.isHidden = true
+                        })
+                    }
+                }
             default:
                 break
             }
@@ -903,6 +958,7 @@ public class CameraScreen: ViewController {
                     CameraScreenComponent(
                         context: self.context,
                         camera: self.camera,
+                        changeMode: self.changeMode,
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
                         },
@@ -984,8 +1040,8 @@ public class CameraScreen: ViewController {
         guard !self.isDismissed else {
             return
         }
-        self.statusBar.statusBarStyle = .Ignore
         self.isDismissed = true
+        self.statusBar.statusBarStyle = .Ignore
         if animated {
             self.node.animateOut(completion: {
                 self.dismiss(animated: false)
@@ -998,6 +1054,8 @@ public class CameraScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        if !self.isDismissed {
+            (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        }
     }
 }

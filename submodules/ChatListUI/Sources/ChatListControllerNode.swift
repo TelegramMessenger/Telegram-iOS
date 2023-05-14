@@ -373,6 +373,10 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         
         self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode)
         
+        if let controller, case .chatList(groupId: .root) = controller.location {
+            self.listNode.scrollHeightTopInset = navigationBarSearchContentHeight + 94.0
+        }
+        
         super.init()
         
         self.addSubnode(self.listNode)
@@ -1481,7 +1485,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private(set) var inlineStackContainerTransitionFraction: CGFloat = 0.0
     private(set) var inlineStackContainerNode: ChatListContainerNode?
     private var inlineContentPanRecognizer: InteractiveTransitionGestureRecognizer?
-    private(set) var temporaryContentOffsetChangeTransition: ContainedViewLayoutTransition?
+    var temporaryContentOffsetChangeTransition: ContainedViewLayoutTransition?
     
     private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?

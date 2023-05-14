@@ -255,7 +255,7 @@ final class CurvesComponent: Component {
             switch state.section {
             case .all:
                 histogramColor = .white
-                histogramBins = component.histogram?.green
+                histogramBins = component.histogram?.luminance
             case .red:
                 histogramColor = UIColor(rgb: 0xed3d4c)
                 histogramBins = component.histogram?.red

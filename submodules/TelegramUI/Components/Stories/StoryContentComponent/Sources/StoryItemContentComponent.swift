@@ -16,10 +16,12 @@ final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
     
 	let context: AccountContext
+    let peerId: EnginePeer.Id
     let item: StoryListContext.Item
 
-    init(context: AccountContext, item: StoryListContext.Item) {
+    init(context: AccountContext, peerId: EnginePeer.Id, item: StoryListContext.Item) {
 		self.context = context
+        self.peerId = peerId
 		self.item = item
 	}
 
@@ -27,6 +29,9 @@ final class StoryItemContentComponent: Component {
 		if lhs.context !== rhs.context {
 			return false
 		}
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
 		if lhs.item != rhs.item {
 			return false
 		}
@@ -98,6 +103,9 @@ final class StoryItemContentComponent: Component {
         private var currentProgressTimer: SwiftSignalKit.Timer?
         private var currentProgressTimerValue: Double = 0.0
         private var videoProgressDisposable: Disposable?
+        
+        private var markedAsSeen: Bool = false
+        private var contentLoaded: Bool = false
         
         private var videoPlaybackStatus: MediaPlayerStatus?
         
@@ -186,7 +194,7 @@ final class StoryItemContentComponent: Component {
         
         private func updateIsProgressPaused() {
             if let videoNode = self.videoNode {
-                if !self.isProgressPaused && self.hierarchyTrackingLayer.isInHierarchy {
+                if !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy {
                     videoNode.play()
                 } else {
                     videoNode.pause()
@@ -198,7 +206,7 @@ final class StoryItemContentComponent: Component {
         }
         
         private func updateProgressTimer() {
-            let needsTimer = !self.isProgressPaused && self.hierarchyTrackingLayer.isInHierarchy
+            let needsTimer = !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
             
             if needsTimer {
                 if self.currentProgressTimer == nil {
@@ -206,13 +214,20 @@ final class StoryItemContentComponent: Component {
                         timeout: 1.0 / 60.0,
                         repeat: true,
                         completion: { [weak self] in
-                            guard let self, !self.isProgressPaused, self.hierarchyTrackingLayer.isInHierarchy else {
+                            guard let self, !self.isProgressPaused, self.contentLoaded, self.hierarchyTrackingLayer.isInHierarchy else {
                                 return
                             }
                             
-                            if self.videoNode != nil {
+                            if case .file = self.currentMessageMedia {
                                 self.updateVideoPlaybackProgress()
                             } else {
+                                if !self.markedAsSeen {
+                                    self.markedAsSeen = true
+                                    if let component = self.component {
+                                        let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peerId, id: component.item.id).start()
+                                    }
+                                }
+                                
                                 #if DEBUG && false
                                 let currentProgressTimerLimit: Double = 5 * 60.0
                                 #else
@@ -273,6 +288,15 @@ final class StoryItemContentComponent: Component {
                 progress = min(1.0, progress)
                 
                 currentProgress = progress
+                
+                if isPlaying {
+                    if !self.markedAsSeen {
+                        self.markedAsSeen = true
+                        if let component = self.component {
+                            let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peerId, id: component.item.id).start()
+                        }
+                    }
+                }
             }
             
             let clippedProgress = max(0.0, min(1.0, currentProgress))
@@ -325,6 +349,8 @@ final class StoryItemContentComponent: Component {
                         }
                     }
                 case let .file(file):
+                    self.contentLoaded = true
+                    
                     signal = chatMessageVideo(
                         postbox: component.context.account.postbox,
                         userLocation: .other,
@@ -362,7 +388,15 @@ final class StoryItemContentComponent: Component {
                 self.fetchDisposable?.dispose()
                 self.fetchDisposable = nil
                 if let fetchSignal {
-                    self.fetchDisposable = fetchSignal.start()
+                    self.fetchDisposable = (fetchSignal |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if !self.contentLoaded {
+                            self.contentLoaded = true
+                            self.state?.updated(transition: .immediate)
+                        }
+                    })
                 }
             }
             
@@ -408,7 +442,8 @@ final class StoryItemContentComponent: Component {
                     })
                 }
             }
-            self.updateProgressTimer()
+            
+            self.updateIsProgressPaused()
             
             return availableSize
         }

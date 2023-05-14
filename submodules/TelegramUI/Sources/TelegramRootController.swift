@@ -23,6 +23,7 @@ import LegacyComponents
 import LegacyMediaPickerUI
 import LegacyCamera
 import AvatarNode
+import LocalMediaResources
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -62,7 +63,7 @@ private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceh
     }
 }
 
-public final class TelegramRootController: NavigationController {
+public final class TelegramRootController: NavigationController, TelegramRootControllerInterface {
     private let context: AccountContext
     
     public var rootTabController: TabBarController?
@@ -262,9 +263,6 @@ public final class TelegramRootController: NavigationController {
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
         var dismissCameraImpl: (() -> Void)?
-        let _ = presentImpl
-        let _ = returnToCameraImpl
-        let _ = dismissCameraImpl
         let cameraController = CameraScreen(context: context, mode: .story, completion: { result in
             let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
             |> map { value -> MediaEditorScreen.Subject? in
@@ -352,15 +350,24 @@ public final class TelegramRootController: NavigationController {
                     selectionController?.displayProgress = true
                     
                     switch mediaResult {
-                    case let .image(image):
+                    case let .image(image, _):
                         if let data = image.jpegData(compressionQuality: 0.8) {
-                            let _ = context.engine.messages.uploadStory(media: .image(dimensions: PixelDimensions(image.size), data: data), privacy: privacy).start()
+                            if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                                storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), text: nil, entities: nil, privacy: privacy)
+                            }
                         }
                     case .video:
                         break
+//                        let resource = VideoLibraryMediaResource(localIdentifier: asset.localIdentifier, conversion: VideoLibraryMediaResourceConversion.passthrough)
+//
+//                        if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+//                            storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), privacy: privacy)
+//                        }
+//                        selectionController?.dismiss()
                     }
                     dismissCameraImpl?()
                     commit()
+                    selectionController?.dismiss()
                 })
             })
             controller.sourceHint = .camera

@@ -35,3 +35,20 @@ fragment half4 defaultFragmentShader(RasterizerData in [[stage_in]],
     half3 color = texture.sample(samplr, float2(x, y)).rgb;
     return half4(color, 1.0);
 }
+
+fragment half histogramPrepareFragmentShader(RasterizerData in [[stage_in]],
+                                              constant float2 &texCoordScales [[buffer(0)]],
+                                              texture2d<half, access::sample> texture [[texture(0)]]) {
+    constexpr sampler samplr(filter::linear, mag_filter::linear, min_filter::linear);
+    
+    float scaleX = texCoordScales.x;
+    float scaleY = texCoordScales.y;
+    float x = (in.texCoord.x - (1.0 - scaleX) / 2.0) / scaleX;
+    float y = (in.texCoord.y - (1.0 - scaleY) / 2.0) / scaleY;
+    if (x < 0 || x > 1 || y < 0 || y > 1) {
+        return 0.0;
+    }
+    half3 color = texture.sample(samplr, float2(x, y)).rgb;
+    half luma = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
+    return luma;
+}

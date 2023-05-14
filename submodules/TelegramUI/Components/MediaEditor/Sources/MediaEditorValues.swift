@@ -397,6 +397,18 @@ public extension MediaEditorValues {
     }
     
     var requiresComposing: Bool {
+        if abs(1.0 - self.cropScale) > 0.0 {
+            return true
+        }
+        if self.cropOffset != .zero {
+            return true
+        }
+        if abs(self.cropRotation) > 0.0 {
+            return true
+        }
+        if self.cropMirroring {
+            return true
+        }
         if self.hasAdjustments {
             return true
         }
@@ -483,6 +495,8 @@ public class MediaEditorHistogram: Equatable {
         var greenValues: [UInt32] = []
         var maxBlue: UInt32 = 0
         var blueValues: [UInt32] = []
+        var maxLuma: UInt32 = 0
+        var lumaValues: [UInt32] = []
         
         data.withUnsafeBytes { pointer in
             if let red = pointer.baseAddress?.assumingMemoryBound(to: UInt32.self) {
@@ -511,9 +525,18 @@ public class MediaEditorHistogram: Equatable {
                     }
                 }
             }
+            
+            if let luma = pointer.baseAddress?.assumingMemoryBound(to: UInt32.self).advanced(by: count * 3) {
+                for i in 0 ..< count {
+                    lumaValues.append(luma[i])
+                    if luma[i] > maxLuma {
+                        maxLuma = luma[i]
+                    }
+                }
+            }
         }
         
-        self.luminance = HistogramBins(values: [], max: 0)
+        self.luminance = HistogramBins(values: lumaValues, max: maxLuma)
         self.red = HistogramBins(values: redValues, max: maxRed)
         self.green = HistogramBins(values: greenValues, max: maxGreen)
         self.blue = HistogramBins(values: blueValues, max: maxBlue)

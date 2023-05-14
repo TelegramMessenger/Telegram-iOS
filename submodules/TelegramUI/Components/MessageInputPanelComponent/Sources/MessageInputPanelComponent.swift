@@ -117,6 +117,7 @@ public final class MessageInputPanelComponent: Component {
         private let bottomGradientView: UIView
         
         private let placeholder = ComponentView<Empty>()
+        private let vibrancyPlaceholder = ComponentView<Empty>()
         
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
@@ -242,6 +243,17 @@ public final class MessageInputPanelComponent: Component {
                 component: AnyComponent(Text(
                     text: component.placeholder,
                     font: Font.regular(17.0),
+                    color: UIColor(rgb: 0xffffff, alpha: 0.3)
+                )),
+                environment: {},
+                containerSize: availableTextFieldSize
+            )
+            
+            let _ = self.vibrancyPlaceholder.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: component.placeholder,
+                    font: Font.regular(17.0),
                     color: .white
                 )),
                 environment: {},
@@ -271,10 +283,18 @@ public final class MessageInputPanelComponent: Component {
                 placeholderOriginX = floorToScreenPixels((availableSize.width - placeholderSize.width) / 2.0)
             }
             let placeholderFrame = CGRect(origin: CGPoint(x: placeholderOriginX, y: floor((fieldFrame.height - placeholderSize.height) * 0.5)), size: placeholderSize)
-            if let placeholderView = self.placeholder.view {
+            if let placeholderView = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
+                if vibrancyPlaceholderView.superview == nil {
+                    vibrancyPlaceholderView.layer.anchorPoint = CGPoint()
+                    self.vibrancyEffectView.contentView.addSubview(vibrancyPlaceholderView)
+                }
+                transition.setPosition(view: vibrancyPlaceholderView, position: placeholderFrame.origin)
+                vibrancyPlaceholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
+                
                 if placeholderView.superview == nil {
+                    placeholderView.isUserInteractionEnabled = false
                     placeholderView.layer.anchorPoint = CGPoint()
-                    self.vibrancyEffectView.contentView.addSubview(placeholderView)
+                    self.fieldBackgroundView.addSubview(placeholderView)
                 }
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                 placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
@@ -455,8 +475,9 @@ public final class MessageInputPanelComponent: Component {
             
             self.fieldBackgroundView.updateColor(color: self.textFieldExternalState.isEditing || component.style == .editor ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
             transition.setAlpha(view: self.fieldBackgroundView, alpha: hasMediaRecording ? 0.0 : 1.0)
-            if let placeholderView = self.placeholder.view {
-                placeholderView.isHidden = self.textFieldExternalState.hasText
+            if let placeholder = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
+                placeholder.isHidden = self.textFieldExternalState.hasText
+                vibrancyPlaceholderView.isHidden = placeholder.isHidden
             }
             
             component.externalState.isEditing = self.textFieldExternalState.isEditing

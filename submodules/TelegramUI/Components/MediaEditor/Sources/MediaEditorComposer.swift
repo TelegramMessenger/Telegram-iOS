@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UIKit
 import CoreImage
 import Metal
 import Display
@@ -11,14 +12,13 @@ final class MediaEditorComposer {
     private let dimensions: CGSize
     
     private let ciContext: CIContext?
+    private var textureCache: CVMetalTextureCache?
     
     private let renderer = MediaEditorRenderer()
     private let renderChain = MediaEditorRenderChain()
     
     private var gradientImage: CIImage
-    
-    private var textureCache: CVMetalTextureCache?
-    
+        
     let semaphore = DispatchSemaphore(value: 1)
     
     init(values: MediaEditorValues, dimensions: CGSize) {
@@ -31,7 +31,7 @@ final class MediaEditorComposer {
         
         if let gradientColors = values.gradientColors {
             let image = generateGradientImage(size: dimensions, scale: 1.0, colors: gradientColors, locations: [0.0, 1.0])!
-            self.gradientImage = CIImage(image: image)!
+            self.gradientImage = CIImage(image: image)!.transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
         } else {
             self.gradientImage = CIImage(color: .black)
         }
@@ -49,7 +49,6 @@ final class MediaEditorComposer {
         self.renderChain.update(values: self.values)
     }
     
-    private var processedPixelBuffer: CVPixelBuffer?
     func processSampleBuffer(_ sampleBuffer: CMSampleBuffer, pool: CVPixelBufferPool?) -> CVPixelBuffer? {
         guard let textureCache = self.textureCache, let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let pool = pool else {
             return nil
@@ -74,7 +73,7 @@ final class MediaEditorComposer {
                 var pixelBuffer: CVPixelBuffer?
                 CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer)
                 
-                if let composition = makeFrameComposition(inputImage: ciImage), let pixelBuffer {
+                if let composition = processImage(inputImage: ciImage), let pixelBuffer {
                     self.ciContext?.render(composition, to: pixelBuffer)
                     
                     return pixelBuffer
@@ -89,23 +88,43 @@ final class MediaEditorComposer {
         }
     }
     
-    func makeFrameComposition(inputImage: CIImage) -> CIImage? {
-        var resultImage = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: self.dimensions)).transformed(by: CGAffineTransform(translationX: -self.dimensions.width / 2.0, y: -self.dimensions.height / 2.0))
-        resultImage = self.gradientImage.composited(over: resultImage)
-        
-        var mediaImage = inputImage.transformed(by: CGAffineTransform(translationX: -inputImage.extent.midX, y: -inputImage.extent.midY))
-        
-        var cropTransform = CGAffineTransform(translationX: self.values.cropOffset.x, y: self.values.cropOffset.y * -1.0)
-        cropTransform = cropTransform.rotated(by: -self.values.cropRotation)
-        cropTransform = cropTransform.scaledBy(x: self.values.cropScale, y: self.values.cropScale)
-        mediaImage = mediaImage.transformed(by: cropTransform)
-
-        resultImage = mediaImage.composited(over: resultImage)
-        
-        resultImage = resultImage.cropped(to: CGRect(origin: CGPoint(x: -self.dimensions.width / 2.0, y: -self.dimensions.height / 2.0), size: self.dimensions))
-                
-        return resultImage
+    func processImage(inputImage: CIImage) -> CIImage? {
+        return makeEditorImageFrameComposition(inputImage: inputImage, gradientImage: self.gradientImage, dimensions: self.dimensions, values: self.values)
     }
+}
+
+public func makeEditorImageComposition(inputImage: UIImage, dimensions: CGSize, values: MediaEditorValues) -> UIImage? {
+    let inputImage = CIImage(image: inputImage)!
+    let gradientImage: CIImage
+    if let gradientColors = values.gradientColors {
+        let image = generateGradientImage(size: dimensions, scale: 1.0, colors: gradientColors, locations: [0.0, 1.0])!
+        gradientImage = CIImage(image: image)!.transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
+    } else {
+        gradientImage = CIImage(color: .black)
+    }
+    if let ciImage = makeEditorImageFrameComposition(inputImage: inputImage, gradientImage: gradientImage, dimensions: dimensions, values: values) {
+        let context = CIContext(options: [.workingColorSpace : NSNull()])
+        if let cgImage = context.createCGImage(ciImage, from: CGRect(origin: .zero, size: ciImage.extent.size)) {
+            return UIImage(cgImage: cgImage)
+        }
+    }
+    return nil
+}
+
+private func makeEditorImageFrameComposition(inputImage: CIImage, gradientImage: CIImage, dimensions: CGSize, values: MediaEditorValues) -> CIImage? {
+    var resultImage = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: dimensions)).transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
+    resultImage = gradientImage.composited(over: resultImage)
+    
+    var mediaImage = inputImage.transformed(by: CGAffineTransform(translationX: -inputImage.extent.midX, y: -inputImage.extent.midY))
+    
+    var cropTransform = CGAffineTransform(translationX: values.cropOffset.x, y: values.cropOffset.y * -1.0)
+    cropTransform = cropTransform.rotated(by: -values.cropRotation)
+    cropTransform = cropTransform.scaledBy(x: values.cropScale, y: values.cropScale)
+    mediaImage = mediaImage.transformed(by: cropTransform)
+
+    resultImage = mediaImage.composited(over: resultImage)
+                    
+    return resultImage.transformed(by: CGAffineTransform(translationX: dimensions.width / 2.0, y: dimensions.height / 2.0))
 }
 
 extension CMSampleBuffer {

@@ -24,6 +24,7 @@ public enum StoryChatContent {
                         position: items.count,
                         component: AnyComponent(StoryItemContentComponent(
                             context: context,
+                            peerId: peerId,
                             item: item
                         )),
                         centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(
@@ -57,7 +58,7 @@ public enum StoryChatContent {
                 var sliceFocusedItemId: AnyHashable?
                 if let focusItem, items.contains(where: { ($0.id.base as? Int64) == focusItem }) {
                     sliceFocusedItemId = AnyHashable(focusItem)
-                } else if itemSet.peerId != context.account.peerId {
+                } else {
                     if let id = itemSet.items.first(where: { !$0.isSeen })?.id {
                         sliceFocusedItemId = AnyHashable(id)
                     }

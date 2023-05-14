@@ -577,8 +577,8 @@ public extension TelegramEngine {
             return StoryListContext(account: self.account, scope: .peer(id))
         }
         
-        public func uploadStory(media: EngineStoryInputMedia, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
-            return _internal_uploadStory(account: self.account, media: media, privacy: privacy)
+        public func uploadStory(media: EngineStoryInputMedia, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
+            return _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, privacy: privacy)
         }
         
         public func deleteStory(id: Int64) -> Signal<Never, NoError> {

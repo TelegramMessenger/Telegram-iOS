@@ -663,7 +663,7 @@ final class MediaEditorScreenComponent: Component {
                     muteButtonView.layer.shadowRadius = 2.0
                     muteButtonView.layer.shadowColor = UIColor.black.cgColor
                     muteButtonView.layer.shadowOpacity = 0.25
-                    self.addSubview(muteButtonView)
+                    //self.addSubview(muteButtonView)
                 }
                 transition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
                 transition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))
@@ -712,7 +712,6 @@ public final class MediaEditorScreen: ViewController {
         private let stickerPickerInputData = Promise<StickerPickerInputData>()
         
         private var presentationData: PresentationData
-        private let hapticFeedback = HapticFeedback()
         private var validLayout: ContainerViewLayout?
         
         init(controller: MediaEditorScreen) {
@@ -1159,8 +1158,8 @@ public final class MediaEditorScreen: ViewController {
     }
     
     public enum Result {
-        case image(UIImage)
-        case video(String, UIImage?, MediaEditorValues)
+        case image(UIImage, NSAttributedString?)
+        case video(String, UIImage?, MediaEditorValues, NSAttributedString?)
     }
     
     fileprivate let context: AccountContext
@@ -1211,14 +1210,20 @@ public final class MediaEditorScreen: ViewController {
         }
         
         if mediaEditor.resultIsVideo {
-            
+            self.completion(.video("", nil, mediaEditor.values, nil), { [weak self] in
+                self?.node.animateOut(completion: { [weak self] in
+                    self?.dismiss()
+                })
+            })
         } else {
             if let image = mediaEditor.resultImage {
-                self.completion(.image(image), { [weak self] in
-                    self?.node.animateOut(completion: { [weak self] in
-                        self?.dismiss()
+                if let resultImage = makeEditorImageComposition(inputImage: image, dimensions: storyDimensions, values: mediaEditor.values) {
+                    self.completion(.image(resultImage, nil), { [weak self] in
+                        self?.node.animateOut(completion: { [weak self] in
+                            self?.dismiss()
+                        })
                     })
-                })
+                }
             }
         }
     }
@@ -1269,14 +1274,22 @@ public final class MediaEditorScreen: ViewController {
             
             self.exportDisposable = (export.status
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let _ = self {
+                if let self {
                     if case .completed = status {
+                        self.export = nil
                         saveToPhotos(outputPath, true)
                     }
                 }
             })
         } else {
-            
+            if let image = mediaEditor.resultImage {
+                let resultImage = makeEditorImageComposition(inputImage: image, dimensions: storyDimensions, values: mediaEditor.values)
+                if let data = resultImage?.jpegData(compressionQuality: 0.8) {
+                    let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
+                    try? data.write(to: URL(fileURLWithPath: outputPath))
+                    saveToPhotos(outputPath, false)
+                }
+            }
         }
     }
     

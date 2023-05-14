@@ -3,13 +3,22 @@ import Metal
 import simd
 import MetalPerformanceShaders
 
-final class HistogramCalculationPass: RenderPass {
-    fileprivate var histogramInfoBuffer: MTLBuffer?
+final class HistogramCalculationPass: DefaultRenderPass {
+    fileprivate var cachedTexture: MTLTexture?
+    fileprivate var histogramBuffer: MTLBuffer?
     fileprivate var calculation: MPSImageHistogram?
     
     var updated: ((Data) -> Void)?
     
-    func setup(device: MTLDevice, library: MTLLibrary) {
+    override var fragmentShaderFunctionName: String {
+        return "histogramPrepareFragmentShader"
+    }
+    
+    override var pixelFormat: MTLPixelFormat  {
+        return .r8Unorm
+    }
+    
+    override func setup(device: MTLDevice, library: MTLLibrary) {
         var histogramInfo = MPSImageHistogramInfo(
             numberOfHistogramEntries: 256,
             histogramForAlpha: false,
@@ -18,22 +27,71 @@ final class HistogramCalculationPass: RenderPass {
         )
         
         let calculation = MPSImageHistogram(device: device, histogramInfo: &histogramInfo)
-        calculation.zeroHistogram = false
+        calculation.zeroHistogram = true
+                
+        let histogramBufferLength = calculation.histogramSize(forSourceFormat: .bgra8Unorm)
+        let lumaHistogramBufferLength = calculation.histogramSize(forSourceFormat: .r8Unorm)
         
-        let bufferLength = calculation.histogramSize(forSourceFormat: .bgra8Unorm)
-        
-        if let histogramInfoBuffer = device.makeBuffer(length: bufferLength, options: [.storageModeShared]) {
+        if let histogramBuffer = device.makeBuffer(length: histogramBufferLength + lumaHistogramBufferLength, options: [.storageModeShared]) {
             self.calculation = calculation
-            self.histogramInfoBuffer = histogramInfoBuffer
+            self.histogramBuffer = histogramBuffer
         }
+        
+        super.setup(device: device, library: library)
     }
     
-    func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        if let histogramInfoBuffer = self.histogramInfoBuffer, let calculation = self.calculation {
-            calculation.encode(to: commandBuffer, sourceTexture: input, histogram: histogramInfoBuffer, histogramOffset: 0)
+    override func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.setupVerticesBuffer(device: device, rotation: rotation)
+        
+        let (width, height) = textureDimensionsForRotation(texture: input, rotation: rotation)
+        
+        if self.cachedTexture == nil || self.cachedTexture?.width != width || self.cachedTexture?.height != height {
+            let textureDescriptor = MTLTextureDescriptor()
+            textureDescriptor.textureType = .type2D
+            textureDescriptor.width = width
+            textureDescriptor.height = height
+            textureDescriptor.pixelFormat = .r8Unorm
+            textureDescriptor.storageMode = .shared
+            textureDescriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
+            guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
+                return input
+            }
+            self.cachedTexture = texture
+            texture.label = "lumaTexture"
+        }
+        
+        let renderPassDescriptor = MTLRenderPassDescriptor()
+        renderPassDescriptor.colorAttachments[0].texture = self.cachedTexture!
+        renderPassDescriptor.colorAttachments[0].loadAction = .dontCare
+        renderPassDescriptor.colorAttachments[0].storeAction = .store
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
+        guard let renderCommandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
+            return input
+        }
+        
+        renderCommandEncoder.setViewport(MTLViewport(
+            originX: 0, originY: 0,
+            width: Double(width), height: Double(height),
+            znear: -1.0, zfar: 1.0)
+        )
+        
+        renderCommandEncoder.setFragmentTexture(input, index: 0)
+        
+        var texCoordScales = simd_float2(x: 1.0, y: 1.0)
+        renderCommandEncoder.setFragmentBytes(&texCoordScales, length: MemoryLayout<simd_float2>.stride, index: 0)
+        
+        self.encodeDefaultCommands(using: renderCommandEncoder)
+        
+        renderCommandEncoder.endEncoding()
+        
+        if let histogramBuffer = self.histogramBuffer, let calculation = self.calculation {
+            calculation.encode(to: commandBuffer, sourceTexture: input, histogram: histogramBuffer, histogramOffset: 0)
             
-            let data = Data(bytes: histogramInfoBuffer.contents(), count: histogramInfoBuffer.length)
-            self.updated?(data)
+            let lumaHistogramBufferLength = calculation.histogramSize(forSourceFormat: .r8Unorm)
+            calculation.encode(to: commandBuffer, sourceTexture: self.cachedTexture!, histogram: histogramBuffer, histogramOffset: histogramBuffer.length - lumaHistogramBufferLength)
+            
+            let histogramData = Data(bytes: histogramBuffer.contents(), count: histogramBuffer.length)
+            self.updated?(histogramData)
         }
         
         return input

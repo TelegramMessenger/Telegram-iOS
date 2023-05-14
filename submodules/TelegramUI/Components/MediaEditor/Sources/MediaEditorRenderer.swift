@@ -58,6 +58,7 @@ final class MediaEditorRenderer: TextureConsumer {
         }
     }
 
+    private var device: MTLDevice?
     private var commandQueue: MTLCommandQueue?
     private var currentTexture: MTLTexture?
     private var currentRotation: TextureRotation = .rotate0Degrees
@@ -114,12 +115,11 @@ final class MediaEditorRenderer: TextureConsumer {
         self.outputRenderPass.setup(device: device, library: defaultLibrary)
     }
     
-    private var currentDevice: MTLDevice?
     func setupForComposer(composer: MediaEditorComposer) {
         guard let device = composer.device else {
             return
         }
-        self.currentDevice = device
+        self.device = device
         
         let mainBundle = Bundle(for: MediaEditorRenderer.self)
         guard let path = mainBundle.path(forResource: "MediaEditorBundle", ofType: "bundle") else {
@@ -144,7 +144,7 @@ final class MediaEditorRenderer: TextureConsumer {
         let device: MTLDevice?
         if let renderTarget = self.renderTarget {
             device = renderTarget.mtlDevice
-        } else if let currentDevice = self.currentDevice {
+        } else if let currentDevice = self.device {
             device = currentDevice
         } else {
             device = nil
@@ -223,8 +223,9 @@ final class MediaEditorRenderer: TextureConsumer {
         guard let device = self.renderTarget?.mtlDevice else {
             return nil
         }
+        let options = [CIImageOption.colorSpace: CGColorSpaceCreateDeviceRGB()]
         let context = CIContext(mtlDevice: device)
-        guard var ciImage = CIImage(mtlTexture: texture) else {
+        guard var ciImage = CIImage(mtlTexture: texture, options: options) else {
             return nil
         }
         let transform = CGAffineTransform(1.0, 0.0, 0.0, -1.0, 0.0, ciImage.extent.height)

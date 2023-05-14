@@ -5,6 +5,7 @@ import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data)
+    case video(dimensions: PixelDimensions, duration: Int, resource: TelegramMediaResource)
 }
 
 public struct EngineStoryPrivacy: Equatable {
@@ -23,7 +24,7 @@ public struct EngineStoryPrivacy: Equatable {
     }
 }
 
-func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
+func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
     switch media {
     case let .image(dimensions, data):
         let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
@@ -101,7 +102,16 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, priva
                 case let .content(content):
                     switch content.content {
                     case let .media(inputMedia, _):
-                        return account.network.request(Api.functions.stories.sendStory(flags: 0, media: inputMedia, caption: nil, entities: nil, privacyRules: privacyRules))
+                        var flags: Int32 = 0
+                        var inputEntities: [Api.MessageEntity]?
+                        if let text = text, !text.isEmpty {
+                            flags |= (1 << 0)
+                            if let entities = entities, !entities.isEmpty {
+                                flags |= (1 << 1)
+                                inputEntities = apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary())
+                            }
+                        }
+                        return account.network.request(Api.functions.stories.sendStory(flags: 0, media: inputMedia, caption: text, entities: inputEntities, privacyRules: privacyRules))
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                             return .single(nil)
@@ -118,6 +128,124 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, priva
                                                     let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                                     if let parsedMedia = parsedMedia {
                                                         applyMediaResourceChanges(from: imageMedia, to: parsedMedia, postbox: account.postbox, force: false)
+                                                    }
+                                                default:
+                                                    break
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                account.stateManager.addUpdates(updates)
+                            }
+                            
+                            return .complete()
+                        }
+                    default:
+                        return .complete()
+                    }
+                default:
+                    return .complete()
+                }
+            }
+            |> switchToLatest
+        }
+    case let .video(dimensions, duration, resource):
+        let fileMedia = TelegramMediaFile(
+            fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: MediaId.Id.random(in: MediaId.Id.min ... MediaId.Id.max)),
+            partialReference: nil,
+            resource: resource,
+            previewRepresentations: [],
+            videoThumbnails: [],
+            immediateThumbnailData: nil,
+            mimeType: "video/mp4",
+            size: nil,
+            attributes: [
+                TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming)
+            ]
+        )
+        
+        let contentToUpload = messageContentToUpload(
+            network: account.network,
+            postbox: account.postbox,
+            auxiliaryMethods: account.auxiliaryMethods,
+            transformOutgoingMessageMedia: nil,
+            messageMediaPreuploadManager: account.messageMediaPreuploadManager,
+            revalidationContext: account.mediaReferenceRevalidationContext,
+            forceReupload: true,
+            isGrouped: false,
+            peerId: account.peerId,
+            messageId: nil,
+            attributes: [],
+            text: "",
+            media: [fileMedia]
+        )
+        let contentSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>
+        switch contentToUpload {
+        case let .immediate(result, _):
+            contentSignal = .single(result)
+        case let .signal(signal, _):
+            contentSignal = signal
+        }
+        
+        return contentSignal
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Never, NoError> in
+            return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+                var privacyRules: [Api.InputPrivacyRule]
+                switch privacy.base {
+                case .everyone:
+                    privacyRules = [.inputPrivacyValueAllowAll]
+                case .contacts:
+                    privacyRules = [.inputPrivacyValueAllowContacts]
+                case .closeFriends:
+                    privacyRules = [.inputPrivacyValueAllowCloseFriends]
+                }
+                var privacyUsers: [Api.InputUser] = []
+                var privacyChats: [Int64] = []
+                for peerId in privacy.additionallyIncludePeers {
+                    if let peer = transaction.getPeer(peerId) {
+                        if let _ = peer as? TelegramUser {
+                            if let inputUser = apiInputUser(peer) {
+                                privacyUsers.append(inputUser)
+                            }
+                        } else if peer is TelegramGroup || peer is TelegramChannel {
+                            privacyChats.append(peer.id.id._internalGetInt64Value())
+                        }
+                    }
+                }
+                if !privacyUsers.isEmpty {
+                    privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
+                }
+                if !privacyChats.isEmpty {
+                    privacyRules.append(.inputPrivacyValueAllowChatParticipants(chats: privacyChats))
+                }
+                
+                switch result {
+                case let .content(content):
+                    switch content.content {
+                    case let .media(inputMedia, _):
+                        return account.network.request(Api.functions.stories.sendStory(flags: 0, media: inputMedia, caption: nil, entities: nil, privacyRules: privacyRules))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                            return .single(nil)
+                        }
+                        |> mapToSignal { updates -> Signal<Never, NoError> in
+                            if let updates = updates {
+                                for update in updates.allUpdates {
+                                    if case let .updateStories(stories) = update {
+                                        switch stories {
+                                        case .userStories(let userId, let apiStories), .userStoriesShort(let userId, let apiStories, _):
+                                            if PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)) == account.peerId, apiStories.count == 1 {
+                                                switch apiStories[0] {
+                                                case let .storyItem(_, _, _, _, _, media, _, _, _):
+                                                    let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
+                                                    if let parsedMedia = parsedMedia {
+                                                        applyMediaResourceChanges(from: fileMedia, to: parsedMedia, postbox: account.postbox, force: true)
                                                     }
                                                 default:
                                                     break
