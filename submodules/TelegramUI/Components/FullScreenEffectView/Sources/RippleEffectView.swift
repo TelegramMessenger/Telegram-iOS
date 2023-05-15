@@ -4,6 +4,9 @@ import MetalKit
 import simd
 
 public final class RippleEffectView: MTKView {
+    private let centerLocation: CGPoint
+    private let completion: () -> Void
+    
     private let textureLoader: MTKTextureLoader
     private let commandQueue: MTLCommandQueue
     private let drawPassthroughPipelineState: MTLRenderPipelineState
@@ -11,7 +14,7 @@ public final class RippleEffectView: MTKView {
     
     private var viewportDimensions = CGSize(width: 1, height: 1)
     
-    private var time: Float = 0.0
+    private var startTime: Double?
     
     private var lastUpdateTimestamp: Double?
     
@@ -21,7 +24,10 @@ public final class RippleEffectView: MTKView {
         }
     }
     
-    public init?(test: Bool) {
+    public init?(centerLocation: CGPoint, completion: @escaping () -> Void) {
+        self.centerLocation = centerLocation
+        self.completion = completion
+        
         let mainBundle = Bundle(for: RippleEffectView.self)
         
         guard let path = mainBundle.path(forResource: "FullScreenEffectViewBundle", ofType: "bundle") else {
@@ -135,12 +141,21 @@ public final class RippleEffectView: MTKView {
     }
 
     private func redraw(drawable: MTLDrawable) {
-        if let lastUpdateTimestamp = self.lastUpdateTimestamp {
+        /*if let lastUpdateTimestamp = self.lastUpdateTimestamp {
             if lastUpdateTimestamp + 1.0 < CACurrentMediaTime() {
                 self.updateImageFromSourceView()
             }
         } else {
             self.updateImageFromSourceView()
+        }*/
+        
+        let relativeTime: Double
+        let timestamp = CACurrentMediaTime()
+        if let startTime = self.startTime {
+            relativeTime = timestamp - startTime
+        } else {
+            self.startTime = timestamp
+            relativeTime = 0.0
         }
         
         guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
@@ -160,20 +175,20 @@ public final class RippleEffectView: MTKView {
         renderEncoder.setRenderPipelineState(self.drawPassthroughPipelineState)
         
         let gridSize = 1000
-        var time = self.time.truncatingRemainder(dividingBy: 0.7)
-        //time = 0.6
-        self.time += (1.0 / 60.0) * 0.1
+        var time: Float = Float(min(relativeTime, 0.7))
         
         var gridResolution = simd_uint2(UInt32(gridSize), UInt32(gridSize))
         var resolution = simd_uint2(UInt32(viewportDimensions.width), UInt32(viewportDimensions.height))
         
-        var center = simd_uint2(200, 200);
+        var center = simd_uint2(UInt32(self.centerLocation.x * self.contentScaleFactor), UInt32(self.centerLocation.y * self.contentScaleFactor));
         
         if let texture = self.texture {
+            var contentScale: Float = Float(self.contentScaleFactor)
             renderEncoder.setVertexBytes(&center, length: MemoryLayout<simd_uint2>.size, index: 0)
             renderEncoder.setVertexBytes(&gridResolution, length: MemoryLayout<simd_uint2>.size, index: 1)
             renderEncoder.setVertexBytes(&resolution, length: MemoryLayout<simd_uint2>.size, index: 2)
             renderEncoder.setVertexBytes(&time, length: MemoryLayout<Float>.size, index: 3)
+            renderEncoder.setVertexBytes(&contentScale, length: MemoryLayout<Float>.size, index: 4)
             
             renderEncoder.setFragmentTexture(texture, index: 0)
             
@@ -184,5 +199,11 @@ public final class RippleEffectView: MTKView {
 
         commandBuffer.present(drawable)
         commandBuffer.commit()
+        
+        if relativeTime >= 0.7 {
+            //self.startTime = nil
+            self.isPaused = true
+            self.completion()
+        }
     }
 }

@@ -191,6 +191,7 @@ private final class FetchImpl {
     private final class Impl {
         private let queue: Queue
         
+        private let accountPeerId: PeerId
         private let postbox: Postbox
         private let network: Network
         private let mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?
@@ -220,6 +221,7 @@ private final class FetchImpl {
         
         init(
             queue: Queue,
+            accountPeerId: PeerId,
             postbox: Postbox,
             network: Network,
             mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -237,6 +239,7 @@ private final class FetchImpl {
         ) {
             self.queue = queue
             
+            self.accountPeerId = accountPeerId
             self.postbox = postbox
             self.network = network
             self.mediaReferenceRevalidationContext = mediaReferenceRevalidationContext
@@ -471,6 +474,7 @@ private final class FetchImpl {
                         let fetchLocation = state.fetchLocation
                         
                         state.disposable = (revalidateMediaResourceReference(
+                            accountPeerId: self.accountPeerId,
                             postbox: self.postbox,
                             network: self.network,
                             revalidationContext: mediaReferenceRevalidationContext,
@@ -716,6 +720,7 @@ private final class FetchImpl {
     
     
     init(
+        accountPeerId: PeerId,
         postbox: Postbox,
         network: Network,
         mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -736,6 +741,7 @@ private final class FetchImpl {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(
                 queue: queue,
+                accountPeerId: accountPeerId,
                 postbox: postbox,
                 network: network,
                 mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
@@ -756,6 +762,7 @@ private final class FetchImpl {
 }
 
 func multipartFetchV2(
+    accountPeerId: PeerId,
     postbox: Postbox,
     network: Network,
     mediaReferenceRevalidationContext: MediaReferenceRevalidationContext?,
@@ -771,6 +778,7 @@ func multipartFetchV2(
 ) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let impl = FetchImpl(
+            accountPeerId: accountPeerId,
             postbox: postbox,
             network: network,
             mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,

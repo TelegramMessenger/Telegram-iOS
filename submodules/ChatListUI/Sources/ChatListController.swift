@@ -2304,6 +2304,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         self.chatListDisplayNode.clearHighlightAnimated(true)
+        
+        if let fullScreenEffectView = self.fullScreenEffectView {
+            self.fullScreenEffectView = nil
+            fullScreenEffectView.removeFromSuperview()
+        }
     }
     
     func requestUpdateHeaderContent(transition: ContainedViewLayoutTransition) {
@@ -2501,25 +2506,37 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             searchContentNode.updateListVisibleContentOffset(.known(0.0))
             self.chatListDisplayNode.scrollToTop()
         }
-        
-        #if DEBUG && false
-        var fullScreenEffectView: RippleEffectView?
-        if let current = self.fullScreenEffectView {
-            fullScreenEffectView = current
-            self.view.window?.addSubview(current)
-            current.sourceView = self.view
-        } else {
-            if let value = RippleEffectView(test: false) {
-                fullScreenEffectView = value
-                self.fullScreenEffectView = value
-                self.view.window?.addSubview(value)
-                value.sourceView = self.view
+    }
+    
+    public func animateStoryUploadRipple() {
+        if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                let localRect = transitionView.convert(transitionView.bounds, to: self.view)
+                self.animateRipple(centerLocation: localRect.center)
             }
         }
-        if let fullScreenEffectView {
-            fullScreenEffectView.frame = CGRect(origin: CGPoint(), size: layout.size)
+    }
+    
+    public func animateRipple(centerLocation: CGPoint) {
+        if let fullScreenEffectView = self.fullScreenEffectView {
+            self.fullScreenEffectView = nil
+            fullScreenEffectView.removeFromSuperview()
         }
-        #endif
+        
+        if let value = RippleEffectView(centerLocation: centerLocation, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            if let fullScreenEffectView = self.fullScreenEffectView {
+                self.fullScreenEffectView = nil
+                fullScreenEffectView.removeFromSuperview()
+            }
+        }) {
+            self.fullScreenEffectView = value
+            value.sourceView = self.view
+            self.view.addSubview(value)
+            value.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
+        }
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -1214,6 +1214,7 @@ private final class NotificationServiceHandler {
                                                         let collectedData = Atomic<DataValue>(value: DataValue())
                                                         
                                                         return standaloneMultipartFetch(
+                                                            accountPeerId: stateManager.accountPeerId,
                                                             postbox: stateManager.postbox,
                                                             network: stateManager.network,
                                                             resource: resource,
@@ -1304,6 +1305,7 @@ private final class NotificationServiceHandler {
                                                     fetchNotificationSoundSignal = Signal { subscriber in
                                                         let collectedData = Atomic<Data>(value: Data())
                                                         return standaloneMultipartFetch(
+                                                            accountPeerId: stateManager.accountPeerId,
                                                             postbox: stateManager.postbox,
                                                             network: stateManager.network,
                                                             resource: resource,

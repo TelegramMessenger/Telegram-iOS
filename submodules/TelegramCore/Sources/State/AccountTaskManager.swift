@@ -7,6 +7,7 @@ import TelegramApi
 final class AccountTaskManager {
     private final class Impl {
         private let queue: Queue
+        private let accountPeerId: PeerId
         private let stateManager: AccountStateManager
         private let accountManager: AccountManager<TelegramAccountManagerTypes>
         private let networkArguments: NetworkInitializationArguments
@@ -22,9 +23,10 @@ final class AccountTaskManager {
         
         private var isUpdating: Bool = false
         
-        init(queue: Queue, stateManager: AccountStateManager, accountManager: AccountManager<TelegramAccountManagerTypes>,
+        init(queue: Queue, accountPeerId: PeerId, stateManager: AccountStateManager, accountManager: AccountManager<TelegramAccountManagerTypes>,
              networkArguments: NetworkInitializationArguments, viewTracker: AccountViewTracker, mediaReferenceRevalidationContext: MediaReferenceRevalidationContext, isMainApp: Bool, testingEnvironment: Bool) {
             self.queue = queue
+            self.accountPeerId = accountPeerId
             self.stateManager = stateManager
             self.accountManager = accountManager
             self.networkArguments = networkArguments
@@ -73,9 +75,9 @@ final class AccountTaskManager {
                     tasks.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager, namespace: .masks).start())
                     tasks.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager, namespace: .emoji).start())
                     tasks.add(managedSynchronizeMarkFeaturedStickerPacksAsSeenOperations(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
-                    tasks.add(managedSynchronizeRecentlyUsedMediaOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, category: .stickers, revalidationContext: self.mediaReferenceRevalidationContext).start())
-                    tasks.add(managedSynchronizeSavedGifsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
-                    tasks.add(managedSynchronizeSavedStickersOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
+                    tasks.add(managedSynchronizeRecentlyUsedMediaOperations(accountPeerId: self.accountPeerId, postbox: self.stateManager.postbox, network: self.stateManager.network, category: .stickers, revalidationContext: self.mediaReferenceRevalidationContext).start())
+                    tasks.add(managedSynchronizeSavedGifsOperations(accountPeerId: self.accountPeerId, postbox: self.stateManager.postbox, network: self.stateManager.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
+                    tasks.add(managedSynchronizeSavedStickersOperations(accountPeerId: self.accountPeerId, postbox: self.stateManager.postbox, network: self.stateManager.network, revalidationContext: self.mediaReferenceRevalidationContext).start())
                     tasks.add(_internal_managedRecentlyUsedInlineBots(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
                     tasks.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager).start())
                     tasks.add(managedConsumePersonalMessagesActions(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager).start())
@@ -146,7 +148,7 @@ final class AccountTaskManager {
         let queue = Account.sharedQueue
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, stateManager: stateManager, accountManager: accountManager, networkArguments: networkArguments, viewTracker: viewTracker, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, isMainApp: isMainApp, testingEnvironment: testingEnvironment)
+            return Impl(queue: queue, accountPeerId: stateManager.accountPeerId, stateManager: stateManager, accountManager: accountManager, networkArguments: networkArguments, viewTracker: viewTracker, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, isMainApp: isMainApp, testingEnvironment: testingEnvironment)
         })
     }
 }

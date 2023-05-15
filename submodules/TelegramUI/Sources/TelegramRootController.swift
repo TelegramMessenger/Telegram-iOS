@@ -372,18 +372,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                                 return
                                             }
                                             if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                                                storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), privacy: privacy)
+                                                storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), text: "", entities: [], privacy: privacy)
+                                                Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                                    chatListController?.animateStoryUploadRipple()
+                                                })
                                             }
                                             selectionController?.dismiss()
-                                            
-                                            /*let _ = (context.engine.messages.uploadStory(media: )
-                                            |> deliverOnMainQueue).start(completed: {
-                                                guard let self else {
-                                                    return
-                                                }
-                                                let _ = self
-                                                selectionController?.dismiss()
-                                            })*/
                                         }
                                     }
                                 })
@@ -391,18 +385,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 let resource = VideoLibraryMediaResource(localIdentifier: asset.localIdentifier, conversion: VideoLibraryMediaResourceConversion.passthrough)
                                 
                                 if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                                    storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), privacy: privacy)
+                                    storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), text: "", entities: [], privacy: privacy)
+                                    Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                        chatListController?.animateStoryUploadRipple()
+                                    })
                                 }
                                 selectionController?.dismiss()
-                                
-                                /*let _ = (context.engine.messages.uploadStory(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), privacy: privacy)
-                                |> deliverOnMainQueue).start(completed: { [weak self] in
-                                    guard let self else {
-                                        return
-                                    }
-                                    let _ = self
-                                    selectionController?.dismiss()
-                                })*/
                             default:
                                 selectionController?.dismiss()
                             }

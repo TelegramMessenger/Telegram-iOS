@@ -16,6 +16,9 @@ public enum StoryChatContent {
             for itemSet in state.itemSets {
                 var items: [StoryContentItem] = []
                 
+                guard let peer = itemSet.peer else {
+                    continue
+                }
                 let peerId = itemSet.peerId
                 
                 for item in itemSet.items {
@@ -24,7 +27,7 @@ public enum StoryChatContent {
                         position: items.count,
                         component: AnyComponent(StoryItemContentComponent(
                             context: context,
-                            peerId: peerId,
+                            peer: peer,
                             item: item
                         )),
                         centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(

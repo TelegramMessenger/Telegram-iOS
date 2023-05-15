@@ -251,6 +251,7 @@ public enum AnyMediaReference: Equatable {
     case avatarList(peer: PeerReference, media: Media)
     case attachBot(peer: PeerReference, media: Media)
     case customEmoji(media: Media)
+    case story(peer: PeerReference, id: Int32, media: Media)
     
     public static func ==(lhs: AnyMediaReference, rhs: AnyMediaReference) -> Bool {
         switch lhs {
@@ -302,6 +303,12 @@ public enum AnyMediaReference: Equatable {
                 } else {
                     return false
                 }
+            case let .story(lhsPeer, lhsId, lhsMedia):
+                if case let .story(rhsPeer, rhsId, rhsMedia) = rhs, lhsPeer == rhsPeer, lhsId == rhsId, lhsMedia.isEqual(to: rhsMedia) {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -322,6 +329,8 @@ public enum AnyMediaReference: Equatable {
             case .attachBot:
                 return nil
             case .customEmoji:
+                return nil
+            case .story:
                 return nil
         }
     }
@@ -360,6 +369,10 @@ public enum AnyMediaReference: Equatable {
                 if let media = media as? T {
                     return .customEmoji(media: media)
                 }
+            case let .story(peer, id, media):
+                if let media = media as? T {
+                    return .story(peer: peer, id: id, media: media)
+                }
         }
         return nil
     }
@@ -381,6 +394,8 @@ public enum AnyMediaReference: Equatable {
             case let .attachBot(_, media):
                 return media
             case let .customEmoji(media):
+                return media
+            case let .story(_, _, media):
                 return media
         }
     }
@@ -462,6 +477,7 @@ public enum MediaReference<T: Media> {
         case avatarList
         case attachBot
         case customEmoji
+        case story
     }
     
     case standalone(media: T)
@@ -472,6 +488,7 @@ public enum MediaReference<T: Media> {
     case avatarList(peer: PeerReference, media: T)
     case attachBot(peer: PeerReference, media: T)
     case customEmoji(media: T)
+    case story(peer: PeerReference, id: Int32, media: T)
     
     public init?(decoder: PostboxDecoder) {
         guard let caseIdValue = decoder.decodeOptionalInt32ForKey("_r"), let caseId = CodingCase(rawValue: caseIdValue) else {
@@ -523,6 +540,13 @@ public enum MediaReference<T: Media> {
                     return nil
                 }
                 self = .customEmoji(media: media)
+            case .story:
+                let peer = decoder.decodeObjectForKey("pr", decoder: { PeerReference(decoder: $0) }) as! PeerReference
+                guard let media = decoder.decodeObjectForKey("m") as? T else {
+                    return nil
+                }
+                let id = decoder.decodeInt32ForKey("sid", orElse: 0)
+                self = .story(peer: peer, id: id, media: media)
         }
     }
     
@@ -557,6 +581,11 @@ public enum MediaReference<T: Media> {
             case let .customEmoji(media):
                 encoder.encodeInt32(CodingCase.customEmoji.rawValue, forKey: "_r")
                 encoder.encodeObject(media, forKey: "m")
+            case let .story(peer, id, media):
+                encoder.encodeInt32(CodingCase.story.rawValue, forKey: "_r")
+                encoder.encodeObject(peer, forKey: "pr")
+                encoder.encodeInt32(id, forKey: "sid")
+                encoder.encodeObject(media, forKey: "m")
         }
     }
     
@@ -578,6 +607,8 @@ public enum MediaReference<T: Media> {
                 return .attachBot(peer: peer, media: media)
             case let .customEmoji(media):
                 return .customEmoji(media: media)
+            case let .story(peer, id, media):
+                return .story(peer: peer, id: id, media: media)
         }
     }
     
@@ -602,6 +633,8 @@ public enum MediaReference<T: Media> {
             case let .attachBot(_, media):
                 return media
             case let .customEmoji(media):
+                return media
+            case let .story(_, _, media):
                 return media
         }
     }

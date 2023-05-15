@@ -25,11 +25,11 @@ float doubleStep(float value, float lowerBound, float upperBound) {
     return step(lowerBound, value) * (1.0 - step(upperBound, value));
 }
 
-float fieldFunction(float2 center, float2 position, float2 dimensions, float time) {
+float fieldFunction(float2 center, float contentScale, float2 position, float2 dimensions, float time) {
     float maxDimension = max(dimensions.x, dimensions.y);
     
     float currentDistance = time * maxDimension;
-    float waveWidth = 100.0f * 3.0f;
+    float waveWidth = 100.0f * contentScale;
     
     float d = distance(center, position);
     
@@ -50,7 +50,8 @@ vertex RasterizerData rippleVertex
     device const uint2 &center [[buffer(0)]],
     device const uint2 &gridResolution [[buffer(1)]],
     device const uint2 &resolution [[buffer(2)]],
-    device const float &time [[buffer(3)]]
+    device const float &time [[buffer(3)]],
+    device const float &contentScale [[buffer(4)]]
 ) {
     uint triangleIndex = vid / 6;
     uint vertexIndex = vid % 6;
@@ -69,7 +70,7 @@ vertex RasterizerData rippleVertex
     );
     float2 texCoord = float2(position.x, 1.0 - position.y);
     
-    float zPosition = fieldFunction(float2(center), float2(position.x * dimensions.x, (1.0 - position.y) * dimensions.y), dimensions, time);
+    float zPosition = fieldFunction(float2(center), contentScale, float2(position.x * dimensions.x, (1.0 - position.y) * dimensions.y), dimensions, time);
     zPosition *= 0.5f;
     
     float leftEdgeDistance = abs(position.x);
@@ -84,9 +85,6 @@ vertex RasterizerData rippleVertex
     zPosition *= edgeDistance;
     
     zPosition *= max(0.0, min(1.0, linearDecay(time, 0.7)));
-    if (zPosition <= 0.1) {
-        //zPosition = 0.0;
-    }
     
     float3 camPosition = float3(0.0, 0.0f, 1.0f);
     float3 camTarget = float3(0.0, 0.0, 0.0);
@@ -147,6 +145,9 @@ fragment half4 rippleFragment(
     float4 rgb = float4(texture.sample(textureSampler, texCoord));
     
     float4 out = float4(rgb.xyz, 1.0);
+    /*out.r = 0.0;
+    out.g = 0.0;
+    out.b = 1.0;*/
     
     out.a = 1.0 - step(in.visibilityFraction, 0.5);
     

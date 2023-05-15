@@ -75,7 +75,7 @@ private final class PendingUpdateMessageManagerImpl {
         self.contexts[messageId] = context
         
         let queue = self.queue
-        disposable.set((requestEditMessage(postbox: self.postbox, network: self.network, stateManager: self.stateManager, transformOutgoingMessageMedia: self.transformOutgoingMessageMedia, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview, scheduleTime: nil)
+        disposable.set((requestEditMessage(accountPeerId: self.stateManager.accountPeerId, postbox: self.postbox, network: self.network, stateManager: self.stateManager, transformOutgoingMessageMedia: self.transformOutgoingMessageMedia, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview, scheduleTime: nil)
         |> deliverOn(self.queue)).start(next: { [weak self, weak context] value in
             queue.async {
                 guard let strongSelf = self, let initialContext = context else {
