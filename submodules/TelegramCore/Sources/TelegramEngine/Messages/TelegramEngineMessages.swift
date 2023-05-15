@@ -581,11 +581,11 @@ public extension TelegramEngine {
             return _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, privacy: privacy)
         }
         
-        public func deleteStory(id: Int64) -> Signal<Never, NoError> {
+        public func deleteStory(id: Int32) -> Signal<Never, NoError> {
             return _internal_deleteStory(account: self.account, id: id)
         }
         
-        public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int64) -> Signal<Never, NoError> {
+        public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int32) -> Signal<Never, NoError> {
             return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id)
         }
     }

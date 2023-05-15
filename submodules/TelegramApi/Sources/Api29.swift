@@ -419,6 +419,62 @@ public extension Api.stories {
     }
 }
 public extension Api.stories {
+    enum Stories: TypeConstructorDescription {
+        case stories(count: Int32, stories: [Api.StoryItem], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .stories(let count, let stories, let users):
+                    if boxed {
+                        buffer.appendInt32(1340440049)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(stories.count))
+                    for item in stories {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stories(let count, let stories, let users):
+                return ("stories", [("count", count as Any), ("stories", stories as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_stories(_ reader: BufferReader) -> Stories? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.StoryItem]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.stories.Stories.stories(count: _1!, stories: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.stories {
     enum StoryViewsList: TypeConstructorDescription {
         case storyViewsList(count: Int32, views: [Api.StoryView], users: [Api.User])
     

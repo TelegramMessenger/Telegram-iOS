@@ -1631,7 +1631,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             case let .updateStories(stories):
                 updatedState.updateStories(stories: stories)
             case let .updateReadStories(userId, id):
-                updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), ids: id)
+                updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), maxId: id)
             default:
                 break
         }
@@ -4330,13 +4330,14 @@ func replayFinalState(
                 }
             case let .UpdateStories(updateStories):
                 switch updateStories {
-                case .userStories(let userId, let stories), .userStoriesShort(let userId, let stories, _):
+                case .userStories(let userId, let stories), .userStoriesSlice(_, let userId, let stories):
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                     for storyItem in stories {
                         switch storyItem {
                         case let .storyItemDeleted(id):
                             storyUpdates.append(InternalStoryUpdate.deleted(id))
                         case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
+                            let _ = flags
                             let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                             if let parsedMedia = parsedMedia {
                                 var seenPeers: [EnginePeer] = []
@@ -4383,7 +4384,6 @@ func replayFinalState(
                                     id: id,
                                     timestamp: date,
                                     media: EngineMedia(parsedMedia),
-                                    isSeen: (flags & (1 << 4)) == 0,
                                     seenCount: viewCount.flatMap(Int.init) ?? 0,
                                     seenPeers: seenPeers,
                                     privacy: parsedPrivacy
@@ -4392,9 +4392,8 @@ func replayFinalState(
                         }
                     }
                 }
-            case let .UpdateReadStories(peerId, ids):
-                let _ = peerId
-                storyUpdates.append(InternalStoryUpdate.read(ids))
+            case let .UpdateReadStories(peerId, maxId):
+                storyUpdates.append(InternalStoryUpdate.read(peerId: peerId, maxId: maxId))
         }
     }
     

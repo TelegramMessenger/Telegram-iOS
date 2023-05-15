@@ -59,7 +59,7 @@ public enum StoryChatContent {
                 if let focusItem, items.contains(where: { ($0.id.base as? Int64) == focusItem }) {
                     sliceFocusedItemId = AnyHashable(focusItem)
                 } else {
-                    if let id = itemSet.items.first(where: { !$0.isSeen })?.id {
+                    if let id = itemSet.items.first(where: { $0.id > itemSet.maxReadId })?.id {
                         sliceFocusedItemId = AnyHashable(id)
                     }
                 }

@@ -786,8 +786,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1087454222] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[2008112412] = { return Api.StickerSetCovered.parse_stickerSetNoCovered($0) }
-    dict[271121336] = { return Api.StoryItem.parse_storyItem($0) }
-    dict[-2020380585] = { return Api.StoryItem.parse_storyItemDeleted($0) }
+    dict[-1526488475] = { return Api.StoryItem.parse_storyItem($0) }
+    dict[1374088783] = { return Api.StoryItem.parse_storyItemDeleted($0) }
     dict[90474706] = { return Api.StoryView.parse_storyView($0) }
     dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
@@ -895,7 +895,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1667805217] = { return Api.Update.parse_updateReadHistoryInbox($0) }
     dict[791617983] = { return Api.Update.parse_updateReadHistoryOutbox($0) }
     dict[1757493555] = { return Api.Update.parse_updateReadMessagesContents($0) }
-    dict[-1653870963] = { return Api.Update.parse_updateReadStories($0) }
+    dict[-21679014] = { return Api.Update.parse_updateReadStories($0) }
     dict[821314523] = { return Api.Update.parse_updateRecentEmojiStatuses($0) }
     dict[1870160884] = { return Api.Update.parse_updateRecentReactions($0) }
     dict[-1706939360] = { return Api.Update.parse_updateRecentStickers($0) }
@@ -937,7 +937,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-306628279] = { return Api.UserStatus.parse_userStatusOnline($0) }
     dict[-496024847] = { return Api.UserStatus.parse_userStatusRecently($0) }
     dict[333268946] = { return Api.UserStories.parse_userStories($0) }
-    dict[-47503192] = { return Api.UserStories.parse_userStoriesShort($0) }
+    dict[827991632] = { return Api.UserStories.parse_userStoriesSlice($0) }
     dict[-1274595769] = { return Api.Username.parse_username($0) }
     dict[-567037804] = { return Api.VideoSize.parse_videoSize($0) }
     dict[-128171716] = { return Api.VideoSize.parse_videoSizeEmojiMarkup($0) }
@@ -1155,6 +1155,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1432995067] = { return Api.storage.FileType.parse_fileUnknown($0) }
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1214632796] = { return Api.stories.AllStories.parse_allStories($0) }
+    dict[1340440049] = { return Api.stories.Stories.parse_stories($0) }
     dict[-79726676] = { return Api.stories.StoryViewsList.parse_storyViewsList($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
@@ -2016,6 +2017,8 @@ public extension Api {
             case let _1 as Api.storage.FileType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.AllStories:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stories.Stories:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.StoryViewsList:
                 _1.serialize(buffer, boxed)

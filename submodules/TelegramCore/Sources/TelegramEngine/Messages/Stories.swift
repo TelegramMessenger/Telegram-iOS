@@ -121,7 +121,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                                 for update in updates.allUpdates {
                                     if case let .updateStories(stories) = update {
                                         switch stories {
-                                        case .userStories(let userId, let apiStories), .userStoriesShort(let userId, let apiStories, _):
+                                        case .userStories(let userId, let apiStories), .userStoriesSlice(_, let userId, let apiStories):
                                             if PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)) == account.peerId, apiStories.count == 1 {
                                                 switch apiStories[0] {
                                                 case let .storyItem(_, _, _, _, _, media, _, _, _):
@@ -239,7 +239,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                                 for update in updates.allUpdates {
                                     if case let .updateStories(stories) = update {
                                         switch stories {
-                                        case .userStories(let userId, let apiStories), .userStoriesShort(let userId, let apiStories, _):
+                                        case .userStories(let userId, let apiStories), .userStoriesSlice(_, let userId, let apiStories):
                                             if PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)) == account.peerId, apiStories.count == 1 {
                                                 switch apiStories[0] {
                                                 case let .storyItem(_, _, _, _, _, media, _, _, _):
@@ -272,17 +272,17 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
     }
 }
 
-func _internal_deleteStory(account: Account, id: Int64) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.stories.deleteStory(id: id))
-    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-        return .single(.boolFalse)
+func _internal_deleteStory(account: Account, id: Int32) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.stories.deleteStories(id: [id]))
+    |> `catch` { _ -> Signal<[Int32], NoError> in
+        return .single([])
     }
     |> mapToSignal { _ -> Signal<Never, NoError> in
         return .complete()
     }
 }
 
-func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int64) -> Signal<Never, NoError> {
+func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
@@ -291,11 +291,11 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int64) -> S
             return .complete()
         }
         
-        account.stateManager.injectStoryUpdates(updates: [.read([id])])
+        account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
         
-        return account.network.request(Api.functions.stories.readStories(userId: inputUser, id: [id]))
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .single(.boolFalse)
+        return account.network.request(Api.functions.stories.readStories(userId: inputUser, maxId: id))
+        |> `catch` { _ -> Signal<[Int32], NoError> in
+            return .single([])
         }
         |> ignoreValues
     }

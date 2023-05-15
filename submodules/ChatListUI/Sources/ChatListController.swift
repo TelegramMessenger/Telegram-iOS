@@ -47,6 +47,7 @@ import InviteLinksUI
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import StoryContentComponent
+import FullScreenEffectView
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -248,6 +249,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var storyListStateDisposable: Disposable?
     
     private var storyListHeight: CGFloat
+    
+    private var fullScreenEffectView: RippleEffectView?
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
@@ -2141,7 +2144,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if itemSet.peerId == self.context.account.peerId {
                             continue
                         }
-                        if itemSet.items.contains(where: { !$0.isSeen }) {
+                        if itemSet.items.contains(where: { $0.id > itemSet.maxReadId }) {
                             peersWithNewStories.insert(itemSet.peerId)
                         }
                     }
@@ -2498,6 +2501,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             searchContentNode.updateListVisibleContentOffset(.known(0.0))
             self.chatListDisplayNode.scrollToTop()
         }
+        
+        #if DEBUG && false
+        var fullScreenEffectView: RippleEffectView?
+        if let current = self.fullScreenEffectView {
+            fullScreenEffectView = current
+            self.view.window?.addSubview(current)
+            current.sourceView = self.view
+        } else {
+            if let value = RippleEffectView(test: false) {
+                fullScreenEffectView = value
+                self.fullScreenEffectView = value
+                self.view.window?.addSubview(value)
+                value.sourceView = self.view
+            }
+        }
+        if let fullScreenEffectView {
+            fullScreenEffectView.frame = CGRect(origin: CGPoint(), size: layout.size)
+        }
+        #endif
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

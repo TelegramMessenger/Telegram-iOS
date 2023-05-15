@@ -889,7 +889,7 @@ public extension Api {
 public extension Api {
     enum UserStories: TypeConstructorDescription {
         case userStories(userId: Int64, stories: [Api.StoryItem])
-        case userStoriesShort(userId: Int64, stories: [Api.StoryItem], totalCount: Int32)
+        case userStoriesSlice(count: Int32, userId: Int64, stories: [Api.StoryItem])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -904,17 +904,17 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     break
-                case .userStoriesShort(let userId, let stories, let totalCount):
+                case .userStoriesSlice(let count, let userId, let stories):
                     if boxed {
-                        buffer.appendInt32(-47503192)
+                        buffer.appendInt32(827991632)
                     }
+                    serializeInt32(count, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(stories.count))
                     for item in stories {
                         item.serialize(buffer, true)
                     }
-                    serializeInt32(totalCount, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -923,8 +923,8 @@ public extension Api {
         switch self {
                 case .userStories(let userId, let stories):
                 return ("userStories", [("userId", userId as Any), ("stories", stories as Any)])
-                case .userStoriesShort(let userId, let stories, let totalCount):
-                return ("userStoriesShort", [("userId", userId as Any), ("stories", stories as Any), ("totalCount", totalCount as Any)])
+                case .userStoriesSlice(let count, let userId, let stories):
+                return ("userStoriesSlice", [("count", count as Any), ("userId", userId as Any), ("stories", stories as Any)])
     }
     }
     
@@ -944,20 +944,20 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_userStoriesShort(_ reader: BufferReader) -> UserStories? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.StoryItem]?
+        public static func parse_userStoriesSlice(_ reader: BufferReader) -> UserStories? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: [Api.StoryItem]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
             }
-            var _3: Int32?
-            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.UserStories.userStoriesShort(userId: _1!, stories: _2!, totalCount: _3!)
+                return Api.UserStories.userStoriesSlice(count: _1!, userId: _2!, stories: _3!)
             }
             else {
                 return nil
