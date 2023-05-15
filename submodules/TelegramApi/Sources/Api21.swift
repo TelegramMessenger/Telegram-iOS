@@ -328,17 +328,17 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
-        case storyItem(flags: Int32, id: Int64, date: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, recentViewers: [Int64]?, viewsCount: Int32?)
-        case storyItemDeleted(id: Int64)
+        case storyItem(flags: Int32, id: Int32, date: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, recentViewers: [Int64]?, viewsCount: Int32?)
+        case storyItemDeleted(id: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let recentViewers, let viewsCount):
                     if boxed {
-                        buffer.appendInt32(271121336)
+                        buffer.appendInt32(-1526488475)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(caption!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
@@ -361,9 +361,9 @@ public extension Api {
                     break
                 case .storyItemDeleted(let id):
                     if boxed {
-                        buffer.appendInt32(-2020380585)
+                        buffer.appendInt32(1374088783)
                     }
-                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -380,8 +380,8 @@ public extension Api {
         public static func parse_storyItem(_ reader: BufferReader) -> StoryItem? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
             var _4: String?
@@ -421,8 +421,8 @@ public extension Api {
             }
         }
         public static func parse_storyItemDeleted(_ reader: BufferReader) -> StoryItem? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             let _c1 = _1 != nil
             if _c1 {
                 return Api.StoryItem.storyItemDeleted(id: _1!)
@@ -963,7 +963,7 @@ public extension Api {
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
         case updateReadMessagesContents(messages: [Int32], pts: Int32, ptsCount: Int32)
-        case updateReadStories(userId: Int64, id: [Int64])
+        case updateReadStories(userId: Int64, maxId: Int32)
         case updateRecentEmojiStatuses
         case updateRecentReactions
         case updateRecentStickers
@@ -1803,16 +1803,12 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
-                case .updateReadStories(let userId, let id):
+                case .updateReadStories(let userId, let maxId):
                     if boxed {
-                        buffer.appendInt32(-1653870963)
+                        buffer.appendInt32(-21679014)
                     }
                     serializeInt64(userId, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(id.count))
-                    for item in id {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }
+                    serializeInt32(maxId, buffer: buffer, boxed: false)
                     break
                 case .updateRecentEmojiStatuses:
                     if boxed {
@@ -2150,8 +2146,8 @@ public extension Api {
                 return ("updateReadHistoryOutbox", [("peer", peer as Any), ("maxId", maxId as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateReadMessagesContents(let messages, let pts, let ptsCount):
                 return ("updateReadMessagesContents", [("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
-                case .updateReadStories(let userId, let id):
-                return ("updateReadStories", [("userId", userId as Any), ("id", id as Any)])
+                case .updateReadStories(let userId, let maxId):
+                return ("updateReadStories", [("userId", userId as Any), ("maxId", maxId as Any)])
                 case .updateRecentEmojiStatuses:
                 return ("updateRecentEmojiStatuses", [])
                 case .updateRecentReactions:
@@ -3874,14 +3870,12 @@ public extension Api {
         public static func parse_updateReadStories(_ reader: BufferReader) -> Update? {
             var _1: Int64?
             _1 = reader.readInt64()
-            var _2: [Int64]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
+            var _2: Int32?
+            _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.Update.updateReadStories(userId: _1!, id: _2!)
+                return Api.Update.updateReadStories(userId: _1!, maxId: _2!)
             }
             else {
                 return nil

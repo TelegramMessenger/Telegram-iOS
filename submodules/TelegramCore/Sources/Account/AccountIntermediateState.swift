@@ -121,7 +121,7 @@ enum AccountStateMutationOperation {
     case UpdateExtendedMedia(MessageId, Api.MessageExtendedMedia)
     case ResetForumTopic(topicId: MessageId, data: StoreMessageHistoryThreadData, pts: Int32)
     case UpdateStories(Api.UserStories)
-    case UpdateReadStories(peerId: PeerId, ids: [Int64])
+    case UpdateReadStories(peerId: PeerId, maxId: Int32)
 }
 
 struct HoleFromPreviousState {
@@ -615,8 +615,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateStories(stories))
     }
     
-    mutating func readStories(peerId: PeerId, ids: [Int64]) {
-        self.addOperation(.UpdateReadStories(peerId: peerId, ids: ids))
+    mutating func readStories(peerId: PeerId, maxId: Int32) {
+        self.addOperation(.UpdateReadStories(peerId: peerId, maxId: maxId))
     }
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {

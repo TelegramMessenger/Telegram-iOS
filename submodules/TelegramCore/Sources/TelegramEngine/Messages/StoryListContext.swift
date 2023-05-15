@@ -4,9 +4,9 @@ import TelegramApi
 import SwiftSignalKit
 
 enum InternalStoryUpdate {
-    case deleted(Int64)
+    case deleted(Int32)
     case added(peerId: PeerId, item: StoryListContext.Item)
-    case read([Int64])
+    case read(peerId: PeerId, maxId: Int32)
 }
 
 public final class StoryListContext {
@@ -16,19 +16,17 @@ public final class StoryListContext {
     }
     
     public final class Item: Equatable {
-        public let id: Int64
+        public let id: Int32
         public let timestamp: Int32
         public let media: EngineMedia
-        public let isSeen: Bool
         public let seenCount: Int
         public let seenPeers: [EnginePeer]
         public let privacy: EngineStoryPrivacy?
         
-        public init(id: Int64, timestamp: Int32, media: EngineMedia, isSeen: Bool, seenCount: Int, seenPeers: [EnginePeer], privacy: EngineStoryPrivacy?) {
+        public init(id: Int32, timestamp: Int32, media: EngineMedia, seenCount: Int, seenPeers: [EnginePeer], privacy: EngineStoryPrivacy?) {
             self.id = id
             self.timestamp = timestamp
             self.media = media
-            self.isSeen = isSeen
             self.seenCount = seenCount
             self.seenPeers = seenPeers
             self.privacy = privacy
@@ -42,9 +40,6 @@ public final class StoryListContext {
                 return false
             }
             if lhs.media != rhs.media {
-                return false
-            }
-            if lhs.isSeen != rhs.isSeen {
                 return false
             }
             if lhs.seenCount != rhs.seenCount {
@@ -63,12 +58,14 @@ public final class StoryListContext {
     public final class PeerItemSet: Equatable {
         public let peerId: EnginePeer.Id
         public let peer: EnginePeer?
+        public var maxReadId: Int32
         public fileprivate(set) var items: [Item]
         public fileprivate(set) var totalCount: Int?
         
-        public init(peerId: EnginePeer.Id, peer: EnginePeer?, items: [Item], totalCount: Int?) {
+        public init(peerId: EnginePeer.Id, peer: EnginePeer?, maxReadId: Int32, items: [Item], totalCount: Int?) {
             self.peerId = peerId
             self.peer = peer
+            self.maxReadId = maxReadId
             self.items = items
             self.totalCount = totalCount
         }
@@ -78,6 +75,9 @@ public final class StoryListContext {
                 return false
             }
             if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.maxReadId != rhs.maxReadId {
                 return false
             }
             if lhs.items != rhs.items {
@@ -165,7 +165,7 @@ public final class StoryListContext {
                     return
                 }
                 self.stateValue = State(itemSets: [
-                    PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), items: [], totalCount: 0)
+                    PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), maxReadId: 0, items: [], totalCount: 0)
                 ], uploadProgress: nil, loadMoreToken: LoadMoreToken(value: nil))
             })
             
@@ -215,6 +215,7 @@ public final class StoryListContext {
                                     itemSets[i] = PeerItemSet(
                                         peerId: itemSets[i].peerId,
                                         peer: itemSets[i].peer,
+                                        maxReadId: itemSets[i].maxReadId,
                                         items: items,
                                         totalCount: items.count
                                     )
@@ -236,7 +237,6 @@ public final class StoryListContext {
                                             id: item.id,
                                             timestamp: item.timestamp,
                                             media: item.media,
-                                            isSeen: false,
                                             seenCount: item.seenCount,
                                             seenPeers: item.seenPeers,
                                             privacy: item.privacy
@@ -254,6 +254,7 @@ public final class StoryListContext {
                                     itemSets[i] = PeerItemSet(
                                         peerId: itemSets[i].peerId,
                                         peer: itemSets[i].peer,
+                                        maxReadId: itemSets[i].maxReadId,
                                         items: items,
                                         totalCount: items.count
                                     )
@@ -263,32 +264,22 @@ public final class StoryListContext {
                                 itemSets.insert(PeerItemSet(
                                     peerId: peerId,
                                     peer: EnginePeer(peer),
+                                    maxReadId: 0,
                                     items: [item],
                                     totalCount: 1
                                 ), at: 0)
                             }
-                        case let .read(ids):
-                            for id in ids {
-                                for i in 0 ..< itemSets.count {
-                                    if let index = itemSets[i].items.firstIndex(where: { $0.id == id }) {
-                                        var items = itemSets[i].items
-                                        let item = items[index]
-                                        items[index] = Item(
-                                            id: item.id,
-                                            timestamp: item.timestamp,
-                                            media: item.media,
-                                            isSeen: true,
-                                            seenCount: item.seenCount,
-                                            seenPeers: item.seenPeers,
-                                            privacy: item.privacy
-                                        )
-                                        itemSets[i] = PeerItemSet(
-                                            peerId: itemSets[i].peerId,
-                                            peer: itemSets[i].peer,
-                                            items: items,
-                                            totalCount: items.count
-                                        )
-                                    }
+                        case let .read(peerId, maxId):
+                            for i in 0 ..< itemSets.count {
+                                if itemSets[i].peerId == peerId {
+                                    let items = itemSets[i].items
+                                    itemSets[i] = PeerItemSet(
+                                        peerId: itemSets[i].peerId,
+                                        peer: itemSets[i].peer,
+                                        maxReadId: max(itemSets[i].maxReadId, maxId),
+                                        items: items,
+                                        totalCount: items.count
+                                    )
                                 }
                             }
                         }
@@ -311,7 +302,7 @@ public final class StoryListContext {
                     
                     if !itemSets.contains(where: { $0.peerId == self.account.peerId }) {
                         if let peer = peers[self.account.peerId] {
-                            itemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), items: [], totalCount: 0), at: 0)
+                            itemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), maxReadId: 0, items: [], totalCount: 0), at: 0)
                         }
                     }
                     
@@ -345,95 +336,104 @@ public final class StoryListContext {
                     guard let inputPeer = inputPeer else {
                         return .single(nil)
                     }
-                    return account.network.request(Api.functions.stories.getUserStories(userId: inputPeer))
+                    return account.network.request(Api.functions.stories.getUserStories(flags: 0, userId: inputPeer, offsetId: 0, limit: 100))
                     |> map(Optional.init)
-                    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                    |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
                         return .single(nil)
                     }
-                    |> mapToSignal { updates -> Signal<PeerItemSet?, NoError> in
-                        guard let updates = updates else {
+                    |> mapToSignal { stories -> Signal<PeerItemSet?, NoError> in
+                        guard let stories = stories else {
                             return .single(nil)
                         }
                         return account.postbox.transaction { transaction -> PeerItemSet? in
-                            for update in updates.allUpdates {
-                                if case let .updateStories(stories) = update {
-                                    switch stories {
-                                    case .userStories(_, let apiStories), .userStoriesShort(_, let apiStories, _):
-                                        var parsedItemSets: [PeerItemSet] = []
-                                        
-                                        let peerId = id
-                                        
-                                        for apiStory in apiStories {
-                                            switch apiStory {
-                                            case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
-                                                let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
-                                                if let parsedMedia = parsedMedia {
-                                                    var seenPeers: [EnginePeer] = []
-                                                    if let recentViewers = recentViewers {
-                                                        for id in recentViewers {
-                                                            if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))) {
-                                                                seenPeers.append(EnginePeer(peer))
-                                                            }
-                                                        }
-                                                    }
-                                                    
-                                                    var parsedPrivacy: EngineStoryPrivacy?
-                                                    if let privacy = privacy {
-                                                        var base: EngineStoryPrivacy.Base = .everyone
-                                                        var additionalPeerIds: [EnginePeer.Id] = []
-                                                        for rule in privacy {
-                                                            switch rule {
-                                                            case .privacyValueAllowAll:
-                                                                base = .everyone
-                                                            case .privacyValueAllowContacts:
-                                                                base = .contacts
-                                                            case .privacyValueAllowCloseFriends:
-                                                                base = .closeFriends
-                                                            case let .privacyValueAllowUsers(users):
-                                                                for id in users {
-                                                                    additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
-                                                                }
-                                                            case let .privacyValueAllowChatParticipants(chats):
-                                                                for id in chats {
-                                                                    if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
-                                                                        additionalPeerIds.append(peer.id)
-                                                                    } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
-                                                                        additionalPeerIds.append(peer.id)
-                                                                    }
-                                                                }
-                                                            default:
-                                                                break
-                                                            }
-                                                        }
-                                                        parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
-                                                    }
-                                                    
-                                                    let item = StoryListContext.Item(
-                                                        id: id,
-                                                        timestamp: date,
-                                                        media: EngineMedia(parsedMedia),
-                                                        isSeen: (flags & (1 << 4)) == 0,
-                                                        seenCount: viewCount.flatMap(Int.init) ?? 0,
-                                                        seenPeers: seenPeers,
-                                                        privacy: parsedPrivacy
-                                                    )
-                                                    if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
-                                                        parsedItemSets[parsedItemSets.count - 1].items.append(item)
-                                                        parsedItemSets[parsedItemSets.count - 1].totalCount = parsedItemSets[parsedItemSets.count - 1].items.count
-                                                    } else {
-                                                        parsedItemSets.append(StoryListContext.PeerItemSet(peerId: peerId, peer: transaction.getPeer(peerId).flatMap(EnginePeer.init), items: [item], totalCount: 1))
+                            switch stories {
+                            case let .stories(_, apiStories, users):
+                                var parsedItemSets: [PeerItemSet] = []
+                                
+                                var peers: [Peer] = []
+                                var peerPresences: [PeerId: Api.User] = [:]
+                                
+                                for user in users {
+                                    let telegramUser = TelegramUser(user: user)
+                                    peers.append(telegramUser)
+                                    peerPresences[telegramUser.id] = user
+                                }
+                                
+                                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                    return updated
+                                })
+                                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                
+                                let peerId = id
+                                
+                                for apiStory in apiStories {
+                                    switch apiStory {
+                                    case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
+                                        let _ = flags
+                                        let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                                        if let parsedMedia = parsedMedia {
+                                            var seenPeers: [EnginePeer] = []
+                                            if let recentViewers = recentViewers {
+                                                for id in recentViewers {
+                                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))) {
+                                                        seenPeers.append(EnginePeer(peer))
                                                     }
                                                 }
-                                            case .storyItemDeleted:
-                                                break
+                                            }
+                                            
+                                            var parsedPrivacy: EngineStoryPrivacy?
+                                            if let privacy = privacy {
+                                                var base: EngineStoryPrivacy.Base = .everyone
+                                                var additionalPeerIds: [EnginePeer.Id] = []
+                                                for rule in privacy {
+                                                    switch rule {
+                                                    case .privacyValueAllowAll:
+                                                        base = .everyone
+                                                    case .privacyValueAllowContacts:
+                                                        base = .contacts
+                                                    case .privacyValueAllowCloseFriends:
+                                                        base = .closeFriends
+                                                    case let .privacyValueAllowUsers(users):
+                                                        for id in users {
+                                                            additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
+                                                        }
+                                                    case let .privacyValueAllowChatParticipants(chats):
+                                                        for id in chats {
+                                                            if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                                additionalPeerIds.append(peer.id)
+                                                            } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
+                                                                additionalPeerIds.append(peer.id)
+                                                            }
+                                                        }
+                                                    default:
+                                                        break
+                                                    }
+                                                }
+                                                parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
+                                            }
+                                            
+                                            let item = StoryListContext.Item(
+                                                id: id,
+                                                timestamp: date,
+                                                media: EngineMedia(parsedMedia),
+                                                seenCount: viewCount.flatMap(Int.init) ?? 0,
+                                                seenPeers: seenPeers,
+                                                privacy: parsedPrivacy
+                                            )
+                                            if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
+                                                parsedItemSets[parsedItemSets.count - 1].items.append(item)
+                                                parsedItemSets[parsedItemSets.count - 1].totalCount = parsedItemSets[parsedItemSets.count - 1].items.count
+                                            } else {
+                                                parsedItemSets.append(StoryListContext.PeerItemSet(peerId: peerId, peer: transaction.getPeer(peerId).flatMap(EnginePeer.init), maxReadId: 0, items: [item], totalCount: 1))
                                             }
                                         }
-                                        
-                                        return parsedItemSets.first
+                                    case .storyItemDeleted:
+                                        break
                                     }
                                 }
+                                
+                                return parsedItemSets.first
                             }
-                            return nil
                         }
                     }
                 }
@@ -522,7 +522,7 @@ public final class StoryListContext {
                             case let .userStories(userId, stories):
                                 apiUserId = userId
                                 apiStories = stories
-                            case let .userStoriesShort(userId, stories, totalCount):
+                            case let .userStoriesSlice(totalCount, userId, stories):
                                 apiUserId = userId
                                 apiStories = stories
                                 apiTotalCount = totalCount
@@ -532,6 +532,7 @@ public final class StoryListContext {
                             for apiStory in apiStories {
                                 switch apiStory {
                                 case let .storyItem(flags, id, date, _, _, media, privacy, recentViewers, viewCount):
+                                    let _ = flags
                                     let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                                     if let parsedMedia = parsedMedia {
                                         var seenPeers: [EnginePeer] = []
@@ -578,7 +579,6 @@ public final class StoryListContext {
                                             id: id,
                                             timestamp: date,
                                             media: EngineMedia(parsedMedia),
-                                            isSeen: (flags & (1 << 4)) == 0,
                                             seenCount: viewCount.flatMap(Int.init) ?? 0,
                                             seenPeers: seenPeers,
                                             privacy: parsedPrivacy
@@ -586,7 +586,13 @@ public final class StoryListContext {
                                         if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
                                             parsedItemSets[parsedItemSets.count - 1].items.append(item)
                                         } else {
-                                            parsedItemSets.append(StoryListContext.PeerItemSet(peerId: peerId, peer: transaction.getPeer(peerId).flatMap(EnginePeer.init), items: [item], totalCount: apiTotalCount.flatMap(Int.init)))
+                                            parsedItemSets.append(StoryListContext.PeerItemSet(
+                                                peerId: peerId,
+                                                peer: transaction.getPeer(peerId).flatMap(EnginePeer.init),
+                                                maxReadId: 0,
+                                                items: [item],
+                                                totalCount: apiTotalCount.flatMap(Int.init)
+                                            ))
                                         }
                                     }
                                 case .storyItemDeleted:
@@ -597,7 +603,7 @@ public final class StoryListContext {
                         
                         if !parsedItemSets.contains(where: { $0.peerId == account.peerId }) {
                             if let peer = transaction.getPeer(account.peerId) {
-                                parsedItemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), items: [], totalCount: 0), at: 0)
+                                parsedItemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), maxReadId: 0, items: [], totalCount: 0), at: 0)
                             }
                         }
                         
@@ -633,6 +639,7 @@ public final class StoryListContext {
                         itemSets[index] = PeerItemSet(
                             peerId: itemSet.peerId,
                             peer: itemSet.peer,
+                            maxReadId: itemSet.maxReadId,
                             items: items,
                             totalCount: items.count
                         )
@@ -666,7 +673,7 @@ public final class StoryListContext {
             }))
         }
         
-        func delete(id: Int64) {
+        func delete(id: Int32) {
             let _ = _internal_deleteStory(account: self.account, id: id).start()
             
             var itemSets: [PeerItemSet] = self.stateValue.itemSets
@@ -680,6 +687,7 @@ public final class StoryListContext {
                         itemSets[i] = PeerItemSet(
                             peerId: itemSets[i].peerId,
                             peer: itemSets[i].peer,
+                            maxReadId: itemSets[i].maxReadId,
                             items: items,
                             totalCount: items.count
                         )
@@ -707,7 +715,7 @@ public final class StoryListContext {
         })
     }
     
-    public func delete(id: Int64) {
+    public func delete(id: Int32) {
         self.impl.with { impl in
             impl.delete(id: id)
         }

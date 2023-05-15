@@ -293,7 +293,7 @@ public final class StoryPeerListComponent: Component {
                 }
                 
                 for item in itemSet.items {
-                    if !item.isSeen {
+                    if item.id > itemSet.maxReadId {
                         hasUnseen = true
                     }
                 }
@@ -422,7 +422,7 @@ public final class StoryPeerListComponent: Component {
                         if i == 0 {
                             self.sortedItemSets.append(itemSet)
                         } else {
-                            self.sortedItemSets.append(StoryListContext.PeerItemSet(peerId: EnginePeer.Id(namespace: itemSet.peerId.namespace, id: EnginePeer.Id.Id._internalFromInt64Value(itemSet.peerId.id._internalGetInt64Value() + Int64(i))), peer: itemSet.peer, items: itemSet.items, totalCount: itemSet.totalCount))
+                            self.sortedItemSets.append(StoryListContext.PeerItemSet(peerId: EnginePeer.Id(namespace: itemSet.peerId.namespace, id: EnginePeer.Id.Id._internalFromInt64Value(itemSet.peerId.id._internalGetInt64Value() + Int64(i))), peer: itemSet.peer, maxReadId: itemSet.maxReadId, items: itemSet.items, totalCount: itemSet.totalCount))
                         }
                     }
                 }
