@@ -13,6 +13,7 @@ import BlurredBackgroundComponent
 import SegmentedControlNode
 import MultilineTextComponent
 import HexColor
+import MediaEditor
 
 private let palleteColors: [UInt32] = [
     0xffffff, 0xebebeb, 0xd6d6d6, 0xc2c2c2, 0xadadad, 0x999999, 0x858585, 0x707070, 0x5c5c5c, 0x474747, 0x333333, 0x000000,

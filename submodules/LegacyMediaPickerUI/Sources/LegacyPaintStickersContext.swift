@@ -10,6 +10,7 @@ import YuvConversion
 import StickerResources
 import DrawingUI
 import SolidRoundedButtonNode
+import MediaEditor
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }
@@ -432,7 +433,9 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                     renderEntities.append(LegacyPaintTextEntity(entity: text))
                     if let renderSubEntities = text.renderSubEntities, let account {
                         for entity in renderSubEntities {
-                            renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                            if let entity = entity as? DrawingStickerEntity {
+                                renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                            }
                         }
                     }
                 } else if let simpleShape = entity as? DrawingSimpleShapeEntity {

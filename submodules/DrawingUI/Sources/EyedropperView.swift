@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import MediaEditor
 
 private let size = CGSize(width: 148.0, height: 148.0)
 private let outerWidth: CGFloat = 12.0

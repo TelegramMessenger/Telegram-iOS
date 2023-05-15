@@ -89,6 +89,7 @@ public final class MediaEditor {
                 videoTrimRange: nil,
                 videoIsMuted: false,
                 drawing: nil,
+                entities: [],
                 toolValues: [:]
             )
         }
@@ -265,6 +266,10 @@ public final class MediaEditor {
     public func setVideoIsMuted(_ videoIsMuted: Bool) {
         self.player?.isMuted = videoIsMuted
         self.values = self.values.withUpdatedVideoIsMuted(videoIsMuted)
+    }
+    
+    public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
+        self.values = self.values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
     }
     
     public func setGradientColors(_ gradientColors: [UIColor]) {

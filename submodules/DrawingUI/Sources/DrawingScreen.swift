@@ -21,6 +21,13 @@ import ChatEntityKeyboardInputNode
 import EntityKeyboard
 import TelegramUIPreferences
 import FastBlur
+import MediaEditor
+
+public struct DrawingResultData {
+    public let data: Data?
+    public let drawingImage: UIImage?
+    public let entities: [CodableDrawingEntity]
+}
 
 enum DrawingToolState: Equatable, Codable {
     private enum CodingKeys: String, CodingKey {
@@ -502,6 +509,8 @@ private final class DrawingScreenComponent: CombinedComponent {
     let toggleWithPreviousTool: ActionSlot<Void>
     let insertSticker: ActionSlot<Void>
     let insertText: ActionSlot<Void>
+    let updateEntityView: ActionSlot<(UUID, Bool)>
+    let endEditingTextEntityView: ActionSlot<(UUID, Bool)>
     let apply: ActionSlot<Void>
     let dismiss: ActionSlot<Void>
     
@@ -533,6 +542,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         toggleWithPreviousTool: ActionSlot<Void>,
         insertSticker: ActionSlot<Void>,
         insertText: ActionSlot<Void>,
+        updateEntityView: ActionSlot<(UUID, Bool)>,
+        endEditingTextEntityView: ActionSlot<(UUID, Bool)>,
         apply: ActionSlot<Void>,
         dismiss: ActionSlot<Void>,
         presentColorPicker: @escaping (DrawingColor) -> Void,
@@ -562,6 +573,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         self.toggleWithPreviousTool = toggleWithPreviousTool
         self.insertSticker = insertSticker
         self.insertText = insertText
+        self.updateEntityView = updateEntityView
+        self.endEditingTextEntityView = endEditingTextEntityView
         self.apply = apply
         self.dismiss = dismiss
         self.presentColorPicker = presentColorPicker
@@ -637,6 +650,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         private let toggleWithPreviousTool: ActionSlot<Void>
         private let insertSticker: ActionSlot<Void>
         private let insertText: ActionSlot<Void>
+        private let updateEntityView: ActionSlot<(UUID, Bool)>
+        private let endEditingTextEntityView: ActionSlot<(UUID, Bool)>
         private let present: (ViewController) -> Void
         
         var currentMode: Mode
@@ -661,6 +676,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             toggleWithPreviousTool: ActionSlot<Void>,
             insertSticker: ActionSlot<Void>,
             insertText: ActionSlot<Void>,
+            updateEntityView: ActionSlot<(UUID, Bool)>,
+            endEditingTextEntityView: ActionSlot<(UUID, Bool)>,
             present: @escaping (ViewController) -> Void)
         {
             self.context = context
@@ -673,6 +690,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.toggleWithPreviousTool = toggleWithPreviousTool
             self.insertSticker = insertSticker
             self.insertText = insertText
+            self.updateEntityView = updateEntityView
+            self.endEditingTextEntityView = endEditingTextEntityView
             self.present = present
             
             self.currentMode = .drawing
@@ -808,7 +827,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.currentColor = color
             if let selectedEntity = self.selectedEntity {
                 selectedEntity.color = color
-                selectedEntity.currentEntityView?.update()
+                self.updateEntityView.invoke((selectedEntity.uuid, false))
             } else {
                 self.drawingState = self.drawingState.withUpdatedColor(color)
                 self.updateToolState.invoke(self.drawingState.currentToolState)
@@ -850,7 +869,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 } else {
                     selectedEntity.lineWidth = size
                 }
-                selectedEntity.currentEntityView?.update()
+                self.updateEntityView.invoke((selectedEntity.uuid, false))
             } else {
                 self.drawingState = self.drawingState.withUpdatedSize(size)
                 self.updateToolState.invoke(self.drawingState.currentToolState)
@@ -996,7 +1015,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, existingStickerPickerInputData: self.existingStickerPickerInputData, updateToolState: self.updateToolState, insertEntity: self.insertEntity, deselectEntity: self.deselectEntity, updateEntitiesPlayback: self.updateEntitiesPlayback, dismissEyedropper: self.dismissEyedropper, toggleWithEraser: self.toggleWithEraser, toggleWithPreviousTool: self.toggleWithPreviousTool, insertSticker: self.insertSticker, insertText: self.insertText, present: self.present)
+        return State(context: self.context, existingStickerPickerInputData: self.existingStickerPickerInputData, updateToolState: self.updateToolState, insertEntity: self.insertEntity, deselectEntity: self.deselectEntity, updateEntitiesPlayback: self.updateEntitiesPlayback, dismissEyedropper: self.dismissEyedropper, toggleWithEraser: self.toggleWithEraser, toggleWithPreviousTool: self.toggleWithPreviousTool, insertSticker: self.insertSticker, insertText: self.insertText, updateEntityView: self.updateEntityView, endEditingTextEntityView: self.endEditingTextEntityView, present: self.present)
     }
     
     static var body: Body {
@@ -1069,6 +1088,9 @@ private final class DrawingScreenComponent: CombinedComponent {
             let updateFastColorPickerPan = component.updateFastColorPickerPan
             let dismissFastColorPicker = component.dismissFastColorPicker
             let presentFontPicker = component.presentFontPicker
+            
+            let updateEntityView = component.updateEntityView
+            let endEditingTextEntityView = component.endEditingTextEntityView
             
             component.updateState.connect { [weak state] updatedState in
                 state?.updateDrawingState(updatedState)
@@ -1162,9 +1184,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 nextStyle = .regular
                             }
                             textEntity.style = nextStyle
-                            if let entityView = textEntity.currentEntityView {
-                                entityView.update()
-                            }
+                            updateEntityView.invoke((textEntity.uuid, false))
                             state?.updated(transition: .easeInOut(duration: 0.2))
                         },
                         toggleAnimation: { [weak state, weak textEntity] in
@@ -1183,9 +1203,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 nextAnimation = .none
                             }
                             textEntity.animation = nextAnimation
-                            if let entityView = textEntity.currentEntityView {
-                                entityView.update()
-                            }
+                            updateEntityView.invoke((textEntity.uuid, false))
                             state?.updated(transition: .easeInOut(duration: 0.2))
                         },
                         toggleAlignment: { [weak state, weak textEntity] in
@@ -1202,9 +1220,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 nextAlignment = .left
                             }
                             textEntity.alignment = nextAlignment
-                            if let entityView = textEntity.currentEntityView {
-                                entityView.update()
-                            }
+                            updateEntityView.invoke((textEntity.uuid, false))
                             state?.updated(transition: .easeInOut(duration: 0.2))
                         },
                         presentFontPicker: {
@@ -1549,14 +1565,14 @@ private final class DrawingScreenComponent: CombinedComponent {
                                     } else {
                                         entity.drawType = .fill
                                     }
-                                    entity.currentEntityView?.update()
+                                    updateEntityView.invoke((entity.uuid, false))
                                 } else if let entity = state.selectedEntity as? DrawingBubbleEntity {
                                     if case .fill = entity.drawType {
                                         entity.drawType = .stroke
                                     } else {
                                         entity.drawType = .fill
                                     }
-                                    entity.currentEntityView?.update()
+                                    updateEntityView.invoke((entity.uuid, false))
                                 } else if let entity = state.selectedEntity as? DrawingVectorEntity {
                                     if case .oneSidedArrow = entity.type {
                                         entity.type = .twoSidedArrow
@@ -1565,7 +1581,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                                     } else {
                                         entity.type = .oneSidedArrow
                                     }
-                                    entity.currentEntityView?.update()
+                                    updateEntityView.invoke((entity.uuid, false))
                                 }
                                 state.updated(transition: .easeInOut(duration: 0.2))
                             }
@@ -1594,10 +1610,10 @@ private final class DrawingScreenComponent: CombinedComponent {
                                     var updatedTailPosition = entity.tailPosition
                                     updatedTailPosition.x = 1.0 - updatedTailPosition.x
                                     entity.tailPosition = updatedTailPosition
-                                    entity.currentEntityView?.update()
+                                    updateEntityView.invoke((entity.uuid, false))
                                 } else if let entity = state.selectedEntity as? DrawingStickerEntity {
                                     entity.mirrored = !entity.mirrored
-                                    entity.currentEntityView?.update(animated: true)
+                                    updateEntityView.invoke((entity.uuid, true))
                                 }
                                 state.updated(transition: .easeInOut(duration: 0.2))
                             }
@@ -1616,9 +1632,9 @@ private final class DrawingScreenComponent: CombinedComponent {
             var sizeSliderVisible = false
             var isEditingText = false
             var sizeValue: CGFloat?
-            if let textEntity = state.selectedEntity as? DrawingTextEntity, let entityView = textEntity.currentEntityView as? DrawingTextEntityView {
+            if let textEntity = state.selectedEntity as? DrawingTextEntity, !"".isEmpty {//} let entityView = textEntity.currentEntityView as? DrawingTextEntityView {
                 sizeSliderVisible = true
-                isEditingText = entityView.isEditing
+                isEditingText = false//entityView.isEditing
                 sizeValue = textEntity.fontSize
             } else {
                 if state.selectedEntity == nil || !(state.selectedEntity is DrawingStickerEntity) {
@@ -1755,8 +1771,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                         Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: .white)
                     ),
                     action: { [weak state] in
-                        if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
-                            entityView.endEditing(reset: true)
+                        if let entity = state?.selectedEntity as? DrawingTextEntity {
+                            endEditingTextEntityView.invoke((entity.uuid, true))
                         }
                     }
                 ),
@@ -1775,8 +1791,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                         Text(text: environment.strings.Common_Done, font: Font.semibold(17.0), color: .white)
                     ),
                     action: { [weak state] in
-                        if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
-                            entityView.endEditing()
+                        if let entity = state?.selectedEntity as? DrawingTextEntity {
+                            endEditingTextEntityView.invoke((entity.uuid, false))
                         }
                     }
                 ),
@@ -2041,6 +2057,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         private let toggleWithPreviousTool: ActionSlot<Void>
         fileprivate let insertSticker: ActionSlot<Void>
         fileprivate let insertText: ActionSlot<Void>
+        private let updateEntityView: ActionSlot<(UUID, Bool)>
+        private let endEditingTextEntityView: ActionSlot<(UUID, Bool)>
         
         private let apply: ActionSlot<Void>
         private let dismiss: ActionSlot<Void>
@@ -2274,6 +2292,18 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                         }
                     }
                 }
+                self.updateEntityView.connect { [weak self] uuid, animated in
+                    if let strongSelf = self, let entitiesView = strongSelf._entitiesView {
+                        entitiesView.getView(for: uuid)?.update(animated: animated)
+                    }
+                }
+                self.endEditingTextEntityView.connect { [weak self] uuid, reset in
+                    if let strongSelf = self, let entitiesView = strongSelf._entitiesView {
+                        if let textEntityView = entitiesView.getView(for: uuid) as? DrawingTextEntityView {
+                            textEntityView.endEditing(reset: reset)
+                        }
+                    }
+                }
             }
             return self._entitiesView!
         }
@@ -2312,6 +2342,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             self.toggleWithPreviousTool = ActionSlot<Void>()
             self.insertSticker = ActionSlot<Void>()
             self.insertText = ActionSlot<Void>()
+            self.updateEntityView = ActionSlot<(UUID, Bool)>()
+            self.endEditingTextEntityView = ActionSlot<(UUID, Bool)>()
             self.apply = ActionSlot<Void>()
             self.dismiss = ActionSlot<Void>()
             
@@ -2737,6 +2769,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                         toggleWithPreviousTool: self.toggleWithPreviousTool,
                         insertSticker: self.insertSticker,
                         insertText: self.insertText,
+                        updateEntityView: self.updateEntityView,
+                        endEditingTextEntityView: self.endEditingTextEntityView,
                         apply: self.apply,
                         dismiss: self.dismiss,
                         presentColorPicker: { [weak self] initialColor in
@@ -3042,6 +3076,24 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         self.drawingView.addInteraction(dropInteraction)
     }
     
+    public func generateDrawingResultData() -> DrawingResultData? {
+        if self.drawingView.isEmpty && self.entitiesView.entities.isEmpty {
+            return nil
+        }
+        
+        let drawingImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
+            let bounds = CGRect(origin: .zero, size: size)
+            context.clear(bounds)
+            if let cgImage = self.drawingView.drawingImage?.cgImage {
+                context.draw(cgImage, in: bounds)
+            }
+        }, opaque: false, scale: 1.0)
+        
+        let _ = self.entitiesView.entitiesData
+        let codableEntities = self.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }.compactMap({ CodableDrawingEntity(entity: $0) })
+        return DrawingResultData(data: self.drawingView.drawingData, drawingImage: drawingImage, entities: codableEntities)
+    }
+    
     public func generateResultData() -> TGPaintingData? {
         if self.drawingView.isEmpty && self.entitiesView.entities.isEmpty {
             return nil
@@ -3102,7 +3154,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 stickers.append(coder.makeData())
             } else if let text = entity as? DrawingTextEntity, let subEntities = text.renderSubEntities {
                 for sticker in subEntities {
-                    if case let .file(file) = sticker.content {
+                    if let sticker = sticker as? DrawingStickerEntity, case let .file(file) = sticker.content {
                         let coder = PostboxEncoder()
                         coder.encodeRootObject(file)
                         stickers.append(coder.makeData())

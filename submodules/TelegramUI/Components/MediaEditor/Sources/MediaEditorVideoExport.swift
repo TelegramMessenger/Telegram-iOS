@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import MetalKit
 import SwiftSignalKit
+import AccountContext
 
 enum ExportWriterStatus {
     case unknown
@@ -239,6 +240,7 @@ public final class MediaEditorVideoExport {
     
     public private(set) var internalStatus: Status = .idle
     
+    private let context: AccountContext
     private let subject: Subject
     private let configuration: Configuration
     private let outputPath: String
@@ -262,7 +264,10 @@ public final class MediaEditorVideoExport {
     
     private var startTimestamp = CACurrentMediaTime()
     
-    public init(subject: Subject, configuration: Configuration, outputPath: String) {
+    private let semaphore = DispatchSemaphore(value: 0)
+    
+    public init(context: AccountContext, subject: Subject, configuration: Configuration, outputPath: String) {
+        self.context = context
         self.subject = subject
         self.configuration = configuration
         self.outputPath = outputPath
@@ -284,7 +289,7 @@ public final class MediaEditorVideoExport {
         }
         
         if self.configuration.values.requiresComposing {
-            self.composer = MediaEditorComposer(values: self.configuration.values, dimensions: self.configuration.dimensions)
+            self.composer = MediaEditorComposer(context: self.context, values: self.configuration.values, dimensions: self.configuration.dimensions)
         }
         self.setupVideoInput()
     }
@@ -336,7 +341,7 @@ public final class MediaEditorVideoExport {
         }
         
         let audioTracks = asset.tracks(withMediaType: .audio)
-        if audioTracks.count > 0 {
+        if audioTracks.count > 0, !self.configuration.values.videoIsMuted {
             let audioOutput = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: nil)
             audioOutput.alwaysCopiesSampleData = false
             if reader.canAdd(audioOutput) {
@@ -420,28 +425,40 @@ public final class MediaEditorVideoExport {
             return false
         }
         
+        var appendFailed = false
         while writer.isReadyForMoreVideoData {
-            let _ = self.composer?.semaphore.wait(timeout: .distantFuture)
-            
+            if appendFailed {
+                return false
+            }
             if reader.status != .reading || writer.status != .writing {
                 writer.markVideoAsFinished()
                 return false
             }
             self.pauseDispatchGroup.wait()
             if let buffer = output.copyNextSampleBuffer() {
-                if let pixelBuffer = self.composer?.processSampleBuffer(buffer, pool: writer.pixelBufferPool) {
+                if let composer = self.composer {
                     let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer)
-                    if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
-                        writer.markVideoAsFinished()
-                        return false
-                    }
+                    composer.processSampleBuffer(buffer, pool: writer.pixelBufferPool, completion: { pixelBuffer in
+                        if let pixelBuffer {
+                            if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
+                                writer.markVideoAsFinished()
+                                appendFailed = true
+                            }
+                        } else {
+                            if !writer.appendVideoBuffer(buffer) {
+                                writer.markVideoAsFinished()
+                                appendFailed = true
+                            }
+                        }
+                        self.semaphore.signal()
+                    })
+                    self.semaphore.wait()
                 } else {
                     if !writer.appendVideoBuffer(buffer) {
                         writer.markVideoAsFinished()
                         return false
                     }
                 }
-                
 //                let progress = (CMSampleBufferGetPresentationTimeStamp(buffer) - self.configuration.timeRange.start).seconds/self.duration.seconds
 //                if self.videoOutput === output {
 //                    self.dispatchProgressCallback { $0.updateVideoEncodingProgress(fractionCompleted: progress) }

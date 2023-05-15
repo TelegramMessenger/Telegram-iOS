@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import MediaEditor
 
 private let activeWidthFactor: CGFloat = 0.7
 

@@ -65,9 +65,7 @@ final class MediaEditorRenderer: TextureConsumer {
     private var library: MTLLibrary?
     
     var finalTexture: MTLTexture?
-    
-    var externalSemaphore: DispatchSemaphore?
-    
+        
     public init() {
         
     }
@@ -175,7 +173,6 @@ final class MediaEditorRenderer: TextureConsumer {
         
         commandBuffer.addCompletedHandler { [weak self] _ in
             self?.semaphore.signal()
-            self?.externalSemaphore?.signal()
         }
         
         if let _ = self.renderTarget {

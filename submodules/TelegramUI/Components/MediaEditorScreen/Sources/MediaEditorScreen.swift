@@ -1044,6 +1044,12 @@ public final class MediaEditorScreen: ViewController {
                                     self?.drawingView.isUserInteractionEnabled = false
                                     self?.animateInFromTool()
                                     
+                                    if let result = controller?.generateDrawingResultData() {
+                                        self?.mediaEditor?.setDrawingAndEntities(data: result.data, image: result.drawingImage, entities: result.entities)
+                                    } else {
+                                        self?.mediaEditor?.setDrawingAndEntities(data: nil, image: nil, entities: [])
+                                    }
+                                    
                                     selectionContainerView?.removeFromSuperview()
                                 }
                                 self.controller?.present(controller, in: .current)
@@ -1217,13 +1223,15 @@ public final class MediaEditorScreen: ViewController {
             })
         } else {
             if let image = mediaEditor.resultImage {
-                if let resultImage = makeEditorImageComposition(inputImage: image, dimensions: storyDimensions, values: mediaEditor.values) {
-                    self.completion(.image(resultImage, nil), { [weak self] in
-                        self?.node.animateOut(completion: { [weak self] in
-                            self?.dismiss()
+                makeEditorImageComposition(context: self.context, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                    if let resultImage {
+                        self.completion(.image(resultImage, nil), { [weak self] in
+                            self?.node.animateOut(completion: { [weak self] in
+                                self?.dismiss()
+                            })
                         })
-                    })
-                }
+                    }
+                })
             }
         }
     }
@@ -1267,7 +1275,7 @@ public final class MediaEditorScreen: ViewController {
             
             let configuration = recommendedExportConfiguration(mediaEditor: mediaEditor)
             let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
-            let export = MediaEditorVideoExport(subject: exportSubject, configuration: configuration, outputPath: outputPath)
+            let export = MediaEditorVideoExport(context: self.context, subject: exportSubject, configuration: configuration, outputPath: outputPath)
             self.export = export
             
             export.startExport()
@@ -1283,12 +1291,13 @@ public final class MediaEditorScreen: ViewController {
             })
         } else {
             if let image = mediaEditor.resultImage {
-                let resultImage = makeEditorImageComposition(inputImage: image, dimensions: storyDimensions, values: mediaEditor.values)
-                if let data = resultImage?.jpegData(compressionQuality: 0.8) {
-                    let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
-                    try? data.write(to: URL(fileURLWithPath: outputPath))
-                    saveToPhotos(outputPath, false)
-                }
+                makeEditorImageComposition(context: self.context, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                    if let data = resultImage?.jpegData(compressionQuality: 0.8) {
+                        let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
+                        try? data.write(to: URL(fileURLWithPath: outputPath))
+                        saveToPhotos(outputPath, false)
+                    }
+                })
             }
         }
     }

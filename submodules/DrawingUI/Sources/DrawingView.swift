@@ -6,6 +6,7 @@ import ComponentFlow
 import LegacyComponents
 import AppBundle
 import ImageBlur
+import MediaEditor
 
 protocol DrawingRenderLayer: CALayer {
     

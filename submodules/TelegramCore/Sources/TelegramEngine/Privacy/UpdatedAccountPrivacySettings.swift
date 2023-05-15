@@ -14,7 +14,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
     let phoneNumberPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneNumber))
     let phoneDiscoveryPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyAddedByPhone))
     let voiceMessagesPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyVoiceMessages))
-    let bioPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyProfilePhoto))
+    let bioPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyAbout))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
     let globalPrivacySettings = account.network.request(Api.functions.account.getGlobalPrivacySettings())
     let messageAutoremoveTimeout = account.network.request(Api.functions.messages.getDefaultHistoryTTL())
@@ -253,7 +253,7 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
             case .voiceMessages:
                 return .inputPrivacyKeyVoiceMessages
             case .bio:
-                return .inputPrivacyKeyProfilePhoto
+                return .inputPrivacyKeyAbout
         }
     }
 }

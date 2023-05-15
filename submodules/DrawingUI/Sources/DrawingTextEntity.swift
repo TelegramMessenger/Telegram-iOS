@@ -5,286 +5,17 @@ import SwiftSignalKit
 import AccountContext
 import TextFormat
 import EmojiTextAttachmentView
+import MediaEditor
 
-public final class DrawingTextEntity: DrawingEntity, Codable {
-    final class CustomEmojiAttribute: Codable {
-        private enum CodingKeys: String, CodingKey {
-            case attribute
-            case rangeOrigin
-            case rangeLength
-        }
-        let attribute: ChatTextInputTextCustomEmojiAttribute
-        let range: NSRange
-        
-        init(attribute: ChatTextInputTextCustomEmojiAttribute, range: NSRange) {
-            self.attribute = attribute
-            self.range = range
-        }
-        
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.attribute = try container.decode(ChatTextInputTextCustomEmojiAttribute.self, forKey: .attribute)
-            
-            let rangeOrigin = try container.decode(Int.self, forKey: .rangeOrigin)
-            let rangeLength = try container.decode(Int.self, forKey: .rangeLength)
-            self.range = NSMakeRange(rangeOrigin, rangeLength)
-        }
-        
-        func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.attribute, forKey: .attribute)
-            try container.encode(self.range.location, forKey: .rangeOrigin)
-            try container.encode(self.range.length, forKey: .rangeLength)
-        }
-    }
-    
-    private enum CodingKeys: String, CodingKey {
-        case uuid
-        case text
-        case textAttributes
-        case style
-        case animation
-        case font
-        case alignment
-        case fontSize
-        case color
-        case referenceDrawingSize
-        case position
-        case width
-        case scale
-        case rotation
-        case renderImage
-        case renderSubEntities
-        case renderAnimationFrames
-    }
-    
-    enum Style: Codable {
-        case regular
-        case filled
-        case semi
-        case stroke
-    }
-    
-    enum Animation: Codable {
-        case none
-        case typing
-        case wiggle
-        case zoomIn
-    }
-    
-    enum Font: Codable {
-        case sanFrancisco
-        case other(String, String)
-    }
-    
-    enum Alignment: Codable {
-        case left
-        case center
-        case right
-        
-        var alignment: NSTextAlignment {
-            switch self {
-            case .left:
-                return .left
-            case .center:
-                return .center
-            case .right:
-                return .right
-            }
-        }
-    }
-    
-    public var uuid: UUID
-    public var isAnimated: Bool {
-        if self.animation != .none {
-            return true
-        }
-        var isAnimated = false
-        self.text.enumerateAttributes(in: NSMakeRange(0, self.text.length), options: [], using: { attributes, range, _ in
-            if let _ = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
-                isAnimated = true
-            }
-        })
-        return isAnimated
-    }
-    
-    var text: NSAttributedString
-    var style: Style
-    var animation: Animation
-    var font: Font
-    var alignment: Alignment
-    var fontSize: CGFloat
-    public var color: DrawingColor
-    public var lineWidth: CGFloat = 0.0
-    
-    var referenceDrawingSize: CGSize
-    public var position: CGPoint
-    var width: CGFloat
-    public var scale: CGFloat
-    public var rotation: CGFloat
-    
-    public var center: CGPoint {
-        return self.position
-    }
-    
-    public var renderImage: UIImage?
-    public var renderSubEntities: [DrawingStickerEntity]?
-    
-    public var isMedia: Bool {
-        return false
-    }
-    
-    public class AnimationFrame: Codable {
-        private enum CodingKeys: String, CodingKey {
-            case timestamp
-            case duration
-            case image
-        }
-        
-        public let timestamp: Double
-        public let duration: Double
-        public let image: UIImage
-        
-        public init(timestamp: Double, duration: Double, image: UIImage) {
-            self.timestamp = timestamp
-            self.duration = duration
-            self.image = image
-        }
-        
-        required public init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.timestamp = try container.decode(Double.self, forKey: .timestamp)
-            self.duration = try container.decode(Double.self, forKey: .duration)
-            if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .image) {
-                self.image = UIImage(data: renderImageData)!
-            } else {
-                fatalError()
-            }
-        }
-        
-        public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-          
-            try container.encode(self.timestamp, forKey: .timestamp)
-            try container.encode(self.duration, forKey: .duration)
-            if let data = self.image.pngData() {
-                try container.encode(data, forKey: .image)
-            }
-        }
-    }
-    public var renderAnimationFrames: [AnimationFrame]?
-    
-    init(text: NSAttributedString, style: Style, animation: Animation, font: Font, alignment: Alignment, fontSize: CGFloat, color: DrawingColor) {
-        self.uuid = UUID()
-        
-        self.text = text
-        self.style = style
-        self.animation = animation
-        self.font = font
-        self.alignment = alignment
-        self.fontSize = fontSize
-        self.color = color
-        
-        self.referenceDrawingSize = .zero
-        self.position = .zero
-        self.width = 100.0
-        self.scale = 1.0
-        self.rotation = 0.0
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        let text = try container.decode(String.self, forKey: .text)
-        
-        let attributedString = NSMutableAttributedString(string: text)
-        let textAttributes = try container.decode([CustomEmojiAttribute].self, forKey: .textAttributes)
-        for attribute in textAttributes {
-            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: attribute.attribute, range: attribute.range)
-        }
-        self.text = attributedString
-
-        self.style = try container.decode(Style.self, forKey: .style)
-        self.animation = try container.decode(Animation.self, forKey: .animation)
-        self.font = try container.decode(Font.self, forKey: .font)
-        self.alignment = try container.decode(Alignment.self, forKey: .alignment)
-        self.fontSize = try container.decode(CGFloat.self, forKey: .fontSize)
-        self.color = try container.decode(DrawingColor.self, forKey: .color)
-        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
-        self.position = try container.decode(CGPoint.self, forKey: .position)
-        self.width = try container.decode(CGFloat.self, forKey: .width)
-        self.scale = try container.decode(CGFloat.self, forKey: .scale)
-        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
-        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
-            self.renderImage = UIImage(data: renderImageData)
-        }
-        if let renderSubEntities = try? container.decodeIfPresent([CodableDrawingEntity].self, forKey: .renderSubEntities) {
-            self.renderSubEntities = renderSubEntities.compactMap { $0.entity as? DrawingStickerEntity }
-        }
-        self.renderAnimationFrames = try container.decodeIfPresent([AnimationFrame].self, forKey: .renderAnimationFrames)
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.uuid, forKey: .uuid)
-        try container.encode(self.text.string, forKey: .text)
-        
-        var textAttributes: [CustomEmojiAttribute] = []
-        self.text.enumerateAttributes(in: NSMakeRange(0, self.text.length), options: [], using: { attributes, range, _ in
-            if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
-                textAttributes.append(CustomEmojiAttribute(attribute: value, range: range))
-            }
-        })
-        try container.encode(textAttributes, forKey: .textAttributes)
-        
-        try container.encode(self.style, forKey: .style)
-        try container.encode(self.animation, forKey: .animation)
-        try container.encode(self.font, forKey: .font)
-        try container.encode(self.alignment, forKey: .alignment)
-        try container.encode(self.fontSize, forKey: .fontSize)
-        try container.encode(self.color, forKey: .color)
-        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
-        try container.encode(self.position, forKey: .position)
-        try container.encode(self.width, forKey: .width)
-        try container.encode(self.scale, forKey: .scale)
-        try container.encode(self.rotation, forKey: .rotation)
-        if let renderImage, let data = renderImage.pngData() {
-            try container.encode(data, forKey: .renderImage)
-        }
-        if let renderSubEntities = self.renderSubEntities {
-            let codableEntities: [CodableDrawingEntity] = renderSubEntities.map { .sticker($0) }
-            try container.encode(codableEntities, forKey: .renderSubEntities)
-        }
-        if let renderAnimationFrames = self.renderAnimationFrames {
-            try container.encode(renderAnimationFrames, forKey: .renderAnimationFrames)
-        }
-    }
-
-    public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingTextEntity(text: self.text, style: self.style, animation: self.animation, font: self.font, alignment: self.alignment, fontSize: self.fontSize, color: self.color)
-        newEntity.referenceDrawingSize = self.referenceDrawingSize
-        newEntity.position = self.position
-        newEntity.width = self.width
-        newEntity.scale = self.scale
-        newEntity.rotation = self.rotation
-        return newEntity
-    }
-    
-    public weak var currentEntityView: DrawingEntityView?
-    public func makeView(context: AccountContext) -> DrawingEntityView {
-        let entityView = DrawingTextEntityView(context: context, entity: self)
-        self.currentEntityView = entityView
-        return entityView
-    }
-    
-    public func prepareForRender() {
-        self.renderImage = (self.currentEntityView as? DrawingTextEntityView)?.getRenderImage()
-        self.renderSubEntities = (self.currentEntityView as? DrawingTextEntityView)?.getRenderSubEntities()
-        
-        if case .none = self.animation {
-            self.renderAnimationFrames = nil
-        } else {
-            self.renderAnimationFrames = (self.currentEntityView as? DrawingTextEntityView)?.getRenderAnimationFrames()
+extension DrawingTextEntity.Alignment {
+    var alignment: NSTextAlignment {
+        switch self {
+        case .left:
+            return .left
+        case .center:
+            return .center
+        case .right:
+            return .right
         }
     }
 }
@@ -892,7 +623,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         return image
     }
     
-    func getRenderSubEntities() -> [DrawingStickerEntity] {
+    func getRenderSubEntities() -> [DrawingEntity] {
         let textSize = self.textView.bounds.size
         let textPosition = self.textEntity.position
         let scale = self.textEntity.scale
@@ -900,7 +631,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         
         let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.78 / 17.0)
         
-        var entities: [DrawingStickerEntity] = []
+        var entities: [DrawingEntity] = []
         for (emojiRect, emojiAttribute) in self.emojiRects {
             guard let file = emojiAttribute.file else {
                 continue

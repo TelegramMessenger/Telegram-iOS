@@ -34,6 +34,72 @@ private let adjustmentToolsKeys: [EditorToolKey] = [
     .sharpen
 ]
 
+public class MediaEditorValues {
+    public let originalDimensions: PixelDimensions
+    public let cropOffset: CGPoint
+    public let cropSize: CGSize?
+    public let cropScale: CGFloat
+    public let cropRotation: CGFloat
+    public let cropMirroring: Bool
+    
+    public let gradientColors: [UIColor]?
+    
+    public let videoTrimRange: Range<Double>?
+    public let videoIsMuted: Bool
+    
+    public let drawing: UIImage?
+    public let entities: [CodableDrawingEntity]
+    public let toolValues: [EditorToolKey: Any]
+    
+    init(
+        originalDimensions: PixelDimensions,
+        cropOffset: CGPoint,
+        cropSize: CGSize?,
+        cropScale: CGFloat,
+        cropRotation: CGFloat,
+        cropMirroring: Bool,
+        gradientColors: [UIColor]?,
+        videoTrimRange: Range<Double>?,
+        videoIsMuted: Bool,
+        drawing: UIImage?,
+        entities: [CodableDrawingEntity],
+        toolValues: [EditorToolKey: Any]
+    ) {
+        self.originalDimensions = originalDimensions
+        self.cropOffset = cropOffset
+        self.cropSize = cropSize
+        self.cropScale = cropScale
+        self.cropRotation = cropRotation
+        self.cropMirroring = cropMirroring
+        self.gradientColors = gradientColors
+        self.videoTrimRange = videoTrimRange
+        self.videoIsMuted = videoIsMuted
+        self.drawing = drawing
+        self.entities = entities
+        self.toolValues = toolValues
+    }
+    
+    func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedGradientColors(gradientColors: [UIColor]) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedVideoIsMuted(_ videoIsMuted: Bool) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedDrawingAndEntities(drawing: UIImage?, entities: [CodableDrawingEntity]) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: drawing, entities: entities, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedToolValues(_ toolValues: [EditorToolKey: Any]) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: toolValues)
+    }
+}
+
 public struct TintValue: Equatable {
     public static let initial = TintValue(
         color: .clear,
@@ -300,64 +366,6 @@ public struct CurvesValue: Equatable {
     }
 }
 
-public class MediaEditorValues {
-    public let originalDimensions: PixelDimensions
-    public let cropOffset: CGPoint
-    public let cropSize: CGSize?
-    public let cropScale: CGFloat
-    public let cropRotation: CGFloat
-    public let cropMirroring: Bool
-    
-    public let gradientColors: [UIColor]?
-    
-    public let videoTrimRange: Range<Double>?
-    public let videoIsMuted: Bool
-    
-    public let drawing: UIImage?
-    public let toolValues: [EditorToolKey: Any]
-    
-    init(
-        originalDimensions: PixelDimensions,
-        cropOffset: CGPoint,
-        cropSize: CGSize?,
-        cropScale: CGFloat,
-        cropRotation: CGFloat,
-        cropMirroring: Bool,
-        gradientColors: [UIColor]?,
-        videoTrimRange: Range<Double>?,
-        videoIsMuted: Bool,
-        drawing: UIImage?,
-        toolValues: [EditorToolKey: Any]
-    ) {
-        self.originalDimensions = originalDimensions
-        self.cropOffset = cropOffset
-        self.cropSize = cropSize
-        self.cropScale = cropScale
-        self.cropRotation = cropRotation
-        self.cropMirroring = cropMirroring
-        self.gradientColors = gradientColors
-        self.videoTrimRange = videoTrimRange
-        self.videoIsMuted = videoIsMuted
-        self.drawing = drawing
-        self.toolValues = toolValues
-    }
-    
-    func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, toolValues: self.toolValues)
-    }
-    
-    func withUpdatedGradientColors(gradientColors: [UIColor]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, toolValues: self.toolValues)
-    }
-    
-    func withUpdatedVideoIsMuted(_ videoIsMuted: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, drawing: self.drawing, toolValues: self.toolValues)
-    }
-    
-    func withUpdatedToolValues(_ toolValues: [EditorToolKey: Any]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, toolValues: toolValues)
-    }
-}
 
 private let toolEpsilon: Float = 0.005
 public extension MediaEditorValues {
