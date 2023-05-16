@@ -180,7 +180,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                             for update in updates.allUpdates {
                                 if case let .updateStories(stories) = update {
                                     switch stories {
-                                    case .userStories(let userId, let apiStories), .userStoriesSlice(_, let userId, let apiStories):
+                                    case let .userStories(_, userId, _, apiStories, _):
                                         if PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)) == account.peerId, apiStories.count == 1 {
                                             switch apiStories[0] {
                                             case let .storyItem(_, _, _, _, _, media, _, _):

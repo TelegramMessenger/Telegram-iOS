@@ -469,14 +469,13 @@ public final class StoryListContext {
                             let apiUserId: Int64
                             let apiStories: [Api.StoryItem]
                             var apiTotalCount: Int32?
+                            var apiMaxReadId: Int32 = 0
                             switch userStories {
-                            case let .userStories(userId, stories):
+                            case let .userStories(_, userId, maxReadId, stories, missingCount):
                                 apiUserId = userId
                                 apiStories = stories
-                            case let .userStoriesSlice(totalCount, userId, stories):
-                                apiUserId = userId
-                                apiStories = stories
-                                apiTotalCount = totalCount
+                                apiTotalCount = (missingCount ?? 0) + Int32(stories.count)
+                                apiMaxReadId = maxReadId ?? 0
                             }
                             
                             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(apiUserId))
@@ -488,7 +487,7 @@ public final class StoryListContext {
                                         parsedItemSets.append(StoryListContext.PeerItemSet(
                                             peerId: peerId,
                                             peer: transaction.getPeer(peerId).flatMap(EnginePeer.init),
-                                            maxReadId: 0,
+                                            maxReadId: apiMaxReadId,
                                             items: [item],
                                             totalCount: apiTotalCount.flatMap(Int.init)
                                         ))

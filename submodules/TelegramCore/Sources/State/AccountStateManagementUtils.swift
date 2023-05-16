@@ -4330,7 +4330,9 @@ func replayFinalState(
                 }
             case let .UpdateStories(updateStories):
                 switch updateStories {
-                case .userStories(let userId, let stories), .userStoriesSlice(_, let userId, let stories):
+                case let .userStories(_, userId, maxReadId, stories, missingCount):
+                    let _ = maxReadId
+                    let _ = missingCount
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                     for storyItem in stories {
                         if let parsedItem = _internal_parseApiStoryItem(transaction: transaction, peerId: peerId, apiStory: storyItem) {
