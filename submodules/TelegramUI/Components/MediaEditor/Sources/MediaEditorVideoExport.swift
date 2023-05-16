@@ -44,7 +44,6 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
     private var writer: AVAssetWriter?
     private var videoInput: AVAssetWriterInput?
     private var audioInput: AVAssetWriterInput?
-    
     private var adaptor: AVAssetWriterInputPixelBufferAdaptor!
     
     func setup(configuration: MediaEditorVideoExport.Configuration, outputPath: String) {
@@ -83,8 +82,6 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         
         if writer.canAdd(videoInput) {
             writer.add(videoInput)
-        } else {
-            //throw Error.cannotAddVideoInput
         }
         self.videoInput = videoInput
     }

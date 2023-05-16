@@ -31,6 +31,9 @@ swift_library(
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/TelegramUI/Components/MessageInputPanelComponent",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
+        "//submodules/TooltipUI",
+        "//submodules/Components/BlurredBackgroundComponent",
+        "//submodules/AvatarNode",
     ],
     visibility = [
         "//visibility:public",

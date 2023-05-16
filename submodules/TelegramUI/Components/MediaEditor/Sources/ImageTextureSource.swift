@@ -16,7 +16,7 @@ final class ImageTextureSource: TextureSource {
         let textureLoader = MTKTextureLoader(device: device)
         self.textureLoader = textureLoader
         
-        self.texture = try? textureLoader.newTexture(cgImage: cgImage, options: nil)
+        self.texture = try? textureLoader.newTexture(cgImage: cgImage, options: [.SRGB : false])
     }
     
     func start() {

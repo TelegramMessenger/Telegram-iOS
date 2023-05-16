@@ -14,6 +14,7 @@ import Camera
 import MultilineTextComponent
 import BlurredBackgroundComponent
 import Photos
+import LottieAnimationComponent
 
 let videoRedColor = UIColor(rgb: 0xff3b30)
 
@@ -284,17 +285,39 @@ private final class CameraScreenComponent: CombinedComponent {
                     .cornerRadius(20.0)
                 )
                 
+                let flashIconName: String
+                switch state.cameraState.flashMode {
+                case .off:
+                    flashIconName = "flash_off"
+                case .on:
+                    flashIconName = "flash_on"
+                case .auto:
+                    flashIconName = "flash_auto"
+                @unknown default:
+                    flashIconName = "flash_off"
+                }
+                
                 let flashButton = flashButton.update(
                     component: CameraButton(
-                        content: AnyComponent(Image(
-                            image: state.image(.flash)
-                        )),
+                        content: AnyComponent(
+                            LottieAnimationComponent(
+                                animation: LottieAnimationComponent.AnimationItem(
+                                    name: flashIconName,
+                                    mode: .animating(loop: false),
+                                    range: nil
+                                ),
+                                colors: [:],
+                                size: CGSize(width: 40.0, height: 40.0)
+                            )
+                        ),
                         action: { [weak state] in
                             guard let state else {
                                 return
                             }
                             if state.cameraState.flashMode == .off {
                                 state.camera.setFlashMode(.on)
+                            } else if state.cameraState.flashMode == .on {
+                                state.camera.setFlashMode(.auto)
                             } else {
                                 state.camera.setFlashMode(.off)
                             }
@@ -885,6 +908,13 @@ public class CameraScreen: ViewController {
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 }
             }
+            
+            if let view = self.componentHost.findTaggedView(tag: flashButtonTag) {
+                view.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                view.layer.shadowRadius = 4.0
+                view.layer.shadowColor = UIColor.black.cgColor
+                view.layer.shadowOpacity = 0.2
+            }
         }
 
         func animateOut(completion: @escaping () -> Void) {
@@ -928,11 +958,11 @@ public class CameraScreen: ViewController {
         func animateOutToEditor() {
             let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
-                transition.setScale(view: view, scale: 0.1)
+                view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
                 transition.setAlpha(view: view, alpha: 0.0)
             }
             if let view = self.componentHost.findTaggedView(tag: flashButtonTag) {
-                transition.setScale(view: view, scale: 0.1)
+                view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
                 transition.setAlpha(view: view, alpha: 0.0)
             }
             if let view = self.componentHost.findTaggedView(tag: zoomControlTag) {
@@ -973,15 +1003,15 @@ public class CameraScreen: ViewController {
             
             let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.componentHost.findTaggedView(tag: cancelButtonTag) {
-                transition.setScale(view: view, scale: 1.0)
+                view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 transition.setAlpha(view: view, alpha: 1.0)
             }
             if let view = self.componentHost.findTaggedView(tag: flashButtonTag) {
-                transition.setScale(view: view, scale: 1.0)
+                view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 transition.setAlpha(view: view, alpha: 1.0)
             }
             if let view = self.componentHost.findTaggedView(tag: zoomControlTag) {
-                transition.setScale(view: view, scale: 1.0)
+                view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 transition.setAlpha(view: view, alpha: 1.0)
             }
             if let view = self.componentHost.findTaggedView(tag: captureControlsTag) as? CaptureControlsComponent.View {
@@ -1143,6 +1173,7 @@ public class CameraScreen: ViewController {
         let controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] asset in
             dismissGalleryControllerImpl?()
             if let self {
+                self.node.animateOutToEditor()
                 self.completion(.single(.asset(asset)))
             }
         })
