@@ -2488,7 +2488,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 
                                 if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
                                     if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
-                                        let localRect = transitionView.convert(transitionView.bounds, to: self.view)
+                                        //let localRect = transitionView.convert(transitionView.bounds, to: self.view)
                                         
                                         /*Queue.mainQueue().after(0.2 * UIView.animationDurationFactor, { [weak self] in
                                             HapticFeedback().impact()
