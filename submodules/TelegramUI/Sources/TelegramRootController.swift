@@ -23,6 +23,7 @@ import LegacyMediaPickerUI
 import LegacyCamera
 import AvatarNode
 import LocalMediaResources
+import ShareWithPeersScreen
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -257,6 +258,22 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         }
         controller.view.endEditing(true)
         
+        if !"".isEmpty {
+            let stateContext = ShareWithPeersScreen.StateContext(context: self.context)
+            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                guard let controller = self.viewControllers.last as? ViewController else {
+                    return
+                }
+                
+                controller.push(ShareWithPeersScreen(context: self.context, stateContext: stateContext, completion: { _ in
+                }))
+            })
+            return
+        }
+        
         var presentImpl: ((ViewController) -> Void)?
         var dismissCameraImpl: (() -> Void)?
         let cameraController = CameraScreen(context: self.context, mode: .story, completion: { [weak self] result in
@@ -272,13 +289,68 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 }
                 let context = self.context
                 legacyStoryMediaEditor(context: context, item: item, getCaptionPanelView: { return nil }, completion: { [weak self] mediaResult in
-                    dismissCameraImpl?()
-                    
                     guard let self else {
                         return
                     }
                     
-                    enum AdditionalCategoryId: Int {
+                    let stateContext = ShareWithPeersScreen.StateContext(context: self.context)
+                    let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        guard let controller = self.viewControllers.last as? ViewController else {
+                            return
+                        }
+                        
+                        controller.push(ShareWithPeersScreen(context: self.context, stateContext: stateContext, completion: { privacy in
+                            switch mediaResult {
+                            case let .image(image):
+                                _ = image
+                                break
+                            case let .video(path):
+                                _ = path
+                                break
+                            case let .asset(asset):
+                                let options = PHImageRequestOptions()
+                                options.deliveryMode = .highQualityFormat
+                                options.isNetworkAccessAllowed = true
+                                switch asset.mediaType {
+                                case .image:
+                                    PHImageManager.default().requestImageData(for: asset, options:options, resultHandler: { [weak self] data, _, _, _ in
+                                        if let data, let image = UIImage(data: data) {
+                                            Queue.mainQueue().async {
+                                                guard let self else {
+                                                    return
+                                                }
+                                                
+                                                if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                                                    storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), text: "", entities: [], privacy: privacy)
+                                                    Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                                        chatListController?.animateStoryUploadRipple()
+                                                    })
+                                                }
+                                            }
+                                        }
+                                    })
+                                case .video:
+                                    let resource = VideoLibraryMediaResource(localIdentifier: asset.localIdentifier, conversion: VideoLibraryMediaResourceConversion.passthrough)
+                                    
+                                    if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                                        storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), text: "", entities: [], privacy: privacy)
+                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                            chatListController?.animateStoryUploadRipple()
+                                        })
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                            
+                            dismissCameraImpl?()
+                        }))
+                    })
+                    
+                    /*enum AdditionalCategoryId: Int {
                         case everyone
                         case contacts
                         case closeFriends
@@ -371,6 +443,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                             guard let self else {
                                                 return
                                             }
+                                            
                                             if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
                                                 storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), text: "", entities: [], privacy: privacy)
                                                 Queue.mainQueue().after(0.3, { [weak chatListController] in
@@ -395,7 +468,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 selectionController?.dismiss()
                             }
                         }
-                    })
+                    })*/
                 }, present: { c, a in
                     presentImpl?(c)
                 })

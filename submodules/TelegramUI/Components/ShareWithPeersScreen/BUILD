@@ -28,8 +28,10 @@ swift_library(
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/AnimatedCounterComponent",
+        "//submodules/TelegramUI/Components/TokenListTextField",
         "//submodules/AvatarNode",
         "//submodules/CheckNode",
+        "//submodules/PeerPresenceStatusManager",
     ],
     visibility = [
         "//visibility:public",
