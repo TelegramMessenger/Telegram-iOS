@@ -2454,9 +2454,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             initialFocusedId = AnyHashable(peer.id)
                         }
                         
-                        if !initialContent.contains(where: { slice in
-                            return !slice.items.isEmpty
-                        }) {
+                        if initialFocusedId == AnyHashable(self.context.account.peerId), let firstItem = initialContent.first, firstItem.id == initialFocusedId && firstItem.items.isEmpty {
                             if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
                                 rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionOut: { [weak self] _ in
                                     guard let self else {

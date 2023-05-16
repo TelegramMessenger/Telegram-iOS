@@ -113,7 +113,7 @@ final class MediaEditorComposer {
         }
         if self.filteredImage == nil, let device = self.device, let cgImage = inputImage.cgImage {
             let textureLoader = MTKTextureLoader(device: device)
-            if let texture = try? textureLoader.newTexture(cgImage: cgImage) {
+            if let texture = try? textureLoader.newTexture(cgImage: cgImage, options: [.SRGB : false]) {
                 self.renderer.consumeTexture(texture, rotation: .rotate0Degrees)
                 self.renderer.renderFrame()
                 

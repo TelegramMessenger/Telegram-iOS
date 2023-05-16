@@ -69,6 +69,7 @@ swift_library(
         "//submodules/Camera",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BlurredBackgroundComponent",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
     ],
     visibility = [
         "//visibility:public",
