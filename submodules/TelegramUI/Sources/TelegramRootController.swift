@@ -420,7 +420,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         switch mediaResult {
                         case let .image(image, dimensions, _):
                             if let data = image.jpegData(compressionQuality: 0.8) {
-                                storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: nil, entities: nil, privacy: privacy)
+                                storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: "", entities: [], privacy: privacy)
+                                Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                    chatListController?.animateStoryUploadRipple()
+                                })
                             }
                         case let .video(content, _, values, duration, dimensions, _):
                             let adjustments: VideoMediaResourceAdjustments
@@ -438,7 +441,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 case let .asset(localIdentifier):
                                     resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                 }
-                                storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: nil, entities: nil, privacy: privacy)
+                                storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: "", entities: [], privacy: privacy)
+                                Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                    chatListController?.animateStoryUploadRipple()
+                                })
                             }
                         }
                     }

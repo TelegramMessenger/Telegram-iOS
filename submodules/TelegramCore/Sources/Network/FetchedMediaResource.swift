@@ -307,6 +307,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case attachBot(peer: PeerReference)
     case notificationSoundList
     case customEmoji(fileId: Int64)
+    case story(peer: PeerReference, id: Int32)
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -658,6 +659,31 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
+    func story(accountPeerId: PeerId, postbox: Postbox, network: Network, background: Bool, peer: PeerReference, id: Int32) -> Signal<StoryListContext.Item, RevalidateMediaReferenceError> {
+        return self.genericItem(key: .story(peer: peer, id: id), background: background, request: { next, error in
+            return (_internal_getStoryById(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, id: id)
+            |> castError(RevalidateMediaReferenceError.self)
+            |> mapToSignal { result -> Signal<StoryListContext.Item, RevalidateMediaReferenceError> in
+                if let result = result {
+                    return .single(result)
+                } else {
+                    return .fail(.generic)
+                }
+            }).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        })
+        |> mapToSignal { next -> Signal<StoryListContext.Item, RevalidateMediaReferenceError> in
+            if let next = next as? StoryListContext.Item {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
+    
     func notificationSoundList(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> {
         return self.genericItem(key: .notificationSoundList, background: background, request: { next, error in
             return (requestNotificationSoundList(network: network, hash: 0)
@@ -682,7 +708,7 @@ struct RevalidatedMediaResource {
     let updatedReference: MediaResourceReference?
 }
 
-func revalidateMediaResourceReference(postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo, resource: MediaResource) -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> {
+func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, network: Network, revalidationContext: MediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo, resource: MediaResource) -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> {
     var updatedReference = info.reference
     if case let .media(media, resource) = updatedReference {
         if case let .message(messageReference, mediaValue) = media {
@@ -802,6 +828,14 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                             if let updatedResource = findUpdatedMediaResource(media: icon, previousMedia: nil, resource: resource) {
                                 return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                             }
+                        }
+                        return .fail(.generic)
+                    }
+                case let .story(peer, id, _):
+                    return revalidationContext.story(accountPeerId: accountPeerId, postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer, id: id)
+                    |> mapToSignal { storyItem -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                        if let updatedResource = findUpdatedMediaResource(media: storyItem.media._asMedia(), previousMedia: nil, resource: resource) {
+                            return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                         }
                         return .fail(.generic)
                     }

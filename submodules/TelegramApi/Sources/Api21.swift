@@ -328,14 +328,14 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
-        case storyItem(flags: Int32, id: Int32, date: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, recentViewers: [Int64]?, viewsCount: Int32?)
+        case storyItem(flags: Int32, id: Int32, date: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
         case storyItemDeleted(id: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let recentViewers, let viewsCount):
+                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let views):
                     if boxed {
-                        buffer.appendInt32(-1526488475)
+                        buffer.appendInt32(-1882351956)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -352,12 +352,7 @@ public extension Api {
                     for item in privacy! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(recentViewers!.count))
-                    for item in recentViewers! {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }}
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(viewsCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {views!.serialize(buffer, true)}
                     break
                 case .storyItemDeleted(let id):
                     if boxed {
@@ -370,8 +365,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let recentViewers, let viewsCount):
-                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("recentViewers", recentViewers as Any), ("viewsCount", viewsCount as Any)])
+                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let views):
+                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("views", views as Any)])
                 case .storyItemDeleted(let id):
                 return ("storyItemDeleted", [("id", id as Any)])
     }
@@ -398,12 +393,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
                 _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
             } }
-            var _8: [Int64]?
-            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
-                _8 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            var _8: Api.StoryViews?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.StoryViews
             } }
-            var _9: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_9 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -412,9 +405,8 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 3) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, caption: _4, entities: _5, media: _6!, privacy: _7, recentViewers: _8, viewsCount: _9)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, caption: _4, entities: _5, media: _6!, privacy: _7, views: _8)
             }
             else {
                 return nil
@@ -436,16 +428,16 @@ public extension Api {
 }
 public extension Api {
     enum StoryView: TypeConstructorDescription {
-        case storyView(userId: Int64, date: Int64)
+        case storyView(userId: Int64, date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .storyView(let userId, let date):
                     if boxed {
-                        buffer.appendInt32(90474706)
+                        buffer.appendInt32(-1491424062)
                     }
                     serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt64(date, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -460,12 +452,58 @@ public extension Api {
         public static func parse_storyView(_ reader: BufferReader) -> StoryView? {
             var _1: Int64?
             _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.StoryView.storyView(userId: _1!, date: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum StoryViews: TypeConstructorDescription {
+        case storyViews(recentViewers: [Int64], viewsCount: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyViews(let recentViewers, let viewsCount):
+                    if boxed {
+                        buffer.appendInt32(1368082392)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentViewers.count))
+                    for item in recentViewers {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    serializeInt32(viewsCount, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyViews(let recentViewers, let viewsCount):
+                return ("storyViews", [("recentViewers", recentViewers as Any), ("viewsCount", viewsCount as Any)])
+    }
+    }
+    
+        public static func parse_storyViews(_ reader: BufferReader) -> StoryViews? {
+            var _1: [Int64]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StoryViews.storyViews(recentViewers: _1!, viewsCount: _2!)
             }
             else {
                 return nil

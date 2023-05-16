@@ -16,12 +16,12 @@ final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
     
 	let context: AccountContext
-    let peerId: EnginePeer.Id
+    let peer: EnginePeer
     let item: StoryListContext.Item
 
-    init(context: AccountContext, peerId: EnginePeer.Id, item: StoryListContext.Item) {
+    init(context: AccountContext, peer: EnginePeer, item: StoryListContext.Item) {
 		self.context = context
-        self.peerId = peerId
+        self.peer = peer
 		self.item = item
 	}
 
@@ -29,7 +29,7 @@ final class StoryItemContentComponent: Component {
 		if lhs.context !== rhs.context {
 			return false
 		}
-        if lhs.peerId != rhs.peerId {
+        if lhs.peer != rhs.peer {
             return false
         }
 		if lhs.item != rhs.item {
@@ -144,7 +144,7 @@ final class StoryItemContentComponent: Component {
                 return
             }
             
-            if case let .file(file) = currentMessageMedia {
+            if case let .file(file) = currentMessageMedia, let peerReference = PeerReference(component.peer._asPeer()) {
                 if self.videoNode == nil {
                     let videoNode = UniversalVideoNode(
                         postbox: component.context.account.postbox,
@@ -154,7 +154,7 @@ final class StoryItemContentComponent: Component {
                         content: NativeVideoContent(
                             id: .message(0, file.fileId),
                             userLocation: .other,
-                            fileReference: .standalone(media: file),
+                            fileReference: .story(peer: peerReference, id: component.item.id, media: file),
                             imageReference: nil,
                             loopVideo: true,
                             enableSound: true,
@@ -224,7 +224,7 @@ final class StoryItemContentComponent: Component {
                                 if !self.markedAsSeen {
                                     self.markedAsSeen = true
                                     if let component = self.component {
-                                        let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peerId, id: component.item.id).start()
+                                        let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peer.id, id: component.item.id).start()
                                     }
                                 }
                                 
@@ -293,7 +293,7 @@ final class StoryItemContentComponent: Component {
                     if !self.markedAsSeen {
                         self.markedAsSeen = true
                         if let component = self.component {
-                            let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peerId, id: component.item.id).start()
+                            let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peer.id, id: component.item.id).start()
                         }
                     }
                 }
@@ -307,6 +307,8 @@ final class StoryItemContentComponent: Component {
             self.component = component
             self.state = state
             self.environment = environment[StoryContentItem.Environment.self].value
+            
+            let peerReference = PeerReference(component.peer._asPeer())
             
             var messageMedia: EngineMedia?
             switch component.item.media {
@@ -324,7 +326,7 @@ final class StoryItemContentComponent: Component {
                 reloadMedia = true
             }
             
-            if reloadMedia, let messageMedia {
+            if reloadMedia, let messageMedia, let peerReference {
                 var signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 var fetchSignal: Signal<Never, NoError>?
                 switch messageMedia {
@@ -332,7 +334,7 @@ final class StoryItemContentComponent: Component {
                     signal = chatMessagePhoto(
                         postbox: component.context.account.postbox,
                         userLocation: .other,
-                        photoReference: .standalone(media: image),
+                        photoReference: .story(peer: peerReference, id: component.item.id, media: image),
                         synchronousLoad: true,
                         highQuality: true
                     )
@@ -341,7 +343,7 @@ final class StoryItemContentComponent: Component {
                             mediaBox: component.context.account.postbox.mediaBox,
                             userLocation: .other,
                             userContentType: .image,
-                            reference: ImageMediaReference.standalone(media: image).resourceReference(representation.resource)
+                            reference: ImageMediaReference.story(peer: peerReference, id: component.item.id, media: image).resourceReference(representation.resource)
                         )
                         |> ignoreValues
                         |> `catch` { _ -> Signal<Never, NoError> in
@@ -354,14 +356,14 @@ final class StoryItemContentComponent: Component {
                     signal = chatMessageVideo(
                         postbox: component.context.account.postbox,
                         userLocation: .other,
-                        videoReference: .standalone(media: file),
+                        videoReference: .story(peer: peerReference, id: component.item.id, media: file),
                         synchronousLoad: true
                     )
                     fetchSignal = fetchedMediaResource(
                         mediaBox: component.context.account.postbox.mediaBox,
                         userLocation: .other,
                         userContentType: .image,
-                        reference: FileMediaReference.standalone(media: file).resourceReference(file.resource)
+                        reference: FileMediaReference.story(peer: peerReference, id: component.item.id, media: file).resourceReference(file.resource)
                     )
                     |> ignoreValues
                     |> `catch` { _ -> Signal<Never, NoError> in

@@ -73,7 +73,7 @@ public final class StoryFooterPanelComponent: Component {
             let avatarSpacing: CGFloat = 18.0
             
             var peers: [EnginePeer] = []
-            if let seenPeers = component.storyItem?.seenPeers {
+            if let seenPeers = component.storyItem?.views?.seenPeers {
                 peers = Array(seenPeers.prefix(3))
             }
             let avatarsContent = self.avatarsContext.update(peers: peers, animated: false)
@@ -86,11 +86,11 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             let viewsText: String
-            if let storyItem = component.storyItem, storyItem.seenCount != 0 {
-                if storyItem.seenCount == 1 {
+            if let views = component.storyItem?.views, views.seenCount != 0 {
+                if views.seenCount == 1 {
                     viewsText = "1 view"
                 } else {
-                    viewsText = "\(storyItem.seenCount) views"
+                    viewsText = "\(views.seenCount) views"
                 }
             } else {
                 viewsText = "No views yet"

@@ -75,9 +75,10 @@ func _internal_stickerPacksAttachedToMedia(account: Account, media: AnyMediaRefe
     } else {
         return .single([])
     }
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.messages.getAttachedStickers(media: inputMedia))
     |> `catch` { _ -> Signal<[Api.StickerSetCovered], MTRpcError> in
-        return revalidateMediaResourceReference(postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: resourceReference, preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: resourceReference.resource)
+        return revalidateMediaResourceReference(accountPeerId: accountPeerId, postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: resourceReference, preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: resourceReference.resource)
         |> mapError { _ -> MTRpcError in
             return MTRpcError(errorCode: 500, errorDescription: "Internal")
         }

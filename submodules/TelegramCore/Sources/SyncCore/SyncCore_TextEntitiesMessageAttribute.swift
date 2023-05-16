@@ -255,6 +255,17 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
     }
 }
 
+extension MessageTextEntity {
+    var associatedPeerIds: [PeerId] {
+        switch self.type {
+        case let .TextMention(peerId):
+            return [peerId]
+        default:
+            return []
+        }
+    }
+}
+
 public class TextEntitiesMessageAttribute: MessageAttribute, Equatable {
     public let entities: [MessageTextEntity]
     

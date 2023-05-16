@@ -577,7 +577,7 @@ public extension TelegramEngine {
             return StoryListContext(account: self.account, scope: .peer(id))
         }
         
-        public func uploadStory(media: EngineStoryInputMedia, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
+        public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
             return _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, privacy: privacy)
         }
         
@@ -587,6 +587,10 @@ public extension TelegramEngine {
         
         public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int32) -> Signal<Never, NoError> {
             return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id)
+        }
+        
+        public func getStoryViewList(account: Account, id: Int32, offsetTimestamp: Int32?, offsetPeerId: PeerId?, limit: Int) -> Signal<StoryViewList?, NoError> {
+            return _internal_getStoryViewList(account: account, id: id, offsetTimestamp: offsetTimestamp, offsetPeerId: offsetPeerId, limit: limit)
         }
     }
 }

@@ -786,9 +786,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1087454222] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[2008112412] = { return Api.StickerSetCovered.parse_stickerSetNoCovered($0) }
-    dict[-1526488475] = { return Api.StoryItem.parse_storyItem($0) }
+    dict[-1882351956] = { return Api.StoryItem.parse_storyItem($0) }
     dict[1374088783] = { return Api.StoryItem.parse_storyItemDeleted($0) }
-    dict[90474706] = { return Api.StoryView.parse_storyView($0) }
+    dict[-1491424062] = { return Api.StoryView.parse_storyView($0) }
+    dict[1368082392] = { return Api.StoryViews.parse_storyViews($0) }
     dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
@@ -1156,6 +1157,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1214632796] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[1340440049] = { return Api.stories.Stories.parse_stories($0) }
+    dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
     dict[-79726676] = { return Api.stories.StoryViewsList.parse_storyViewsList($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
@@ -1712,6 +1714,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoryView:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.StoryViews:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.TextWithEntities:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Theme:
@@ -2019,6 +2023,8 @@ public extension Api {
             case let _1 as Api.stories.AllStories:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.Stories:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stories.StoryViews:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.StoryViewsList:
                 _1.serialize(buffer, boxed)

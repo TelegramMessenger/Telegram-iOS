@@ -268,10 +268,11 @@ func _internal_saveNotificationSound(account: Account, file: FileMediaReference,
     guard let resource = file.media.resource as? CloudDocumentMediaResource else {
         return .fail(.generic)
     }
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: unsave ? .boolTrue : .boolFalse))
     |> `catch` { error -> Signal<Api.account.SavedRingtone, MTRpcError> in
         if error.errorDescription == "FILE_REFERENCE_EXPIRED" {
-            return revalidateMediaResourceReference(postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: file.abstract.resourceReference(file.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: file.media.resource)
+            return revalidateMediaResourceReference(accountPeerId: accountPeerId, postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: file.abstract.resourceReference(file.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: file.media.resource)
             |> mapError { _ -> MTRpcError in
                 return MTRpcError(errorCode: 500, errorDescription: "Internal")
             }
