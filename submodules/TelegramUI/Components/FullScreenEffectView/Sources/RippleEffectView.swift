@@ -2,6 +2,7 @@ import Foundation
 import Metal
 import MetalKit
 import simd
+import ComponentFlow
 
 public final class RippleEffectView: MTKView {
     private let centerLocation: CGPoint
@@ -154,7 +155,7 @@ public final class RippleEffectView: MTKView {
         let relativeTime: Double
         let timestamp = CACurrentMediaTime()
         if let startTime = self.startTime {
-            relativeTime = timestamp - startTime
+            relativeTime = (timestamp - startTime) * (1.0 / UIView.animationDurationFactor)
         } else {
             self.startTime = timestamp
             relativeTime = 0.0

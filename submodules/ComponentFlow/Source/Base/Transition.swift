@@ -6,7 +6,7 @@ import Display
 @_silgen_name("UIAnimationDragCoefficient") func UIAnimationDragCoefficient() -> Float
 #endif
 
-private extension UIView {
+public extension UIView {
     static var animationDurationFactor: Double {
         #if targetEnvironment(simulator)
         return Double(UIAnimationDragCoefficient())

@@ -115,6 +115,8 @@ private final class StoryContainerScreenComponent: Component {
         private weak var state: EmptyComponentState?
         private var environment: ViewControllerComponentContainer.Environment?
         
+        private let backgroundLayer: SimpleLayer
+        
         private var focusedItemSet: AnyHashable?
         private var itemSets: [StoryContentItemSlice] = []
         private var visibleItemSetViews: [AnyHashable: ItemSetView] = [:]
@@ -122,10 +124,14 @@ private final class StoryContainerScreenComponent: Component {
         private var itemSetPanState: ItemSetPanState?
         private var dismissPanState: ItemSetPanState?
         
+        private var isAnimatingOut: Bool = false
+        private var didAnimateOut: Bool = false
+        
         override init(frame: CGRect) {
-            super.init(frame: frame)
+            self.backgroundLayer = SimpleLayer()
+            self.backgroundLayer.backgroundColor = UIColor.black.cgColor
             
-            self.backgroundColor = .black
+            super.init(frame: frame)
             
             let horizontalPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
                 guard let self, let focusedItemSet = self.focusedItemSet, let itemSetView = self.visibleItemSetViews[focusedItemSet], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
@@ -320,7 +326,7 @@ private final class StoryContainerScreenComponent: Component {
         
         func animateIn() {
             if let transitionIn = self.component?.transitionIn, transitionIn.sourceView != nil {
-                self.layer.animate(from: UIColor.black.withAlphaComponent(0.0).cgColor, to: self.layer.backgroundColor ?? UIColor.black.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.28)
+                self.backgroundLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.28, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                 
                 if let transitionIn = self.component?.transitionIn, let focusedItemSet = self.focusedItemSet, let itemSetView = self.visibleItemSetViews[focusedItemSet] {
                     if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
@@ -336,17 +342,26 @@ private final class StoryContainerScreenComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
+            self.isAnimatingOut = true
+            self.state?.updated(transition: .immediate)
+            
             if let component = self.component, let focusedItemSet = self.focusedItemSet, let peerId = focusedItemSet.base as? EnginePeer.Id, let itemSetView = self.visibleItemSetViews[focusedItemSet], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(peerId) {
-                let currentBackgroundColor = self.layer.presentation()?.backgroundColor ?? self.layer.backgroundColor
-                self.layer.animate(from: currentBackgroundColor ?? UIColor.black.cgColor, to: UIColor.black.withAlphaComponent(0.0).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.25, removeOnCompletion: false)
+                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                transition.setAlpha(layer: self.backgroundLayer, alpha: 0.0)
                 
-                itemSetComponentView.animateOut(transitionOut: transitionOut, completion: completion)
+                let transitionOutCompleted = transitionOut.completed
+                itemSetComponentView.animateOut(transitionOut: transitionOut, completion: {
+                    completion()
+                    transitionOutCompleted()
+                })
             } else {
                 self.layer.allowsGroupOpacity = true
                 self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                     completion()
                 })
             }
+            
+            self.didAnimateOut = true
         }
         
         private func updatePreloads() {
@@ -381,6 +396,10 @@ private final class StoryContainerScreenComponent: Component {
         }
         
         func update(component: StoryContainerScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+            if self.didAnimateOut {
+                return availableSize
+            }
+            
             let isFirstTime = self.component == nil
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
@@ -405,6 +424,9 @@ private final class StoryContainerScreenComponent: Component {
             if self.dismissPanState != nil {
                 isProgressPaused = true
             }
+            if self.isAnimatingOut {
+                isProgressPaused = true
+            }
             
             var dismissPanOffset: CGFloat = 0.0
             var dismissPanScale: CGFloat = 1.0
@@ -415,7 +437,7 @@ private final class StoryContainerScreenComponent: Component {
                 dismissAlphaScale = 1.0 * (1.0 - dismissPanState.fraction) + 0.2 * dismissPanState.fraction
             }
             
-            transition.setBackgroundColor(view: self, color: UIColor.black.withAlphaComponent(max(0.5, dismissAlphaScale)))
+            transition.setAlpha(layer: self.backgroundLayer, alpha: max(0.5, dismissAlphaScale))
             
             var contentDerivedBottomInset: CGFloat = environment.safeInsets.bottom
             
@@ -727,15 +749,18 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         public weak var destinationView: UIView?
         public let destinationRect: CGRect
         public let destinationCornerRadius: CGFloat
+        public let completed: () -> Void
         
         public init(
             destinationView: UIView,
             destinationRect: CGRect,
-            destinationCornerRadius: CGFloat
+            destinationCornerRadius: CGFloat,
+            completed: @escaping () -> Void
         ) {
             self.destinationView = destinationView
             self.destinationRect = destinationRect
             self.destinationCornerRadius = destinationCornerRadius
+            self.completed = completed
         }
     }
     

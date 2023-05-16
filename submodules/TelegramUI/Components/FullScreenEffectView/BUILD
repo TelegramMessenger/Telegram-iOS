@@ -58,6 +58,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/ComponentFlow",
     ],
     data = [
         ":FullScreenEffectViewBundle",

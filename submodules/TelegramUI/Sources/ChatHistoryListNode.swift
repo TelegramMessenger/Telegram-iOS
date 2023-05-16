@@ -636,7 +636,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     var openNextChannelToRead: ((EnginePeer, TelegramEngine.NextUnreadChannelLocation) -> Void)?
     private var contentInsetAnimator: DisplayLinkAnimator?
 
-    private let adMessagesContext: AdMessagesHistoryContext?
+    let adMessagesContext: AdMessagesHistoryContext?
     private var adMessagesDisposable: Disposable?
     private var preloadAdPeerId: PeerId?
     private let preloadAdPeerDisposable = MetaDisposable()

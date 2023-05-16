@@ -4329,6 +4329,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
+            self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
+            
             switch adAttribute.target {
             case let .peer(id, messageId, startParam):
                 if case let .peer(currentPeerId) = self.chatLocation, currentPeerId == id {

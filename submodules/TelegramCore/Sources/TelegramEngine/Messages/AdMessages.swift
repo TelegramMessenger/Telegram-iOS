@@ -579,6 +579,24 @@ private class AdMessagesHistoryContextImpl {
         }
         self.maskAsSeenDisposables.set(signal.start(), forKey: opaqueId)
     }
+    
+    func markAction(opaqueId: Data) {
+        let account = self.account
+        let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
+            return transaction.getPeer(self.peerId).flatMap(apiInputChannel)
+        }
+        |> mapToSignal { inputChannel -> Signal<Never, NoError> in
+            guard let inputChannel = inputChannel else {
+                return .complete()
+            }
+            return account.network.request(Api.functions.channels.clickSponsoredMessage(channel: inputChannel, randomId: Buffer(data: opaqueId)))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+        }
+        let _ = signal.start()
+    }
 }
 
 public class AdMessagesHistoryContext {
@@ -610,6 +628,12 @@ public class AdMessagesHistoryContext {
     public func markAsSeen(opaqueId: Data) {
         self.impl.with { impl in
             impl.markAsSeen(opaqueId: opaqueId)
+        }
+    }
+    
+    public func markAction(opaqueId: Data) {
+        self.impl.with { impl in
+            impl.markAction(opaqueId: opaqueId)
         }
     }
 }
