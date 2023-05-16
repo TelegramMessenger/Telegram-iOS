@@ -502,7 +502,11 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     })
     |> mapToSignal { coordinate -> Signal<PeersNearbyData?, NoError> in
         guard let coordinate = coordinate else {
-            let peersNearbyContext = PeersNearbyContext(network: context.account.network, stateManager: context.account.stateManager, coordinate: nil)
+            #if !DEBUG
+            #error("fix")
+            #endif
+            preconditionFailure()
+            /*let peersNearbyContext = PeersNearbyContext(network: context.account.network, stateManager: context.account.stateManager, coordinate: nil)
             return peersNearbyContext.get()
             |> map { peersNearby -> PeersNearbyData in
                 var isVisible = false
@@ -515,7 +519,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                     }
                 }
                 return PeersNearbyData(latitude: 0.0, longitude: 0.0, address: nil, visible: isVisible, accountPeerId: context.account.peerId, users: [], groups: [], channels: [])
-            }
+            }*/
         }
         
         return Signal { subscriber in

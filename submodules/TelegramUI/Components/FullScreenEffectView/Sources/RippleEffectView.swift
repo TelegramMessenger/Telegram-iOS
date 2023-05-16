@@ -82,6 +82,8 @@ public final class RippleEffectView: MTKView {
         self.framebufferOnly = true
         
         self.isPaused = false
+        
+        self.isUserInteractionEnabled = false
     }
     
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
