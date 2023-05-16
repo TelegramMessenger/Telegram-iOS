@@ -7,8 +7,65 @@ import Metal
 import MetalKit
 import CoreMedia
 import Vision
+import ImageBlur
 
 public class CameraSimplePreviewView: UIView {
+    static func lastStateImage() -> UIImage {
+        let imagePath = NSTemporaryDirectory() + "cameraImage.jpg"
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: imagePath)), let image = UIImage(data: data) {
+            return image
+        } else {
+            return UIImage(bundleImageName: "Camera/Placeholder")!
+        }
+    }
+    
+    static func saveLastState(_ image: UIImage) {
+        let imagePath = NSTemporaryDirectory() + "cameraImage.jpg"
+        if let blurredImage = blurredImage(image, radius: 60.0), let data = blurredImage.jpegData(compressionQuality: 0.85) {
+            try? data.write(to: URL(fileURLWithPath: imagePath))
+        }
+    }
+    
+    private var previewingDisposable: Disposable?
+    private let placeholderView = UIImageView()
+    public override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        self.placeholderView.image = CameraSimplePreviewView.lastStateImage()
+        self.addSubview(self.placeholderView)
+        
+        if #available(iOS 13.0, *) {
+            self.previewingDisposable = (self.isPreviewing
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                UIView.animate(withDuration: 0.3) {
+                    self?.placeholderView.alpha = 0.0
+                }
+            })
+        } else {
+            Queue.mainQueue().after(0.5) {
+                UIView.animate(withDuration: 0.3) {
+                    self.placeholderView.alpha = 0.0
+                }
+            }
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.previewingDisposable?.dispose()
+    }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        self.placeholderView.frame = self.bounds
+    }
+    
     var videoPreviewLayer: AVCaptureVideoPreviewLayer {
         guard let layer = layer as? AVCaptureVideoPreviewLayer else {
             fatalError()

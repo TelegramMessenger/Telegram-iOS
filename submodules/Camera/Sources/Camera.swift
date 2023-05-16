@@ -1,6 +1,8 @@
 import Foundation
+import UIKit
 import SwiftSignalKit
 import AVFoundation
+import CoreImage
 
 private final class CameraContext {
     private let queue: Queue
@@ -38,6 +40,19 @@ private final class CameraContext {
         }
     }
     
+    private var lastSnapshotTimestamp: Double = CACurrentMediaTime()
+    private func savePreviewSnapshot(pixelBuffer: CVPixelBuffer) {
+        Queue.concurrentDefaultQueue().async {
+            let ciContext = CIContext()
+            var ciImage = CIImage(cvImageBuffer: pixelBuffer)
+            ciImage = ciImage.transformed(by: CGAffineTransform(scaleX: 0.33, y: 0.33))
+            if let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) {
+                let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+                CameraSimplePreviewView.saveLastState(uiImage)
+            }
+        }
+    }
+    
     private var videoOrientation: AVCaptureVideoOrientation?
     init(queue: Queue, session: AVCaptureSession, configuration: Camera.Configuration, metrics: Camera.Metrics, previewView: CameraSimplePreviewView?) {
         self.queue = queue
@@ -59,24 +74,30 @@ private final class CameraContext {
             guard let self else {
                 return
             }
-            if let previewView = self.previewView, !self.changingPosition {
-                let videoOrientation = connection.videoOrientation
-                if #available(iOS 13.0, *) {
-                    previewView.mirroring = connection.inputPorts.first?.sourceDevicePosition == .front
-                }
-                if let rotation = CameraPreviewView.Rotation(with: .portrait, videoOrientation: videoOrientation, cameraPosition: self.device.position) {
-                    previewView.rotation = rotation
-                }
-                if #available(iOS 13.0, *), connection.inputPorts.first?.sourceDevicePosition == .front {
-                    let width = CVPixelBufferGetWidth(pixelBuffer)
-                    let height = CVPixelBufferGetHeight(pixelBuffer)
-                    previewView.captureDeviceResolution = CGSize(width: width, height: height)
-                }
-                previewView.pixelBuffer = pixelBuffer
-                Queue.mainQueue().async {
-                    self.videoOrientation = videoOrientation
-                }
+            
+            let timestamp = CACurrentMediaTime()
+            if timestamp > self.lastSnapshotTimestamp + 5.0 {
+                self.savePreviewSnapshot(pixelBuffer: pixelBuffer)
+                self.lastSnapshotTimestamp = timestamp
             }
+//            if let previewView = self.previewView, !self.changingPosition {
+//                let videoOrientation = connection.videoOrientation
+//                if #available(iOS 13.0, *) {
+//                    previewView.mirroring = connection.inputPorts.first?.sourceDevicePosition == .front
+//                }
+//                if let rotation = CameraPreviewView.Rotation(with: .portrait, videoOrientation: videoOrientation, cameraPosition: self.device.position) {
+//                    previewView.rotation = rotation
+//                }
+//                if #available(iOS 13.0, *), connection.inputPorts.first?.sourceDevicePosition == .front {
+//                    let width = CVPixelBufferGetWidth(pixelBuffer)
+//                    let height = CVPixelBufferGetHeight(pixelBuffer)
+//                    previewView.captureDeviceResolution = CGSize(width: width, height: height)
+//                }
+//                previewView.pixelBuffer = pixelBuffer
+//                Queue.mainQueue().async {
+//                    self.videoOrientation = videoOrientation
+//                }
+//            }
         }
         
         self.output.processFaceLandmarks = { [weak self] observations in

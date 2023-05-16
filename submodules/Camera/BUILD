@@ -56,6 +56,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
+        "//submodules/ImageBlur:ImageBlur",
     ],
     visibility = [
         "//visibility:public",

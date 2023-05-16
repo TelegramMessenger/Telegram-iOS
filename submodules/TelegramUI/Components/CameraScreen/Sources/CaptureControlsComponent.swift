@@ -364,6 +364,8 @@ final class CaptureControlsComponent: Component {
         
         private let lockImage = UIImage(bundleImageName: "Camera/LockIcon")
         
+        private let hapticFeedback = HapticFeedback()
+        
         public func matches(tag: Any) -> Bool {
             if let component = self.component, let componentTag = component.tag {
                 let tag = tag as AnyObject
@@ -392,7 +394,6 @@ final class CaptureControlsComponent: Component {
             let location = gestureRecognizer.location(in: self)
             switch gestureRecognizer.state {
             case .began:
-                self.hapticFeedback.impact(.click05)
                 self.component?.shutterPressed()
                 self.component?.swipeHintUpdated(.zoom)
                 self.shutterUpdateOffset.invoke((0.0, .immediate))
@@ -414,8 +415,6 @@ final class CaptureControlsComponent: Component {
                 break
             }
         }
-        
-        private let hapticFeedback = HapticFeedback()
         
         private var didFlip = false
         private var wasBanding: Bool?
@@ -667,6 +666,7 @@ final class CaptureControlsComponent: Component {
                         ),
                         automaticHighlight: false,
                         action: { [weak self] in
+                            self?.hapticFeedback.impact(.light)
                             self?.shutterUpdateOffset.invoke((0.0, .immediate))
                             component.shutterTapped()
                         },

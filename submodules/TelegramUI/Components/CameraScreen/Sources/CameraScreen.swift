@@ -254,10 +254,6 @@ private final class CameraScreenComponent: CombinedComponent {
             let controller = environment.controller
             let availableSize = context.availableSize
 
-            let accountContext = component.context
-            let push = component.push
-            let completion = component.completion
-            
             let topControlInset: CGFloat = 20.0
             
             component.changeMode.connect({ [weak state] mode in
@@ -394,15 +390,10 @@ private final class CameraScreenComponent: CombinedComponent {
                         state.camera.togglePosition()
                     },
                     galleryTapped: {
-                        var dismissGalleryControllerImpl: (() -> Void)?
-                        let controller = accountContext.sharedContext.makeMediaPickerScreen(context: accountContext, completion: { asset in
-                            dismissGalleryControllerImpl?()
-                            completion.invoke(.single(.asset(asset)))
-                        })
-                        dismissGalleryControllerImpl = { [weak controller] in
-                            controller?.dismiss(animated: true)
+                        guard let controller = environment.controller() as? CameraScreen else {
+                            return
                         }
-                        push(controller)
+                        controller.presentGallery()
                     },
                     swipeHintUpdated: { hint in
                         state.updateSwipeHint(hint)
@@ -824,6 +815,10 @@ public class CameraScreen: ViewController {
                                 self.containerLayoutUpdated(layout: layout, transition: .easeInOut(duration: 0.2))
                             }
                         }
+                    } else if translation.y < -10.0 {
+                        self.controller?.presentGallery()
+                        gestureRecognizer.isEnabled = false
+                        gestureRecognizer.isEnabled = true
                     }
                 }
             case .ended:
@@ -872,12 +867,13 @@ public class CameraScreen: ViewController {
             
             if let transitionIn = self.controller?.transitionIn, let sourceView = transitionIn.sourceView {
                 let sourceLocalFrame = sourceView.convert(transitionIn.sourceRect, to: self.view)
-                let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - self.previewContainerView.frame.minX, y: sourceLocalFrame.minY - self.previewContainerView.frame.minY), size: sourceLocalFrame.size)
-                
+
+                let sourceScale = sourceLocalFrame.width / self.previewContainerView.frame.width
                 self.previewContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.previewContainerView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                self.previewContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), to: self.previewContainerView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.previewContainerView.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                self.previewContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width)), to: self.previewContainerView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 self.previewContainerView.layer.animate(
-                    from: transitionIn.sourceCornerRadius as NSNumber,
+                    from: self.previewContainerView.bounds.width / 2.0 as NSNumber,
                     to: self.previewContainerView.layer.cornerRadius as NSNumber,
                     keyPath: "cornerRadius",
                     timingFunction: kCAMediaTimingFunctionSpring,
@@ -886,7 +882,7 @@ public class CameraScreen: ViewController {
                 
                 if let view = self.componentHost.view {
                     view.layer.animatePosition(from: sourceLocalFrame.center, to: view.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    view.layer.animateBounds(from: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), to: view.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 }
             }
         }
@@ -902,16 +898,17 @@ public class CameraScreen: ViewController {
             })
             
             if let transitionOut = self.controller?.transitionOut(false), let destinationView = transitionOut.destinationView {
-                let sourceLocalFrame = destinationView.convert(transitionOut.destinationRect, to: self.view)
-                let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - self.previewContainerView.frame.minX, y: sourceLocalFrame.minY - self.previewContainerView.frame.minY), size: sourceLocalFrame.size)
+                let destinationLocalFrame = destinationView.convert(transitionOut.destinationRect, to: self.view)
                 
-                self.previewContainerView.layer.animatePosition(from: self.previewContainerView.center, to: sourceLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                let targetScale = destinationLocalFrame.width / self.previewContainerView.frame.width
+                self.previewContainerView.layer.animatePosition(from: self.previewContainerView.center, to: destinationLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                     completion()
                 })
-                self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                self.previewContainerView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.previewContainerView.layer.animate(
                     from: self.previewContainerView.layer.cornerRadius as NSNumber,
-                    to: transitionOut.destinationCornerRadius as NSNumber,
+                    to: self.previewContainerView.bounds.width / 2.0 as NSNumber,
                     keyPath: "cornerRadius",
                     timingFunction: kCAMediaTimingFunctionSpring,
                     duration: 0.3,
@@ -919,8 +916,8 @@ public class CameraScreen: ViewController {
                 )
                 
                 if let view = self.componentHost.view {
-                    view.layer.animatePosition(from: view.center, to: sourceLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    view.layer.animateBounds(from: view.bounds, to: CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    view.layer.animatePosition(from: view.center, to: destinationLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    view.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 }
             }
             
@@ -1075,10 +1072,6 @@ public class CameraScreen: ViewController {
                     let componentFrame = CGRect(origin: .zero, size: componentSize)
                     transition.setFrame(view: componentView, frame: componentFrame)
                 }
-                
-                if isFirstTime {
-                    self.animateIn()
-                }
             }
             
             transition.setFrame(view: self.backgroundDimView, frame: CGRect(origin: .zero, size: layout.size))
@@ -1089,6 +1082,10 @@ public class CameraScreen: ViewController {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)
                 transition.setFrame(view: self.effectivePreviewView, frame: CGRect(origin: .zero, size: previewFrame.size))
                 transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewFrame.size))
+            }
+            
+            if isFirstTime {
+                self.animateIn()
             }
         }
     }
@@ -1139,6 +1136,20 @@ public class CameraScreen: ViewController {
     
     public func returnFromEditor() {
         self.node.animateInFromEditor()
+    }
+    
+    func presentGallery() {
+        var dismissGalleryControllerImpl: (() -> Void)?
+        let controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] asset in
+            dismissGalleryControllerImpl?()
+            if let self {
+                self.completion(.single(.asset(asset)))
+            }
+        })
+        dismissGalleryControllerImpl = { [weak controller] in
+            controller?.dismiss(animated: true)
+        }
+        push(controller)
     }
 
     private var isDismissed = false

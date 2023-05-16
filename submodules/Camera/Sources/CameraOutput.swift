@@ -225,6 +225,10 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
             }
         }
         
+        if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+            self.processSampleBuffer?(videoPixelBuffer, connection)
+        }
+        
 //        let finalSampleBuffer: CMSampleBuffer = sampleBuffer
 //        if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) {
 //            var finalVideoPixelBuffer = videoPixelBuffer
