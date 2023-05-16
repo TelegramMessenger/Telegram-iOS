@@ -2533,6 +2533,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
+    public func transitionViewForOwnStoryItem() -> UIView? {
+        if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                return transitionView
+            }
+        }
+        return nil
+    }
+    
     public func animateStoryUploadRipple() {
         if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
             if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {

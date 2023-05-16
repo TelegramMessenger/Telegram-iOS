@@ -602,6 +602,9 @@ public extension MediaEditorValues {
     }
     
     var requiresComposing: Bool {
+        if self.originalDimensions.width > self.originalDimensions.height {
+            return true
+        }
         if abs(1.0 - self.cropScale) > 0.0 {
             return true
         }

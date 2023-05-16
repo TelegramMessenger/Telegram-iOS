@@ -519,21 +519,7 @@ public final class MediaEditorVideoExport {
                         return false
                     }
                 }
-//                let progress = (CMSampleBufferGetPresentationTimeStamp(buffer) - self.configuration.timeRange.start).seconds/self.duration.seconds
-//                if self.videoOutput === output {
-//                    self.dispatchProgressCallback { $0.updateVideoEncodingProgress(fractionCompleted: progress) }
-//                }
-//                if self.audioOutput === output {
-//                    self.dispatchProgressCallback { $0.updateAudioEncodingProgress(fractionCompleted: progress) }
-//                }
- 
             } else {
-//                if self.videoOutput === output {
-//                    self.dispatchProgressCallback { $0.updateVideoEncodingProgress(fractionCompleted: 1) }
-//                }
-//                if self.audioOutput === output {
-//                    self.dispatchProgressCallback { $0.updateAudioEncodingProgress(fractionCompleted: 1) }
-//                }
                 writer.markVideoAsFinished()
                 return false
             }
@@ -553,24 +539,11 @@ public final class MediaEditorVideoExport {
             }
             self.pauseDispatchGroup.wait()
             if let buffer = output.copyNextSampleBuffer() {
-//                let progress = (CMSampleBufferGetPresentationTimeStamp(buffer) - self.configuration.timeRange.start).seconds/self.duration.seconds
-//                if self.videoOutput === output {
-//                    self.dispatchProgressCallback { $0.updateVideoEncodingProgress(fractionCompleted: progress) }
-//                }
-//                if self.audioOutput === output {
-//                    self.dispatchProgressCallback { $0.updateAudioEncodingProgress(fractionCompleted: progress) }
-//                }
-                if !writer.appendVideoBuffer(buffer) {
+                if !writer.appendAudioBuffer(buffer) {
                     writer.markAudioAsFinished()
                     return false
                 }
             } else {
-//                if self.videoOutput === output {
-//                    self.dispatchProgressCallback { $0.updateVideoEncodingProgress(fractionCompleted: 1) }
-//                }
-//                if self.audioOutput === output {
-//                    self.dispatchProgressCallback { $0.updateAudioEncodingProgress(fractionCompleted: 1) }
-//                }
                 writer.markAudioAsFinished()
                 return false
             }

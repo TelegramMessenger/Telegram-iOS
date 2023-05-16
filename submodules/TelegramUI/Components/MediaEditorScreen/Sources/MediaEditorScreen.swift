@@ -385,11 +385,20 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.done),
                         size: CGSize(width: 33.0, height: 33.0)
                     )),
-                    action: {
-                        guard let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak self] in
+                        guard let self, let controller = environment.controller() as? MediaEditorScreen else {
                             return
                         }
-                        controller.requestCompletion(animated: true)
+                        guard let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View else {
+                            return
+                        }
+                        var inputText = NSAttributedString(string: "")
+                        switch inputPanelView.getSendMessageInput() {
+                        case let .text(text):
+                            inputText = NSAttributedString(string: text)
+                        }
+                        
+                        controller.requestCompletion(caption: inputText, animated: true)
                     }
                 )),
                 environment: {},
@@ -687,6 +696,38 @@ final class MediaEditorScreenComponent: Component {
 private let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
 
 public final class MediaEditorScreen: ViewController {
+    public final class TransitionIn {
+        public weak var sourceView: UIView?
+        public let sourceRect: CGRect
+        public let sourceCornerRadius: CGFloat
+        
+        public init(
+            sourceView: UIView,
+            sourceRect: CGRect,
+            sourceCornerRadius: CGFloat
+        ) {
+            self.sourceView = sourceView
+            self.sourceRect = sourceRect
+            self.sourceCornerRadius = sourceCornerRadius
+        }
+    }
+    
+    public final class TransitionOut {
+        public weak var destinationView: UIView?
+        public let destinationRect: CGRect
+        public let destinationCornerRadius: CGFloat
+        
+        public init(
+            destinationView: UIView,
+            destinationRect: CGRect,
+            destinationCornerRadius: CGFloat
+        ) {
+            self.destinationView = destinationView
+            self.destinationRect = destinationRect
+            self.destinationCornerRadius = destinationCornerRadius
+        }
+    }
+    
     fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: MediaEditorScreen?
         private let context: AccountContext
@@ -935,11 +976,44 @@ public final class MediaEditorScreen: ViewController {
             }
         }
         
-        func animateOut(completion: @escaping () -> Void) {
+        func animateOut(finished: Bool, completion: @escaping () -> Void) {
             guard let controller = self.controller else {
                 return
             }
-            if let sourceHint = controller.sourceHint {
+            if let transitionOut = controller.transitionOut(finished), let destinationView = transitionOut.destinationView {
+                let destinationLocalFrame = destinationView.convert(transitionOut.destinationRect, to: self.view)
+                
+                let targetScale = destinationLocalFrame.width / self.previewContainerView.frame.width
+                self.previewContainerView.layer.animatePosition(from: self.previewContainerView.center, to: destinationLocalFrame.center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                    completion()
+                })
+                self.previewContainerView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.frame.height - self.previewContainerView.frame.width) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                self.previewContainerView.layer.animate(
+                    from: self.previewContainerView.layer.cornerRadius as NSNumber,
+                    to: self.previewContainerView.bounds.width / 2.0 as NSNumber,
+                    keyPath: "cornerRadius",
+                    timingFunction: kCAMediaTimingFunctionSpring,
+                    duration: 0.4,
+                    removeOnCompletion: false
+                )
+                
+                if let componentView = self.componentHost.view {
+                    componentView.clipsToBounds = true
+                    componentView.layer.animatePosition(from: componentView.center, to: destinationLocalFrame.center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    componentView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    componentView.layer.animateBounds(from: componentView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (componentView.frame.height - componentView.frame.width) / 2.0), size: CGSize(width: componentView.bounds.width, height: componentView.bounds.width)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    componentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    componentView.layer.animate(
+                        from: componentView.layer.cornerRadius as NSNumber,
+                        to: componentView.bounds.width / 2.0 as NSNumber,
+                        keyPath: "cornerRadius",
+                        timingFunction: kCAMediaTimingFunctionSpring,
+                        duration: 0.4,
+                        removeOnCompletion: false
+                    )
+                }
+            } else if let sourceHint = controller.sourceHint {
                 switch sourceHint {
                 case .camera:
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
@@ -1175,6 +1249,8 @@ public final class MediaEditorScreen: ViewController {
     
     fileprivate let context: AccountContext
     fileprivate let subject: Signal<Subject?, NoError>
+    fileprivate let transitionIn: TransitionIn?
+    fileprivate let transitionOut: (Bool) -> TransitionOut?
     
     public enum SourceHint {
         case camera
@@ -1184,9 +1260,17 @@ public final class MediaEditorScreen: ViewController {
     public var cancelled: () -> Void = {}
     public var completion: (MediaEditorScreen.Result, @escaping () -> Void) -> Void = { _, _ in }
     
-    public init(context: AccountContext, subject: Signal<Subject?, NoError>, completion: @escaping (MediaEditorScreen.Result, @escaping () -> Void) -> Void) {
+    public init(
+        context: AccountContext,
+        subject: Signal<Subject?, NoError>,
+        transitionIn: TransitionIn?,
+        transitionOut: @escaping (Bool) -> TransitionOut?,
+        completion: @escaping (MediaEditorScreen.Result, @escaping () -> Void) -> Void
+    ) {
         self.context = context
         self.subject = subject
+        self.transitionIn = transitionIn
+        self.transitionOut = transitionOut
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
@@ -1210,12 +1294,12 @@ public final class MediaEditorScreen: ViewController {
     func requestDismiss(animated: Bool) {
         self.cancelled()
         
-        self.node.animateOut(completion: { [weak self] in
+        self.node.animateOut(finished: false, completion: { [weak self] in
             self?.dismiss()
         })
     }
     
-    func requestCompletion(animated: Bool) {
+    func requestCompletion(caption: NSAttributedString,  animated: Bool) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
             return
         }
@@ -1250,8 +1334,8 @@ public final class MediaEditorScreen: ViewController {
                     duration = 5.0
                 }
             }
-            self.completion(.video(video: videoResult, coverImage: nil, values: mediaEditor.values, duration: duration, dimensions: PixelDimensions(width: 1080, height: 1920), caption: nil), { [weak self] in
-                self?.node.animateOut(completion: { [weak self] in
+            self.completion(.video(video: videoResult, coverImage: nil, values: mediaEditor.values, duration: duration, dimensions: PixelDimensions(width: 1080, height: 1920), caption: caption), { [weak self] in
+                self?.node.animateOut(finished: true, completion: { [weak self] in
                     self?.dismiss()
                 })
             })
@@ -1259,8 +1343,8 @@ public final class MediaEditorScreen: ViewController {
             if let image = mediaEditor.resultImage {
                 makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
                     if let resultImage {
-                        self.completion(.image(image: resultImage, dimensions: PixelDimensions(resultImage.size), caption: nil), { [weak self] in
-                            self?.node.animateOut(completion: { [weak self] in
+                        self.completion(.image(image: resultImage, dimensions: PixelDimensions(resultImage.size), caption: caption), { [weak self] in
+                            self?.node.animateOut(finished: true, completion: { [weak self] in
                                 self?.dismiss()
                             })
                         })

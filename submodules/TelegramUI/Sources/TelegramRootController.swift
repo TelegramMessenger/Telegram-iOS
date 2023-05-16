@@ -210,7 +210,13 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 return nil
                             }
                             if finished {
-                                
+                                if let chatListController = self.chatListController as? ChatListControllerImpl, let transitionView = chatListController.transitionViewForOwnStoryItem() {
+                                    return StoryCameraTransitionOut(
+                                        destinationView: transitionView,
+                                        destinationRect: transitionView.bounds,
+                                        destinationCornerRadius: transitionView.bounds.height / 2.0
+                                    )
+                                }
                             } else {
                                 if let cameraItemView = self.rootTabController?.viewForCameraItem() {
                                     return StoryCameraTransitionOut(
@@ -221,18 +227,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 }
                             }
                             return nil
-//                            if finished {
-//                                return nil
-//                            } else {
-//                                if let self, let cameraItemView = self.rootTabController?.viewForCameraItem() {
-//                                    return StoryCameraTransitionOut(
-//                                        destinationView: cameraItemView,
-//                                        destinationRect: cameraItemView.bounds,
-//                                        destinationCornerRadius: cameraItemView.bound.height / 2.0
-//                                    )
-//                                }
-//                            }
-//                            return nil
                         }
                     )
                 }
@@ -344,114 +338,68 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     return .asset(asset)
                 }
             }
-            let controller = MediaEditorScreen(context: context, subject: subject, completion: { mediaResult, commit in
-                enum AdditionalCategoryId: Int {
-                    case everyone
-                    case contacts
-                    case closeFriends
-                }
-                
-                let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                
-                let additionalCategories: [ChatListNodeAdditionalCategory] = [
-                    ChatListNodeAdditionalCategory(
-                        id: AdditionalCategoryId.everyone.rawValue,
-                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), cornerRadius: nil, color: .blue),
-                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
-                        title: "Everyone",
-                        appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-                    ),
-                    ChatListNodeAdditionalCategory(
-                        id: AdditionalCategoryId.contacts.rawValue,
-                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 1.0 * 0.8, cornerRadius: nil, color: .yellow),
-                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 0.6 * 0.8, cornerRadius: 6.0, circleCorners: true, color: .yellow),
-                        title: presentationData.strings.ChatListFolder_CategoryContacts,
-                        appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-                    ),
-                    ChatListNodeAdditionalCategory(
-                        id: AdditionalCategoryId.closeFriends.rawValue,
-                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 1.0 * 0.6, cornerRadius: nil, color: .green),
-                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 0.6 * 0.6, cornerRadius: 6.0, circleCorners: true, color: .green),
-                        title: "Close Friends",
-                        appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
+            let controller = MediaEditorScreen(context: context, subject: subject, transitionIn: nil, transitionOut: { finished in
+                if finished, let transitionOut = transitionOut(true), let destinationView = transitionOut.destinationView {
+                    return MediaEditorScreen.TransitionOut(
+                        destinationView: destinationView,
+                        destinationRect: transitionOut.destinationRect,
+                        destinationCornerRadius: transitionOut.destinationCornerRadius
                     )
-                ]
-                
-                let selectionController = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                    title: "Share Story",
-                    searchPlaceholder: "Search contacts",
-                    selectedChats: Set(),
-                    additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: Set([AdditionalCategoryId.everyone.rawValue])),
-                    chatListFilters: nil,
-                    displayPresence: true
-                )), options: [], filters: [.excludeSelf], alwaysEnabled: true, limit: 1000, reachedLimit: { _ in
-                }))
-                selectionController.navigationPresentation = .modal
-                self.pushViewController(selectionController)
-                
-                let _ = (selectionController.result
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak selectionController] result in
-                    guard case let .result(peerIds, additionalCategoryIds) = result else {
-                        selectionController?.dismiss()
-                        return
-                    }
-                    
-                    var privacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
-                    if additionalCategoryIds.contains(AdditionalCategoryId.everyone.rawValue) {
-                        privacy.base = .everyone
-                    } else if additionalCategoryIds.contains(AdditionalCategoryId.contacts.rawValue) {
-                        privacy.base = .contacts
-                    } else if additionalCategoryIds.contains(AdditionalCategoryId.closeFriends.rawValue) {
-                        privacy.base = .closeFriends
-                    }
-                    privacy.additionallyIncludePeers = peerIds.compactMap { id -> EnginePeer.Id? in
-                        switch id {
-                        case let .peer(peerId):
-                            return peerId
-                        default:
-                            return nil
+                } else {
+                    return nil
+                }
+            }, completion: { mediaResult, commit in
+                let privacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
+//                    if additionalCategoryIds.contains(AdditionalCategoryId.everyone.rawValue) {
+//                        privacy.base = .everyone
+//                    } else if additionalCategoryIds.contains(AdditionalCategoryId.contacts.rawValue) {
+//                        privacy.base = .contacts
+//                    } else if additionalCategoryIds.contains(AdditionalCategoryId.closeFriends.rawValue) {
+//                        privacy.base = .closeFriends
+//                    }
+//                    privacy.additionallyIncludePeers = peerIds.compactMap { id -> EnginePeer.Id? in
+//                        switch id {
+//                        case let .peer(peerId):
+//                            return peerId
+//                        default:
+//                            return nil
+//                        }
+//                    }
+                                    
+                if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                    switch mediaResult {
+                    case let .image(image, dimensions, caption):
+                        if let data = image.jpegData(compressionQuality: 0.8) {
+                            storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: caption?.string ?? "", entities: [], privacy: privacy)
+                            Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                chatListController?.animateStoryUploadRipple()
+                            })
                         }
-                    }
-                    
-                    selectionController?.displayProgress = true
-                    
-                    if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                        switch mediaResult {
-                        case let .image(image, dimensions, _):
-                            if let data = image.jpegData(compressionQuality: 0.8) {
-                                storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: "", entities: [], privacy: privacy)
-                                Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                    chatListController?.animateStoryUploadRipple()
-                                })
-                            }
-                        case let .video(content, _, values, duration, dimensions, _):
-                            let adjustments: VideoMediaResourceAdjustments
-                            if let valuesData = try? JSONEncoder().encode(values) {
-                                let data = MemoryBuffer(data: valuesData)
-                                let digest = MemoryBuffer(data: data.md5Digest())
-                                adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
+                    case let .video(content, _, values, duration, dimensions, caption):
+                        let adjustments: VideoMediaResourceAdjustments
+                        if let valuesData = try? JSONEncoder().encode(values) {
+                            let data = MemoryBuffer(data: valuesData)
+                            let digest = MemoryBuffer(data: data.md5Digest())
+                            adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
 
-                                let resource: TelegramMediaResource
-                                switch content {
-                                case let .imageFile(path):
-                                    resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-                                case let .videoFile(path):
-                                    resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-                                case let .asset(localIdentifier):
-                                    resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
-                                }
-                                storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: "", entities: [], privacy: privacy)
-                                Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                    chatListController?.animateStoryUploadRipple()
-                                })
+                            let resource: TelegramMediaResource
+                            switch content {
+                            case let .imageFile(path):
+                                resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                            case let .videoFile(path):
+                                resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                            case let .asset(localIdentifier):
+                                resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                             }
+                            storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: privacy)
+                            Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                chatListController?.animateStoryUploadRipple()
+                            })
                         }
                     }
-                    dismissCameraImpl?()
-                    commit()
-                    selectionController?.dismiss()
-                })
+                }
+                dismissCameraImpl?()
+                commit()
             })
             controller.sourceHint = .camera
             controller.cancelled = {
