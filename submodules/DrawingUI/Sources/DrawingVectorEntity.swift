@@ -2,129 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AccountContext
-
-public final class DrawingVectorEntity: DrawingEntity, Codable {
-    private enum CodingKeys: String, CodingKey {
-        case uuid
-        case type
-        case color
-        case lineWidth
-        case drawingSize
-        case referenceDrawingSize
-        case start
-        case mid
-        case end
-        case renderImage
-    }
-    
-    public enum VectorType: Codable {
-        case line
-        case oneSidedArrow
-        case twoSidedArrow
-    }
-    
-    public let uuid: UUID
-    public let isAnimated: Bool
-    
-    var type: VectorType
-    public var color: DrawingColor
-    public var lineWidth: CGFloat
-    
-    public var drawingSize: CGSize
-    var referenceDrawingSize: CGSize
-    var start: CGPoint
-    var mid: (CGFloat, CGFloat)
-    var end: CGPoint
-    
-    var _cachedMidPoint: (start: CGPoint, end: CGPoint, midLength: CGFloat, midHeight: CGFloat, midPoint: CGPoint)?
-    var midPoint: CGPoint {
-        if let (start, end, midLength, midHeight, midPoint) = self._cachedMidPoint, start == self.start, end == self.end, midLength == self.mid.0, midHeight == self.mid.1 {
-            return midPoint
-        } else {
-            let midPoint = midPointPositionFor(start: self.start, end: self.end, length: self.mid.0, height: self.mid.1)
-            self._cachedMidPoint = (self.start, self.end, self.mid.0, self.mid.1, midPoint)
-            return midPoint
-        }
-    }
-    
-    public var center: CGPoint {
-        return self.start
-    }
-    
-    public var scale: CGFloat = 1.0
-    
-    public var renderImage: UIImage?
-    
-    init(type: VectorType, color: DrawingColor, lineWidth: CGFloat) {
-        self.uuid = UUID()
-        self.isAnimated = false
-        
-        self.type = type
-        self.color = color
-        self.lineWidth = lineWidth
-        
-        self.drawingSize = .zero
-        self.referenceDrawingSize = .zero
-        self.start = CGPoint()
-        self.mid = (0.5, 0.0)
-        self.end = CGPoint()
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        self.isAnimated = false
-        self.type = try container.decode(VectorType.self, forKey: .type)
-        self.color = try container.decode(DrawingColor.self, forKey: .color)
-        self.lineWidth = try container.decode(CGFloat.self, forKey: .lineWidth)
-        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
-        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
-        self.start = try container.decode(CGPoint.self, forKey: .start)
-        let mid = try container.decode(CGPoint.self, forKey: .mid)
-        self.mid = (mid.x, mid.y)
-        self.end = try container.decode(CGPoint.self, forKey: .end)
-        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
-            self.renderImage = UIImage(data: renderImageData)
-        }
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.uuid, forKey: .uuid)
-        try container.encode(self.type, forKey: .type)
-        try container.encode(self.color, forKey: .color)
-        try container.encode(self.lineWidth, forKey: .lineWidth)
-        try container.encode(self.drawingSize, forKey: .drawingSize)
-        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
-        try container.encode(self.start, forKey: .start)
-        try container.encode(CGPoint(x: self.mid.0, y: self.mid.1), forKey: .mid)
-        try container.encode(self.end, forKey: .end)
-        if let renderImage, let data = renderImage.pngData() {
-            try container.encode(data, forKey: .renderImage)
-        }
-    }
-    
-    public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingVectorEntity(type: self.type, color: self.color, lineWidth: self.lineWidth)
-        newEntity.drawingSize = self.drawingSize
-        newEntity.referenceDrawingSize = self.referenceDrawingSize
-        newEntity.start = self.start
-        newEntity.mid = self.mid
-        newEntity.end = self.end
-        return newEntity
-    }
-    
-    public weak var currentEntityView: DrawingEntityView?
-    public func makeView(context: AccountContext) -> DrawingEntityView {
-        let entityView = DrawingVectorEntityView(context: context, entity: self)
-        self.currentEntityView = entityView
-        return entityView
-    }
-    
-    public func prepareForRender() {
-        self.renderImage = (self.currentEntityView as? DrawingVectorEntityView)?.getRenderImage()
-    }
-}
+import MediaEditor
 
 final class DrawingVectorEntityView: DrawingEntityView {
     private var vectorEntity: DrawingVectorEntity {
@@ -162,7 +40,7 @@ final class DrawingVectorEntityView: DrawingEntityView {
         self.shapeLayer.path = CGPath.curve(
             start: self.vectorEntity.start,
             end: self.vectorEntity.end,
-            mid: self.vectorEntity.midPoint,
+            mid: self.midPoint,
             lineWidth: lineWidth,
             arrowSize: self.vectorEntity.type == .line ? nil : CGSize(width: lineWidth * 1.5, height: lineWidth * 3.0),
             twoSided: self.vectorEntity.type == .twoSidedArrow
@@ -194,7 +72,7 @@ final class DrawingVectorEntityView: DrawingEntityView {
                 let expandedPath = CGPath.curve(
                     start: self.vectorEntity.start,
                     end: self.vectorEntity.end,
-                    mid: self.vectorEntity.midPoint,
+                    mid: self.midPoint,
                     lineWidth: self.maxLineWidth * 0.8,
                     arrowSize: nil,
                     twoSided: false
@@ -206,7 +84,7 @@ final class DrawingVectorEntityView: DrawingEntityView {
         }
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }
@@ -222,6 +100,18 @@ final class DrawingVectorEntityView: DrawingEntityView {
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return image
+    }
+    
+    var _cachedMidPoint: (start: CGPoint, end: CGPoint, midLength: CGFloat, midHeight: CGFloat, midPoint: CGPoint)?
+    var midPoint: CGPoint {
+        let entity = self.vectorEntity
+        if let (start, end, midLength, midHeight, midPoint) = self._cachedMidPoint, start == entity.start, end == entity.end, midLength == entity.mid.0, midHeight == entity.mid.1 {
+            return midPoint
+        } else {
+            let midPoint = midPointPositionFor(start: entity.start, end: entity.end, length: entity.mid.0, height: entity.mid.1)
+            self._cachedMidPoint = (entity.start, entity.end, entity.mid.0, entity.mid.1, midPoint)
+            return midPoint
+        }
     }
 }
 
@@ -291,7 +181,7 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
 
     private var currentHandle: CALayer?
     @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingVectorEntity else {
+        guard let entityView = self.entityView as? DrawingVectorEntityView, let entity = entityView.entity as? DrawingVectorEntity else {
             return
         }
         let location = gestureRecognizer.location(in: self)
@@ -321,7 +211,7 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
                 updatedEnd.x += delta.x
                 updatedEnd.y += delta.y
             } else if self.currentHandle === self.midHandle {
-                var updatedMidPoint = entity.midPoint
+                var updatedMidPoint = entityView.midPoint
                 updatedMidPoint.x += delta.x
                 updatedMidPoint.y += delta.y
                 
@@ -352,7 +242,7 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
             entity.start = updatedStart
             entity.mid = updatedMid
             entity.end = updatedEnd
-            entityView.update()
+            entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
         case .ended:
@@ -387,7 +277,7 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
         self.startHandle.lineWidth = lineWidth
         
         self.midHandle.path = handlePath
-        self.midHandle.position = entity.midPoint
+        self.midHandle.position = entityView.midPoint
         self.midHandle.bounds = bounds
         self.midHandle.lineWidth = lineWidth
         

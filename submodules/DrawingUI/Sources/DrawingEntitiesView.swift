@@ -3,64 +3,7 @@ import UIKit
 import Display
 import LegacyComponents
 import AccountContext
-
-
-public protocol DrawingEntity: AnyObject {
-    var uuid: UUID { get }
-    var isAnimated: Bool { get }
-    var center: CGPoint { get }
-    
-    var lineWidth: CGFloat { get set }
-    var color: DrawingColor { get set }
-    
-    var scale: CGFloat { get set }
-    
-    func duplicate() -> DrawingEntity
-        
-    var currentEntityView: DrawingEntityView? { get }
-    func makeView(context: AccountContext) -> DrawingEntityView
-    
-    func prepareForRender()
-}
-
-enum CodableDrawingEntity {
-    case sticker(DrawingStickerEntity)
-    case text(DrawingTextEntity)
-    case simpleShape(DrawingSimpleShapeEntity)
-    case bubble(DrawingBubbleEntity)
-    case vector(DrawingVectorEntity)
-    
-    init?(entity: DrawingEntity) {
-        if let entity = entity as? DrawingStickerEntity {
-            self = .sticker(entity)
-        } else if let entity = entity as? DrawingTextEntity {
-            self = .text(entity)
-        } else if let entity = entity as? DrawingSimpleShapeEntity {
-            self = .simpleShape(entity)
-        } else if let entity = entity as? DrawingBubbleEntity {
-            self = .bubble(entity)
-        } else if let entity = entity as? DrawingVectorEntity {
-            self = .vector(entity)
-        } else {
-            return nil
-        }
-    }
-    
-    var entity: DrawingEntity {
-        switch self {
-        case let .sticker(entity):
-            return entity
-        case let .text(entity):
-            return entity
-        case let .simpleShape(entity):
-            return entity
-        case let .bubble(entity):
-            return entity
-        case let .vector(entity):
-            return entity
-        }
-    }
-}
+import MediaEditor
 
 public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
     if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
@@ -69,56 +12,37 @@ public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
     return []
 }
 
-extension CodableDrawingEntity: Codable {
-    private enum CodingKeys: String, CodingKey {
-        case type
-        case entity
+private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> DrawingEntityView? {
+    if let entity = entity as? DrawingBubbleEntity {
+        return DrawingBubbleEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingSimpleShapeEntity {
+        return DrawingSimpleShapeEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingStickerEntity {
+        return DrawingStickerEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingTextEntity {
+        return DrawingTextEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingVectorEntity {
+        return DrawingVectorEntityView(context: context, entity: entity)
+    } else if let entity = entity as? DrawingMediaEntity {
+        return DrawingMediaEntityView(context: context, entity: entity)
+    } else {
+        return nil
     }
+}
 
-    private enum EntityType: Int, Codable {
-        case sticker
-        case text
-        case simpleShape
-        case bubble
-        case vector
+private func prepareForRendering(entityView: DrawingEntityView) {
+    if let entityView = entityView as? DrawingBubbleEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
     }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let type = try container.decode(EntityType.self, forKey: .type)
-        switch type {
-        case .sticker:
-            self = .sticker(try container.decode(DrawingStickerEntity.self, forKey: .entity))
-        case .text:
-            self = .text(try container.decode(DrawingTextEntity.self, forKey: .entity))
-        case .simpleShape:
-            self = .simpleShape(try container.decode(DrawingSimpleShapeEntity.self, forKey: .entity))
-        case .bubble:
-            self = .bubble(try container.decode(DrawingBubbleEntity.self, forKey: .entity))
-        case .vector:
-            self = .vector(try container.decode(DrawingVectorEntity.self, forKey: .entity))
-        }
+    if let entityView = entityView as? DrawingSimpleShapeEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
     }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
-        case let .sticker(payload):
-            try container.encode(EntityType.sticker, forKey: .type)
-            try container.encode(payload, forKey: .entity)
-        case let .text(payload):
-            try container.encode(EntityType.text, forKey: .type)
-            try container.encode(payload, forKey: .entity)
-        case let .simpleShape(payload):
-            try container.encode(EntityType.simpleShape, forKey: .type)
-            try container.encode(payload, forKey: .entity)
-        case let .bubble(payload):
-            try container.encode(EntityType.bubble, forKey: .type)
-            try container.encode(payload, forKey: .entity)
-        case let .vector(payload):
-            try container.encode(EntityType.vector, forKey: .type)
-            try container.encode(payload, forKey: .entity)
-        }
+    if let entityView = entityView as? DrawingTextEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
+        entityView.entity.renderSubEntities = entityView.getRenderSubEntities()
+    }
+    if let entityView = entityView as? DrawingVectorEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
     }
 }
 
@@ -225,13 +149,17 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
-    public static func encodeEntities(_ entities: [DrawingEntity]) -> Data? {
+    public static func encodeEntities(_ entities: [DrawingEntity], entitiesView: DrawingEntitiesView? = nil) -> Data? {
         let entities = entities
         guard !entities.isEmpty else {
             return nil
         }
-        for entity in entities {
-            entity.prepareForRender()
+        if let entitiesView {
+            for entity in entities {
+                if let entityView = entitiesView.getView(for: entity.uuid) {
+                    prepareForRendering(entityView: entityView)
+                }
+            }
         }
         let codableEntities = entities.compactMap({ CodableDrawingEntity(entity: $0) })
         if let data = try? JSONEncoder().encode(codableEntities) {
@@ -242,7 +170,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     var entitiesData: Data? {
-        return DrawingEntitiesView.encodeEntities(self.entities)
+        return DrawingEntitiesView.encodeEntities(self.entities, entitiesView: self)
     }
     
     var hasChanges: Bool {
@@ -250,7 +178,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             let entitiesData = self.entitiesData
             return entitiesData != initialEntitiesData
         } else {
-            return !self.entities.isEmpty
+            let filteredEntities = self.entities.filter { !$0.isMedia }
+            return !filteredEntities.isEmpty
         }
     }
     
@@ -266,6 +195,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             while true {
                 var occupied = false
                 for case let view as DrawingEntityView in self.subviews {
+                    if view.entity.isMedia {
+                        continue
+                    }
                     let location = view.entity.center
                     let distance = sqrt(pow(location.x - position.x, 2) + pow(location.y - position.y, 2))
                     if distance < minimalDistance {
@@ -344,8 +276,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     @discardableResult
-    func add(_ entity: DrawingEntity, announce: Bool = true) -> DrawingEntityView {
-        let view = entity.makeView(context: self.context)
+    public func add(_ entity: DrawingEntity, announce: Bool = true) -> DrawingEntityView {
+        guard let view = makeEntityView(context: self.context, entity: entity) else {
+            fatalError()
+        }
         view.containerView = self
         
         view.onSnapToXAxis = { [weak self, weak view] snappedToX in
@@ -414,7 +348,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         let newEntity = entity.duplicate()
         self.prepareNewEntity(newEntity, setup: false, relativeTo: entity)
         
-        let view = newEntity.makeView(context: self.context)
+        guard let view = makeEntityView(context: self.context, entity: entity) else {
+            fatalError()
+        }
         view.containerView = self
         view.update()
         self.addSubview(view)
@@ -462,6 +398,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private func clear(animated: Bool = false) {
         if animated {
             for case let view as DrawingEntityView in self.subviews {
+                if view.entity.isMedia {
+                    continue
+                }
                 if let selectionView = view.selectionView {
                     selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak selectionView] _ in
                         selectionView?.removeFromSuperview()
@@ -477,6 +416,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             
         } else {
             for case let view as DrawingEntityView in self.subviews {
+                if view.entity.isMedia {
+                    continue
+                }
                 view.selectionView?.removeFromSuperview()
                 view.removeFromSuperview()
             }
@@ -489,7 +431,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
-    func getView(for uuid: UUID) -> DrawingEntityView? {
+    public func getView(for uuid: UUID) -> DrawingEntityView? {
         for case let view as DrawingEntityView in self.subviews {
             if view.entity.uuid == uuid {
                 return view
@@ -544,6 +486,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     func selectEntity(_ entity: DrawingEntity?) {
+        if entity?.isMedia == true {
+            return
+        }
         if entity !== self.selectedEntityView?.entity {
             if let selectedEntityView = self.selectedEntityView {
                 if let textEntityView = selectedEntityView as? DrawingTextEntityView, textEntityView.isEditing {
@@ -565,14 +510,15 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         if let entity = entity, let entityView = self.getView(for: entity.uuid) {
             self.selectedEntityView = entityView
             
-            let selectionView = entityView.makeSelectionView()
-            selectionView.tapped = { [weak self, weak entityView] in
-                if let strongSelf = self, let entityView = entityView {
-                    strongSelf.requestedMenuForEntityView(entityView, strongSelf.subviews.last === entityView)
+            if let selectionView = entityView.makeSelectionView() {
+                selectionView.tapped = { [weak self, weak entityView] in
+                    if let strongSelf = self, let entityView = entityView {
+                        strongSelf.requestedMenuForEntityView(entityView, strongSelf.subviews.last === entityView)
+                    }
                 }
+                entityView.selectionView = selectionView
+                self.selectionContainerView?.addSubview(selectionView)
             }
-            entityView.selectionView = selectionView
-            self.selectionContainerView?.addSubview(selectionView)
             entityView.update()
         }
         
@@ -616,17 +562,33 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return self.selectedEntityView != nil
     }
     
+    public func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+        if !self.hasSelection, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+            mediaEntityView.handlePan(gestureRecognizer)
+        }
+    }
+    
     public func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
-        if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
+        if !self.hasSelection, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+            mediaEntityView.handlePinch(gestureRecognizer)
+        } else if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             selectionView.handlePinch(gestureRecognizer)
         }
     }
     
     public func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
-        if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
+        if !self.hasSelection, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+            mediaEntityView.handleRotate(gestureRecognizer)
+        } else if let selectedEntityView = self.selectedEntityView, let selectionView = selectedEntityView.selectionView {
             selectionView.handleRotate(gestureRecognizer)
         }
     }
+}
+
+protocol DrawingEntityMediaView: DrawingEntityView {
+    func handlePan(_ gestureRecognizer: UIPanGestureRecognizer)
+    func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer)
+    func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer)
 }
 
 public class DrawingEntityView: UIView {
@@ -725,7 +687,7 @@ public class DrawingEntityView: UIView {
         return self.point(inside: point, with: nil)
     }
     
-    func makeSelectionView() -> DrawingEntitySelectionView {
+    func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }

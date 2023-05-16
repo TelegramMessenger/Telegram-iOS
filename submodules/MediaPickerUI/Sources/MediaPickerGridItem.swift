@@ -129,6 +129,8 @@ final class MediaPickerGridItemNode: GridItemNode {
                 
         super.init()
         
+        self.clipsToBounds = true
+        
         self.addSubnode(self.imageNode)
         self.addSubnode(self.activateAreaNode)
         
@@ -396,7 +398,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     override func layout() {
         super.layout()
         
-        self.imageNode.frame = self.bounds
+        self.imageNode.frame = self.bounds.insetBy(dx: -1.0 + UIScreenPixel, dy: -1.0 + UIScreenPixel)
         self.gradientNode.frame = CGRect(x: 0.0, y: self.bounds.height - 24.0, width: self.bounds.width, height: 24.0)
         self.typeIconNode.frame = CGRect(x: 0.0, y: self.bounds.height - 20.0, width: 19.0, height: 19.0)
         self.activateAreaNode.frame = self.bounds

@@ -453,6 +453,11 @@ class TabBarNode: ASDisplayNode, UIGestureRecognizerDelegate {
         return container.imageNode.frame
     }
     
+    func viewForControllerTab(at index: Int) -> UIView? {
+        let container = self.tabBarNodeContainers[index]
+        return container.imageNode.view
+    }
+    
     private func reloadTabBarItems() {
         for node in self.tabBarNodeContainers {
             node.imageNode.removeFromSupernode()

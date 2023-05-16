@@ -140,7 +140,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                     
                     let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
                     let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
-                    resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
+                    resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest, isStory: false)
                 }
                 
                 let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)

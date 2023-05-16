@@ -14,15 +14,16 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
     let phoneNumberPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneNumber))
     let phoneDiscoveryPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyAddedByPhone))
     let voiceMessagesPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyVoiceMessages))
+    let bioPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyAbout))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
     let globalPrivacySettings = account.network.request(Api.functions.account.getGlobalPrivacySettings())
     let messageAutoremoveTimeout = account.network.request(Api.functions.messages.getDefaultHistoryTTL())
     
-    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, autoremoveTimeout, globalPrivacySettings, messageAutoremoveTimeout)
+    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, bioPrivacy, autoremoveTimeout, globalPrivacySettings, messageAutoremoveTimeout)
     |> `catch` { _ in
         return .complete()
     }
-    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, autoremoveTimeout, globalPrivacySettings, messageAutoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
+    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, voiceMessagesPrivacy, bioPrivacy, autoremoveTimeout, globalPrivacySettings, messageAutoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
         let accountTimeoutSeconds: Int32
         switch autoremoveTimeout {
             case let .accountDaysTTL(days):
@@ -47,6 +48,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
         let forwardRules: [Api.PrivacyRule]
         let phoneNumberRules: [Api.PrivacyRule]
         let voiceMessagesRules: [Api.PrivacyRule]
+        let bioRules: [Api.PrivacyRule]
         var apiUsers: [Api.User] = []
         var apiChats: [Api.Chat] = []
         
@@ -119,6 +121,13 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
                 voiceMessagesRules = rules
         }
         
+        switch bioPrivacy {
+            case let .privacyRules(rules, chats, users):
+                apiUsers.append(contentsOf: users)
+                apiChats.append(contentsOf: chats)
+                bioRules = rules
+        }
+        
         var peers: [SelectivePrivacyPeer] = []
         for user in apiUsers {
             peers.append(SelectivePrivacyPeer(peer: TelegramUser(user: user), participantCount: nil))
@@ -161,7 +170,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
                 return settings
             })
             
-            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, voiceMessages: SelectivePrivacySettings(apiRules: voiceMessagesRules, peers: peerMap), automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: accountTimeoutSeconds, messageAutoremoveTimeout: messageAutoremoveSeconds)
+            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, voiceMessages: SelectivePrivacySettings(apiRules: voiceMessagesRules, peers: peerMap), bio: SelectivePrivacySettings(apiRules: bioRules, peers: peerMap), automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: accountTimeoutSeconds, messageAutoremoveTimeout: messageAutoremoveSeconds)
         }
     }
 }
@@ -223,6 +232,7 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
     case forwards
     case phoneNumber
     case voiceMessages
+    case bio
     
     var apiKey: Api.InputPrivacyKey {
         switch self {
@@ -242,6 +252,8 @@ public enum UpdateSelectiveAccountPrivacySettingsType {
                 return .inputPrivacyKeyPhoneNumber
             case .voiceMessages:
                 return .inputPrivacyKeyVoiceMessages
+            case .bio:
+                return .inputPrivacyKeyAbout
         }
     }
 }

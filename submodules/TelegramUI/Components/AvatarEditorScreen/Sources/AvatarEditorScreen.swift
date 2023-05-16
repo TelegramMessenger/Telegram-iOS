@@ -23,6 +23,7 @@ import DrawingUI
 import SolidRoundedButtonComponent
 import AnimationCache
 import EmojiTextAttachmentView
+import MediaEditor
 
 enum AvatarBackground: Equatable {
     case gradient([UInt32])

@@ -93,6 +93,7 @@ swift_library(
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/FastBlur:FastBlur",
+        "//submodules/TelegramUI/Components/MediaEditor",
     ],
     visibility = [
         "//visibility:public",

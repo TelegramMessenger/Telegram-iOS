@@ -16,12 +16,12 @@ import TelegramNotices
 import ChatEntityKeyboardInputNode
 import ContextUI
 
-struct StickerPickerInputData: Equatable {
+public struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
     var stickers: EmojiPagerContentComponent?
     var masks: EmojiPagerContentComponent?
     
-    init(
+    public init(
         emoji: EmojiPagerContentComponent,
         stickers: EmojiPagerContentComponent?,
         masks: EmojiPagerContentComponent?

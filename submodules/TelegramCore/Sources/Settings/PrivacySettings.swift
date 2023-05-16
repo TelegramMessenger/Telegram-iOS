@@ -105,12 +105,13 @@ public struct AccountPrivacySettings: Equatable {
     public let phoneNumber: SelectivePrivacySettings
     public let phoneDiscoveryEnabled: Bool
     public let voiceMessages: SelectivePrivacySettings
+    public let bio: SelectivePrivacySettings
     
     public let automaticallyArchiveAndMuteNonContacts: Bool
     public let accountRemovalTimeout: Int32
     public let messageAutoremoveTimeout: Int32?
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -120,6 +121,7 @@ public struct AccountPrivacySettings: Equatable {
         self.phoneNumber = phoneNumber
         self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
         self.voiceMessages = voiceMessages
+        self.bio = bio
         self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
         self.accountRemovalTimeout = accountRemovalTimeout
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
@@ -151,6 +153,9 @@ public struct AccountPrivacySettings: Equatable {
             return false
         }
         if lhs.voiceMessages != rhs.voiceMessages {
+            return false
+        }
+        if lhs.bio != rhs.bio {
             return false
         }
         if lhs.automaticallyArchiveAndMuteNonContacts != rhs.automaticallyArchiveAndMuteNonContacts {

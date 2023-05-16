@@ -18,12 +18,12 @@ import TabBarUI
 import WallpaperBackgroundNode
 import ChatPresentationInterfaceState
 import CameraScreen
+import MediaEditorScreen
 import LegacyComponents
 import LegacyMediaPickerUI
 import LegacyCamera
 import AvatarNode
 import LocalMediaResources
-import ShareWithPeersScreen
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -192,7 +192,43 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             tabBarController.cameraItemAndAction = (
                 UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2),
                 { [weak self] in
-                    self?.openStoryCamera()
+                    guard let self else {
+                        return
+                    }
+                    var transitionIn: StoryCameraTransitionIn?
+                    if let cameraItemView = self.rootTabController?.viewForCameraItem() {
+                        transitionIn = StoryCameraTransitionIn(
+                            sourceView: cameraItemView,
+                            sourceRect: cameraItemView.bounds,
+                            sourceCornerRadius: cameraItemView.bounds.height / 2.0
+                        )
+                    }
+                    self.openStoryCamera(
+                        transitionIn: transitionIn,
+                        transitionOut: { [weak self] finished in
+                            guard let self else {
+                                return nil
+                            }
+                            if finished {
+                                if let chatListController = self.chatListController as? ChatListControllerImpl, let transitionView = chatListController.transitionViewForOwnStoryItem() {
+                                    return StoryCameraTransitionOut(
+                                        destinationView: transitionView,
+                                        destinationRect: transitionView.bounds,
+                                        destinationCornerRadius: transitionView.bounds.height / 2.0
+                                    )
+                                }
+                            } else {
+                                if let cameraItemView = self.rootTabController?.viewForCameraItem() {
+                                    return StoryCameraTransitionOut(
+                                        destinationView: cameraItemView,
+                                        destinationRect: cameraItemView.bounds,
+                                        destinationCornerRadius: cameraItemView.bounds.height / 2.0
+                                    )
+                                }
+                            }
+                            return nil
+                        }
+                    )
                 }
             )
         }
@@ -252,234 +288,140 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
     
-    public func openStoryCamera() {
+    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) {
         guard let controller = self.viewControllers.last as? ViewController else {
             return
         }
         controller.view.endEditing(true)
         
-        if !"".isEmpty {
-            let stateContext = ShareWithPeersScreen.StateContext(context: self.context)
-            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                guard let controller = self.viewControllers.last as? ViewController else {
-                    return
-                }
-                
-                controller.push(ShareWithPeersScreen(context: self.context, stateContext: stateContext, completion: { _ in
-                }))
-            })
-            return
-        }
+        let context = self.context
         
         var presentImpl: ((ViewController) -> Void)?
+        var returnToCameraImpl: (() -> Void)?
         var dismissCameraImpl: (() -> Void)?
-        let cameraController = CameraScreen(context: self.context, mode: .story, completion: { [weak self] result in
-            if let self {
-                let item: TGMediaEditableItem & TGMediaSelectableItem
-                switch result {
-                case let .image(image):
-                    item = TGCameraCapturedPhoto(existing: image)
-                case let .video(path):
-                    item = TGCameraCapturedVideo(url: URL(fileURLWithPath: path))
-                case let .asset(asset):
-                    item = TGMediaAsset(phAsset: asset)
+        let cameraController = CameraScreen(
+            context: context,
+            mode: .story,
+            transitionIn: transitionIn.flatMap {
+                if let sourceView = $0.sourceView {
+                    return CameraScreen.TransitionIn(
+                        sourceView: sourceView,
+                        sourceRect: $0.sourceRect,
+                        sourceCornerRadius: $0.sourceCornerRadius
+                    )
+                } else {
+                    return nil
                 }
-                let context = self.context
-                legacyStoryMediaEditor(context: context, item: item, getCaptionPanelView: { return nil }, completion: { [weak self] mediaResult in
-                    guard let self else {
-                        return
-                    }
-                    
-                    let stateContext = ShareWithPeersScreen.StateContext(context: self.context)
-                    let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
-                        guard let self else {
-                            return
-                        }
-                        guard let controller = self.viewControllers.last as? ViewController else {
-                            return
-                        }
-                        
-                        controller.push(ShareWithPeersScreen(context: self.context, stateContext: stateContext, completion: { privacy in
-                            switch mediaResult {
-                            case let .image(image):
-                                _ = image
-                                break
-                            case let .video(path):
-                                _ = path
-                                break
-                            case let .asset(asset):
-                                let options = PHImageRequestOptions()
-                                options.deliveryMode = .highQualityFormat
-                                options.isNetworkAccessAllowed = true
-                                switch asset.mediaType {
-                                case .image:
-                                    PHImageManager.default().requestImageData(for: asset, options:options, resultHandler: { [weak self] data, _, _, _ in
-                                        if let data, let image = UIImage(data: data) {
-                                            Queue.mainQueue().async {
-                                                guard let self else {
-                                                    return
-                                                }
-                                                
-                                                if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                                                    storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), text: "", entities: [], privacy: privacy)
-                                                    Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                                        chatListController?.animateStoryUploadRipple()
-                                                    })
-                                                }
-                                            }
-                                        }
-                                    })
-                                case .video:
-                                    let resource = VideoLibraryMediaResource(localIdentifier: asset.localIdentifier, conversion: VideoLibraryMediaResourceConversion.passthrough)
-                                    
-                                    if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                                        storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), text: "", entities: [], privacy: privacy)
-                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                            chatListController?.animateStoryUploadRipple()
-                                        })
-                                    }
-                                default:
-                                    break
-                                }
-                            }
-                            
-                            dismissCameraImpl?()
-                        }))
-                    })
-                    
-                    /*enum AdditionalCategoryId: Int {
-                        case everyone
-                        case contacts
-                        case closeFriends
-                    }
-                    
-                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                    
-                    let additionalCategories: [ChatListNodeAdditionalCategory] = [
-                        ChatListNodeAdditionalCategory(
-                            id: AdditionalCategoryId.everyone.rawValue,
-                            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), cornerRadius: nil, color: .blue),
-                            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
-                            title: "Everyone",
-                            appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-                        ),
-                        ChatListNodeAdditionalCategory(
-                            id: AdditionalCategoryId.contacts.rawValue,
-                            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 1.0 * 0.8, cornerRadius: nil, color: .yellow),
-                            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 0.6 * 0.8, cornerRadius: 6.0, circleCorners: true, color: .yellow),
-                            title: presentationData.strings.ChatListFolder_CategoryContacts,
-                            appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-                        ),
-                        ChatListNodeAdditionalCategory(
-                            id: AdditionalCategoryId.closeFriends.rawValue,
-                            icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 1.0 * 0.6, cornerRadius: nil, color: .green),
-                            smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 0.6 * 0.6, cornerRadius: 6.0, circleCorners: true, color: .green),
-                            title: "Close Friends",
-                            appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-                        )
-                    ]
-                    
-                    let selectionController = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                        title: "Share Story",
-                        searchPlaceholder: "Search contacts",
-                        selectedChats: Set(),
-                        additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: Set([AdditionalCategoryId.everyone.rawValue])),
-                        chatListFilters: nil,
-                        displayPresence: true
-                    )), options: [], filters: [.excludeSelf], alwaysEnabled: true, limit: 1000, reachedLimit: { _ in
-                    }))
-                    selectionController.navigationPresentation = .modal
-                    self.pushViewController(selectionController)
-                    
-                    let _ = (selectionController.result
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self, weak selectionController] result in
-                        guard let self else {
-                            return
-                        }
-                        guard case let .result(peerIds, additionalCategoryIds) = result else {
-                            selectionController?.dismiss()
-                            return
-                        }
-                        
-                        var privacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
-                        if additionalCategoryIds.contains(AdditionalCategoryId.everyone.rawValue) {
-                            privacy.base = .everyone
-                        } else if additionalCategoryIds.contains(AdditionalCategoryId.contacts.rawValue) {
-                            privacy.base = .contacts
-                        } else if additionalCategoryIds.contains(AdditionalCategoryId.closeFriends.rawValue) {
-                            privacy.base = .closeFriends
-                        }
-                        privacy.additionallyIncludePeers = peerIds.compactMap { id -> EnginePeer.Id? in
-                            switch id {
-                            case let .peer(peerId):
-                                return peerId
-                            default:
-                                return nil
-                            }
-                        }
-                        
-                        selectionController?.displayProgress = true
-                        
-                        switch mediaResult {
-                        case let .image(image):
-                            _ = image
-                            selectionController?.dismiss()
-                        case let .video(path):
-                            _ = path
-                            selectionController?.dismiss()
-                        case let .asset(asset):
-                            let options = PHImageRequestOptions()
-                            options.deliveryMode = .highQualityFormat
-                            options.isNetworkAccessAllowed = true
-                            switch asset.mediaType {
-                            case .image:
-                                PHImageManager.default().requestImageData(for: asset, options:options, resultHandler: { [weak self] data, _, _, _ in
-                                    if let data, let image = UIImage(data: data) {
-                                        Queue.mainQueue().async {
-                                            guard let self else {
-                                                return
-                                            }
-                                            
-                                            if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                                                storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), text: "", entities: [], privacy: privacy)
-                                                Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                                    chatListController?.animateStoryUploadRipple()
-                                                })
-                                            }
-                                            selectionController?.dismiss()
-                                        }
-                                    }
-                                })
-                            case .video:
-                                let resource = VideoLibraryMediaResource(localIdentifier: asset.localIdentifier, conversion: VideoLibraryMediaResourceConversion.passthrough)
-                                
-                                if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                                    storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), text: "", entities: [], privacy: privacy)
-                                    Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                        chatListController?.animateStoryUploadRipple()
-                                    })
-                                }
-                                selectionController?.dismiss()
-                            default:
-                                selectionController?.dismiss()
-                            }
-                        }
-                    })*/
-                }, present: { c, a in
-                    presentImpl?(c)
-                })
+            },
+            transitionOut: { finished in
+                if let transitionOut = transitionOut(finished), let destinationView = transitionOut.destinationView {
+                    return CameraScreen.TransitionOut(
+                        destinationView: destinationView,
+                        destinationRect: transitionOut.destinationRect,
+                        destinationCornerRadius: transitionOut.destinationCornerRadius
+                    )
+                } else {
+                    return nil
+                }
+            },
+            completion: { result in
+            let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
+            |> map { value -> MediaEditorScreen.Subject? in
+                switch value {
+                case .pendingImage:
+                    return nil
+                case let .image(image):
+                    return .image(image, PixelDimensions(image.size))
+                case let .video(path, dimensions):
+                    return .video(path, dimensions)
+                case let .asset(asset):
+                    return .asset(asset)
+                }
             }
+            let controller = MediaEditorScreen(context: context, subject: subject, transitionIn: nil, transitionOut: { finished in
+                if finished, let transitionOut = transitionOut(true), let destinationView = transitionOut.destinationView {
+                    return MediaEditorScreen.TransitionOut(
+                        destinationView: destinationView,
+                        destinationRect: transitionOut.destinationRect,
+                        destinationCornerRadius: transitionOut.destinationCornerRadius
+                    )
+                } else {
+                    return nil
+                }
+            }, completion: { mediaResult, commit in
+                let privacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
+//                    if additionalCategoryIds.contains(AdditionalCategoryId.everyone.rawValue) {
+//                        privacy.base = .everyone
+//                    } else if additionalCategoryIds.contains(AdditionalCategoryId.contacts.rawValue) {
+//                        privacy.base = .contacts
+//                    } else if additionalCategoryIds.contains(AdditionalCategoryId.closeFriends.rawValue) {
+//                        privacy.base = .closeFriends
+//                    }
+//                    privacy.additionallyIncludePeers = peerIds.compactMap { id -> EnginePeer.Id? in
+//                        switch id {
+//                        case let .peer(peerId):
+//                            return peerId
+//                        default:
+//                            return nil
+//                        }
+//                    }
+                                    
+                if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                    switch mediaResult {
+                    case let .image(image, dimensions, caption):
+                        if let data = image.jpegData(compressionQuality: 0.8) {
+                            storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: caption?.string ?? "", entities: [], privacy: privacy)
+                            Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                chatListController?.animateStoryUploadRipple()
+                            })
+                        }
+                    case let .video(content, _, values, duration, dimensions, caption):
+                        let adjustments: VideoMediaResourceAdjustments
+                        if let valuesData = try? JSONEncoder().encode(values) {
+                            let data = MemoryBuffer(data: valuesData)
+                            let digest = MemoryBuffer(data: data.md5Digest())
+                            adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
+
+                            let resource: TelegramMediaResource
+                            switch content {
+                            case let .imageFile(path):
+                                resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                            case let .videoFile(path):
+                                resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                            case let .asset(localIdentifier):
+                                resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
+                            }
+                            storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: privacy)
+                            Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                chatListController?.animateStoryUploadRipple()
+                            })
+                        }
+                    }
+                }
+                dismissCameraImpl?()
+                commit()
+            })
+            controller.sourceHint = .camera
+            controller.cancelled = {
+                returnToCameraImpl?()
+            }
+            presentImpl?(controller)
         })
         controller.push(cameraController)
         presentImpl = { [weak cameraController] c in
-            cameraController?.present(c, in: .window(.root))
+            if let navigationController = cameraController?.navigationController as? NavigationController {
+                var controllers = navigationController.viewControllers
+                controllers.append(c)
+                navigationController.setViewControllers(controllers, animated: false)
+            }
         }
         dismissCameraImpl = { [weak cameraController] in
             cameraController?.dismiss(animated: false)
+        }
+        returnToCameraImpl = { [weak cameraController] in
+            if let cameraController {
+                cameraController.returnFromEditor()
+            }
         }
     }
     

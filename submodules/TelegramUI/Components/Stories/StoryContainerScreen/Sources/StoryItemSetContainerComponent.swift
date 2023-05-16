@@ -793,6 +793,8 @@ public final class StoryItemSetContainerComponent: Component {
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,
+                    style: .story,
+                    placeholder: "Reply Privately...",
                     presentController: { [weak self] c in
                         guard let self, let component = self.component else {
                             return

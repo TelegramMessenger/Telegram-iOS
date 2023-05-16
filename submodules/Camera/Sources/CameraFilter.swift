@@ -113,7 +113,6 @@ class CameraTestFilter: CameraFilter {
     
     private(set) var inputFormatDescription: CMFormatDescription?
     
-    /// - Tag: FilterCoreImageRosy
     func prepare(with formatDescription: CMFormatDescription, outputRetainedBufferCountHint: Int) {
         reset()
         
@@ -149,7 +148,6 @@ class CameraTestFilter: CameraFilter {
         guard let rosyFilter = rosyFilter,
             let ciContext = ciContext,
             isPrepared else {
-                assertionFailure("Invalid state: Not prepared")
                 return nil
         }
         
@@ -157,18 +155,15 @@ class CameraTestFilter: CameraFilter {
         rosyFilter.setValue(sourceImage, forKey: kCIInputImageKey)
         
         guard let filteredImage = rosyFilter.value(forKey: kCIOutputImageKey) as? CIImage else {
-            print("CIFilter failed to render image")
             return nil
         }
         
         var pbuf: CVPixelBuffer?
         CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, outputPixelBufferPool!, &pbuf)
         guard let outputPixelBuffer = pbuf else {
-            print("Allocation failure")
             return nil
         }
         
-        // Render the filtered image out to a pixel buffer (no locking needed, as CIContext's render method will do that)
         ciContext.render(filteredImage, to: outputPixelBuffer, bounds: filteredImage.extent, colorSpace: outputColorSpace)
         return outputPixelBuffer
     }

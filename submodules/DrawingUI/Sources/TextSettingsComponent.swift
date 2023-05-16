@@ -5,6 +5,7 @@ import ComponentFlow
 import LegacyComponents
 import TelegramCore
 import LottieAnimationComponent
+import MediaEditor
 
 enum DrawingTextStyle: Equatable {
     case regular

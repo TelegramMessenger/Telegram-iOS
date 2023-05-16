@@ -2438,6 +2438,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         }
                         
+                        var cameraTransitionIn: StoryCameraTransitionIn?
+                        if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                                cameraTransitionIn = StoryCameraTransitionIn(
+                                    sourceView: transitionView,
+                                    sourceRect: transitionView.bounds,
+                                    sourceCornerRadius: transitionView.bounds.height * 0.5
+                                )
+                            }
+                        }
+                        
                         var initialFocusedId: AnyHashable?
                         if let peer {
                             initialFocusedId = AnyHashable(peer.id)
@@ -2447,7 +2458,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             return !slice.items.isEmpty
                         }) {
                             if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                                rootController.openStoryCamera()
+                                rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionOut: { [weak self] _ in
+                                    guard let self else {
+                                        return nil
+                                    }
+                                    if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                                        if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                                            return StoryCameraTransitionOut(
+                                                destinationView: transitionView,
+                                                destinationRect: transitionView.bounds,
+                                                destinationCornerRadius: transitionView.bounds.height * 0.5
+                                            )
+                                        }
+                                    }
+                                    return nil
+                                })
                             }
                             
                             return
@@ -2506,6 +2531,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             searchContentNode.updateListVisibleContentOffset(.known(0.0))
             self.chatListDisplayNode.scrollToTop()
         }
+    }
+    
+    public func transitionViewForOwnStoryItem() -> UIView? {
+        if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                return transitionView
+            }
+        }
+        return nil
     }
     
     public func animateStoryUploadRipple() {

@@ -25,6 +25,58 @@ final class CameraDevice {
         self.audioDevice = AVCaptureDevice.default(for: .audio)
     }
     
+    func configureDeviceFormat(maxDimensions: CMVideoDimensions, maxFramerate: Double) {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            var maxWidth: Int32 = 0
+            var maxHeight: Int32 = 0
+            var hasSecondaryZoomLevels = false
+            var candidates: [AVCaptureDevice.Format] = []
+     outer: for format in device.formats {
+                if format.mediaType != .video || format.value(forKey: "isPhotoFormat") as? Bool == true {
+                    continue
+                }
+                
+                let dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+                if dimensions.width >= maxWidth && dimensions.width <= maxDimensions.width && dimensions.height >= maxHeight && dimensions.height <= maxDimensions.height {
+                    if dimensions.width > maxWidth {
+                        hasSecondaryZoomLevels = false
+                        candidates.removeAll()
+                    }
+                    let subtype = CMFormatDescriptionGetMediaSubType(format.formatDescription)
+                    if subtype == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange {
+                        for range in format.videoSupportedFrameRateRanges {
+                            if range.maxFrameRate > maxFramerate {
+                                continue outer
+                            }
+                        }
+                        
+                        maxWidth = dimensions.width
+                        maxHeight = dimensions.height
+                        
+                        if #available(iOS 16.0, *), !format.secondaryNativeResolutionZoomFactors.isEmpty {
+                            hasSecondaryZoomLevels = true
+                            candidates.append(format)
+                        } else if !hasSecondaryZoomLevels {
+                            candidates.append(format)
+                        }
+                    }
+                }
+            }
+            
+            if let bestFormat = candidates.last {
+                device.activeFormat = bestFormat
+            }
+            
+            if let targetFPS = device.actualFPS(maxFramerate) {
+                device.activeVideoMinFrameDuration = targetFPS.duration
+                device.activeVideoMaxFrameDuration = targetFPS.duration
+            }
+        }
+    }
+    
     func transaction(_ device: AVCaptureDevice, update: (AVCaptureDevice) -> Void) {
         if let _ = try? device.lockForConfiguration() {
             update(device)

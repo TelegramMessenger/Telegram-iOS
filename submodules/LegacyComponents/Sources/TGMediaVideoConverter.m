@@ -113,6 +113,8 @@
         avAsset = [[AVURLAsset alloc] initWithURL:(NSURL *)avAsset options:nil];
     }
     SQueue *queue = [[SQueue alloc] init];
+
+    double start = CACurrentMediaTime();
     
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
@@ -179,6 +181,10 @@
                         videoStartValue = adjustments.videoStartValue - adjustments.trimStartValue;
                     }
                     
+                    
+                    
+                    double end = CACurrentMediaTime();
+                                        
                     [resultContext.imageGenerator generateCGImagesAsynchronouslyForTimes:@[ [NSValue valueWithCMTime:CMTimeMakeWithSeconds(videoStartValue, NSEC_PER_SEC)] ] completionHandler:^(__unused CMTime requestedTime, CGImageRef  _Nullable image, __unused CMTime actualTime, AVAssetImageGeneratorResult result, __unused NSError * _Nullable error)
                     {
                         UIImage *coverImage = nil;
@@ -191,6 +197,9 @@
                             id liveUploadData = nil;
                             if (watcher != nil)
                                 liveUploadData = [watcher fileUpdated:true];
+                            
+                            NSLog(@"%lf seconds", end - start);
+                            NSLog(@"%lf speed", (end - start) / CMTimeGetSeconds(resultContext.timeRange.duration));
                             
                             NSUInteger fileSize = [[[NSFileManager defaultManager] attributesOfItemAtPath:outputUrl.path error:nil] fileSize];
                             contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:fileSize duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];

@@ -742,8 +742,40 @@ public protocol RecentSessionsController: AnyObject {
 public protocol AttachmentFileController: AnyObject {
 }
 
+public struct StoryCameraTransitionIn {
+    public weak var sourceView: UIView?
+    public let sourceRect: CGRect
+    public let sourceCornerRadius: CGFloat
+    
+    public init(
+        sourceView: UIView,
+        sourceRect: CGRect,
+        sourceCornerRadius: CGFloat
+    ) {
+        self.sourceView = sourceView
+        self.sourceRect = sourceRect
+        self.sourceCornerRadius = sourceCornerRadius
+    }
+}
+
+public struct StoryCameraTransitionOut {
+    public weak var destinationView: UIView?
+    public let destinationRect: CGRect
+    public let destinationCornerRadius: CGFloat
+    
+    public init(
+        destinationView: UIView,
+        destinationRect: CGRect,
+        destinationCornerRadius: CGFloat
+    ) {
+        self.destinationView = destinationView
+        self.destinationRect = destinationRect
+        self.destinationCornerRadius = destinationCornerRadius
+    }
+}
+
 public protocol TelegramRootControllerInterface: NavigationController {
-    func openStoryCamera()
+    func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?)
 }
 
 public protocol SharedAccountContext: AnyObject {
