@@ -3,6 +3,7 @@ import AVFoundation
 import UIKit
 import CoreImage
 import Metal
+import MetalKit
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -10,7 +11,6 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
-import AccountContext
 
 final class MediaEditorComposer {
     let device: MTLDevice?
@@ -28,7 +28,7 @@ final class MediaEditorComposer {
     private let drawingImage: CIImage?
     private var entities: [MediaEditorComposerEntity]
     
-    init(context: AccountContext, values: MediaEditorValues, dimensions: CGSize) {
+    init(account: Account, values: MediaEditorValues, dimensions: CGSize) {
         self.values = values
         self.dimensions = dimensions
         
@@ -48,7 +48,7 @@ final class MediaEditorComposer {
             self.drawingImage = nil
         }
         
-        self.entities = values.entities.map { $0.entity } .compactMap { composerEntityForDrawingEntity(context: context, entity: $0) }
+        self.entities = values.entities.map { $0.entity } .compactMap { composerEntityForDrawingEntity(account: account, entity: $0) }
         
         self.device = MTLCreateSystemDefaultDevice()
         if let device = self.device {
@@ -103,15 +103,52 @@ final class MediaEditorComposer {
             }
         }
         completion(nil)
-        return
+    }
+    
+    private var filteredImage: CIImage?
+    func processImage(inputImage: UIImage, pool: CVPixelBufferPool?, time: CMTime, completion: @escaping (CVPixelBuffer?, CMTime) -> Void) {
+        guard let pool else {
+            completion(nil, time)
+            return
+        }
+        if self.filteredImage == nil, let device = self.device, let cgImage = inputImage.cgImage {
+            let textureLoader = MTKTextureLoader(device: device)
+            if let texture = try? textureLoader.newTexture(cgImage: cgImage) {
+                self.renderer.consumeTexture(texture, rotation: .rotate0Degrees)
+                self.renderer.renderFrame()
+                
+                if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture) {
+                    ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
+                    self.filteredImage = ciImage
+                }
+            }
+        }
+        
+        if let image = self.filteredImage {
+            var pixelBuffer: CVPixelBuffer?
+            CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer)
+            
+            if let pixelBuffer {
+                makeEditorImageFrameComposition(inputImage: image, gradientImage: self.gradientImage, drawingImage: self.drawingImage, dimensions: self.dimensions, values: self.values, entities: self.entities, time: time, completion: { compositedImage in
+                    if let compositedImage {
+                        self.ciContext?.render(compositedImage, to: pixelBuffer)
+                        completion(pixelBuffer, time)
+                    } else {
+                        completion(nil, time)
+                    }
+                })
+                return
+            }
+        }
+        completion(nil, time)
     }
     
     func processImage(inputImage: CIImage, time: CMTime, completion: @escaping (CIImage?) -> Void) {
-        return makeEditorImageFrameComposition(inputImage: inputImage, gradientImage: self.gradientImage, drawingImage: self.drawingImage, dimensions: self.dimensions, values: self.values, entities: self.entities, time: time, completion: completion)
+        makeEditorImageFrameComposition(inputImage: inputImage, gradientImage: self.gradientImage, drawingImage: self.drawingImage, dimensions: self.dimensions, values: self.values, entities: self.entities, time: time, completion: completion)
     }
 }
 
-public func makeEditorImageComposition(context: AccountContext, inputImage: UIImage, dimensions: CGSize, values: MediaEditorValues, time: CMTime, completion: @escaping (UIImage?) -> Void) {
+public func makeEditorImageComposition(account: Account, inputImage: UIImage, dimensions: CGSize, values: MediaEditorValues, time: CMTime, completion: @escaping (UIImage?) -> Void) {
     let inputImage = CIImage(image: inputImage)!
     let gradientImage: CIImage
     var drawingImage: CIImage?
@@ -126,7 +163,7 @@ public func makeEditorImageComposition(context: AccountContext, inputImage: UIIm
         drawingImage = image.transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
     }
     
-    let entities: [MediaEditorComposerEntity] = values.entities.map { $0.entity }.compactMap { composerEntityForDrawingEntity(context: context, entity: $0) }
+    let entities: [MediaEditorComposerEntity] = values.entities.map { $0.entity }.compactMap { composerEntityForDrawingEntity(account: account, entity: $0) }
     makeEditorImageFrameComposition(inputImage: inputImage, gradientImage: gradientImage, drawingImage: drawingImage, dimensions: dimensions, values: values, entities: entities, time: time, completion: { ciImage in
         if let ciImage {
             let context = CIContext(options: [.workingColorSpace : NSNull()])
@@ -147,9 +184,16 @@ private func makeEditorImageFrameComposition(inputImage: CIImage, gradientImage:
     
     var mediaImage = inputImage.transformed(by: CGAffineTransform(translationX: -inputImage.extent.midX, y: -inputImage.extent.midY))
     
+    var initialScale: CGFloat
+    if mediaImage.extent.height > mediaImage.extent.width {
+        initialScale = dimensions.height / mediaImage.extent.height
+    } else {
+        initialScale = dimensions.width / mediaImage.extent.width
+    }
+    
     var cropTransform = CGAffineTransform(translationX: values.cropOffset.x, y: values.cropOffset.y * -1.0)
     cropTransform = cropTransform.rotated(by: -values.cropRotation)
-    cropTransform = cropTransform.scaledBy(x: values.cropScale, y: values.cropScale)
+    cropTransform = cropTransform.scaledBy(x: initialScale * values.cropScale, y: initialScale * values.cropScale)
     mediaImage = mediaImage.transformed(by: cropTransform)
     resultImage = mediaImage.composited(over: resultImage)
     
@@ -172,6 +216,7 @@ private func makeEditorImageFrameComposition(inputImage: CIImage, gradientImage:
             }
             
             resultImage = resultImage.transformed(by: CGAffineTransform(translationX: dimensions.width / 2.0, y: dimensions.height / 2.0))
+            resultImage = resultImage.cropped(to: CGRect(origin: .zero, size: dimensions))
             completion(resultImage)
         }
     }
@@ -183,21 +228,22 @@ private func makeEditorImageFrameComposition(inputImage: CIImage, gradientImage:
         let index = i
         entity.image(for: time, frameRate: frameRate, completion: { image in
             if var image = image {
-                var transform = CGAffineTransform(translationX: -image.extent.midX, y: -image.extent.midY)
-                image = image.transformed(by: transform)
+                let resetTransform = CGAffineTransform(translationX: -image.extent.width / 2.0, y: -image.extent.height / 2.0)
+                image = image.transformed(by: resetTransform)
                 
-                var scale = entity.scale * 1.0
+                var baseScale: CGFloat = 1.0
                 if let baseSize = entity.baseSize {
-                    scale *= baseSize.width / image.extent.size.width
+                    baseScale = baseSize.width / image.extent.width
                 }
-            
-                transform = CGAffineTransform(translationX: entity.position.x, y: dimensions.height - entity.position.y)
-                transform = transform.rotated(by: CGFloat.pi * 2.0 - entity.rotation)
-                transform = transform.scaledBy(x: scale, y: scale)
+                
+                var transform = CGAffineTransform.identity
+                transform = transform.translatedBy(x: -dimensions.width / 2.0 + entity.position.x, y: dimensions.height / 2.0 + entity.position.y * -1.0)
+                transform = transform.rotated(by: -entity.rotation)
+                transform = transform.scaledBy(x: entity.scale * baseScale, y: entity.scale * baseScale)
                 if entity.mirrored {
                     transform = transform.scaledBy(x: -1.0, y: 1.0)
                 }
-                                            
+                                                            
                 image = image.transformed(by: transform)
                 let _ = entitiesImages.modify { current in
                     var updated = current
@@ -212,7 +258,7 @@ private func makeEditorImageFrameComposition(inputImage: CIImage, gradientImage:
     maybeFinalize()
 }
 
-private func composerEntityForDrawingEntity(context: AccountContext, entity: DrawingEntity) -> MediaEditorComposerEntity? {
+private func composerEntityForDrawingEntity(account: Account, entity: DrawingEntity) -> MediaEditorComposerEntity? {
     if let entity = entity as? DrawingStickerEntity {
         let content: MediaEditorComposerStickerEntity.Content
         switch entity.content {
@@ -221,7 +267,7 @@ private func composerEntityForDrawingEntity(context: AccountContext, entity: Dra
         case let .image(image):
             content = .image(image)
         }
-        return MediaEditorComposerStickerEntity(context: context, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored)
+        return MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored)
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage) {
         if let entity = entity as? DrawingBubbleEntity {
             return MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)
@@ -295,7 +341,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     var imagePixelBuffer: CVPixelBuffer?
     let imagePromise = Promise<UIImage>()
     
-    init(context: AccountContext, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool) {
+    init(account: Account, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool) {
         self.content = content
         self.position = position
         self.scale = scale
@@ -307,8 +353,8 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         case let .file(file):
             if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                 self.isAnimated = true
-                self.source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
-                let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
+                let pathPrefix = account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                 if let source = self.source {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
@@ -337,7 +383,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 }
             } else {
                 self.isAnimated = false
-                self.disposables.add((chatMessageSticker(account: context.account, userLocation: .other, file: file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
+                self.disposables.add((chatMessageSticker(account: account, userLocation: .other, file: file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
                 |> deliverOn(self.queue)).start(next: { [weak self] generator in
                     if let strongSelf = self {
                         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: baseSize, boundingSize: baseSize, intrinsicInsets: UIEdgeInsets()))
@@ -368,7 +414,6 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 tintColor = .white
             }
             
-//            let start = CACurrentMediaTime()
             self.disposables.add((self.frameSource.get()
             |> take(1)
             |> deliverOn(self.queue)).start(next: { [weak self] frameSource in
@@ -381,17 +426,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                     completion(nil)
                     return
                 }
-                
-//                if !strongSelf.tested {
-//                    frameSource.syncWith { frameSource in
-//                        for _ in 0 ..< 60 * 3 {
-//                            let _ = frameSource.takeFrame(draw: true)
-//                        }
-//                    }
-//                    strongSelf.tested = true
-//                    print("180 frames in \(CACurrentMediaTime() - start)")
-//                }
-                                
+                                                
                 let relativeTime = currentTime - floor(currentTime / duration) * duration
                 var t = relativeTime / duration
                 t = max(0.0, t)
@@ -415,9 +450,6 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         delta = max(1, frameIndex - previousFrameIndex)
                     }
                     
-                    //print("skipping: \(delta) frames")
-                    
-                    
                     var frame: AnimatedStickerFrame?
                     frameSource.syncWith { frameSource in
                         for i in 0 ..< delta {
@@ -425,8 +457,6 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         }
                     }
                     if let frame {
-                        //print("has frame: \(CACurrentMediaTime() - start)")
-                        
                         var imagePixelBuffer: CVPixelBuffer?
                         if let pixelBuffer = strongSelf.imagePixelBuffer {
                             imagePixelBuffer = pixelBuffer
@@ -451,7 +481,6 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         
                         if let imagePixelBuffer {
                             let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, pixelBuffer: imagePixelBuffer, tintColor: tintColor)
-                            //print("image loaded in: \(CACurrentMediaTime() - start)")
                             strongSelf.image = image
                         }
                         completion(strongSelf.image)
@@ -505,7 +534,7 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
                 guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                     return
                 }
-                decodeYUVAToRGBA(bytes, dest, Int32(width), Int32(height), Int32(bytesPerRow))
+                decodeYUVAToRGBA(bytes, dest, Int32(width), Int32(height), Int32(width * 4))
             }
         case .argb:
             data.withUnsafeBytes { buffer -> Void in

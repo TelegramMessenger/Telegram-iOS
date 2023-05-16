@@ -172,8 +172,27 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         return self.tabBarControllerNode.tabBarNode.sourceNodesForController(at: index)
     }
     
+    public func viewForCameraItem() -> UIView? {
+        if let (cameraItem, _) = self.cameraItemAndAction {
+            if let cameraItemIndex = self.tabBarControllerNode.tabBarNode.tabBarItems.firstIndex(where: { $0.item === cameraItem }) {
+                return self.tabBarControllerNode.tabBarNode.viewForControllerTab(at: cameraItemIndex)
+            }
+        }
+        return nil
+    }
+    
     public func frameForControllerTab(controller: ViewController) -> CGRect? {
         if let index = self.controllers.firstIndex(of: controller) {
+            var index = index
+            if let (cameraItem, _) = self.cameraItemAndAction {
+                if let cameraItemIndex = self.tabBarControllerNode.tabBarNode.tabBarItems.firstIndex(where: { $0.item === cameraItem }) {
+                    if index == cameraItemIndex {
+                        
+                    } else if index > cameraItemIndex {
+                        index -= 1
+                    }
+                }
+            }
             return self.tabBarControllerNode.tabBarNode.frameForControllerTab(at: index).flatMap { self.tabBarControllerNode.tabBarNode.view.convert($0, to: self.view) }
         } else {
             return nil

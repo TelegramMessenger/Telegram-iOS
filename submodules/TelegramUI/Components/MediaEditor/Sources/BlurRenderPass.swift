@@ -37,6 +37,7 @@ private final class BlurGaussianPass: RenderPass {
         let radius = round(4.0 + intensity * 26.0)
         if self.blur?.sigma != radius {
             self.blur = MPSImageGaussianBlur(device: device, sigma: radius)
+            self.blur?.edgeMode = .clamp
         }
         
         if self.cachedTexture == nil {

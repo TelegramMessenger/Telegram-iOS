@@ -22,7 +22,6 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         didSet {
             if let previewView = self.previewView {
                 previewView.isUserInteractionEnabled = false
-                previewView.layer.allowsEdgeAntialiasing = true
                 self.addSubview(previewView)
             }
         }
@@ -30,8 +29,6 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     
     init(context: AccountContext, entity: DrawingMediaEntity) {
         super.init(context: context, entity: entity)
-        
-        self.layer.allowsEdgeAntialiasing = true
     }
     
     required init?(coder: NSCoder) {

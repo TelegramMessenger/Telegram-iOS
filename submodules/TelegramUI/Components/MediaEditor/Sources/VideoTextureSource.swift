@@ -13,7 +13,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
     
     private var displayLink: CADisplayLink?
     
-    private var preferredVideoTransform: CGAffineTransform = .identity
+    private var textureRotation: TextureRotation = .rotate0Degrees
     
     private var forceUpdate: Bool = false
     
@@ -82,8 +82,32 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         for track in playerItem.asset.tracks {
             if track.mediaType == .video {
                 hasVideoTrack = true
-                self.preferredVideoTransform = track.preferredTransform
-                break
+                
+                let t = track.preferredTransform
+                if t.a == -1.0 && t.d == -1.0 {
+                    self.textureRotation = .rotate180Degrees
+                } else if t.a == 1.0 && t.d == 1.0 {
+                    self.textureRotation = .rotate0Degrees
+                } else if t.b == -1.0 && t.c == 1.0 {
+                    self.textureRotation = .rotate270Degrees
+                }  else if t.a == -1.0 && t.d == 1.0 {
+//                    if (mirrored != NULL) {
+//                        *mirrored = true;
+//                    }
+                    self.textureRotation = .rotate270Degrees
+                } else if t.a == 1.0 && t.d == -1.0  {
+//                    if (mirrored != NULL) {
+//                        *mirrored = true;
+//                    }
+                    self.textureRotation = .rotate180Degrees
+                } else {
+//                    if (t.c == 1) {
+//                        if (mirrored != NULL) {
+//                            *mirrored = true;
+//                        }
+//                    }
+                    self.textureRotation = .rotate90Degrees
+                }
             }
         }
         if !hasVideoTrack {
@@ -151,13 +175,8 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         var presentationTime: CMTime = .zero
         if let pixelBuffer = output.copyPixelBuffer(forItemTime: requestTime, itemTimeForDisplay: &presentationTime) {
             if let texture = self.pixelBufferToMTLTexture(pixelBuffer: pixelBuffer) {
-                self.output?.consumeTexture(texture, rotation: .rotate90Degrees)
+                self.output?.consumeTexture(texture, rotation: self.textureRotation)
             }
-//
-//            self.handler(VideoFrame(preferredTrackTransform: self.preferredVideoTransform,
-//                                    presentationTimestamp: presentationTime,
-//                                    playerTimestamp: player.currentTime(),
-//                                    pixelBuffer: pixelBuffer))
         }
     }
     

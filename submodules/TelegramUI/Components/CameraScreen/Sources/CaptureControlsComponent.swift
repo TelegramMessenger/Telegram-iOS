@@ -637,7 +637,8 @@ final class CaptureControlsComponent: Component {
                 if flipButtonView.superview == nil {
                     self.addSubview(flipButtonView)
                 }
-                transition.setFrame(view: flipButtonView, frame: flipButtonFrame)
+                transition.setBounds(view: flipButtonView, bounds: CGRect(origin: .zero, size: flipButtonFrame.size))
+                transition.setPosition(view: flipButtonView, position: flipButtonFrame.center)
             }
             
             var blobState: ShutterBlobView.BlobState
@@ -689,7 +690,8 @@ final class CaptureControlsComponent: Component {
                     
                     self.addSubview(shutterButtonView)
                 }
-                transition.setFrame(view: shutterButtonView, frame: shutterButtonFrame)
+                transition.setBounds(view: shutterButtonView, bounds: CGRect(origin: .zero, size: shutterButtonFrame.size))
+                transition.setPosition(view: shutterButtonView, position: shutterButtonFrame.center)
             }
             
             let guideSpacing: CGFloat = 9.0

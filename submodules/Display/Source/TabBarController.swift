@@ -19,6 +19,7 @@ public protocol TabBarController: ViewController {
     
     func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition)
     
+    func viewForCameraItem() -> UIView?
     func frameForControllerTab(controller: ViewController) -> CGRect?
     func isPointInsideContentArea(point: CGPoint) -> Bool
     func sourceNodesForController(at index: Int) -> [ASDisplayNode]?

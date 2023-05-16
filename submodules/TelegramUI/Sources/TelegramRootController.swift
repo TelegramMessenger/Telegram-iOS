@@ -192,7 +192,49 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             tabBarController.cameraItemAndAction = (
                 UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2),
                 { [weak self] in
-                    self?.openStoryCamera()
+                    guard let self else {
+                        return
+                    }
+                    var transitionIn: StoryCameraTransitionIn?
+                    if let cameraItemView = self.rootTabController?.viewForCameraItem() {
+                        transitionIn = StoryCameraTransitionIn(
+                            sourceView: cameraItemView,
+                            sourceRect: cameraItemView.bounds,
+                            sourceCornerRadius: cameraItemView.bounds.height / 2.0
+                        )
+                    }
+                    self.openStoryCamera(
+                        transitionIn: transitionIn,
+                        transitionOut: { [weak self] finished in
+                            guard let self else {
+                                return nil
+                            }
+                            if finished {
+                                
+                            } else {
+                                if let cameraItemView = self.rootTabController?.viewForCameraItem() {
+                                    return StoryCameraTransitionOut(
+                                        destinationView: cameraItemView,
+                                        destinationRect: cameraItemView.bounds,
+                                        destinationCornerRadius: cameraItemView.bounds.height / 2.0
+                                    )
+                                }
+                            }
+                            return nil
+//                            if finished {
+//                                return nil
+//                            } else {
+//                                if let self, let cameraItemView = self.rootTabController?.viewForCameraItem() {
+//                                    return StoryCameraTransitionOut(
+//                                        destinationView: cameraItemView,
+//                                        destinationRect: cameraItemView.bounds,
+//                                        destinationCornerRadius: cameraItemView.bound.height / 2.0
+//                                    )
+//                                }
+//                            }
+//                            return nil
+                        }
+                    )
                 }
             )
         }
@@ -252,7 +294,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
     
-    public func openStoryCamera() {
+    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) {
         guard let controller = self.viewControllers.last as? ViewController else {
             return
         }
@@ -263,7 +305,32 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
         var dismissCameraImpl: (() -> Void)?
-        let cameraController = CameraScreen(context: context, mode: .story, completion: { result in
+        let cameraController = CameraScreen(
+            context: context,
+            mode: .story,
+            transitionIn: transitionIn.flatMap {
+                if let sourceView = $0.sourceView {
+                    return CameraScreen.TransitionIn(
+                        sourceView: sourceView,
+                        sourceRect: $0.sourceRect,
+                        sourceCornerRadius: $0.sourceCornerRadius
+                    )
+                } else {
+                    return nil
+                }
+            },
+            transitionOut: { finished in
+                if let transitionOut = transitionOut(finished), let destinationView = transitionOut.destinationView {
+                    return CameraScreen.TransitionOut(
+                        destinationView: destinationView,
+                        destinationRect: transitionOut.destinationRect,
+                        destinationCornerRadius: transitionOut.destinationCornerRadius
+                    )
+                } else {
+                    return nil
+                }
+            },
+            completion: { result in
             let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
             |> map { value -> MediaEditorScreen.Subject? in
                 switch value {
@@ -349,21 +416,31 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     
                     selectionController?.displayProgress = true
                     
-                    switch mediaResult {
-                    case let .image(image, _):
-                        if let data = image.jpegData(compressionQuality: 0.8) {
-                            if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                                storyListContext.upload(media: .image(dimensions: PixelDimensions(image.size), data: data), text: nil, entities: nil, privacy: privacy)
+                    if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                        switch mediaResult {
+                        case let .image(image, dimensions, _):
+                            if let data = image.jpegData(compressionQuality: 0.8) {
+                                storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: nil, entities: nil, privacy: privacy)
+                            }
+                        case let .video(content, _, values, duration, dimensions, _):
+                            let adjustments: VideoMediaResourceAdjustments
+                            if let valuesData = try? JSONEncoder().encode(values) {
+                                let data = MemoryBuffer(data: valuesData)
+                                let digest = MemoryBuffer(data: data.md5Digest())
+                                adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
+
+                                let resource: TelegramMediaResource
+                                switch content {
+                                case let .imageFile(path):
+                                    resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                                case let .videoFile(path):
+                                    resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                                case let .asset(localIdentifier):
+                                    resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
+                                }
+                                storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: nil, entities: nil, privacy: privacy)
                             }
                         }
-                    case .video:
-                        break
-//                        let resource = VideoLibraryMediaResource(localIdentifier: asset.localIdentifier, conversion: VideoLibraryMediaResourceConversion.passthrough)
-//
-//                        if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-//                            storyListContext.upload(media: .video(dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: Int(asset.duration), resource: resource), privacy: privacy)
-//                        }
-//                        selectionController?.dismiss()
                     }
                     dismissCameraImpl?()
                     commit()

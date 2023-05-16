@@ -2,8 +2,9 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import AVFoundation
 
-public enum EditorToolKey {
+public enum EditorToolKey: Int32 {
     case enhance
     case brightness
     case contrast
@@ -20,6 +21,7 @@ public enum EditorToolKey {
     case blur
     case curves
 }
+
 private let adjustmentToolsKeys: [EditorToolKey] = [
     .enhance,
     .brightness,
@@ -34,7 +36,26 @@ private let adjustmentToolsKeys: [EditorToolKey] = [
     .sharpen
 ]
 
-public class MediaEditorValues {
+public final class MediaEditorValues: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case originalWidth
+        case originalHeight
+        case cropOffset
+        case cropSize
+        case cropScale
+        case cropRotation
+        case cropMirroring
+        
+        case gradientColors
+        
+        case videoTrimRange
+        case videoIsMuted
+        
+        case drawing
+        case entities
+        case toolValues
+    }
+    
     public let originalDimensions: PixelDimensions
     public let cropOffset: CGPoint
     public let cropSize: CGSize?
@@ -79,6 +100,79 @@ public class MediaEditorValues {
         self.toolValues = toolValues
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        let width = try container.decode(Int32.self, forKey: .originalWidth)
+        let height = try container.decode(Int32.self, forKey: .originalHeight)
+        self.originalDimensions = PixelDimensions(width: width, height: height)
+        
+        self.cropOffset = try container.decode(CGPoint.self, forKey: .cropOffset)
+        self.cropSize = try container.decodeIfPresent(CGSize.self, forKey: .cropSize)
+        self.cropScale = try container.decode(CGFloat.self, forKey: .cropScale)
+        self.cropRotation = try container.decode(CGFloat.self, forKey: .cropRotation)
+        self.cropMirroring = try container.decode(Bool.self, forKey: .cropMirroring)
+        
+        if let gradientColors = try container.decodeIfPresent([DrawingColor].self, forKey: .gradientColors) {
+            self.gradientColors = gradientColors.map { $0.toUIColor() }
+        } else {
+            self.gradientColors = nil
+        }
+        
+        self.videoTrimRange = try container.decodeIfPresent(Range<Double>.self, forKey: .videoTrimRange)
+        self.videoIsMuted = try container.decode(Bool.self, forKey: .videoIsMuted)
+        
+        if let drawingData = try container.decodeIfPresent(Data.self, forKey: .drawing), let image = UIImage(data: drawingData) {
+            self.drawing = image
+        } else {
+            self.drawing = nil
+        }
+        
+        self.entities = try container.decode([CodableDrawingEntity].self, forKey: .entities)
+        
+        let values = try container.decode([CodableToolValue].self, forKey: .toolValues)
+        var toolValues: [EditorToolKey: Any] = [:]
+        for value in values {
+            let (key, value) = value.keyAndValue
+            toolValues[key] = value
+        }
+        self.toolValues = toolValues
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.originalDimensions.width, forKey: .originalWidth)
+        try container.encode(self.originalDimensions.height, forKey: .originalHeight)
+        
+        try container.encode(self.cropOffset, forKey: .cropOffset)
+        try container.encode(self.cropSize, forKey: .cropSize)
+        try container.encode(self.cropScale, forKey: .cropScale)
+        try container.encode(self.cropRotation, forKey: .cropRotation)
+        try container.encode(self.cropMirroring, forKey: .cropMirroring)
+        
+        if let gradientColors = self.gradientColors {
+            try container.encode(gradientColors.map { DrawingColor(color: $0) }, forKey: .gradientColors)
+        }
+        
+        try container.encodeIfPresent(self.videoTrimRange, forKey: .videoTrimRange)
+        try container.encode(self.videoIsMuted, forKey: .videoIsMuted)
+        
+        if let drawing = self.drawing, let pngDrawingData = drawing.pngData() {
+            try container.encode(pngDrawingData, forKey: .drawing)
+        }
+        
+        try container.encode(self.entities, forKey: .entities)
+        
+        var values: [CodableToolValue] = []
+        for (key, value) in self.toolValues {
+            if let toolValue = CodableToolValue(key: key, value: value) {
+                values.append(toolValue)
+            }
+        }
+        try container.encode(values, forKey: .toolValues)
+    }
+    
     func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
         return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
@@ -100,7 +194,12 @@ public class MediaEditorValues {
     }
 }
 
-public struct TintValue: Equatable {
+public struct TintValue: Equatable, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case color
+        case intensity
+    }
+    
     public static let initial = TintValue(
         color: .clear,
         intensity: 0.5
@@ -117,6 +216,20 @@ public struct TintValue: Equatable {
         self.intensity = intensity
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.color = try container.decode(DrawingColor.self, forKey: .color).toUIColor()
+        self.intensity = try container.decode(Float.self, forKey: .intensity)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(DrawingColor(color: self.color), forKey: .color)
+        try container.encode(self.intensity, forKey: .intensity)
+    }
+    
     public func withUpdatedColor(_ color: UIColor) -> TintValue {
         return TintValue(color: color, intensity: self.intensity)
     }
@@ -126,7 +239,16 @@ public struct TintValue: Equatable {
     }
 }
 
-public struct BlurValue: Equatable {
+public struct BlurValue: Equatable, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case mode
+        case intensity
+        case position
+        case size
+        case falloff
+        case rotation
+    }
+    
     public static let initial = BlurValue(
         mode: .off,
         intensity: 0.5,
@@ -136,7 +258,7 @@ public struct BlurValue: Equatable {
         rotation: 0.0
     )
     
-    public enum Mode: Equatable {
+    public enum Mode: Int32, Equatable {
         case off
         case radial
         case linear
@@ -164,6 +286,28 @@ public struct BlurValue: Equatable {
         self.size = size
         self.falloff = falloff
         self.rotation = rotation
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.mode = try BlurValue.Mode(rawValue: container.decode(Int32.self, forKey: .mode)) ?? .off
+        self.intensity = try container.decode(Float.self, forKey: .intensity)
+        self.position = try container.decode(CGPoint.self, forKey: .position)
+        self.size = try container.decode(Float.self, forKey: .size)
+        self.falloff = try container.decode(Float.self, forKey: .falloff)
+        self.rotation = try container.decode(Float.self, forKey: .rotation)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.mode.rawValue, forKey: .mode)
+        try container.encode(self.intensity, forKey: .intensity)
+        try container.encode(self.position, forKey: .position)
+        try container.encode(self.size, forKey: .size)
+        try container.encode(self.falloff, forKey: .falloff)
+        try container.encode(self.rotation, forKey: .rotation)
     }
     
     public func withUpdatedMode(_ mode: Mode) -> BlurValue {
@@ -233,8 +377,23 @@ public struct BlurValue: Equatable {
     }
 }
 
-public struct CurvesValue: Equatable {
-    public struct CurveValue: Equatable {
+public struct CurvesValue: Equatable, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case all
+        case red
+        case green
+        case blue
+    }
+    
+    public struct CurveValue: Equatable, Codable {
+        private enum CodingKeys: String, CodingKey {
+            case blacks
+            case shadows
+            case midtones
+            case highlights
+            case whites
+        }
+        
         public static let initial = CurveValue(
             blacks: 0.0,
             shadows: 0.25,
@@ -304,6 +463,26 @@ public struct CurvesValue: Equatable {
             self.whites = whites
         }
         
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            self.blacks = try container.decode(Float.self, forKey: .blacks)
+            self.shadows = try container.decode(Float.self, forKey: .shadows)
+            self.midtones = try container.decode(Float.self, forKey: .midtones)
+            self.highlights = try container.decode(Float.self, forKey: .highlights)
+            self.whites = try container.decode(Float.self, forKey: .whites)
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.blacks, forKey: .blacks)
+            try container.encode(self.shadows, forKey: .shadows)
+            try container.encode(self.midtones, forKey: .midtones)
+            try container.encode(self.highlights, forKey: .highlights)
+            try container.encode(self.whites, forKey: .whites)
+        }
+        
         public func withUpdatedBlacks(_ blacks: Float) -> CurveValue {
             return CurveValue(blacks: blacks, shadows: self.shadows, midtones: self.midtones, highlights: self.highlights, whites: self.whites)
         }
@@ -347,6 +526,24 @@ public struct CurvesValue: Equatable {
         self.red = red
         self.green = green
         self.blue = blue
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.all = try container.decode(CurveValue.self, forKey: .all)
+        self.red = try container.decode(CurveValue.self, forKey: .red)
+        self.green = try container.decode(CurveValue.self, forKey: .green)
+        self.blue = try container.decode(CurveValue.self, forKey: .blue)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.all, forKey: .all)
+        try container.encode(self.red, forKey: .red)
+        try container.encode(self.green, forKey: .green)
+        try container.encode(self.blue, forKey: .blue)
     }
     
     public func withUpdatedAll(_ all: CurveValue) -> CurvesValue {
@@ -622,4 +819,117 @@ public func curveThroughPoints(count: Int, valueAtIndex: (Int) -> Float, positio
     }
     
     return (path, dataPoints)
+}
+
+public enum CodableToolValue {
+    case float(EditorToolKey, Float)
+    case tint(EditorToolKey, TintValue)
+    case blur(EditorToolKey, BlurValue)
+    case curves(EditorToolKey, CurvesValue)
+    
+    public init?(key: EditorToolKey, value: Any) {
+        if let toolValue = value as? Float {
+            self = .float(key, toolValue)
+        } else if let toolValue = value as? TintValue {
+            self = .tint(key, toolValue)
+        } else if let toolValue = value as? BlurValue {
+            self = .blur(key, toolValue)
+        } else if let toolValue = value as? CurvesValue {
+            self = .curves(key, toolValue)
+        } else {
+            return nil
+        }
+    }
+    
+    public var keyAndValue: (EditorToolKey, Any) {
+        switch self {
+        case let .float(key, value):
+            return (key, value)
+        case let .tint(key, value):
+            return (key, value)
+        case let .blur(key, value):
+            return (key, value)
+        case let .curves(key, value):
+            return (key, value)
+        }
+    }
+}
+
+extension CodableToolValue: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case key
+        case type
+        case value
+    }
+
+    private enum ToolType: Int, Codable {
+        case float
+        case tint
+        case blur
+        case curves
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(ToolType.self, forKey: .type)
+        let key = EditorToolKey(rawValue: try container.decode(Int32.self, forKey: .key))!
+        switch type {
+        case .float:
+            self = .float(key, try container.decode(Float.self, forKey: .value))
+        case .tint:
+            self = .tint(key, try container.decode(TintValue.self, forKey: .value))
+        case .blur:
+            self = .blur(key, try container.decode(BlurValue.self, forKey: .value))
+        case .curves:
+            self = .curves(key, try container.decode(CurvesValue.self, forKey: .value))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case let .float(key, value):
+            try container.encode(key.rawValue, forKey: .key)
+            try container.encode(ToolType.float, forKey: .type)
+            try container.encode(value, forKey: .value)
+        case let .tint(key, value):
+            try container.encode(key.rawValue, forKey: .key)
+            try container.encode(ToolType.tint, forKey: .type)
+            try container.encode(value, forKey: .value)
+        case let .blur(key, value):
+            try container.encode(key.rawValue, forKey: .key)
+            try container.encode(ToolType.blur, forKey: .type)
+            try container.encode(value, forKey: .value)
+        case let .curves(key, value):
+            try container.encode(key.rawValue, forKey: .key)
+            try container.encode(ToolType.curves, forKey: .type)
+            try container.encode(value, forKey: .value)
+        }
+    }
+}
+
+public func recommendedVideoExportConfiguration(values: MediaEditorValues) -> MediaEditorVideoExport.Configuration {
+    let compressionProperties: [String: Any] = [
+        AVVideoAverageBitRateKey: 2000000
+    ]
+    
+    let videoSettings: [String: Any] = [
+        AVVideoCodecKey: AVVideoCodecType.h264,
+        AVVideoCompressionPropertiesKey: compressionProperties,
+        AVVideoWidthKey: 1080,
+        AVVideoHeightKey: 1920
+    ]
+    
+    let audioSettings: [String: Any] = [
+        AVFormatIDKey: kAudioFormatMPEG4AAC,
+        AVSampleRateKey: 44100,
+        AVEncoderBitRateKey: 64000,
+        AVNumberOfChannelsKey: 2
+    ]
+    
+    return MediaEditorVideoExport.Configuration(
+        videoSettings: videoSettings,
+        audioSettings: audioSettings,
+        values: values
+    )
 }

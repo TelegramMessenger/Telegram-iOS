@@ -691,7 +691,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                 
                                 let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
                                 let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
-                                resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
+                                resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest, isStory: false)
                             }
                             
                             let resource: TelegramMediaResource

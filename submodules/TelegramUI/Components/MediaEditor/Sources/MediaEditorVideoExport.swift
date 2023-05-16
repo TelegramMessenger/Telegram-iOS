@@ -2,7 +2,7 @@ import Foundation
 import AVFoundation
 import MetalKit
 import SwiftSignalKit
-import AccountContext
+import TelegramCore
 
 enum ExportWriterStatus {
     case unknown
@@ -240,7 +240,7 @@ public final class MediaEditorVideoExport {
     
     public private(set) var internalStatus: Status = .idle
     
-    private let context: AccountContext
+    private let account: Account
     private let subject: Subject
     private let configuration: Configuration
     private let outputPath: String
@@ -266,8 +266,8 @@ public final class MediaEditorVideoExport {
     
     private let semaphore = DispatchSemaphore(value: 0)
     
-    public init(context: AccountContext, subject: Subject, configuration: Configuration, outputPath: String) {
-        self.context = context
+    public init(account: Account, subject: Subject, configuration: Configuration, outputPath: String) {
+        self.account = account
         self.subject = subject
         self.configuration = configuration
         self.outputPath = outputPath
@@ -289,16 +289,18 @@ public final class MediaEditorVideoExport {
         }
         
         if self.configuration.values.requiresComposing {
-            self.composer = MediaEditorComposer(context: self.context, values: self.configuration.values, dimensions: self.configuration.dimensions)
+            self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.dimensions)
         }
-        self.setupVideoInput()
+        
+        switch self.subject {
+        case let .video(asset):
+            self.setupWithAsset(asset)
+        case let .image(image):
+            self.setupWithImage(image)
+        }
     }
         
-    private func setupVideoInput() {
-        guard case let .video(asset) = self.subject else {
-            return
-        }
-        
+    private func setupWithAsset(_ asset: AVAsset) {
         self.reader = try? AVAssetReader(asset: asset)
         guard let reader = self.reader else {
             return
@@ -363,22 +365,40 @@ public final class MediaEditorVideoExport {
         }
     }
     
+    private func setupWithImage(_ image: UIImage) {
+        self.writer = MediaEditorVideoAVAssetWriter()
+        guard let writer = self.writer else {
+            return
+        }
+        writer.setup(configuration: self.configuration, outputPath: self.outputPath)
+        writer.setupVideoInput(configuration: self.configuration, inputTransform: nil)
+    }
+    
     private func finish() {
         assert(self.queue.isCurrent())
         
-        guard let reader = self.reader, let writer = self.writer else {
+        guard let writer = self.writer else {
             return
         }
         
         let outputUrl = URL(fileURLWithPath: self.outputPath)
         
-        if reader.status == .cancelled || writer.status == .cancelled {
+        var cancelled = false
+        if let reader = self.reader, reader.status == .cancelled {
             if writer.status != .cancelled {
                 writer.cancelWriting()
             }
-            if reader.status != .cancelled {
+            cancelled = true
+        }
+        
+        if writer.status == .cancelled {
+            if let reader = self.reader, reader.status != .cancelled {
                 reader.cancelReading()
             }
+            cancelled = true
+        }
+        
+        if cancelled {
             try? FileManager().removeItem(at: outputUrl)
             self.internalStatus = .finished
             self.statusValue = .failed(.cancelled)
@@ -389,7 +409,7 @@ public final class MediaEditorVideoExport {
             try? FileManager().removeItem(at: outputUrl)
             self.internalStatus = .finished
             self.statusValue = .failed(.writing(nil))
-        } else if reader.status == .failed {
+        } else if let reader = self.reader, reader.status == .failed {
             try? FileManager().removeItem(at: outputUrl)
             writer.cancelWriting()
             self.internalStatus = .finished
@@ -418,6 +438,46 @@ public final class MediaEditorVideoExport {
                 }
             }
         }
+    }
+    
+    private func encodeImageVideo() -> Bool {
+        guard let writer = self.writer, let composer = self.composer, case let .image(image) = self.subject else {
+            return false
+        }
+        
+        let duration: Double = 3.0
+        let frameRate: Double = 60.0
+        var position: CMTime = CMTime(value: 0, timescale: Int32(frameRate))
+        
+        var appendFailed = false
+        while writer.isReadyForMoreVideoData {
+            if appendFailed {
+                return false
+            }
+            if writer.status != .writing {
+                writer.markVideoAsFinished()
+                return false
+            }
+            self.pauseDispatchGroup.wait()
+            composer.processImage(inputImage: image, pool: writer.pixelBufferPool, time: position, completion: { pixelBuffer, timestamp in
+                if let pixelBuffer {
+                    if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
+                        writer.markVideoAsFinished()
+                        appendFailed = true
+                    }
+                }
+                Thread.sleep(forTimeInterval: 0.001)
+                self.semaphore.signal()
+            })
+            self.semaphore.wait()
+            
+            position = position + CMTime(value: 1, timescale: Int32(frameRate))
+            if position.seconds >= duration {
+                writer.markVideoAsFinished()
+                return false
+            }
+        }
+        return true
     }
     
     private func encodeVideo() -> Bool {
@@ -551,7 +611,33 @@ public final class MediaEditorVideoExport {
         return self.statusPromise.get()
     }
     
-    public func startExport() {
+    
+    private func startImageVideoExport() {
+        guard self.internalStatus == .idle, let writer = self.writer else {
+            self.statusValue = .failed(.invalid)
+            return
+        }
+        
+        guard writer.startWriting() else {
+            self.statusValue = .failed(.writing(nil))
+            return
+        }
+        
+        self.internalStatus = .exporting
+        
+        writer.startSession(atSourceTime: .zero)
+        
+        var exportForVideoOutput: MediaEditorVideoExport? = self
+        writer.requestVideoDataWhenReady(on: self.queue.queue) {
+            guard let export = exportForVideoOutput else { return }
+            if !export.encodeImageVideo() {
+                exportForVideoOutput = nil
+                export.finish()
+            }
+        }
+    }
+    
+    private func startVideoExport() {
         guard self.internalStatus == .idle, let writer = self.writer, let reader = self.reader else {
             self.statusValue = .failed(.invalid)
             return
@@ -572,16 +658,15 @@ public final class MediaEditorVideoExport {
         
         var videoCompleted = false
         var audioCompleted = false
-
         if let _ = self.videoOutput {
-            var sessionForVideoEncoder: MediaEditorVideoExport? = self
+            var exportForVideoOutput: MediaEditorVideoExport? = self
             writer.requestVideoDataWhenReady(on: self.queue.queue) {
-                guard let session = sessionForVideoEncoder else { return }
-                if !session.encodeVideo() {
+                guard let export = exportForVideoOutput else { return }
+                if !export.encodeVideo() {
                     videoCompleted = true
-                    sessionForVideoEncoder = nil
+                    exportForVideoOutput = nil
                     if audioCompleted {
-                        session.finish()
+                        export.finish()
                     }
                 }
             }
@@ -590,19 +675,28 @@ public final class MediaEditorVideoExport {
         }
         
         if let _ = self.audioOutput {
-            var sessionForAudioEncoder: MediaEditorVideoExport? = self
+            var exportForAudioOutput: MediaEditorVideoExport? = self
             writer.requestAudioDataWhenReady(on: self.queue.queue) {
-                guard let session = sessionForAudioEncoder else { return }
-                if !session.encodeAudio() {
+                guard let export = exportForAudioOutput else { return }
+                if !export.encodeAudio() {
                     audioCompleted = true
-                    sessionForAudioEncoder = nil
+                    exportForAudioOutput = nil
                     if videoCompleted {
-                        session.finish()
+                        export.finish()
                     }
                 }
             }
         } else {
             audioCompleted = true
+        }
+    }
+    
+    public func startExport() {
+        switch self.subject {
+        case .video:
+            self.startVideoExport()
+        case .image:
+            self.startImageVideoExport()
         }
     }
 }

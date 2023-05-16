@@ -1164,8 +1164,13 @@ public final class MediaEditorScreen: ViewController {
     }
     
     public enum Result {
-        case image(UIImage, NSAttributedString?)
-        case video(String, UIImage?, MediaEditorValues, NSAttributedString?)
+        public enum VideoResult {
+            case imageFile(path: String)
+            case videoFile(path: String)
+            case asset(localIdentifier: String)
+        }
+        case image(image: UIImage, dimensions: PixelDimensions, caption: NSAttributedString?)
+        case video(video: VideoResult, coverImage: UIImage?, values: MediaEditorValues, duration: Double, dimensions: PixelDimensions, caption: NSAttributedString?)
     }
     
     fileprivate let context: AccountContext
@@ -1211,21 +1216,50 @@ public final class MediaEditorScreen: ViewController {
     }
     
     func requestCompletion(animated: Bool) {
-        guard let mediaEditor = self.node.mediaEditor else {
+        guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
             return
         }
         
         if mediaEditor.resultIsVideo {
-            self.completion(.video("", nil, mediaEditor.values, nil), { [weak self] in
+            let videoResult: Result.VideoResult
+            let duration: Double
+            switch subject {
+            case let .image(image, _):
+                let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
+                if let data = image.jpegData(compressionQuality: 0.85) {
+                    try? data.write(to: URL(fileURLWithPath: tempImagePath))
+                }
+                videoResult = .imageFile(path: tempImagePath)
+                duration = 5.0
+            case let .video(path, _):
+                videoResult = .videoFile(path: path)
+                if let videoTrimRange = mediaEditor.values.videoTrimRange {
+                    duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
+                } else {
+                    duration = 5.0
+                }
+            case let .asset(asset):
+                videoResult = .asset(localIdentifier: asset.localIdentifier)
+                if asset.mediaType == .video {
+                    if let videoTrimRange = mediaEditor.values.videoTrimRange {
+                        duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
+                    } else {
+                        duration = asset.duration
+                    }
+                } else {
+                    duration = 5.0
+                }
+            }
+            self.completion(.video(video: videoResult, coverImage: nil, values: mediaEditor.values, duration: duration, dimensions: PixelDimensions(width: 1080, height: 1920), caption: nil), { [weak self] in
                 self?.node.animateOut(completion: { [weak self] in
                     self?.dismiss()
                 })
             })
         } else {
             if let image = mediaEditor.resultImage {
-                makeEditorImageComposition(context: self.context, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
                     if let resultImage {
-                        self.completion(.image(resultImage, nil), { [weak self] in
+                        self.completion(.image(image: resultImage, dimensions: PixelDimensions(resultImage.size), caption: nil), { [weak self] in
                             self?.node.animateOut(completion: { [weak self] in
                                 self?.dismiss()
                             })
@@ -1236,7 +1270,7 @@ public final class MediaEditorScreen: ViewController {
         }
     }
     
-    private var export: MediaEditorVideoExport?
+    private var videoExport: MediaEditorVideoExport?
     private var exportDisposable: Disposable?
     
     func requestSave() {
@@ -1266,32 +1300,35 @@ public final class MediaEditorScreen: ViewController {
         
         if mediaEditor.resultIsVideo {
             let exportSubject: MediaEditorVideoExport.Subject
-            if case let .video(path, _) = subject {
+            switch subject {
+            case let .video(path, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .video(asset)
-            } else {
+            case let .image(image, _):
+                exportSubject = .image(image)
+            default:
                 fatalError()
             }
             
-            let configuration = recommendedExportConfiguration(mediaEditor: mediaEditor)
+            let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values)
             let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
-            let export = MediaEditorVideoExport(context: self.context, subject: exportSubject, configuration: configuration, outputPath: outputPath)
-            self.export = export
+            let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath)
+            self.videoExport = videoExport
             
-            export.startExport()
+            videoExport.startExport()
             
-            self.exportDisposable = (export.status
+            self.exportDisposable = (videoExport.status
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 if let self {
                     if case .completed = status {
-                        self.export = nil
+                        self.videoExport = nil
                         saveToPhotos(outputPath, true)
                     }
                 }
             })
         } else {
             if let image = mediaEditor.resultImage {
-                makeEditorImageComposition(context: self.context, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
                     if let data = resultImage?.jpegData(compressionQuality: 0.8) {
                         let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
                         try? data.write(to: URL(fileURLWithPath: outputPath))
@@ -1307,31 +1344,4 @@ public final class MediaEditorScreen: ViewController {
 
         (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
     }
-}
-
-
-private func recommendedExportConfiguration(mediaEditor: MediaEditor) -> MediaEditorVideoExport.Configuration {
-    let compressionProperties: [String: Any] = [
-        AVVideoAverageBitRateKey: 2000000
-    ]
-    
-    let videoSettings: [String: Any] = [
-        AVVideoCodecKey: AVVideoCodecType.h264,
-        AVVideoCompressionPropertiesKey: compressionProperties,
-        AVVideoWidthKey: 1080,
-        AVVideoHeightKey: 1920
-    ]
-    
-    let audioSettings: [String: Any] = [
-        AVFormatIDKey: kAudioFormatMPEG4AAC,
-        AVSampleRateKey: 44100,
-        AVEncoderBitRateKey: 64000,
-        AVNumberOfChannelsKey: 2
-    ]
-    
-    return MediaEditorVideoExport.Configuration(
-        videoSettings: videoSettings,
-        audioSettings: audioSettings,
-        values: mediaEditor.values
-    )
 }

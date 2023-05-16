@@ -33,7 +33,9 @@ public final class MediaEditor {
 
     public var values: MediaEditorValues {
         didSet {
-            self.updateRenderChain()
+            if !self.skipRendering {
+                self.updateRenderChain()
+            }
         }
     }
     
@@ -65,8 +67,7 @@ public final class MediaEditor {
     }
     
     public var resultIsVideo: Bool {
-        let hasAnimatedEntities = false
-        return self.player != nil || hasAnimatedEntities
+        return self.player != nil || self.values.entities.contains(where: { $0.entity.isAnimated })
     }
     
     public var resultImage: UIImage? {
@@ -248,8 +249,11 @@ public final class MediaEditor {
         self.setupSource()
     }
     
+    private var skipRendering = false
     public func setCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) {
+        self.skipRendering = true
         self.values = self.values.withUpdatedCrop(offset: offset, scale: scale, rotation: rotation, mirroring: mirroring)
+        self.skipRendering = false
     }
     
     public func getToolValue(_ key: EditorToolKey) -> Any? {
