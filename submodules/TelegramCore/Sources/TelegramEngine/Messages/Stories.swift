@@ -13,6 +13,7 @@ public struct EngineStoryPrivacy: Equatable {
         case everyone
         case contacts
         case closeFriends
+        case nobody
     }
     
     public var base: Base
@@ -116,6 +117,8 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                 privacyRules = [.inputPrivacyValueAllowContacts]
             case .closeFriends:
                 privacyRules = [.inputPrivacyValueAllowCloseFriends]
+            case .nobody:
+                privacyRules = [.inputPrivacyValueDisallowAll]
             }
             var privacyUsers: [Api.InputUser] = []
             var privacyChats: [Int64] = []

@@ -502,10 +502,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     })
     |> mapToSignal { coordinate -> Signal<PeersNearbyData?, NoError> in
         guard let coordinate = coordinate else {
-            #if !DEBUG
-            #error("fix")
-            #endif
-            preconditionFailure()
+            return .single(nil)
             /*let peersNearbyContext = PeersNearbyContext(network: context.account.network, stateManager: context.account.stateManager, coordinate: nil)
             return peersNearbyContext.get()
             |> map { peersNearby -> PeersNearbyData in

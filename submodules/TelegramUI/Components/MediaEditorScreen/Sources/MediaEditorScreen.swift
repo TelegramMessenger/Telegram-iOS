@@ -19,6 +19,7 @@ import EntityKeyboard
 import TooltipUI
 import BlurredBackgroundComponent
 import AvatarNode
+import ShareWithPeersScreen
 
 enum DrawingScreenType {
     case drawing
@@ -631,6 +632,8 @@ final class MediaEditorScreenComponent: Component {
                 privacyText = "Close Friends"
             case .contacts:
                 privacyText = "Contacts"
+            case .nobody:
+                privacyText = "Selected Contacts"
             }
             
             
@@ -1359,14 +1362,14 @@ public final class MediaEditorScreen: ViewController {
     public var sourceHint: SourceHint?
     
     public var cancelled: () -> Void = {}
-    public var completion: (MediaEditorScreen.Result, @escaping () -> Void) -> Void = { _, _ in }
+    public var completion: (MediaEditorScreen.Result, @escaping () -> Void, EngineStoryPrivacy) -> Void = { _, _, _ in }
     
     public init(
         context: AccountContext,
         subject: Signal<Subject?, NoError>,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool) -> TransitionOut?,
-        completion: @escaping (MediaEditorScreen.Result, @escaping () -> Void) -> Void
+        completion: @escaping (MediaEditorScreen.Result, @escaping () -> Void, EngineStoryPrivacy) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -1393,7 +1396,22 @@ public final class MediaEditorScreen: ViewController {
     }
             
     func presentPrivacySettings() {
-        enum AdditionalCategoryId: Int {
+        let stateContext = ShareWithPeersScreen.StateContext(context: self.context)
+        let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            self.push(ShareWithPeersScreen(context: self.context, initialPrivacy: self.node.storyPrivacy, stateContext: stateContext, completion: { [weak self] privacy in
+                guard let self else {
+                    return
+                }
+                self.node.storyPrivacy = privacy
+                self.node.requestUpdate()
+            }))
+        })
+        
+        /*enum AdditionalCategoryId: Int {
             case everyone
             case contacts
             case closeFriends
@@ -1464,7 +1482,7 @@ public final class MediaEditorScreen: ViewController {
             }
             self?.node.storyPrivacy = privacy
             self?.node.requestUpdate()
-        })
+        })*/
     }
     
     func requestDismiss(animated: Bool) {
@@ -1514,7 +1532,7 @@ public final class MediaEditorScreen: ViewController {
                 self?.node.animateOut(finished: true, completion: { [weak self] in
                     self?.dismiss()
                 })
-            })
+            }, self.node.storyPrivacy)
         } else {
             if let image = mediaEditor.resultImage {
                 makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
@@ -1523,7 +1541,7 @@ public final class MediaEditorScreen: ViewController {
                             self?.node.animateOut(finished: true, completion: { [weak self] in
                                 self?.dismiss()
                             })
-                        })
+                        }, self.node.storyPrivacy)
                     }
                 })
             }

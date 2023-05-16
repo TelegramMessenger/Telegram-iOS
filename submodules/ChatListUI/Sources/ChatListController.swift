@@ -2490,10 +2490,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                                         let localRect = transitionView.convert(transitionView.bounds, to: self.view)
                                         
-                                        Queue.mainQueue().after(0.2 * UIView.animationDurationFactor, { [weak self] in
+                                        /*Queue.mainQueue().after(0.2 * UIView.animationDurationFactor, { [weak self] in
                                             HapticFeedback().impact()
                                             self?.animateRipple(centerLocation: localRect.center)
-                                        })
+                                        })*/
                                         
                                         return StoryContainerScreen.TransitionOut(
                                             destinationView: transitionView,

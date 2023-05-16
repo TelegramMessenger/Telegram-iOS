@@ -23,17 +23,20 @@ final class ShareWithPeersScreenComponent: Component {
     
     let context: AccountContext
     let stateContext: ShareWithPeersScreen.StateContext
+    let initialPrivacy: EngineStoryPrivacy
     let categoryItems: [CategoryItem]
     let completion: (EngineStoryPrivacy) -> Void
     
     init(
         context: AccountContext,
         stateContext: ShareWithPeersScreen.StateContext,
+        initialPrivacy: EngineStoryPrivacy,
         categoryItems: [CategoryItem],
         completion: @escaping (EngineStoryPrivacy) -> Void
     ) {
         self.context = context
         self.stateContext = stateContext
+        self.initialPrivacy = initialPrivacy
         self.categoryItems = categoryItems
         self.completion = completion
     }
@@ -43,6 +46,9 @@ final class ShareWithPeersScreenComponent: Component {
             return false
         }
         if lhs.stateContext !== rhs.stateContext {
+            return false
+        }
+        if lhs.initialPrivacy != rhs.initialPrivacy {
             return false
         }
         if lhs.categoryItems != rhs.categoryItems {
@@ -681,7 +687,16 @@ final class ShareWithPeersScreenComponent: Component {
             let sideInset: CGFloat = 0.0
             
             if self.component == nil {
-                self.selectedCategories.insert(.everyone)
+                switch component.initialPrivacy.base {
+                case .everyone:
+                    self.selectedCategories.insert(.everyone)
+                case .closeFriends:
+                    self.selectedCategories.insert(.closeFriends)
+                case .contacts:
+                    self.selectedCategories.insert(.contacts)
+                case .nobody:
+                    self.selectedCategories.insert(.selectedContacts)
+                }
                 
                 var applyState = false
                 self.defaultStateValue = component.stateContext.stateValue
@@ -778,6 +793,9 @@ final class ShareWithPeersScreenComponent: Component {
                             self.selectedCategories.remove(categoryId)
                         } else if let peerId = tokenId.base as? EnginePeer.Id {
                             self.selectedPeers.removeAll(where: { $0 == peerId })
+                        }
+                        if self.selectedCategories.isEmpty {
+                            self.selectedCategories.insert(.everyone)
                         }
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
                     }
@@ -969,8 +987,21 @@ final class ShareWithPeersScreenComponent: Component {
                             return
                         }
                         
+                        let base: EngineStoryPrivacy.Base
+                        if self.selectedCategories.contains(.everyone) {
+                            base = .everyone
+                        } else if self.selectedCategories.contains(.closeFriends) {
+                            base = .closeFriends
+                        } else if self.selectedCategories.contains(.contacts) {
+                            base = .contacts
+                        } else if self.selectedCategories.contains(.selectedContacts) {
+                            base = .nobody
+                        } else {
+                            base = .nobody
+                        }
+                        
                         component.completion(EngineStoryPrivacy(
-                            base: .everyone,
+                            base: base,
                             additionallyIncludePeers: self.selectedPeers
                         ))
                         controller.dismiss()
@@ -1152,7 +1183,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void) {
+    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void) {
         self.context = context
         
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []
@@ -1188,6 +1219,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         super.init(context: context, component: ShareWithPeersScreenComponent(
             context: context,
             stateContext: stateContext,
+            initialPrivacy: initialPrivacy,
             categoryItems: categoryItems,
             completion: completion
         ), navigationBarAppearance: .none, theme: .dark)
