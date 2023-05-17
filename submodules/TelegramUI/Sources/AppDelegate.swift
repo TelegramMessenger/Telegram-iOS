@@ -1546,13 +1546,19 @@ extension UserDefaults {
                         }
                     })
                     
-                    Queue.mainQueue().after(0.5) {
-                        // handle calls or new messages while app was not running or in background for non-current accounts (both hidable and normal)
-                        // for hidable accounts all notifications are unregistered when app is in background
-                        // this also updates badge counter in case of new messages in hidable secret chat in normal non-current account
-                        // even for normal non-current accounts if iOS Call Integration is disabled and new call comes, or if new message comes, when app is in background, if we do not tap notification but just open app, this will show incoming call window or update badge counter on Settings tab
-                        self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(nil)
-                    }
+                    let _ = (self.sharedContextPromise.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                        if sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) {
+                            Queue.mainQueue().after(0.5) {
+                                // handle calls or new messages while app was not running or in background for non-current accounts (both hidable and normal)
+                                // for hidable accounts all notifications are unregistered when app is in background
+                                // this also updates badge counter in case of new messages in hidable secret chat in normal non-current account
+                                // even for normal non-current accounts if iOS Call Integration is disabled and new call comes, or if new message comes, when app is in background, if we do not tap notification but just open app, this will show incoming call window or update badge counter on Settings tab
+                                self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(nil)
+                            }
+                        }
+                    })
                 } else {
                     suppressedNotificationForAccounIdObserver?.invalidate()
                     suppressedNotificationForAccounIdObserver = nil
@@ -1572,7 +1578,7 @@ extension UserDefaults {
                 let newlyRevealedAccountIds = lastInactiveAccountIds.subtracting(inactiveAccountsIds)
                 lastInactiveAccountIds = inactiveAccountsIds
                 
-                if !newlyRevealedAccountIds.isEmpty {
+                if !newlyRevealedAccountIds.isEmpty && sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) {
                     self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(newlyRevealedAccountIds)
                 }
             })
@@ -2131,7 +2137,7 @@ extension UserDefaults {
                 if #available(iOS 13.0, *) {
                     assertionFailure()
                 } else {
-                    // On iOS before 13, telegram servers do not send regular push notification for incoming calls when call integration is disabled?! But they always send voip-push, even when integration is disabled and voip pushes are deregistered via telegram API?
+                    // On iOS before 13, telegram servers do not send regular push notification for incoming calls when call integration is disabled?! But they send voip-push, even when integration is disabled.
                     self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts([accountId])
                 }
                 completion()

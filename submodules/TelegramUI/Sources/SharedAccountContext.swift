@@ -1282,6 +1282,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             
+            if #available(iOS 13.0, *) {
+            } else {
+                voipProductionUserIds = activeProductionUserIds
+                voipTestingUserIds = activeTestingUserIds
+            }
+            
             let allAccountContexts = activeAccounts.map({ $0.1 }) + inactiveAccounts.map({ $0.1 })
             for account in allAccountContexts {
                 let appliedAps: Signal<Bool, NoError>
