@@ -13184,7 +13184,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             var (buttons, allButtons, initialButton) = buttonsAndInitialButton
-            if !premiumGiftOptions.isEmpty {
+            if !premiumGiftOptions.isEmpty, !"".isEmpty {
                 buttons.insert(.gift, at: 1)
             }
             

@@ -4954,6 +4954,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         })))
                     }
                     
+                    /*
                     if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport), let cachedData = data.cachedData as? CachedUserData, !cachedData.premiumGiftOptions.isEmpty {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_GiftPremium, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
@@ -4991,6 +4992,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             }
                         })))
                     }
+                    */
                     
                     if let cachedData = data.cachedData as? CachedUserData, cachedData.flags.contains(.translationHidden) {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuTranslate, icon: { theme in
