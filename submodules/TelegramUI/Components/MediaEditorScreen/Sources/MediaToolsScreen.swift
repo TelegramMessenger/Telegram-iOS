@@ -351,7 +351,7 @@ private final class MediaToolsScreenComponent: Component {
                         guard let controller = environment.controller() as? MediaToolsScreen else {
                             return
                         }
-                        controller.requestDismiss(animated: true)
+                        controller.requestDismiss(reset: true, animated: true)
                     }
                 )),
                 environment: {},
@@ -379,7 +379,7 @@ private final class MediaToolsScreenComponent: Component {
                         guard let controller = environment.controller() as? MediaToolsScreen else {
                             return
                         }
-                        controller.requestDismiss(animated: true)
+                        controller.requestDismiss(reset: false, animated: true)
                     }
                 )),
                 environment: {},
@@ -954,10 +954,13 @@ public final class MediaToolsScreen: ViewController {
     fileprivate let mediaEditor: MediaEditor
     
     public var dismissed: () -> Void = {}
+    
+    private var initialValues: MediaEditorValues
         
     public init(context: AccountContext, mediaEditor: MediaEditor) {
         self.context = context
         self.mediaEditor = mediaEditor
+        self.initialValues = mediaEditor.values.makeCopy()
         
         super.init(navigationBarPresentationData: nil)
         self.navigationPresentation = .flatModal
@@ -977,7 +980,11 @@ public final class MediaToolsScreen: ViewController {
         super.displayNodeDidLoad()
     }
             
-    func requestDismiss(animated: Bool) {
+    func requestDismiss(reset: Bool, animated: Bool) {
+        if reset {
+            self.mediaEditor.values = self.initialValues
+        }
+        
         self.dismissed()
         
         self.node.animateOutToEditor(completion: {
