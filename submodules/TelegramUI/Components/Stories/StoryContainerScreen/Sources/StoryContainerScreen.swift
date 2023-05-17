@@ -133,6 +133,8 @@ private final class StoryContainerScreenComponent: Component {
             
             super.init(frame: frame)
             
+            self.layer.addSublayer(self.backgroundLayer)
+            
             let horizontalPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
                 guard let self, let focusedItemSet = self.focusedItemSet, let itemSetView = self.visibleItemSetViews[focusedItemSet], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return []
@@ -416,6 +418,8 @@ private final class StoryContainerScreenComponent: Component {
                 }
                 self.itemSets = component.initialContent
             }
+            
+            transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             var isProgressPaused = false
             if self.itemSetPanState != nil {

@@ -846,7 +846,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                 |> mapError { _ -> PendingMessageUploadError in return .generic }
                                 |> mapToSignal { result -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                     switch result {
-                                        case let .messageMediaDocument(_, document, _):
+                                        case let .messageMediaDocument(_, document, _, _):
                                         if let document = document, let mediaFile = telegramMediaFileFromApiDocument(document), let resource = mediaFile.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
                                                 var flags: Int32 = 0
                                                 if hasSpoiler {

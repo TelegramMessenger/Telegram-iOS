@@ -56,7 +56,7 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                         |> mapError { _ -> UploadStickerError in return .generic }
                         |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
                             switch media {
-                                case let .messageMediaDocument(_, document, _):
+                                case let .messageMediaDocument(_, document, _, _):
                                     if let document = document, let file = telegramMediaFileFromApiDocument(document), let resource = file.resource as? CloudDocumentMediaResource {
                                         return .single(.complete(resource, file.mimeType))
                                     }

@@ -52,7 +52,7 @@ extension Api.MessageMedia {
                 } else {
                     return nil
                 }
-            case let .messageMediaDocument(_, document, _):
+            case let .messageMediaDocument(_, document, _, _):
                 if let document = document {
                     return collectPreCachedResources(for: document)
                 }

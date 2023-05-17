@@ -162,7 +162,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                                             |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                                             |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                                 switch media {
-                                                case let .messageMediaDocument(_, document, _):
+                                                case let .messageMediaDocument(_, document, _, _):
                                                     if let document = document {
                                                         if let mediaFile = telegramMediaFileFromApiDocument(document) {
                                                             return .single(.result(.media(.standalone(media: mediaFile))))
