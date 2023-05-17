@@ -10,7 +10,7 @@
 	"app_specific_url_scheme": "tg",
 	"premium_iap_product_id": "org.telegram.telegramPremium.monthly",
 	"enable_siri": true,
-	"enable_icloud": true,
+	"enable_icloud": false,
     "is_non_dev_account": false,
     "bundle_name": "Cloudballon",
     "bundle_display_name": "Cloudballon"
