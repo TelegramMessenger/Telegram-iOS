@@ -1528,7 +1528,7 @@ public final class MediaEditorScreen: ViewController {
                     duration = 5.0
                 }
             }
-            self.completion(.video(video: videoResult, coverImage: nil, values: mediaEditor.values, duration: duration, dimensions: PixelDimensions(width: 1080, height: 1920), caption: caption), { [weak self] in
+            self.completion(.video(video: videoResult, coverImage: nil, values: mediaEditor.values, duration: duration, dimensions: PixelDimensions(width: 720, height: 1280), caption: caption), { [weak self] in
                 self?.node.animateOut(finished: true, completion: { [weak self] in
                     self?.dismiss()
                 })

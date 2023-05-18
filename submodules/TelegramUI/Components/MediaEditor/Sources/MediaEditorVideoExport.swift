@@ -14,7 +14,7 @@ enum ExportWriterStatus {
 
 protocol MediaEditorVideoExportWriter {
     func setup(configuration: MediaEditorVideoExport.Configuration, outputPath: String)
-    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, inputTransform: CGAffineTransform?)
+    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration)
     func setupAudioInput(configuration: MediaEditorVideoExport.Configuration)
     
     func startWriting() -> Bool
@@ -55,28 +55,17 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         writer.shouldOptimizeForNetworkUse = configuration.shouldOptimizeForNetworkUse
     }
     
-    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, inputTransform: CGAffineTransform?) {
+    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration) {
         guard let writer = self.writer else {
             return
         }
-        let videoInput: AVAssetWriterInput
-        if let transform = inputTransform {
-            let size = CGSize(width: configuration.videoSettings[AVVideoWidthKey] as! Int, height: configuration.videoSettings[AVVideoHeightKey] as! Int)
-            let transformedSize = size.applying(transform.inverted())
-            var videoSettings = configuration.videoSettings
-            videoSettings[AVVideoWidthKey] = abs(transformedSize.width)
-            videoSettings[AVVideoHeightKey] = abs(transformedSize.height)
-            videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
-            videoInput.transform = transform
-        } else {
-            videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: configuration.videoSettings)
-        }
+        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: configuration.videoSettings)
         videoInput.expectsMediaDataInRealTime = false
         
         let sourcePixelBufferAttributes = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey as String: 1080,
-            kCVPixelBufferHeightKey as String: 1920
+            kCVPixelBufferWidthKey as String: UInt32(configuration.dimensions.width),
+            kCVPixelBufferHeightKey as String: UInt32(configuration.dimensions.height)
         ]
         self.adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput, sourcePixelBufferAttributes: sourcePixelBufferAttributes)
         
@@ -284,11 +273,7 @@ public final class MediaEditorVideoExport {
         } else {
             self.duration.set(CMTime(seconds: 3, preferredTimescale: 1))
         }
-        
-        if self.configuration.values.requiresComposing {
-            self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.dimensions)
-        }
-        
+                
         switch self.subject {
         case let .video(asset):
             self.setupWithAsset(asset)
@@ -297,6 +282,13 @@ public final class MediaEditorVideoExport {
         }
     }
         
+    private func setupComposer() {
+        guard self.composer == nil else {
+            return
+        }
+        self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.dimensions)
+    }
+    
     private func setupWithAsset(_ asset: AVAsset) {
         self.reader = try? AVAssetReader(asset: asset)
         guard let reader = self.reader else {
@@ -315,16 +307,14 @@ public final class MediaEditorVideoExport {
                 
         let videoTracks = asset.tracks(withMediaType: .video)
         if (videoTracks.count > 0) {
-            let videoOutput: AVAssetReaderOutput
-            let inputTransform: CGAffineTransform?
-            if self.composer == nil {
-                videoOutput = AVAssetReaderTrackOutput(track: videoTracks.first!, outputSettings: [kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]])
-                inputTransform = videoTracks.first!.preferredTransform
+            let outputSettings: [String : Any]
+            if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing {
+                outputSettings = [kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]]
             } else {
-                videoOutput = AVAssetReaderTrackOutput(track: videoTracks.first!, outputSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
-                inputTransform = nil
+                outputSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+                self.setupComposer()
             }
-            
+            let videoOutput = AVAssetReaderTrackOutput(track: videoTracks.first!, outputSettings: outputSettings)
             videoOutput.alwaysCopiesSampleData = false
             if reader.canAdd(videoOutput) {
                 reader.add(videoOutput)
@@ -334,7 +324,7 @@ public final class MediaEditorVideoExport {
             }
             self.videoOutput = videoOutput
             
-            writer.setupVideoInput(configuration: self.configuration, inputTransform: inputTransform)
+            writer.setupVideoInput(configuration: self.configuration)
         } else {
             self.videoOutput = nil
         }
@@ -363,12 +353,14 @@ public final class MediaEditorVideoExport {
     }
     
     private func setupWithImage(_ image: UIImage) {
+        self.setupComposer()
+        
         self.writer = MediaEditorVideoAVAssetWriter()
         guard let writer = self.writer else {
             return
         }
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
-        writer.setupVideoInput(configuration: self.configuration, inputTransform: nil)
+        writer.setupVideoInput(configuration: self.configuration)
     }
     
     private func finish() {

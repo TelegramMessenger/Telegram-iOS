@@ -919,13 +919,14 @@ extension CodableToolValue: Codable {
 public func recommendedVideoExportConfiguration(values: MediaEditorValues) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any] = [
         AVVideoAverageBitRateKey: 2000000,
-        AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
-        //AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-        //AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
+        //AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
+        AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+        AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
     ]
     
     let videoSettings: [String: Any] = [
-        AVVideoCodecKey: AVVideoCodecType.hevc,
+        AVVideoCodecKey: AVVideoCodecType.h264,
+        //AVVideoCodecKey: AVVideoCodecType.hevc,
         AVVideoCompressionPropertiesKey: compressionProperties,
         AVVideoWidthKey: 720,
         AVVideoHeightKey: 1280
