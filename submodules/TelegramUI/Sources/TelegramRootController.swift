@@ -362,7 +362,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     case let .image(image, dimensions, caption):
                         var randomId: Int64 = 0
                         arc4random_buf(&randomId, 8)
-                        let scaledSize = image.size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
+                        let scaledSize = image.size.aspectFittedOrSmaller(CGSize(width: 1920, height: 1920))
                         if let scaledImage = scaleImageToPixelSize(image: image, size: scaledSize) {
                             if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
                                 storyListContext.upload(media: .image(dimensions: dimensions, data: scaledImageData), text: caption?.string ?? "", entities: [], privacy: privacy)
