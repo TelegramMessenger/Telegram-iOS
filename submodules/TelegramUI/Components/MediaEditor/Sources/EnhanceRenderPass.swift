@@ -85,8 +85,6 @@ private final class EnhanceLightnessPass: DefaultRenderPass {
         
         renderCommandEncoder.endEncoding()
         
-        //saveTexture(self.cachedTexture!, name: "lightness", device: device)
-        
         return self.cachedTexture!
     }
 }

@@ -3,6 +3,7 @@ import UIKit
 import Display
 import TelegramCore
 import AVFoundation
+import VideoToolbox
 
 public enum EditorToolKey: Int32 {
     case enhance
@@ -171,6 +172,10 @@ public final class MediaEditorValues: Codable {
             }
         }
         try container.encode(values, forKey: .toolValues)
+    }
+    
+    public func makeCopy() -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
@@ -913,14 +918,18 @@ extension CodableToolValue: Codable {
 
 public func recommendedVideoExportConfiguration(values: MediaEditorValues) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any] = [
-        AVVideoAverageBitRateKey: 2000000
+        AVVideoAverageBitRateKey: 2000000,
+        //AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
+        AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+        AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
     ]
     
     let videoSettings: [String: Any] = [
         AVVideoCodecKey: AVVideoCodecType.h264,
+        //AVVideoCodecKey: AVVideoCodecType.hevc,
         AVVideoCompressionPropertiesKey: compressionProperties,
-        AVVideoWidthKey: 1080,
-        AVVideoHeightKey: 1920
+        AVVideoWidthKey: 720,
+        AVVideoHeightKey: 1280
     ]
     
     let audioSettings: [String: Any] = [
