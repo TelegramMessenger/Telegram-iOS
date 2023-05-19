@@ -177,7 +177,7 @@ public final class StoryListContext {
                     return transaction.getPeer(account.peerId)
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let self, let peer else {
+                    guard let `self` = self, let peer = peer else {
                         return
                     }
                     self.stateValue = State(itemSets: [
@@ -213,7 +213,7 @@ public final class StoryListContext {
                     }
                     return peers
                 }).start(next: { peers in
-                    guard let self else {
+                    guard let `self` = self else {
                         return
                     }
                     if self.isLoadingMore {
@@ -470,7 +470,7 @@ public final class StoryListContext {
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<([PeerItemSet], LoadMoreToken?), NoError> in
-                    guard let result else {
+                    guard let result = result else {
                         return .single(([], nil))
                     }
                     return account.postbox.transaction { transaction -> ([PeerItemSet], LoadMoreToken?) in
