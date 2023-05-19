@@ -19,8 +19,11 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/AccountContext",
         "//submodules/TelegramPresentationData",
+        "//submodules/ManagedAnimationNode",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/Components/HierarchyTrackingLayer",
+        "//submodules/TelegramUI/Components/AudioWaveformComponent",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
     ],
     visibility = [
         "//visibility:public",

@@ -15,6 +15,7 @@ import ListMessageItem
 import ChatMessageInteractiveMediaBadge
 import SoftwareVideo
 import ChatControllerInteraction
+import PeerInfoVisualMediaPaneNode
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext

@@ -111,6 +111,10 @@ public final class Button: Component {
     public final class View: UIButton, ComponentTaggedView {
         private let contentView: ComponentHostView<Empty>
         
+        public var content: UIView? {
+            return self.contentView.componentView
+        }
+        
         private var component: Button?
         private var currentIsHighlighted: Bool = false {
             didSet {

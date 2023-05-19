@@ -8,6 +8,19 @@ import AccountContext
 import TelegramPresentationData
 import ChatPresentationInterfaceState
 
+private extension MessageInputActionButtonComponent.Mode {
+    var iconName: String? {
+        switch self {
+        case .delete:
+            return "Chat/Context Menu/Delete"
+        case .attach:
+            return "Chat/Input/Text/IconAttachment"
+        default:
+            return nil
+        }
+    }
+}
+
 public final class MessageInputActionButtonComponent: Component {
     public enum Mode {
         case none
@@ -15,6 +28,8 @@ public final class MessageInputActionButtonComponent: Component {
         case apply
         case voiceInput
         case videoInput
+        case delete
+        case attach
     }
     
     public enum Action {
@@ -26,6 +41,8 @@ public final class MessageInputActionButtonComponent: Component {
     public let action: (Mode, Action, Bool) -> Void
     public let switchMediaInputMode: () -> Void
     public let updateMediaCancelFraction: (CGFloat) -> Void
+    public let lockMediaRecording: () -> Void
+    public let stopAndPreviewMediaRecording: () -> Void
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -38,6 +55,8 @@ public final class MessageInputActionButtonComponent: Component {
         action: @escaping (Mode, Action, Bool) -> Void,
         switchMediaInputMode: @escaping () -> Void,
         updateMediaCancelFraction: @escaping (CGFloat) -> Void,
+        lockMediaRecording: @escaping () -> Void,
+        stopAndPreviewMediaRecording: @escaping () -> Void,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -49,6 +68,8 @@ public final class MessageInputActionButtonComponent: Component {
         self.action = action
         self.switchMediaInputMode = switchMediaInputMode
         self.updateMediaCancelFraction = updateMediaCancelFraction
+        self.lockMediaRecording = lockMediaRecording
+        self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -162,6 +183,12 @@ public final class MessageInputActionButtonComponent: Component {
                         break
                     }
                 }
+                micButton.stopRecording = { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.stopAndPreviewMediaRecording()
+                }
                 micButton.endRecording = { [weak self] sendMedia in
                     guard let self, let component = self.component else {
                         return
@@ -172,6 +199,12 @@ public final class MessageInputActionButtonComponent: Component {
                     default:
                         break
                     }
+                }
+                micButton.updateLocked = { [weak self] _ in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.lockMediaRecording()
                 }
                 micButton.switchMode = { [weak self] in
                     guard let self, let component = self.component else {
@@ -187,29 +220,33 @@ public final class MessageInputActionButtonComponent: Component {
                 }
             }
             
-            if self.sendIconView.image == nil {
-                self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(UIColor.white.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                    context.setBlendMode(.copy)
-                    context.setStrokeColor(UIColor.clear.cgColor)
-                    context.setLineWidth(2.0)
-                    context.setLineCap(.round)
-                    context.setLineJoin(.round)
-                    
-                    context.translateBy(x: 5.45, y: 4.0)
-                    
-                    context.saveGState()
-                    context.translateBy(x: 4.0, y: 4.0)
-                    let _ = try? drawSvgPath(context, path: "M1,7 L7,1 L13,7 S ")
-                    context.restoreGState()
-                    
-                    context.saveGState()
-                    context.translateBy(x: 10.0, y: 4.0)
-                    let _ = try? drawSvgPath(context, path: "M1,16 V1 S ")
-                    context.restoreGState()
-                })
+            if self.sendIconView.image == nil || previousComponent?.mode.iconName != component.mode.iconName {
+                if let iconName = component.mode.iconName {
+                    self.sendIconView.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: .white)
+                } else {
+                    self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(UIColor.white.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                        context.setBlendMode(.copy)
+                        context.setStrokeColor(UIColor.clear.cgColor)
+                        context.setLineWidth(2.0)
+                        context.setLineCap(.round)
+                        context.setLineJoin(.round)
+                        
+                        context.translateBy(x: 5.45, y: 4.0)
+                        
+                        context.saveGState()
+                        context.translateBy(x: 4.0, y: 4.0)
+                        let _ = try? drawSvgPath(context, path: "M1,7 L7,1 L13,7 S ")
+                        context.restoreGState()
+                        
+                        context.saveGState()
+                        context.translateBy(x: 10.0, y: 4.0)
+                        let _ = try? drawSvgPath(context, path: "M1,16 V1 S ")
+                        context.restoreGState()
+                    })
+                }
             }
             
             var sendAlpha: CGFloat = 0.0
@@ -218,7 +255,7 @@ public final class MessageInputActionButtonComponent: Component {
             switch component.mode {
             case .none:
                 break
-            case .send, .apply:
+            case .send, .apply, .attach, .delete:
                 sendAlpha = 1.0
             case .videoInput, .voiceInput:
                 microphoneAlpha = 1.0
@@ -248,7 +285,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

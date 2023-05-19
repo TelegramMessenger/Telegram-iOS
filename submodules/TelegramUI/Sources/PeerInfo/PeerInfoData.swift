@@ -12,6 +12,7 @@ import TelegramUIPreferences
 import TelegramNotices
 import AccountUtils
 import DeviceAccess
+import PeerInfoVisualMediaPaneNode
 
 enum PeerInfoUpdatingAvatar {
     case none
@@ -327,12 +328,6 @@ private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId
         }
     }
     |> distinctUntilChanged
-}
-
-struct PeerInfoStatusData: Equatable {
-    var text: String
-    var isActivity: Bool
-    var key: PeerInfoPaneKey?
 }
 
 enum PeerInfoMembersData: Equatable {
@@ -681,6 +676,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             )
             |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status -> PeerInfoScreenData in
                 var availablePanes = availablePanes
+                
+                if peerView.peers[peerView.peerId] is TelegramUser {
+                    availablePanes?.insert(.stories, at: 0)
+                }
+                
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
                         availablePanes?.append(.groupsInCommon)

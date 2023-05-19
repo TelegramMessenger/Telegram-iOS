@@ -3,6 +3,7 @@ import SwiftSignalKit
 import TelegramCore
 import AccountContext
 import Display
+import ComponentFlow
 import MessageInputPanelComponent
 import UndoUI
 import AttachmentUI
@@ -29,18 +30,23 @@ import TelegramPresentationData
 import LegacyInstantVideoController
 import TelegramPresentationData
 import ShareController
+import ChatPresentationInterfaceState
 
 final class StoryItemSetContainerSendMessage {
     weak var attachmentController: AttachmentController?
     
     var audioRecorderValue: ManagedAudioRecorder?
     var audioRecorder = Promise<ManagedAudioRecorder?>()
+    var recordedAudioPreview: ChatRecordedMediaPreview?
     
     var videoRecorderValue: InstantVideoController?
     var tempVideoRecorderValue: InstantVideoController?
     var videoRecorder = Promise<InstantVideoController?>()
     let controllerNavigationDisposable = MetaDisposable()
     let enqueueMediaMessageDisposable = MetaDisposable()
+    
+    private(set) var isMediaRecordingLocked: Bool = false
+    var wasRecordingDismissed: Bool = false
     
     deinit {
         self.controllerNavigationDisposable.dispose()
@@ -63,26 +69,38 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         
-        switch inputPanelView.getSendMessageInput() {
-        case let .text(text):
-            if !text.isEmpty {
-                component.context.engine.messages.enqueueOutgoingMessage(
-                    to: peerId,
-                    replyTo: nil,
-                    content: .text(text)
-                )
-                inputPanelView.clearSendMessageInput()
-                view.endEditing(true)
-                
-                if let controller = component.controller() {
-                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    controller.present(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .succeed(text: "Message Sent"),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        action: { _ in return false }
-                    ), in: .current)
+        if let recordedAudioPreview = self.recordedAudioPreview {
+            self.recordedAudioPreview = nil
+            
+            let waveformBuffer = recordedAudioPreview.waveform.makeBitstream()
+            
+            let messages: [EnqueueMessage] = [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedAudioPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(recordedAudioPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedAudioPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+            
+            let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: messages).start()
+            
+            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+        } else {
+            switch inputPanelView.getSendMessageInput() {
+            case let .text(text):
+                if !text.isEmpty {
+                    component.context.engine.messages.enqueueOutgoingMessage(
+                        to: peerId,
+                        replyTo: nil,
+                        content: .text(text)
+                    )
+                    inputPanelView.clearSendMessageInput()
+                    view.endEditing(true)
+                    
+                    if let controller = component.controller() {
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        controller.present(UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .succeed(text: "Message Sent"),
+                            elevatedLayout: false,
+                            animateInAsReplacement: false,
+                            action: { _ in return false }
+                        ), in: .current)
+                    }
                 }
             }
         }
@@ -94,6 +112,8 @@ final class StoryItemSetContainerSendMessage {
         isVideo: Bool,
         sendAction: Bool
     ) {
+        self.isMediaRecordingLocked = false
+        
         guard let component = view.component else {
             return
         }
@@ -167,6 +187,7 @@ final class StoryItemSetContainerSendMessage {
                             return
                         }
                         
+                        self.wasRecordingDismissed = !sendAction
                         self.audioRecorder.set(.single(nil))
                         
                         guard let data else {
@@ -205,7 +226,50 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    func stopMediaRecorder() {
+    func lockMediaRecording() {
+        self.isMediaRecordingLocked = true
+    }
+    
+    func stopMediaRecording(view: StoryItemSetContainerComponent.View) {
+        if let audioRecorderValue = self.audioRecorderValue {
+            let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self, weak view] data in
+                guard let self, let view, let component = view.component else {
+                    return
+                }
+                self.audioRecorder.set(.single(nil))
+                
+                guard let data else {
+                    return
+                }
+                if data.duration < 0.5 {
+                    HapticFeedback().error()
+                } else if let waveform = data.waveform {
+                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: Int64(data.compressedData.count))
+                    
+                    component.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
+                    self.recordedAudioPreview = ChatRecordedMediaPreview(resource: resource, duration: Int32(data.duration), fileSize: Int32(data.compressedData.count), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5))
+                    view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                }
+            })
+        } else if let videoRecorderValue = self.videoRecorderValue {
+            if videoRecorderValue.stopVideo() {
+                /*self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    $0.updatedInputTextPanelState { panelState in
+                        return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
+                    }
+                })*/
+            } else {
+                self.videoRecorder.set(.single(nil))
+            }
+        }
+    }
+    
+    func discardMediaRecordingPreview(view: StoryItemSetContainerComponent.View) {
+        if self.recordedAudioPreview != nil {
+            self.recordedAudioPreview = nil
+            self.wasRecordingDismissed = true
+            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+        }
     }
     
     func performInlineAction(view: StoryItemSetContainerComponent.View, item: StoryActionsComponent.Item) {

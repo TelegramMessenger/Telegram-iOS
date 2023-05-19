@@ -228,7 +228,7 @@ final class StoryItemContentComponent: Component {
                                     }
                                 }
                                 
-                                #if DEBUG && false
+                                #if DEBUG// && false
                                 let currentProgressTimerLimit: Double = 5 * 60.0
                                 #else
                                 let currentProgressTimerLimit: Double = 5.0

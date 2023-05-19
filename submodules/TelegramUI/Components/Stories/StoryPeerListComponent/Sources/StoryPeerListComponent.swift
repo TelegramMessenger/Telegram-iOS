@@ -218,8 +218,7 @@ public final class StoryPeerListComponent: Component {
                 collapsedContentWidth += titleSpacing
             }
             
-            let collapseEndIndex = collapseStartIndex + Int(collapsedItemCount)
-            let _ = collapseEndIndex
+            let collapseEndIndex = collapseStartIndex + max(0, Int(collapsedItemCount) - 1)
             
             let titleOffset = collapsedContentWidth
             collapsedContentWidth += titleSize.width
@@ -307,13 +306,13 @@ public final class StoryPeerListComponent: Component {
                 
                 var itemAlpha: CGFloat = 1.0
                 
-                if i >= collapseStartIndex && i <= (collapseStartIndex + 2) {
+                if i >= collapseStartIndex && i <= collapseEndIndex {
                     if i != collapseStartIndex {
                         let regularLeftItemFrame = itemLayout.frame(at: i - 1)
                         let collapsedLeftItemFrame = CGRect(origin: CGPoint(x: collapsedContentOrigin + CGFloat(i - collapseStartIndex - 1) * collapsedItemDistance, y: regularLeftItemFrame.minY), size: CGSize(width: collapsedItemWidth, height: regularLeftItemFrame.height))
                         leftItemFrame = regularLeftItemFrame.interpolate(to: collapsedLeftItemFrame, amount: component.collapseFraction)
                     }
-                    if i != collapseStartIndex + 2 {
+                    if i != collapseEndIndex {
                         let regularRightItemFrame = itemLayout.frame(at: i - 1)
                         let collapsedRightItemFrame = CGRect(origin: CGPoint(x: collapsedContentOrigin + CGFloat(i - collapseStartIndex - 1) * collapsedItemDistance, y: regularRightItemFrame.minY), size: CGSize(width: collapsedItemWidth, height: regularRightItemFrame.height))
                         rightItemFrame = regularRightItemFrame.interpolate(to: collapsedRightItemFrame, amount: component.collapseFraction)
@@ -414,7 +413,7 @@ public final class StoryPeerListComponent: Component {
                 if let myIndex = state.itemSets.firstIndex(where: { $0.peerId == component.context.account.peerId }) {
                     self.sortedItemSets.append(state.itemSets[myIndex])
                 }
-                for i in 0 ..< 4 {
+                for i in 0 ..< 1 {
                     for itemSet in state.itemSets {
                         if itemSet.peerId == component.context.account.peerId {
                             continue

@@ -16,6 +16,7 @@ import ListMessageItem
 import UndoUI
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
+import PeerInfoVisualMediaPaneNode
 
 final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext

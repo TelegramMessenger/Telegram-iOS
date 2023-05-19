@@ -599,10 +599,16 @@ final class MediaEditorScreenComponent: Component {
                         //self.performSendMessageAction()
                     },
                     setMediaRecordingActive: nil,
+                    lockMediaRecording: nil,
+                    stopAndPreviewMediaRecording: nil,
+                    discardMediaRecordingPreview: nil,
                     attachmentAction: nil,
                     reactionAction: nil,
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
+                    isRecordingLocked: false,
+                    recordedAudioPreview: nil,
+                    wasRecordingDismissed: false,
                     displayGradient: false,//component.inputHeight != 0.0,
                     bottomInset: 0.0 //component.inputHeight != 0.0 ? 0.0 : bottomContentInset
                 )),
