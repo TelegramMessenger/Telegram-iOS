@@ -257,7 +257,7 @@ public final class StoryListContext {
                                         if lhsItem.timestamp != rhsItem.timestamp {
                                             switch scope {
                                             case .all:
-                                                return lhsItem.timestamp > rhsItem.timestamp
+                                                return lhsItem.timestamp < rhsItem.timestamp
                                             case .peer:
                                                 return lhsItem.timestamp < rhsItem.timestamp
                                             }
@@ -309,7 +309,7 @@ public final class StoryListContext {
                     }
                     
                     itemSets.sort(by: { lhs, rhs in
-                        guard let lhsItem = lhs.items.first, let rhsItem = rhs.items.first else {
+                        guard let lhsItem = lhs.items.last, let rhsItem = rhs.items.last else {
                             if lhs.items.first != nil {
                                 return false
                             } else {
@@ -553,7 +553,7 @@ public final class StoryListContext {
                                 if lhsItem.timestamp != rhsItem.timestamp {
                                     switch scope {
                                     case .all:
-                                        return lhsItem.timestamp > rhsItem.timestamp
+                                        return lhsItem.timestamp < rhsItem.timestamp
                                     case .peer:
                                         return lhsItem.timestamp < rhsItem.timestamp
                                     }
@@ -573,7 +573,7 @@ public final class StoryListContext {
                                 if lhsItem.timestamp != rhsItem.timestamp {
                                     switch scope {
                                     case .all:
-                                        return lhsItem.timestamp > rhsItem.timestamp
+                                        return lhsItem.timestamp < rhsItem.timestamp
                                     case .peer:
                                         return lhsItem.timestamp < rhsItem.timestamp
                                     }
@@ -585,8 +585,8 @@ public final class StoryListContext {
                     }
                     
                     itemSets.sort(by: { lhs, rhs in
-                        guard let lhsItem = lhs.items.first, let rhsItem = rhs.items.first else {
-                            if lhs.items.first != nil {
+                        guard let lhsItem = lhs.items.last, let rhsItem = rhs.items.last else {
+                            if lhs.items.last != nil {
                                 return false
                             } else {
                                 return true

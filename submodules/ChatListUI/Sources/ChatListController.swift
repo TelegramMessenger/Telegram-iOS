@@ -2493,6 +2493,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                             destinationView: transitionView,
                                             destinationRect: transitionView.bounds,
                                             destinationCornerRadius: transitionView.bounds.height * 0.5,
+                                            destinationIsAvatar: true,
                                             completed: {}
                                         )
                                     }

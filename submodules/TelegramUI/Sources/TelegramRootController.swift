@@ -363,13 +363,15 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         var randomId: Int64 = 0
                         arc4random_buf(&randomId, 8)
                         let scaledSize = image.size.aspectFittedOrSmaller(CGSize(width: 1920, height: 1920))
-                        if let scaledImage = scaleImageToPixelSize(image: image, size: scaledSize) {
-                            if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
-                                storyListContext.upload(media: .image(dimensions: dimensions, data: scaledImageData), text: caption?.string ?? "", entities: [], privacy: privacy)
-                                Queue.mainQueue().after(0.2, { [weak chatListController] in
-                                    chatListController?.animateStoryUploadRipple()
-                                })
-                            }
+                        var scaledImage: UIImage? = image
+                        if image.size.width > scaledSize.width || image.size.height > scaledSize.height {
+                            scaledImage = scaleImageToPixelSize(image: image, size: scaledSize)
+                        }
+                        if let scaledImage, let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
+                            storyListContext.upload(media: .image(dimensions: dimensions, data: scaledImageData), text: caption?.string ?? "", entities: [], privacy: privacy)
+                            Queue.mainQueue().after(0.2, { [weak chatListController] in
+                                chatListController?.animateStoryUploadRipple()
+                            })
                         }
                     case let .video(content, _, values, duration, dimensions, caption):
                         let adjustments: VideoMediaResourceAdjustments
