@@ -33,8 +33,11 @@ public final class MessageInputPanelComponent: Component {
     public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
     public let attachmentAction: (() -> Void)?
     public let reactionAction: ((UIView) -> Void)?
+    public let timeoutAction: ((UIView) -> Void)?
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
+    public let timeoutValue: Int32?
+    public let timeoutSelected: Bool
     public let displayGradient: Bool
     public let bottomInset: CGFloat
     
@@ -50,8 +53,11 @@ public final class MessageInputPanelComponent: Component {
         setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
         attachmentAction: (() -> Void)?,
         reactionAction: ((UIView) -> Void)?,
+        timeoutAction: ((UIView) -> Void)?,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
+        timeoutValue: Int32?,
+        timeoutSelected: Bool,
         displayGradient: Bool,
         bottomInset: CGFloat
     ) {
@@ -66,8 +72,11 @@ public final class MessageInputPanelComponent: Component {
         self.setMediaRecordingActive = setMediaRecordingActive
         self.attachmentAction = attachmentAction
         self.reactionAction = reactionAction
+        self.timeoutAction = timeoutAction
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
+        self.timeoutValue = timeoutValue
+        self.timeoutSelected = timeoutSelected
         self.displayGradient = displayGradient
         self.bottomInset = bottomInset
     }
@@ -95,6 +104,12 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.videoRecordingStatus !== rhs.videoRecordingStatus {
+            return false
+        }
+        if lhs.timeoutValue != rhs.timeoutValue {
+            return false
+        }
+        if lhs.timeoutSelected != rhs.timeoutSelected {
             return false
         }
         if lhs.displayGradient != rhs.displayGradient {
@@ -126,6 +141,7 @@ public final class MessageInputPanelComponent: Component {
         private let inputActionButton = ComponentView<Empty>()
         private let stickerButton = ComponentView<Empty>()
         private let reactionButton = ComponentView<Empty>()
+        private let timeoutButton = ComponentView<Empty>()
         
         private var mediaRecordingPanel: ComponentView<Empty>?
         private weak var dismissingMediaRecordingPanel: UIView?
@@ -470,6 +486,58 @@ public final class MessageInputPanelComponent: Component {
                     transition.setScale(view: reactionButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
                     
                     fieldIconNextX -= reactionButtonSize.width + 2.0
+                }
+            }
+            
+            if let timeoutAction = component.timeoutAction, let timeoutValue = component.timeoutValue {
+                func generateIcon(value: Int32) -> UIImage? {
+                    let image = UIImage(bundleImageName: "Media Editor/Timeout")!
+                    let string = "\(value)"
+                    let valueString = NSAttributedString(string: "\(value)", font: Font.with(size: string.count == 1 ? 12.0 : 10.0, design: .round, weight: .semibold), textColor: .white, paragraphAlignment: .center)
+                   
+                    return generateImage(image.size, contextGenerator: { size, context in
+                        let bounds = CGRect(origin: CGPoint(), size: size)
+                        context.clear(bounds)
+                        
+                        if let cgImage = image.cgImage {
+                            context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                        }
+                        
+                        let valuePath = CGMutablePath()
+                        valuePath.addRect(bounds.offsetBy(dx: 0.0, dy: -3.0 - UIScreenPixel))
+                        let valueFramesetter = CTFramesetterCreateWithAttributedString(valueString as CFAttributedString)
+                        let valyeFrame = CTFramesetterCreateFrame(valueFramesetter, CFRangeMake(0, valueString.length), valuePath, nil)
+                        CTFrameDraw(valyeFrame, context)
+                    })?.withRenderingMode(.alwaysTemplate)
+                }
+                
+                let icon = generateIcon(value: timeoutValue)
+                let timeoutButtonSize = self.timeoutButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(Image(image: icon, tintColor: component.timeoutSelected ? UIColor(rgb: 0x007aff) : UIColor(white: 1.0, alpha: 0.5), size: CGSize(width: 20.0, height: 20.0))),
+                        action: { [weak self] in
+                            guard let self, let timeoutButtonView = self.timeoutButton.view else {
+                                return
+                            }
+                            timeoutAction(timeoutButtonView)
+                        }
+                    ).minSize(CGSize(width: 32.0, height: 32.0))),
+                    environment: {},
+                    containerSize: CGSize(width: 32.0, height: 32.0)
+                )
+                if let timeoutButtonView = self.timeoutButton.view {
+                    if timeoutButtonView.superview == nil {
+                        self.addSubview(timeoutButtonView)
+                    }
+                    let timeoutIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - timeoutButtonSize.width, y: fieldFrame.minY + 1.0 + floor((fieldFrame.height - timeoutButtonSize.height) * 0.5)), size: timeoutButtonSize)
+                    transition.setPosition(view: timeoutButtonView, position: timeoutIconFrame.center)
+                    transition.setBounds(view: timeoutButtonView, bounds: CGRect(origin: CGPoint(), size: timeoutIconFrame.size))
+                    
+                    transition.setAlpha(view: timeoutButtonView, alpha: self.textFieldExternalState.isEditing ? 0.0 : 1.0)
+                    transition.setScale(view: timeoutButtonView, scale: self.textFieldExternalState.isEditing ? 0.1 : 1.0)
+                    
+                    fieldIconNextX -= timeoutButtonSize.width + 2.0
                 }
             }
             

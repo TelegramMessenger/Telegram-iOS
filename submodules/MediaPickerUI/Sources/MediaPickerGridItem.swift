@@ -15,10 +15,12 @@ import PhotoResources
 import InvisibleInkDustNode
 import ImageBlur
 import FastBlur
+import MediaEditor
 
 enum MediaPickerGridItemContent: Equatable {
     case asset(PHFetchResult<PHAsset>, Int)
     case media(MediaPickerScreen.Subject.Media, Int)
+    case draft(MediaEditorDraft, Int)
 }
 
 final class MediaPickerGridItem: GridItem {
@@ -48,23 +50,25 @@ final class MediaPickerGridItem: GridItem {
             let node = MediaPickerGridItemNode()
             node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
             return node
+        case let .draft(draft, index):
+            let node = MediaPickerGridItemNode()
+            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+            return node
         }
     }
     
     func update(node: GridItemNode) {
+        guard let node = node as? MediaPickerGridItemNode else {
+            assertionFailure()
+            return
+        }
         switch self.content {
         case let .asset(fetchResult, index):
-            guard let node = node as? MediaPickerGridItemNode else {
-                assertionFailure()
-                return
-            }
             node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
         case let .media(media, index):
-            guard let node = node as? MediaPickerGridItemNode else {
-                assertionFailure()
-                return
-            }
             node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+        case let .draft(draft, index):
+            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
         }
     }
 }
@@ -85,6 +89,7 @@ private let maskImage = generateImage(CGSize(width: 1.0, height: 24.0), opaque: 
 final class MediaPickerGridItemNode: GridItemNode {
     var currentMediaState: (TGMediaSelectableItem, Int)?
     var currentState: (PHFetchResult<PHAsset>, Int)?
+    var currentDraftState: (MediaEditorDraft, Int)?
     var enableAnimations: Bool = true
     private var selectable: Bool = false
     
@@ -93,6 +98,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     private let gradientNode: ASImageNode
     private let typeIconNode: ASImageNode
     private let durationNode: ImmediateTextNode
+    private let draftNode: ImmediateTextNode
     
     private let activateAreaNode: AccessibilityAreaNode
     
@@ -123,6 +129,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.typeIconNode.displayWithoutProcessing = true
         
         self.durationNode = ImmediateTextNode()
+        self.draftNode = ImmediateTextNode()
         
         self.activateAreaNode = AccessibilityAreaNode()
         self.activateAreaNode.accessibilityTraits = [.image]
@@ -228,7 +235,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, draft: MediaEditorDraft, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable
@@ -236,7 +243,34 @@ final class MediaPickerGridItemNode: GridItemNode {
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
-        if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentState!.1 != index {
+        if self.currentDraftState == nil || self.currentDraftState?.0.path != draft.path || self.currentDraftState!.1 != index {
+            let imageSignal: Signal<UIImage?, NoError> = .single(draft.thumbnail)
+            self.imageNode.setSignal(imageSignal)
+            
+            self.currentDraftState = (draft, index)
+            self.setNeedsLayout()
+            
+            if self.typeIconNode.supernode == nil {
+                self.draftNode.attributedText = NSAttributedString(string: "Draft", font: Font.semibold(12.0), textColor: .white)
+                
+                self.addSubnode(self.draftNode)
+                self.setNeedsLayout()
+            }
+        }
+        
+        self.updateSelectionState()
+        self.updateHiddenMedia()
+    }
+    
+    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
+        self.interaction = interaction
+        self.theme = theme
+        self.selectable = selectable
+        self.enableAnimations = enableAnimations
+        
+        self.backgroundColor = theme.list.mediaPlaceholderColor
+                
+        if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentMediaState!.1 != index {
             self.currentMediaState = (media.asset, index)
             self.setNeedsLayout()
         }
@@ -408,6 +442,11 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.durationNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - durationSize.width - 7.0, y: self.bounds.height - durationSize.height - 5.0), size: durationSize)
         }
         
+        if self.draftNode.supernode != nil {
+            let draftSize = self.draftNode.updateLayout(self.bounds.size)
+            self.draftNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 5.0), size: draftSize)
+        }
+        
         let checkSize = CGSize(width: 29.0, height: 29.0)
         self.checkNode?.frame = CGRect(origin: CGPoint(x: self.bounds.width - checkSize.width - 3.0, y: 3.0), size: checkSize)
         
@@ -424,6 +463,10 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
         
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
+        if let (draft, _) = self.currentDraftState {
+            self.interaction?.openDraft(draft, self.imageNode.image)
+            return
+        }
         guard let (fetchResult, index) = self.currentState else {
             return
         }

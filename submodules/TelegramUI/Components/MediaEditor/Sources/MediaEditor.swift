@@ -8,12 +8,23 @@ import SwiftSignalKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import FastBlur
+
+public struct MediaEditorPlayerState {
+    public let duration: Double
+    public let timeRange: Range<Double>?
+    public let position: Double
+    public let frames: [UIImage]
+    public let framesCount: Int
+    public let framesUpdateTimestamp: Double
+}
 
 public final class MediaEditor {
     public enum Subject {
         case image(UIImage, PixelDimensions)
         case video(String, PixelDimensions)
         case asset(PHAsset)
+        case draft(MediaEditorDraft)
         
         var dimensions: PixelDimensions {
             switch self {
@@ -21,12 +32,15 @@ public final class MediaEditor {
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
+            case let .draft(draft):
+                return draft.dimensions
             }
         }
     }
 
     private let subject: Subject
     private var player: AVPlayer?
+    private var timeObserver: Any?
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
     private weak var previewView: MediaEditorPreviewView?
@@ -36,8 +50,10 @@ public final class MediaEditor {
             if !self.skipRendering {
                 self.updateRenderChain()
             }
+            self.valuesPromise.set(.single(self.values))
         }
     }
+    private var valuesPromise = Promise<MediaEditorValues>()
     
     private let renderer = MediaEditorRenderer()
     private let renderChain = MediaEditorRenderChain()
@@ -74,6 +90,119 @@ public final class MediaEditor {
         return self.renderer.finalRenderedImage()
     }
     
+    private let playerPromise = Promise<AVPlayer?>()
+    private var playerPosition: (Double, Double) = (0.0, 0.0) {
+        didSet {
+            self.playerPositionPromise.set(.single(self.playerPosition))
+        }
+    }
+    private let playerPositionPromise = Promise<(Double, Double)>((0.0, 0.0))
+    
+    public func playerState(framesCount: Int) -> Signal<MediaEditorPlayerState?, NoError> {
+        return self.playerPromise.get()
+        |> mapToSignal { [weak self] player in
+            if let self, let asset = player?.currentItem?.asset {
+                return combineLatest(self.valuesPromise.get(), self.playerPositionPromise.get(), self.videoFrames(asset: asset, count: framesCount))
+                |> map { values, durationAndPosition, framesAndUpdateTimestamp in
+                    let (duration, position) = durationAndPosition
+                    let (frames, framesUpdateTimestamp) = framesAndUpdateTimestamp
+                    return MediaEditorPlayerState(
+                        duration: duration,
+                        timeRange: values.videoTrimRange,
+                        position: position,
+                        frames: frames,
+                        framesCount: framesCount,
+                        framesUpdateTimestamp: framesUpdateTimestamp
+                    )
+                }
+            } else {
+                return .single(nil)
+            }
+        }
+    }
+    
+    public func videoFrames(asset: AVAsset, count: Int) -> Signal<([UIImage], Double), NoError> {
+        func blurredImage(_ image: UIImage) -> UIImage? {
+            guard let image = image.cgImage else {
+                return nil
+            }
+            
+            let thumbnailSize = CGSize(width: image.width, height: image.height)
+            let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
+            if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
+                thumbnailContext.withFlippedContext { c in
+                    c.interpolationQuality = .none
+                    c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                }
+                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                
+                let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
+                if let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0) {
+                    thumbnailContext2.withFlippedContext { c in
+                        c.interpolationQuality = .none
+                        if let image = thumbnailContext.generateImage()?.cgImage {
+                            c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
+                        }
+                    }
+                    imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                    return thumbnailContext2.generateImage()
+                }
+            }
+            return nil
+        }
+
+        guard count > 0 else {
+            return .complete()
+        }
+        let scale = UIScreen.main.scale
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.maximumSize = CGSize(width: 48.0 * scale, height: 36.0 * scale)
+        imageGenerator.appliesPreferredTrackTransform = true
+        imageGenerator.requestedTimeToleranceBefore = .zero
+        imageGenerator.requestedTimeToleranceAfter = .zero
+                
+        var firstFrame: UIImage
+        if let cgImage = try? imageGenerator.copyCGImage(at: .zero, actualTime: nil) {
+            firstFrame = UIImage(cgImage: cgImage)
+            if let blurred = blurredImage(firstFrame) {
+                firstFrame = blurred
+            }
+        } else {
+            firstFrame = generateSingleColorImage(size: CGSize(width: 24.0, height: 36.0), color: .black)!
+        }
+        return Signal { subscriber in
+            subscriber.putNext((Array(repeating: firstFrame, count: count), CACurrentMediaTime()))
+            
+            var timestamps: [NSValue] = []
+            let duration = asset.duration.seconds
+            let interval = duration / Double(count)
+            for i in 0 ..< count {
+                timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(60.0))))
+            }
+            
+            var updatedFrames: [UIImage] = []
+            imageGenerator.generateCGImagesAsynchronously(forTimes: timestamps) { _, image, _, _, _ in
+                if let image {
+                    updatedFrames.append(UIImage(cgImage: image))
+                    if updatedFrames.count == count {
+                        subscriber.putNext((updatedFrames, CACurrentMediaTime()))
+                        subscriber.putCompletion()
+                    } else {
+                        var tempFrames = updatedFrames
+                        for _ in 0 ..< count - updatedFrames.count {
+                            tempFrames.append(firstFrame)
+                        }
+                        subscriber.putNext((tempFrames, CACurrentMediaTime()))
+                    }
+                }
+            }
+            
+            return ActionDisposable {
+                imageGenerator.cancelAllCGImageGeneration()
+            }
+        }
+    }
+    
     public init(subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
         self.subject = subject
         if let values {
@@ -94,6 +223,7 @@ public final class MediaEditor {
                 toolValues: [:]
             )
         }
+        self.valuesPromise.set(.single(self.values))
 
         self.renderer.addRenderChain(self.renderChain)
         if hasHistogram {
@@ -110,6 +240,9 @@ public final class MediaEditor {
     deinit {
         self.textureSourceDisposable?.dispose()
         
+        if let timeObserver = self.timeObserver {
+            self.player?.removeTimeObserver(timeObserver)
+        }
         if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
             NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
         }
@@ -138,6 +271,17 @@ public final class MediaEditor {
         switch subject {
         case let .image(image, _):
             let colors = gradientColors(from: image)
+            textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
+        case let .draft(draft):
+            guard let image = UIImage(contentsOfFile: draft.path) else {
+                return
+            }
+            let colors: (UIColor, UIColor)
+            if let gradientColors = draft.values.gradientColors {
+                colors = (gradientColors.first!, gradientColors.last!)
+            } else {
+                colors = gradientColors(from: image)
+            }
             textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
         case let .video(path, _):
             textureSource = Signal { subscriber in
@@ -221,20 +365,27 @@ public final class MediaEditor {
                 let (source, image, player, topColor, bottomColor) = sourceAndColors
                 self.renderer.textureSource = source
                 self.player = player
+                self.playerPromise.set(.single(player))
                 self.gradientColorsValue = (topColor, bottomColor)
                 self.setGradientColors([topColor, bottomColor])
                 
                 self.maybeGeneratePersonSegmentation(image)
                
                 if let player {
+                    self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self] time in
+                        guard let self, let duration = player.currentItem?.duration.seconds else {
+                            return
+                        }
+                        self.playerPosition = (duration, time.seconds)
+                    }
                     self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil, using: { [weak self] notification in
-                        if let strongSelf = self {
-                            strongSelf.player?.seek(to: CMTime(seconds: 0.0, preferredTimescale: 30))
-                            strongSelf.player?.play()
+                        if let self {
+                            let start = self.values.videoTrimRange?.lowerBound ?? 0.0
+                            self.player?.seek(to: CMTime(seconds: start, preferredTimescale: 60))
+                            self.player?.play()
                         }
                     })
-                } else {
-                    self.didPlayToEndTimeObserver = nil
+                    self.player?.play()
                 }
             }
         })
@@ -270,6 +421,28 @@ public final class MediaEditor {
     public func setVideoIsMuted(_ videoIsMuted: Bool) {
         self.player?.isMuted = videoIsMuted
         self.values = self.values.withUpdatedVideoIsMuted(videoIsMuted)
+    }
+    
+    public func seek(_ position: Double, andPlay: Bool) {
+        if !andPlay {
+            self.player?.pause()
+        }
+        self.player?.seek(to: CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0)), toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { _ in })
+        if andPlay {
+            self.player?.play()
+        }
+    }
+    
+    public func setVideoTrimStart(_ trimStart: Double) {
+        let trimEnd = self.values.videoTrimRange?.upperBound ?? self.playerPosition.0
+        let trimRange = trimStart ..< trimEnd
+        self.values = self.values.withUpdatedVideoTrimRange(trimRange)
+    }
+    
+    public func setVideoTrimEnd(_ trimEnd: Double) {
+        let trimStart = self.values.videoTrimRange?.lowerBound ?? 0.0
+        let trimRange = trimStart ..< trimEnd
+        self.values = self.values.withUpdatedVideoTrimRange(trimRange)
     }
     
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {

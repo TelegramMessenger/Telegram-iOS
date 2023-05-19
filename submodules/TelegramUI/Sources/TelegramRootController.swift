@@ -300,6 +300,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
         var dismissCameraImpl: (() -> Void)?
+        var hideCameraImpl: (() -> Void)?
+        var showDraftTooltipImpl: (() -> Void)?
         let cameraController = CameraScreen(
             context: context,
             mode: .story,
@@ -326,78 +328,92 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 }
             },
             completion: { result in
-            let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
-            |> map { value -> MediaEditorScreen.Subject? in
-                switch value {
-                case .pendingImage:
-                    return nil
-                case let .image(image):
-                    return .image(image, PixelDimensions(image.size))
-                case let .video(path, dimensions):
-                    return .video(path, dimensions)
-                case let .asset(asset):
-                    return .asset(asset)
-                }
-            }
-            let controller = MediaEditorScreen(context: context, subject: subject, transitionIn: nil, transitionOut: { finished in
-                if finished, let transitionOut = transitionOut(true), let destinationView = transitionOut.destinationView {
-                    return MediaEditorScreen.TransitionOut(
-                        destinationView: destinationView,
-                        destinationRect: transitionOut.destinationRect,
-                        destinationCornerRadius: transitionOut.destinationCornerRadius
-                    )
-                } else {
-                    return nil
-                }
-            }, completion: { [weak self] mediaResult, commit, privacy in
-                guard let self else {
-                    dismissCameraImpl?()
-                    commit()
-                    return
-                }
-                
-                if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
-                    switch mediaResult {
-                    case let .image(image, dimensions, caption):
-                        if let data = image.jpegData(compressionQuality: 0.8) {
-                            storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: caption?.string ?? "", entities: [], privacy: privacy)
-                            Queue.mainQueue().after(0.2, { [weak chatListController] in
-                                chatListController?.animateStoryUploadRipple()
-                            })
-                        }
-                    case let .video(content, _, values, duration, dimensions, caption):
-                        let adjustments: VideoMediaResourceAdjustments
-                        if let valuesData = try? JSONEncoder().encode(values) {
-                            let data = MemoryBuffer(data: valuesData)
-                            let digest = MemoryBuffer(data: data.md5Digest())
-                            adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
-                            
-                            let resource: TelegramMediaResource
-                            switch content {
-                            case let .imageFile(path):
-                                resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-                            case let .videoFile(path):
-                                resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-                            case let .asset(localIdentifier):
-                                resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
-                            }
-                            storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: privacy)
-                            Queue.mainQueue().after(0.2, { [weak chatListController] in
-                                chatListController?.animateStoryUploadRipple()
-                            })
-                        }
+                let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
+                |> map { value -> MediaEditorScreen.Subject? in
+                    switch value {
+                    case .pendingImage:
+                        return nil
+                    case let .image(image):
+                        return .image(image, PixelDimensions(image.size))
+                    case let .video(path, dimensions):
+                        return .video(path, dimensions)
+                    case let .asset(asset):
+                        return .asset(asset)
+                    case let .draft(draft):
+                        return .draft(draft)
                     }
                 }
-                
-                dismissCameraImpl?()
-                commit()
-            })
-            controller.sourceHint = .camera
-            controller.cancelled = {
-                returnToCameraImpl?()
+                let controller = MediaEditorScreen(
+                    context: context,
+                    subject: subject,
+                    transitionIn: nil,
+                    transitionOut: { finished in
+                        if finished, let transitionOut = transitionOut(true), let destinationView = transitionOut.destinationView {
+                            return MediaEditorScreen.TransitionOut(
+                                destinationView: destinationView,
+                                destinationRect: transitionOut.destinationRect,
+                                destinationCornerRadius: transitionOut.destinationCornerRadius
+                            )
+                        } else {
+                            return nil
+                        }
+                    }, completion: { [weak self] mediaResult, commit, privacy in
+                        guard let self else {
+                            dismissCameraImpl?()
+                            commit()
+                            return
+                        }
+                        
+                        if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
+                            switch mediaResult {
+                            case let .image(image, dimensions, caption):
+                                if let data = image.jpegData(compressionQuality: 0.8) {
+                                    storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: caption?.string ?? "", entities: [], privacy: privacy)
+                                    Queue.mainQueue().after(0.2, { [weak chatListController] in
+                                        chatListController?.animateStoryUploadRipple()
+                                    })
+                                }
+                            case let .video(content, _, values, duration, dimensions, caption):
+                                let adjustments: VideoMediaResourceAdjustments
+                                if let valuesData = try? JSONEncoder().encode(values) {
+                                    let data = MemoryBuffer(data: valuesData)
+                                    let digest = MemoryBuffer(data: data.md5Digest())
+                                    adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
+                                    
+                                    let resource: TelegramMediaResource
+                                    switch content {
+                                    case let .imageFile(path):
+                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                                    case let .videoFile(path):
+                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                                    case let .asset(localIdentifier):
+                                        resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
+                                    }
+                                    storyListContext.upload(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: privacy)
+                                    Queue.mainQueue().after(0.2, { [weak chatListController] in
+                                        chatListController?.animateStoryUploadRipple()
+                                    })
+                                }
+                            }
+                        }
+                        
+                        dismissCameraImpl?()
+                        commit()
+                    }
+                )
+                controller.sourceHint = .camera
+                controller.cancelled = { showDraftTooltip in
+                    if showDraftTooltip {
+                        showDraftTooltipImpl?()
+                    }
+                    returnToCameraImpl?()
+                }
+                controller.onReady = {
+                    hideCameraImpl?()
+                }
+                presentImpl?(controller)
             }
-            presentImpl?(controller)
-        })
+        )
         controller.push(cameraController)
         presentImpl = { [weak cameraController] c in
             if let navigationController = cameraController?.navigationController as? NavigationController {
@@ -412,6 +428,16 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         returnToCameraImpl = { [weak cameraController] in
             if let cameraController {
                 cameraController.returnFromEditor()
+            }
+        }
+        hideCameraImpl = { [weak cameraController] in
+            if let cameraController {
+                cameraController.commitTransitionToEditor()
+            }
+        }
+        showDraftTooltipImpl = { [weak cameraController] in
+            if let cameraController {
+                cameraController.presentDraftTooltip()
             }
         }
     }

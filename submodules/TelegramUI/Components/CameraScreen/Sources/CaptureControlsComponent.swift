@@ -273,6 +273,7 @@ final class CaptureControlsComponent: Component {
     let shutterState: ShutterButtonState
     let lastGalleryAsset: PHAsset?
     let tag: AnyObject?
+    let galleryButtonTag: AnyObject?
     let shutterTapped: () -> Void
     let shutterPressed: () -> Void
     let shutterReleased: () -> Void
@@ -280,22 +281,26 @@ final class CaptureControlsComponent: Component {
     let flipTapped: () -> Void
     let galleryTapped: () -> Void
     let swipeHintUpdated: (SwipeHint) -> Void
+    let zoomUpdated: (CGFloat) -> Void
     
     init(
         shutterState: ShutterButtonState,
         lastGalleryAsset: PHAsset?,
         tag: AnyObject?,
+        galleryButtonTag: AnyObject?,
         shutterTapped: @escaping () -> Void,
         shutterPressed: @escaping () -> Void,
         shutterReleased: @escaping () -> Void,
         lockRecording: @escaping () -> Void,
         flipTapped: @escaping () -> Void,
         galleryTapped: @escaping () -> Void,
-        swipeHintUpdated: @escaping (SwipeHint) -> Void
+        swipeHintUpdated: @escaping (SwipeHint) -> Void,
+        zoomUpdated: @escaping (CGFloat) -> Void
     ) {
         self.shutterState = shutterState
         self.lastGalleryAsset = lastGalleryAsset
         self.tag = tag
+        self.galleryButtonTag = galleryButtonTag
         self.shutterTapped = shutterTapped
         self.shutterPressed = shutterPressed
         self.shutterReleased = shutterReleased
@@ -303,6 +308,7 @@ final class CaptureControlsComponent: Component {
         self.flipTapped = flipTapped
         self.galleryTapped = galleryTapped
         self.swipeHintUpdated = swipeHintUpdated
+        self.zoomUpdated = zoomUpdated
     }
     
     static func ==(lhs: CaptureControlsComponent, rhs: CaptureControlsComponent) -> Bool {
@@ -437,6 +443,13 @@ final class CaptureControlsComponent: Component {
                 }
                 blobOffset -= self.frame.width / 2.0
                 var isBanding = false
+                if location.y < -10.0 {
+                    let fraction = 1.0 + min(8.0, ((abs(location.y) - 10.0) / 60.0))
+                    self.component?.zoomUpdated(fraction)
+                } else {
+                    self.component?.zoomUpdated(1.0)
+                }
+                
                 if location.x < self.frame.width / 2.0 - 20.0 {
                     if location.x < self.frame.width / 2.0 - 60.0 {
                         self.component?.swipeHintUpdated(.releaseLock)
@@ -568,6 +581,7 @@ final class CaptureControlsComponent: Component {
                                 contentMode: .scaleAspectFill
                             )
                         ),
+                        tag: component.galleryButtonTag,
                         action: {
                             component.galleryTapped()
                         }

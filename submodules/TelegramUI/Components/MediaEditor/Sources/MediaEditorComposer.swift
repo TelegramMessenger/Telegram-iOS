@@ -17,6 +17,7 @@ final class MediaEditorComposer {
     
     private let values: MediaEditorValues
     private let dimensions: CGSize
+    private let outputDimensions: CGSize
     
     private let ciContext: CIContext?
     private var textureCache: CVMetalTextureCache?
@@ -28,9 +29,10 @@ final class MediaEditorComposer {
     private let drawingImage: CIImage?
     private var entities: [MediaEditorComposerEntity]
     
-    init(account: Account, values: MediaEditorValues, dimensions: CGSize) {
+    init(account: Account, values: MediaEditorValues, dimensions: CGSize, outputDimensions: CGSize) {
         self.values = values
         self.dimensions = dimensions
+        self.outputDimensions = outputDimensions
         
         self.renderer.addRenderChain(self.renderChain)
         self.renderer.addRenderPass(ComposerRenderPass())
@@ -91,7 +93,10 @@ final class MediaEditorComposer {
                 
                 if let pixelBuffer {
                     processImage(inputImage: ciImage, time: time, completion: { compositedImage in
-                        if let compositedImage {
+                        if var compositedImage {
+                            let scale = self.outputDimensions.width / self.dimensions.width
+                            compositedImage = compositedImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                            
                             self.ciContext?.render(compositedImage, to: pixelBuffer)
                             completion(pixelBuffer)
                         } else {
@@ -130,7 +135,10 @@ final class MediaEditorComposer {
             
             if let pixelBuffer {
                 makeEditorImageFrameComposition(inputImage: image, gradientImage: self.gradientImage, drawingImage: self.drawingImage, dimensions: self.dimensions, values: self.values, entities: self.entities, time: time, completion: { compositedImage in
-                    if let compositedImage {
+                    if var compositedImage {
+                        let scale = self.outputDimensions.width / self.dimensions.width
+                        compositedImage = compositedImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                        
                         self.ciContext?.render(compositedImage, to: pixelBuffer)
                         completion(pixelBuffer, time)
                     } else {

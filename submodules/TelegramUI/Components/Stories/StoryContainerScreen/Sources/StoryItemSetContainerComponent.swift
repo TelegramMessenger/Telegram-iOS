@@ -841,8 +841,11 @@ public final class StoryItemSetContainerComponent: Component {
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                         })
                     },
+                    timeoutAction: nil,
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
                     videoRecordingStatus: self.sendMessageContext.videoRecorderValue?.audioStatus,
+                    timeoutValue: nil,
+                    timeoutSelected: false,
                     displayGradient: component.inputHeight != 0.0,
                     bottomInset: component.inputHeight != 0.0 ? 0.0 : bottomContentInset
                 )),

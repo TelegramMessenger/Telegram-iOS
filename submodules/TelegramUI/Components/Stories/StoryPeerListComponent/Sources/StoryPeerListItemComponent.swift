@@ -327,7 +327,7 @@ public final class StoryPeerListItemComponent: Component {
             
             transition.setScale(view: self.avatarContainer, scale: scaledAvatarSize / avatarSize.width)
             
-            if component.peer.id == component.context.account.peerId && !component.hasItems {
+            if component.peer.id == component.context.account.peerId && !component.hasItems && component.progress == nil {
                 self.indicatorColorLayer.isHidden = true
                 
                 let avatarAddBadgeView: UIImageView
@@ -408,7 +408,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let avatarPath = CGMutablePath()
             avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -1.0, dy: -1.0))
-            if component.peer.id == component.context.account.peerId && !component.hasItems {
+            if component.peer.id == component.context.account.peerId && !component.hasItems && component.progress == nil {
                 let cutoutSize: CGFloat = 18.0 + UIScreenPixel * 2.0
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(x: avatarSize.width - cutoutSize + UIScreenPixel, y: avatarSize.height - cutoutSize + UIScreenPixel), size: CGSize(width: cutoutSize, height: cutoutSize)))
             } else if let mappedRightCenter {

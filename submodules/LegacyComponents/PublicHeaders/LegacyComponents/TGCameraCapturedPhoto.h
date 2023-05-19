@@ -14,6 +14,7 @@
 
 - (instancetype)initWithImage:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata;
 - (instancetype)initWithExistingImage:(UIImage *)image;
+- (instancetype)initWithExistingImage:(UIImage *)image identifier:(NSString *)identifier;
 
 - (instancetype)initWithImage:(UIImage *)image rectangle:(PGRectangle *)rectangle;
 

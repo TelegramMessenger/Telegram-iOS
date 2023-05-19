@@ -45,7 +45,7 @@ final class ZoomComponent: Component {
             }
             
             func update(value: String, selected: Bool) {
-                self.setAttributedTitle(NSAttributedString(string: value, font: Font.with(size: 13.0, design: .round, weight: selected ? .semibold : .regular), textColor: selected ? UIColor(rgb: 0xf8d74a) : .white, paragraphAlignment: .center), for: .normal)
+                self.setAttributedTitle(NSAttributedString(string: value, font: Font.with(size: 13.0, design: .round, weight: .semibold), textColor: selected ? UIColor(rgb: 0xf8d74a) : .white, paragraphAlignment: .center), for: .normal)
             }
         }
         

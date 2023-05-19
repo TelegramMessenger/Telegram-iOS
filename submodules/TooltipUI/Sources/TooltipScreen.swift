@@ -580,8 +580,12 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
             if event.type == .touches || eventIsPresses {
                 if case .manual = self.displayDuration {
-                    self.requestDismiss()
-                    return self.view
+                    if self.containerNode.frame.contains(point) {
+                        self.requestDismiss()
+                        return self.view
+                    } else {
+                        return nil
+                    }
                 }
                 switch self.shouldDismissOnTouch(point) {
                 case .ignore:

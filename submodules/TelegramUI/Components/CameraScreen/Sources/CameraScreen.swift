@@ -15,6 +15,8 @@ import MultilineTextComponent
 import BlurredBackgroundComponent
 import Photos
 import LottieAnimationComponent
+import TooltipUI
+import MediaEditor
 
 let videoRedColor = UIColor(rgb: 0xff3b30)
 
@@ -61,6 +63,7 @@ private let flashButtonTag = GenericComponentViewTag()
 private let zoomControlTag = GenericComponentViewTag()
 private let captureControlsTag = GenericComponentViewTag()
 private let modeControlTag = GenericComponentViewTag()
+private let galleryButtonTag = GenericComponentViewTag()
 
 private final class CameraScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -211,6 +214,9 @@ private final class CameraScreenComponent: CombinedComponent {
                 if let self {
                     self.cameraState = self.cameraState.updatedDuration(duration)
                     self.updated(transition: .easeInOut(duration: 0.1))
+                    if duration > 59.0 {
+                        self.stopVideoRecording()
+                    }
                 }
             }))
             self.updated(transition: .spring(duration: 0.4))
@@ -230,6 +236,10 @@ private final class CameraScreenComponent: CombinedComponent {
         func lockVideoRecording() {
             self.cameraState = self.cameraState.updatedRecording(.handsFree)
             self.updated(transition: .spring(duration: 0.4))
+        }
+        
+        func updateZoom(fraction: CGFloat) {
+            self.camera.setZoomLevel(fraction)
         }
     }
     
@@ -348,7 +358,7 @@ private final class CameraScreenComponent: CombinedComponent {
 //                    transition: context.transition
 //                )
 //                context.add(zoomControl
-//                    .position(CGPoint(x: context.availableSize.width / 2.0, y: availableSize.height - zoomControl.size.height / 2.0 - 187.0 - environment.safeInsets.bottom))
+//                    .position(CGPoint(x: context.availableSize.width / 2.0, y: availableSize.height - zoomControl.size.height / 2.0 - 114.0 - environment.safeInsets.bottom))
 //                    .appear(.default(alpha: true))
 //                    .disappear(.default(alpha: true))
 //                )
@@ -374,6 +384,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     shutterState: shutterState,
                     lastGalleryAsset: state.lastGalleryAsset,
                     tag: captureControlsTag,
+                    galleryButtonTag: galleryButtonTag,
                     shutterTapped: { [weak state] in
                         guard let state else {
                             return
@@ -420,6 +431,9 @@ private final class CameraScreenComponent: CombinedComponent {
                     },
                     swipeHintUpdated: { hint in
                         state.updateSwipeHint(hint)
+                    },
+                    zoomUpdated: { fraction in
+                        state.updateZoom(fraction: fraction)
                     }
                 ),
                 availableSize: availableSize,
@@ -492,7 +506,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             transition: .immediate
                         )
                         context.add(hintLabel
-                            .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + 14.0 + hintLabel.size.height / 2.0))
+                            .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom - 136.0))
                             .appear(.default(alpha: true))
                             .disappear(.default(alpha: true))
                         )
@@ -584,6 +598,7 @@ public class CameraScreen: ViewController {
         case image(UIImage)
         case video(String, PixelDimensions)
         case asset(PHAsset)
+        case draft(MediaEditorDraft)
     }
     
     public final class TransitionIn {
@@ -976,8 +991,13 @@ public class CameraScreen: ViewController {
             }
         }
         
+        func commitTransitionToEditor() {
+            self.previewContainerView.alpha = 0.0
+        }
+        
         private var previewSnapshotView: UIView?
         func animateInFromEditor() {
+            self.previewContainerView.alpha = 1.0
             if let snapshot = self.simplePreviewView?.snapshotView(afterScreenUpdates: false) {
                 self.simplePreviewView?.addSubview(snapshot)
                 self.previewSnapshotView = snapshot
@@ -1020,6 +1040,21 @@ public class CameraScreen: ViewController {
             if let view = self.componentHost.findTaggedView(tag: modeControlTag) as? ModeComponent.View {
                 view.animateInFromEditor(transition: transition)
             }
+        }
+        
+        func presentDraftTooltip() {
+            guard let sourceView = self.componentHost.findTaggedView(tag: galleryButtonTag) else {
+                return
+            }
+            
+            let parentFrame = self.view.convert(self.bounds, to: nil)
+            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 3.0), size: CGSize())
+                        
+            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Draft Saved", location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
+                return .ignore
+            })
+            self.controller?.present(controller, in: .current)
         }
 
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1168,19 +1203,31 @@ public class CameraScreen: ViewController {
         self.node.animateInFromEditor()
     }
     
+    public func commitTransitionToEditor() {
+        self.node.commitTransitionToEditor()
+    }
+    
     func presentGallery() {
         var dismissGalleryControllerImpl: (() -> Void)?
-        let controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] asset in
+        let controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result in
             dismissGalleryControllerImpl?()
             if let self {
                 self.node.animateOutToEditor()
-                self.completion(.single(.asset(asset)))
+                if let asset = result as? PHAsset {
+                    self.completion(.single(.asset(asset)))
+                } else if let draft = result as? MediaEditorDraft {
+                    self.completion(.single(.draft(draft)))
+                }
             }
         })
         dismissGalleryControllerImpl = { [weak controller] in
             controller?.dismiss(animated: true)
         }
         push(controller)
+    }
+    
+    public func presentDraftTooltip() {
+        self.node.presentDraftTooltip()
     }
 
     private var isDismissed = false

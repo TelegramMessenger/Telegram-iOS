@@ -190,6 +190,10 @@ public final class MediaEditorValues: Codable {
         return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
+    func withUpdatedVideoTrimRange(_ videoTrimRange: Range<Double>) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
     func withUpdatedDrawingAndEntities(drawing: UIImage?, entities: [CodableDrawingEntity]) -> MediaEditorValues {
         return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: drawing, entities: entities, toolValues: self.toolValues)
     }
@@ -919,14 +923,14 @@ extension CodableToolValue: Codable {
 public func recommendedVideoExportConfiguration(values: MediaEditorValues) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any] = [
         AVVideoAverageBitRateKey: 2000000,
-        //AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
-        AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-        AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
+        AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
+        //AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+        //AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
     ]
     
     let videoSettings: [String: Any] = [
-        AVVideoCodecKey: AVVideoCodecType.h264,
-        //AVVideoCodecKey: AVVideoCodecType.hevc,
+        //AVVideoCodecKey: AVVideoCodecType.h264,
+        AVVideoCodecKey: AVVideoCodecType.hevc,
         AVVideoCompressionPropertiesKey: compressionProperties,
         AVVideoWidthKey: 720,
         AVVideoHeightKey: 1280

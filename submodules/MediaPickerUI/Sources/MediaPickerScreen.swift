@@ -22,10 +22,12 @@ import UndoUI
 import PresentationDataUtils
 import MoreButtonNode
 import CameraScreen
+import MediaEditor
 
 final class MediaPickerInteraction {
     let openMedia: (PHFetchResult<PHAsset>, Int, UIImage?) -> Void
     let openSelectedMedia: (TGMediaSelectableItem, UIImage?) -> Void
+    let openDraft: (MediaEditorDraft, UIImage?) -> Void
     let toggleSelection: (TGMediaSelectableItem, Bool, Bool) -> Bool
     let sendSelected: (TGMediaSelectableItem?, Bool, Int32?, Bool, @escaping () -> Void) -> Void
     let schedule: () -> Void
@@ -34,9 +36,10 @@ final class MediaPickerInteraction {
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool, Bool) -> Bool, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool, @escaping () -> Void) -> Void, schedule: @escaping  () -> Void, dismissInput: @escaping () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, openDraft: @escaping (MediaEditorDraft, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool, Bool) -> Bool, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool, @escaping () -> Void) -> Void, schedule: @escaping  () -> Void, dismissInput: @escaping () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openMedia = openMedia
         self.openSelectedMedia = openSelectedMedia
+        self.openDraft = openDraft
         self.toggleSelection = toggleSelection
         self.sendSelected = sendSelected
         self.schedule = schedule
@@ -165,7 +168,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var presentWebSearch: (MediaGroupsScreen, Bool) -> Void = { _, _ in }
     public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil }
     
-    public var customSelection: ((PHAsset) -> Void)? = nil
+    public var customSelection: ((Any) -> Void)? = nil
     
     private var completed = false
     public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void = { _, _, _, _, _ in }
@@ -187,7 +190,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         enum State {
             case noAccess(cameraAccess: AVAuthorizationStatus?)
-            case assets(fetchResult: PHFetchResult<PHAsset>?, preload: Bool, mediaAccess: PHAuthorizationStatus, cameraAccess: AVAuthorizationStatus?)
+            case assets(fetchResult: PHFetchResult<PHAsset>?, preload: Bool, drafts: [MediaEditorDraft], mediaAccess: PHAuthorizationStatus, cameraAccess: AVAuthorizationStatus?)
             case media([Subject.Media])
         }
         
@@ -277,23 +280,29 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             let preloadPromise = self.preloadPromise
             let updatedState: Signal<State, NoError>
             switch controller.subject {
-            case let .assets(collection, _):
+            case let .assets(collection, mode):
+                let drafts: Signal<[MediaEditorDraft], NoError>
+                if mode == .story {
+                    drafts = storyDrafts(engine: controller.context.engine)
+                } else {
+                    drafts = .single([])
+                }
                 updatedState = combineLatest(mediaAssetsContext.mediaAccess(), mediaAssetsContext.cameraAccess())
                 |> mapToSignal { mediaAccess, cameraAccess -> Signal<State, NoError> in
                     if case .notDetermined = mediaAccess {
-                        return .single(.assets(fetchResult: nil, preload: false, mediaAccess: mediaAccess, cameraAccess: cameraAccess))
+                        return .single(.assets(fetchResult: nil, preload: false, drafts: [], mediaAccess: mediaAccess, cameraAccess: cameraAccess))
                     } else if [.restricted, .denied].contains(mediaAccess) {
                         return .single(.noAccess(cameraAccess: cameraAccess))
                     } else {
                         if let collection = collection {
                             return combineLatest(mediaAssetsContext.fetchAssets(collection), preloadPromise.get())
                             |> map { fetchResult, preload in
-                                return .assets(fetchResult: fetchResult, preload: preload, mediaAccess: mediaAccess, cameraAccess: cameraAccess)
+                                return .assets(fetchResult: fetchResult, preload: preload, drafts: [], mediaAccess: mediaAccess, cameraAccess: cameraAccess)
                             }
                         } else {
-                            return combineLatest(mediaAssetsContext.recentAssets(), preloadPromise.get())
-                            |> map { fetchResult, preload in
-                                return .assets(fetchResult: fetchResult, preload: preload, mediaAccess: mediaAccess, cameraAccess: cameraAccess)
+                            return combineLatest(mediaAssetsContext.recentAssets(), preloadPromise.get(), drafts)
+                            |> map { fetchResult, preload, drafts in
+                                return .assets(fetchResult: fetchResult, preload: preload, drafts: drafts, mediaAccess: mediaAccess, cameraAccess: cameraAccess)
                             }
                         }
                     }
@@ -590,10 +599,17 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     self.requestedCameraAccess = true
                     self.mediaAssetsContext.requestCameraAccess()
                 }
-            case let .assets(fetchResult, preload, mediaAccess, cameraAccess):
+            case let .assets(fetchResult, preload, drafts, mediaAccess, cameraAccess):
                 if let fetchResult = fetchResult {
                     let totalCount = fetchResult.count
                     let count = preload ? min(13, totalCount) : totalCount
+                    
+                    var draftIndex = 0
+                    for draft in drafts {
+                        entries.append(MediaPickerGridEntry(stableId: stableId, content: .draft(draft, draftIndex), selectable: selectable))
+                        stableId += 1
+                        draftIndex += 1
+                    }
                     
                     for i in 0 ..< count {
                         let index: Int
@@ -606,7 +622,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         stableId += 1
                     }
                     
-                    if case let .assets(previousFetchResult, _, _, previousCameraAccess) = previousState, previousFetchResult == nil || previousCameraAccess != cameraAccess {
+                    if case let .assets(previousFetchResult, _, _, _, previousCameraAccess) = previousState, previousFetchResult == nil || previousCameraAccess != cameraAccess {
                         updateLayout = true
                     }
                     
@@ -848,6 +864,23 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             })
         }
         
+        fileprivate func openDraft(draft: MediaEditorDraft, immediateThumbnail: UIImage?) {
+            guard let controller = self.controller, !self.openingMedia else {
+                return
+            }
+            Queue.mainQueue().justDispatch {
+                self.dismissInput()
+            }
+            
+            if let customSelection = controller.customSelection {
+                self.openingMedia = true
+                customSelection(draft)
+                Queue.mainQueue().after(0.3) {
+                    self.openingMedia = false
+                }
+            }
+        }
+        
         fileprivate func send(asFile: Bool = false, silently: Bool, scheduleTime: Int32?, animated: Bool, completion: @escaping () -> Void) {
             guard let controller = self.controller, !controller.completed else {
                 return
@@ -1064,7 +1097,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             var manageHeight: CGFloat = 0.0
-            if case let .assets(_, _, mediaAccess, cameraAccess) = self.state {
+            if case let .assets(_, _, _, mediaAccess, cameraAccess) = self.state {
                 if cameraAccess == nil {
                     cameraRect = nil
                 }
@@ -1387,6 +1420,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         if case let .assets(_, mode) = self.subject, mode != .default {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            
+            if mode == .story {
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
+                self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
+                self.navigationItem.rightBarButtonItem?.target = self
+            }
         } else {
             if case let .assets(collection, _) = self.subject, collection != nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
@@ -1432,6 +1471,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self?.controllerNode.openMedia(fetchResult: fetchResult, index: index, immediateThumbnail: immediateThumbnail)
         }, openSelectedMedia: { [weak self] item, immediateThumbnail in
             self?.controllerNode.openSelectedMedia(item: item, immediateThumbnail: immediateThumbnail)
+        }, openDraft: { [weak self] draft, immediateThumbnail in
+            self?.controllerNode.openDraft(draft: draft, immediateThumbnail: immediateThumbnail)
         }, toggleSelection: { [weak self] item, value, suggestUndo in
             if let self = self, let selectionState = self.interaction?.selectionState {
                 if let _ = item as? TGMediaPickerGalleryPhotoItem {
@@ -1751,7 +1792,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             return
         }
         self.requestAttachmentMenuExpansion()
-        self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
+        
+        let groupsController = MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
             if let strongSelf = self {
                 let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, threadTitle: strongSelf.threadTitle, chatLocation: strongSelf.chatLocation, bannedSendPhotos: strongSelf.bannedSendPhotos, bannedSendVideos: strongSelf.bannedSendVideos, subject: .assets(collection, mode), editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
                 
@@ -1767,7 +1809,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
                 strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
             }
-        }), activateOnDisplay)
+        })
+        if case .story = mode {
+            self.present(groupsController, in: .current)
+        } else {
+            self.presentWebSearch(groupsController, activateOnDisplay)
+        }
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
@@ -2043,7 +2090,7 @@ public func wallpaperMediaPickerController(
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     peer: EnginePeer,
     animateAppearance: Bool,
-    completion: @escaping (PHAsset) -> Void = { _ in },
+    completion: @escaping (Any) -> Void = { _ in },
     openColors: @escaping () -> Void
 ) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
@@ -2065,7 +2112,7 @@ public func wallpaperMediaPickerController(
 
 public func storyMediaPickerController(
     context: AccountContext,
-    completion: @escaping (PHAsset) -> Void = { _ in }
+    completion: @escaping (Any) -> Void = { _ in }
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
     let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))

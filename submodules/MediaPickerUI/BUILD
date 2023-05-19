@@ -42,7 +42,8 @@ swift_library(
         "//submodules/UndoUI:UndoUI",
         "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
-        "//submodules/TelegramUI/Components/CameraScreen", 
+        "//submodules/TelegramUI/Components/CameraScreen",
+        "//submodules/TelegramUI/Components/MediaEditor", 
     ],
     visibility = [
         "//visibility:public",

@@ -18615,8 +18615,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             updatedPresentationData: strongSelf.updatedPresentationData,
                             peer: EnginePeer(peer),
                             animateAppearance: animateAppearance,
-                            completion: { [weak self] asset in
-                                guard let strongSelf = self else {
+                            completion: { [weak self] result in
+                                guard let strongSelf = self, let asset = result as? PHAsset else {
                                     return
                                 }
                                 let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))

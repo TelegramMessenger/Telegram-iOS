@@ -20,6 +20,7 @@ import TooltipUI
 import BlurredBackgroundComponent
 import AvatarNode
 import ShareWithPeersScreen
+import PresentationDataUtils
 
 enum DrawingScreenType {
     case drawing
@@ -37,6 +38,7 @@ final class MediaEditorScreenComponent: Component {
     let context: AccountContext
     let mediaEditor: MediaEditor?
     let privacy: EngineStoryPrivacy
+    let timeout: Bool
     let openDrawing: (DrawingScreenType) -> Void
     let openTools: () -> Void
     
@@ -44,12 +46,14 @@ final class MediaEditorScreenComponent: Component {
         context: AccountContext,
         mediaEditor: MediaEditor?,
         privacy: EngineStoryPrivacy,
+        timeout: Bool,
         openDrawing: @escaping (DrawingScreenType) -> Void,
         openTools: @escaping () -> Void
     ) {
         self.context = context
         self.mediaEditor = mediaEditor
         self.privacy = privacy
+        self.timeout = timeout
         self.openDrawing = openDrawing
         self.openTools = openTools
     }
@@ -59,6 +63,9 @@ final class MediaEditorScreenComponent: Component {
             return false
         }
         if lhs.privacy != rhs.privacy {
+            return false
+        }
+        if lhs.timeout != rhs.timeout {
             return false
         }
         return true
@@ -118,22 +125,34 @@ final class MediaEditorScreenComponent: Component {
         }
         
         let context: AccountContext
-                        
-        init(context: AccountContext) {
+        var playerStateDisposable: Disposable?
+        var playerState: MediaEditorPlayerState?
+        
+        init(context: AccountContext, mediaEditor: MediaEditor?) {
             self.context = context
-         
+            
             super.init()
             
+            if let mediaEditor {
+                self.playerStateDisposable = (mediaEditor.playerState(framesCount: 16)
+                |> deliverOnMainQueue).start(next: { [weak self] playerState in
+                    if let self {
+                        self.playerState = playerState
+                        self.updated()
+                    }
+                })
+            }
         }
         
         deinit {
-            
+            self.playerStateDisposable?.dispose()
         }
     }
     
     func makeState() -> State {
         return State(
-            context: self.context
+            context: self.context,
+            mediaEditor: self.mediaEditor
         )
     }
     
@@ -265,6 +284,12 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: view, alpha: 0.0)
                 transition.setScale(view: view, scale: 0.1)
             }
+            
+            if let view = self.scrubber.view {
+                view.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
+            }
         }
         
         func animateOutToTool() {
@@ -311,6 +336,11 @@ final class MediaEditorScreenComponent: Component {
             if let view = self.privacyButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
                 transition.setScale(view: view, scale: 0.1)
+            }
+            
+            if let view = self.scrubber.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
             }
         }
         
@@ -359,6 +389,11 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: view, alpha: 1.0)
                 transition.setScale(view: view, scale: 1.0)
             }
+            
+            if let view = self.scrubber.view {
+                transition.setAlpha(view: view, alpha: 1.0)
+                view.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
         
         func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
@@ -392,7 +427,7 @@ final class MediaEditorScreenComponent: Component {
                         guard let controller = environment.controller() as? MediaEditorScreen else {
                             return
                         }
-                        controller.requestDismiss(animated: true)
+                        controller.maybePresentDiscardAlert()
                     }
                 )),
                 environment: {},
@@ -548,16 +583,43 @@ final class MediaEditorScreenComponent: Component {
                 transition.setFrame(view: toolsButtonView, frame: toolsButtonFrame)
             }
             
+            let mediaEditor = component.mediaEditor
+            
             var scrubberBottomInset: CGFloat = 0.0
-            if !"".isEmpty {
+            if let playerState = state.playerState {
                 let scrubberInset: CGFloat = 9.0
                 let scrubberSize = self.scrubber.update(
                     transition: transition,
                     component: AnyComponent(VideoScrubberComponent(
                         context: component.context,
-                        duration: 1.0,
-                        startPosition: 0.0,
-                        endPosition: 1.0
+                        duration: playerState.duration,
+                        startPosition: playerState.timeRange?.lowerBound ?? 0.0,
+                        endPosition: playerState.timeRange?.upperBound ?? playerState.duration,
+                        position: playerState.position,
+                        frames: playerState.frames,
+                        framesUpdateTimestamp: playerState.framesUpdateTimestamp,
+                        startPositionUpdated: { [weak mediaEditor] position, done in
+                            if let mediaEditor {
+                                mediaEditor.setVideoTrimStart(position)
+                                mediaEditor.seek(position, andPlay: done)
+                            }
+                        },
+                        endPositionUpdated: { [weak mediaEditor] position, done in
+                            if let mediaEditor {
+                                mediaEditor.setVideoTrimEnd(position)
+                                if done {
+                                    let start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
+                                    mediaEditor.seek(start, andPlay: true)
+                                } else {
+                                    mediaEditor.seek(position, andPlay: false)
+                                }
+                            }
+                        },
+                        positionUpdated: { position, done in
+                            if let mediaEditor {
+                                mediaEditor.seek(position, andPlay: done)
+                            }
+                        }
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - scrubberInset * 2.0, height: availableSize.height)
@@ -593,16 +655,21 @@ final class MediaEditorScreenComponent: Component {
                         //component.presentController(c)
                     },
                     sendMessageAction: { [weak self] in
-                        guard let _ = self else {
+                        guard let self else {
                             return
                         }
-                        //self.performSendMessageAction()
+                        self.endEditing(true)
                     },
                     setMediaRecordingActive: nil,
                     attachmentAction: nil,
                     reactionAction: nil,
+                    timeoutAction: { view in
+                        
+                    },
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
+                    timeoutValue: 24,
+                    timeoutSelected: component.timeout,
                     displayGradient: false,//component.inputHeight != 0.0,
                     bottomInset: 0.0 //component.inputHeight != 0.0 ? 0.0 : bottomContentInset
                 )),
@@ -713,48 +780,49 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: saveButtonView, alpha: self.inputPanelExternalState.isEditing ? 0.0 : 1.0)
             }
              
-            
-            let isVideoMuted = component.mediaEditor?.values.videoIsMuted ?? false
-            let muteButtonSize = self.muteButton.update(
-                transition: transition,
-                component: AnyComponent(Button(
-                    content: AnyComponent(
-                        LottieAnimationComponent(
-                            animation: LottieAnimationComponent.AnimationItem(
-                                name: "anim_storymute",
-                                mode: .animating(loop: false),
-                                range: isVideoMuted ? (0.0, 0.5) : (0.5, 1.0)
-                            ),
-                            colors: ["__allcolors__": .white],
-                            size: CGSize(width: 33.0, height: 33.0)
-                        ).tagged(muteButtonTag)
-                    ),
-                    action: { [weak self, weak state] in
-                        if let self, let mediaEditor = self.component?.mediaEditor {
-                            mediaEditor.setVideoIsMuted(!mediaEditor.values.videoIsMuted)
-                            state?.updated()
+            if let _ = state.playerState {
+                let isVideoMuted = component.mediaEditor?.values.videoIsMuted ?? false
+                let muteButtonSize = self.muteButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(
+                            LottieAnimationComponent(
+                                animation: LottieAnimationComponent.AnimationItem(
+                                    name: "anim_storymute",
+                                    mode: .animating(loop: false),
+                                    range: isVideoMuted ? (0.0, 0.5) : (0.5, 1.0)
+                                ),
+                                colors: ["__allcolors__": .white],
+                                size: CGSize(width: 33.0, height: 33.0)
+                            ).tagged(muteButtonTag)
+                        ),
+                        action: { [weak self, weak state] in
+                            if let self, let mediaEditor = self.component?.mediaEditor {
+                                mediaEditor.setVideoIsMuted(!mediaEditor.values.videoIsMuted)
+                                state?.updated()
+                            }
                         }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                let muteButtonFrame = CGRect(
+                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: environment.safeInsets.top + 20.0 - inputPanelOffset),
+                    size: muteButtonSize
+                )
+                if let muteButtonView = self.muteButton.view {
+                    if muteButtonView.superview == nil {
+                        muteButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                        muteButtonView.layer.shadowRadius = 4.0
+                        muteButtonView.layer.shadowColor = UIColor.black.cgColor
+                        muteButtonView.layer.shadowOpacity = 0.2
+                        self.addSubview(muteButtonView)
                     }
-                )),
-                environment: {},
-                containerSize: CGSize(width: 44.0, height: 44.0)
-            )
-            let muteButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: environment.safeInsets.top + 20.0 - inputPanelOffset),
-                size: muteButtonSize
-            )
-            if let muteButtonView = self.muteButton.view {
-                if muteButtonView.superview == nil {
-                    muteButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                    muteButtonView.layer.shadowRadius = 4.0
-                    muteButtonView.layer.shadowColor = UIColor.black.cgColor
-                    muteButtonView.layer.shadowOpacity = 0.2
-                    //self.addSubview(muteButtonView)
+                    transition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
+                    transition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))
+                    transition.setScale(view: muteButtonView, scale: self.inputPanelExternalState.isEditing ? 0.01 : 1.0)
+                    transition.setAlpha(view: muteButtonView, alpha: self.inputPanelExternalState.isEditing ? 0.0 : 1.0)
                 }
-                transition.setPosition(view: muteButtonView, position: muteButtonFrame.center)
-                transition.setBounds(view: muteButtonView, bounds: CGRect(origin: .zero, size: muteButtonFrame.size))
-                transition.setScale(view: muteButtonView, scale: self.inputPanelExternalState.isEditing ? 0.01 : 1.0)
-                transition.setAlpha(view: muteButtonView, alpha: self.inputPanelExternalState.isEditing ? 0.0 : 1.0)
             }
             
             return availableSize
@@ -813,6 +881,7 @@ public final class MediaEditorScreen: ViewController {
         fileprivate var subject: MediaEditorScreen.Subject?
         private var subjectDisposable: Disposable?
         fileprivate var storyPrivacy: EngineStoryPrivacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
+        fileprivate var timeout: Bool = true
         
         private let backgroundDimView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
@@ -983,7 +1052,17 @@ public final class MediaEditorScreen: ViewController {
                 }
             }
             
-            let mediaEditor = MediaEditor(subject: subject.editorSubject, hasHistogram: true)
+            let initialValues: MediaEditorValues?
+            if case let .draft(draft) = subject {
+                initialValues = draft.values
+                
+                for entity in draft.values.entities {
+                    entitiesView.add(entity.entity, announce: false)
+                }
+            } else {
+                initialValues = nil
+            }
+            let mediaEditor = MediaEditor(subject: subject.editorSubject, values: initialValues, hasHistogram: true)
             mediaEditor.attachPreviewView(self.previewView)
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
@@ -998,7 +1077,10 @@ public final class MediaEditorScreen: ViewController {
                             self.previewContainerView.layer.allowsGroupOpacity = true
                             self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                                 self.previewContainerView.layer.allowsGroupOpacity = false
+                                self.controller?.onReady()
                             })
+                        } else {
+                            self.controller?.onReady()
                         }
                     }
                 }
@@ -1053,9 +1135,9 @@ public final class MediaEditorScreen: ViewController {
                 }
             }
             
-            Queue.mainQueue().after(0.5) {
-                self.presentPrivacyTooltip()
-            }
+//            Queue.mainQueue().after(0.5) {
+//                self.presentPrivacyTooltip()
+//            }
         }
         
         func animateOut(finished: Bool, completion: @escaping () -> Void) {
@@ -1138,6 +1220,29 @@ public final class MediaEditorScreen: ViewController {
             self.controller?.present(controller, in: .current)
         }
         
+        func presentSaveTooltip() {
+            guard let sourceView = self.componentHost.findTaggedView(tag: saveButtonTag) else {
+                return
+            }
+            
+            let parentFrame = self.view.convert(self.bounds, to: nil)
+            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
+            
+            let text: String
+            let isVideo = self.mediaEditor?.resultIsVideo ?? false
+            if isVideo {
+                text = "Video saved to Photos"
+            } else {
+                text = "Image saved to Photos"
+            }
+    
+            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: text, location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
+                return .ignore
+            })
+            self.controller?.present(controller, in: .current)
+        }
+        
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             if result == self.componentHost.view {
@@ -1194,6 +1299,7 @@ public final class MediaEditorScreen: ViewController {
                         context: self.context,
                         mediaEditor: self.mediaEditor,
                         privacy: self.storyPrivacy,
+                        timeout: self.timeout,
                         openDrawing: { [weak self] mode in
                             if let self {
                                 let controller = DrawingScreen(context: self.context, sourceHint: .storyEditor, size: self.previewContainerView.frame.size, originalSize: storyDimensions, isVideo: false, isAvatar: false, drawingView: self.drawingView, entitiesView: self.entitiesView, existingStickerPickerInputData: self.stickerPickerInputData)
@@ -1277,9 +1383,9 @@ public final class MediaEditorScreen: ViewController {
             
             var bottomInputOffset: CGFloat = 0.0
             if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
-                bottomInputOffset = inputHeight - topInset
+                bottomInputOffset = inputHeight - topInset - 17.0
             }
-            
+                        
             transition.setFrame(view: self.backgroundDimView, frame: CGRect(origin: .zero, size: layout.size))
             
             var previewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - bottomInputOffset), size: previewSize)
@@ -1308,6 +1414,7 @@ public final class MediaEditorScreen: ViewController {
         case image(UIImage, PixelDimensions)
         case video(String, PixelDimensions)
         case asset(PHAsset)
+        case draft(MediaEditorDraft)
         
         var dimensions: PixelDimensions {
             switch self {
@@ -1315,6 +1422,8 @@ public final class MediaEditorScreen: ViewController {
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
+            case let .draft(draft):
+                return draft.dimensions
             }
         }
         
@@ -1326,6 +1435,8 @@ public final class MediaEditorScreen: ViewController {
                 return .video(videoPath, dimensions)
             case let .asset(asset):
                 return .asset(asset)
+            case let .draft(draft):
+                return .draft(draft)
             }
         }
         
@@ -1337,6 +1448,8 @@ public final class MediaEditorScreen: ViewController {
                 return .video(videoPath, dimensions)
             case let .asset(asset):
                 return .asset(asset)
+            case let .draft(draft):
+                return .image(draft.thumbnail, draft.dimensions)
             }
         }
     }
@@ -1361,8 +1474,9 @@ public final class MediaEditorScreen: ViewController {
     }
     public var sourceHint: SourceHint?
     
-    public var cancelled: () -> Void = {}
+    public var cancelled: (Bool) -> Void = { _ in }
     public var completion: (MediaEditorScreen.Result, @escaping () -> Void, EngineStoryPrivacy) -> Void = { _, _, _ in }
+    public var onReady: () -> Void = {}
     
     public init(
         context: AccountContext,
@@ -1378,6 +1492,7 @@ public final class MediaEditorScreen: ViewController {
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
+        
         self.navigationPresentation = .flatModal
                     
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
@@ -1410,83 +1525,76 @@ public final class MediaEditorScreen: ViewController {
                 self.node.requestUpdate()
             }))
         })
-        
-        /*enum AdditionalCategoryId: Int {
-            case everyone
-            case contacts
-            case closeFriends
-        }
-        
-        let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-        
-        let additionalCategories: [ChatListNodeAdditionalCategory] = [
-            ChatListNodeAdditionalCategory(
-                id: AdditionalCategoryId.everyone.rawValue,
-                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), cornerRadius: nil, color: .blue),
-                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
-                title: "Everyone",
-                appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-            ),
-            ChatListNodeAdditionalCategory(
-                id: AdditionalCategoryId.contacts.rawValue,
-                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 1.0 * 0.8, cornerRadius: nil, color: .yellow),
-                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 0.6 * 0.8, cornerRadius: 6.0, circleCorners: true, color: .yellow),
-                title: presentationData.strings.ChatListFolder_CategoryContacts,
-                appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-            ),
-            ChatListNodeAdditionalCategory(
-                id: AdditionalCategoryId.closeFriends.rawValue,
-                icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 1.0 * 0.6, cornerRadius: nil, color: .green),
-                smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 0.6 * 0.6, cornerRadius: 6.0, circleCorners: true, color: .green),
-                title: "Close Friends",
-                appearance: .option(sectionTitle: "WHO CAN VIEW FOR 24 HOURS")
-            )
-        ]
-        
-        let updatedPresentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
-        
-        let selectionController = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, updatedPresentationData: (initial: updatedPresentationData, signal: .single(updatedPresentationData)), mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-            title: "Share Story",
-            searchPlaceholder: "Search contacts",
-            selectedChats: Set(),
-            additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: Set([AdditionalCategoryId.everyone.rawValue])),
-            chatListFilters: nil,
-            displayPresence: true
-        )), options: [], filters: [.excludeSelf], alwaysEnabled: true, limit: 1000, reachedLimit: { _ in
-        }))
-        selectionController.navigationPresentation = .modal
-        self.push(selectionController)
-        
-        let _ = (selectionController.result
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak selectionController, weak self] result in
-            selectionController?.dismiss()
-            guard case let .result(peerIds, additionalCategoryIds) = result else {
-                return
-            }
-            var privacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
-            if additionalCategoryIds.contains(AdditionalCategoryId.everyone.rawValue) {
-                privacy.base = .everyone
-            } else if additionalCategoryIds.contains(AdditionalCategoryId.contacts.rawValue) {
-                privacy.base = .contacts
-            } else if additionalCategoryIds.contains(AdditionalCategoryId.closeFriends.rawValue) {
-                privacy.base = .closeFriends
-            }
-            privacy.additionallyIncludePeers = peerIds.compactMap { id -> EnginePeer.Id? in
-                switch id {
-                case let .peer(peerId):
-                    return peerId
-                default:
-                    return nil
-                }
-            }
-            self?.node.storyPrivacy = privacy
-            self?.node.requestUpdate()
-        })*/
     }
     
-    func requestDismiss(animated: Bool) {
-        self.cancelled()
+    func maybePresentDiscardAlert() {
+        if let subject = self.node.subject, case .asset = subject {
+            self.requestDismiss(saveDraft: false, animated: true)
+            return
+        }
+        let title: String
+        let save: String
+        if case .draft = self.node.subject {
+            title = "Discard Draft?"
+            save = "Keep Draft"
+        } else {
+            title = "Discard Media?"
+            save = "Save Draft"
+        }
+        let theme = defaultDarkPresentationTheme
+        let controller = textAlertController(
+            context: self.context,
+            forceTheme: theme,
+            title: title,
+            text: "If you go back now, you will lose any changes that you've made.",
+            actions: [
+                TextAlertAction(type: .destructiveAction, title: "Discard", action: { [weak self] in
+                    if let self {
+                        self.requestDismiss(saveDraft: false, animated: true)
+                    }
+                }),
+                TextAlertAction(type: .genericAction, title: save, action: { [weak self] in
+                    if let self {
+                        self.requestDismiss(saveDraft: true, animated: true)
+                    }
+                }),
+                TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                    
+                })
+            ],
+            actionLayout: .vertical
+        )
+        self.present(controller, in: .window(.root))
+    }
+    
+    func requestDismiss(saveDraft: Bool, animated: Bool) {
+        if saveDraft, let subject = self.node.subject, let values = self.node.mediaEditor?.values {
+            if let resultImage = self.node.mediaEditor?.resultImage {
+                let fittedSize = resultImage.size.aspectFitted(CGSize(width: 128.0, height: 128.0))
+                if case let .image(image, dimensions) = subject {
+                    if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
+                        let path = NSTemporaryDirectory() + "\(Int64.random(in: .min ... .max)).jpg"
+                        if let data = image.jpegData(compressionQuality: 0.87) {
+                            try? data.write(to: URL(fileURLWithPath: path))
+                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, values: values)
+                            addStoryDraft(engine: self.context.engine, item: draft)
+                        }
+                    }
+                } else if case let .draft(draft) = subject {
+                    if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
+                        removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
+                        let draft = MediaEditorDraft(path: draft.path, isVideo: draft.isVideo, thumbnail: thumbnailImage, dimensions: draft.dimensions, values: values)
+                        addStoryDraft(engine: self.context.engine, item: draft)
+                    }
+                }
+            }
+        } else {
+            if case let .draft(draft) = self.node.subject {
+                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+            }
+        }
+        
+        self.cancelled(saveDraft)
         
         self.node.animateOut(finished: false, completion: { [weak self] in
             self?.dismiss()
@@ -1497,7 +1605,7 @@ public final class MediaEditorScreen: ViewController {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
             return
         }
-        
+                
         if mediaEditor.resultIsVideo {
             let videoResult: Result.VideoResult
             let duration: Double
@@ -1527,12 +1635,28 @@ public final class MediaEditorScreen: ViewController {
                 } else {
                     duration = 5.0
                 }
+            case let .draft(draft):
+                if draft.isVideo {
+                    videoResult = .videoFile(path: draft.path)
+                    if let videoTrimRange = mediaEditor.values.videoTrimRange {
+                        duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
+                    } else {
+                        duration = 5.0
+                    }
+                } else {
+                    videoResult = .imageFile(path: draft.path)
+                    duration = 5.0
+                }
             }
             self.completion(.video(video: videoResult, coverImage: nil, values: mediaEditor.values, duration: duration, dimensions: PixelDimensions(width: 720, height: 1280), caption: caption), { [weak self] in
                 self?.node.animateOut(finished: true, completion: { [weak self] in
                     self?.dismiss()
                 })
             }, self.node.storyPrivacy)
+            
+            if case let .draft(draft) = subject {
+                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+            }
         } else {
             if let image = mediaEditor.resultImage {
                 makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
@@ -1542,6 +1666,9 @@ public final class MediaEditorScreen: ViewController {
                                 self?.dismiss()
                             })
                         }, self.node.storyPrivacy)
+                        if case let .draft(draft) = subject {
+                            removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+                        }
                     }
                 })
             }
@@ -1605,6 +1732,17 @@ public final class MediaEditorScreen: ViewController {
                     }
                     return EmptyDisposable
                 }
+            case let .draft(draft):
+                if draft.isVideo {
+                    let asset = AVURLAsset(url: NSURL(fileURLWithPath: draft.path) as URL)
+                    exportSubject = .single(.video(asset))
+                } else {
+                    if let image = UIImage(contentsOfFile: draft.path) {
+                        exportSubject = .single(.image(image))
+                    } else {
+                        fatalError()
+                    }
+                }
             }
             
             let _ = exportSubject.start(next: { [weak self] exportSubject in
@@ -1624,6 +1762,7 @@ public final class MediaEditorScreen: ViewController {
                         if case .completed = status {
                             self.videoExport = nil
                             saveToPhotos(outputPath, true)
+                            self.node.presentSaveTooltip()
                         }
                     }
                 })
@@ -1637,6 +1776,7 @@ public final class MediaEditorScreen: ViewController {
                         saveToPhotos(outputPath, false)
                     }
                 })
+                self.node.presentSaveTooltip()
             }
         }
     }

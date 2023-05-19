@@ -210,6 +210,5 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
     
     public func outputMediaDataWillChange(_ sender: AVPlayerItemOutput) {
         self.displayLink?.isPaused = false
-        self.player.play()
     }
 }

@@ -95,6 +95,7 @@ private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case wallpaperSearchRecentQueries = 1
     case settingsSearchRecentItems = 2
     case localThemes = 3
+    case storyDrafts = 4
 }
 
 public struct ApplicationSpecificOrderedItemListCollectionId {
@@ -102,4 +103,5 @@ public struct ApplicationSpecificOrderedItemListCollectionId {
     public static let wallpaperSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.wallpaperSearchRecentQueries.rawValue)
     public static let settingsSearchRecentItems = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.settingsSearchRecentItems.rawValue)
     public static let localThemes = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.localThemes.rawValue)
+    public static let storyDrafts = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.storyDrafts.rawValue)
 }

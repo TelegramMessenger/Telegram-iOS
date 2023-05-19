@@ -59,6 +59,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AppBundle:AppBundle",
         "//submodules/TextFormat:TextFormat",
@@ -66,6 +67,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/StickerResources:StickerResources",
         "//submodules/YuvConversion:YuvConversion",
+        "//submodules/FastBlur:FastBlur",
     ],
     visibility = [
         "//visibility:public",

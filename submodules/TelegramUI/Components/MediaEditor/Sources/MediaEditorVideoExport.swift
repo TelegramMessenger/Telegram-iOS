@@ -191,6 +191,10 @@ public final class MediaEditorVideoExport {
             }
         }
         
+        var composerDimensions: CGSize {
+            return CGSize(width: 1080.0, height: 1920.0)
+        }
+        
         var dimensions: CGSize {
             if let width = self.videoSettings[AVVideoWidthKey] as? Int, let height = self.videoSettings[AVVideoHeightKey] as? Int {
                 return CGSize(width: width, height: height)
@@ -286,7 +290,7 @@ public final class MediaEditorVideoExport {
         guard self.composer == nil else {
             return
         }
-        self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.dimensions)
+        self.composer = MediaEditorComposer(account: self.account, values: self.configuration.values, dimensions: self.configuration.composerDimensions, outputDimensions: self.configuration.dimensions)
     }
     
     private func setupWithAsset(_ asset: AVAsset) {

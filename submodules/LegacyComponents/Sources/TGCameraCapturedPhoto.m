@@ -75,6 +75,33 @@
     return self;
 }
 
+- (instancetype)initWithExistingImage:(UIImage *)image identifier:(NSString *)identifier
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _identifier = identifier;
+        _dimensions = CGSizeMake(image.size.width, image.size.height);
+        _thumbnail = [[SVariable alloc] init];
+        
+        _existingImage = image;
+        SSignal *thumbnailSignal = [[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+        {
+            CGFloat thumbnailImageSide = TGPhotoThumbnailSizeForCurrentScreen().width * TGScreenScaling();
+            CGSize thumbnailSize = TGScaleToSize(image.size, CGSizeMake(thumbnailImageSide, thumbnailImageSide));
+            UIImage *thumbnailImage = TGScaleImageToPixelSize(image, thumbnailSize);
+            
+            [subscriber putNext:thumbnailImage];
+            [subscriber putCompletion];
+            
+            return nil;
+        }] startOn:[SQueue concurrentDefaultQueue]];
+        
+        [_thumbnail set:thumbnailSignal];
+    }
+    return self;
+}
+
 - (void)_cleanUp
 {
     [[NSFileManager defaultManager] removeItemAtPath:[self filePath] error:nil];
