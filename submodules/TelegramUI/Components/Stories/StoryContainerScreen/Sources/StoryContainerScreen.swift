@@ -36,14 +36,14 @@ private final class StoryContainerScreenComponent: Component {
     let initialFocusedId: AnyHashable?
     let initialContent: [StoryContentItemSlice]
     let transitionIn: StoryContainerScreen.TransitionIn?
-    let transitionOut: (EnginePeer.Id) -> StoryContainerScreen.TransitionOut?
+    let transitionOut: (EnginePeer.Id, AnyHashable) -> StoryContainerScreen.TransitionOut?
     
     init(
         context: AccountContext,
         initialFocusedId: AnyHashable?,
         initialContent: [StoryContentItemSlice],
         transitionIn: StoryContainerScreen.TransitionIn?,
-        transitionOut: @escaping (EnginePeer.Id) -> StoryContainerScreen.TransitionOut?
+        transitionOut: @escaping (EnginePeer.Id, AnyHashable) -> StoryContainerScreen.TransitionOut?
     ) {
         self.context = context
         self.initialFocusedId = initialFocusedId
@@ -130,6 +130,7 @@ private final class StoryContainerScreenComponent: Component {
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
             self.backgroundLayer.backgroundColor = UIColor.black.cgColor
+            self.backgroundLayer.zPosition = -1000.0
             
             super.init(frame: frame)
             
@@ -347,7 +348,7 @@ private final class StoryContainerScreenComponent: Component {
             self.isAnimatingOut = true
             self.state?.updated(transition: .immediate)
             
-            if let component = self.component, let focusedItemSet = self.focusedItemSet, let peerId = focusedItemSet.base as? EnginePeer.Id, let itemSetView = self.visibleItemSetViews[focusedItemSet], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(peerId) {
+            if let component = self.component, let focusedItemSet = self.focusedItemSet, let peerId = focusedItemSet.base as? EnginePeer.Id, let itemSetView = self.visibleItemSetViews[focusedItemSet], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let focusedItemId = itemSetComponentView.focusedItemId, let transitionOut = component.transitionOut(peerId, focusedItemId) {
                 let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
                 transition.setAlpha(layer: self.backgroundLayer, alpha: 0.0)
                 
@@ -654,10 +655,12 @@ private final class StoryContainerScreenComponent: Component {
                             if let previousRotationFraction = itemSetView.rotationFraction {
                                 let fromT = previousRotationFraction
                                 let toT = panFraction
-                                itemSetTransition.setTransformAsKeyframes(view: itemSetView, transform: { sourceT in
+                                itemSetTransition.setTransformAsKeyframes(view: itemSetView, transform: { sourceT, isFinal in
                                     let t = fromT * (1.0 - sourceT) + toT * sourceT
                                     if abs((t + cubeAdditionalRotationFraction) - 0.0) < 0.0001 {
-                                        return CATransform3DIdentity
+                                        if isFinal {
+                                            return CATransform3DIdentity
+                                        }
                                     }
                                     
                                     return calculateCubeTransform(rotationFraction: t + cubeAdditionalRotationFraction, sideAngle: sideAngle, cubeSize: itemFrame.size)
@@ -776,7 +779,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         initialFocusedId: AnyHashable?,
         initialContent: [StoryContentItemSlice],
         transitionIn: TransitionIn?,
-        transitionOut: @escaping (EnginePeer.Id) -> TransitionOut?
+        transitionOut: @escaping (EnginePeer.Id, AnyHashable) -> TransitionOut?
     ) {
         self.context = context
         

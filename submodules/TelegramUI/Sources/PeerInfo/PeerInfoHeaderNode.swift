@@ -30,6 +30,7 @@ import ComponentDisplayAdapters
 import ChatTitleView
 import AppBundle
 import AvatarVideoNode
+import PeerInfoVisualMediaPaneNode
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message

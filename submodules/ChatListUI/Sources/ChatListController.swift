@@ -1393,12 +1393,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let self else {
                     return
                 }
+                
                 let storyContainerScreen = StoryContainerScreen(
                     context: self.context,
                     initialFocusedId: AnyHashable(peerId),
                     initialContent: initialContent,
                     transitionIn: nil,
-                    transitionOut: { _ in
+                    transitionOut: { _, _ in
                         return nil
                     }
                 )
@@ -2481,28 +2482,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             initialFocusedId: initialFocusedId,
                             initialContent: initialContent,
                             transitionIn: transitionIn,
-                            transitionOut: { [weak self] peerId in
+                            transitionOut: { [weak self] peerId, _ in
                                 guard let self else {
                                     return nil
                                 }
                                 
                                 if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
                                     if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
-                                        //let localRect = transitionView.convert(transitionView.bounds, to: self.view)
-                                        
-                                        /*Queue.mainQueue().after(0.2 * UIView.animationDurationFactor, { [weak self] in
-                                            HapticFeedback().impact()
-                                            self?.animateRipple(centerLocation: localRect.center)
-                                        })*/
-                                        
                                         return StoryContainerScreen.TransitionOut(
                                             destinationView: transitionView,
                                             destinationRect: transitionView.bounds,
                                             destinationCornerRadius: transitionView.bounds.height * 0.5,
-                                            completed: { [weak self] in
-                                                let _ = self
-                                                //self?.animateRipple(centerLocation: localRect.center)
-                                            }
+                                            completed: {}
                                         )
                                     }
                                 }

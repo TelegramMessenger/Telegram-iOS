@@ -370,6 +370,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LegacyInstantVideoController",
         "//submodules/TelegramUI/Components/FullScreenEffectView",
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

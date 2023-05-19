@@ -86,6 +86,7 @@ import ChatControllerInteraction
 import StorageUsageScreen
 import AvatarEditorScreen
 import SendInviteLinkScreen
+import PeerInfoVisualMediaPaneNode
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -2016,7 +2017,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
     return result
 }
 
-final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, UIScrollViewDelegate {
     private weak var controller: PeerInfoScreenImpl?
     
     private let context: AccountContext

@@ -249,6 +249,7 @@ public extension CALayer {
         animation.speed = speed
         animation.duration = duration
         animation.isAdditive = additive
+        animation.calculationMode = .linear
         if let mediaTimingFunction = mediaTimingFunction {
             animation.timingFunction = mediaTimingFunction
         } else {

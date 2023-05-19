@@ -8,6 +8,7 @@ import BundleIconComponent
 import AccountContext
 import TelegramPresentationData
 import ChatPresentationInterfaceState
+import LottieComponent
 
 public final class MessageInputPanelComponent: Component {
     public enum Style {
@@ -31,10 +32,16 @@ public final class MessageInputPanelComponent: Component {
     public let presentController: (ViewController) -> Void
     public let sendMessageAction: () -> Void
     public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
+    public let lockMediaRecording: (() -> Void)?
+    public let stopAndPreviewMediaRecording: (() -> Void)?
+    public let discardMediaRecordingPreview: (() -> Void)?
     public let attachmentAction: (() -> Void)?
     public let reactionAction: ((UIView) -> Void)?
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
+    public let isRecordingLocked: Bool
+    public let recordedAudioPreview: ChatRecordedMediaPreview?
+    public let wasRecordingDismissed: Bool
     public let displayGradient: Bool
     public let bottomInset: CGFloat
     
@@ -48,10 +55,16 @@ public final class MessageInputPanelComponent: Component {
         presentController: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
         setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
+        lockMediaRecording: (() -> Void)?,
+        stopAndPreviewMediaRecording: (() -> Void)?,
+        discardMediaRecordingPreview: (() -> Void)?,
         attachmentAction: (() -> Void)?,
         reactionAction: ((UIView) -> Void)?,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
+        isRecordingLocked: Bool,
+        recordedAudioPreview: ChatRecordedMediaPreview?,
+        wasRecordingDismissed: Bool,
         displayGradient: Bool,
         bottomInset: CGFloat
     ) {
@@ -64,10 +77,16 @@ public final class MessageInputPanelComponent: Component {
         self.presentController = presentController
         self.sendMessageAction = sendMessageAction
         self.setMediaRecordingActive = setMediaRecordingActive
+        self.lockMediaRecording = lockMediaRecording
+        self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
+        self.discardMediaRecordingPreview = discardMediaRecordingPreview
         self.attachmentAction = attachmentAction
         self.reactionAction = reactionAction
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
+        self.isRecordingLocked = isRecordingLocked
+        self.wasRecordingDismissed = wasRecordingDismissed
+        self.recordedAudioPreview = recordedAudioPreview
         self.displayGradient = displayGradient
         self.bottomInset = bottomInset
     }
@@ -97,6 +116,15 @@ public final class MessageInputPanelComponent: Component {
         if lhs.videoRecordingStatus !== rhs.videoRecordingStatus {
             return false
         }
+        if lhs.isRecordingLocked != rhs.isRecordingLocked {
+            return false
+        }
+        if lhs.wasRecordingDismissed != rhs.wasRecordingDismissed {
+            return false
+        }
+        if lhs.recordedAudioPreview !== rhs.recordedAudioPreview {
+            return false
+        }
         if lhs.displayGradient != rhs.displayGradient {
             return false
         }
@@ -123,12 +151,16 @@ public final class MessageInputPanelComponent: Component {
         private let textFieldExternalState = TextFieldComponent.ExternalState()
         
         private let attachmentButton = ComponentView<Empty>()
+        private var deleteMediaPreviewButton: ComponentView<Empty>?
         private let inputActionButton = ComponentView<Empty>()
         private let stickerButton = ComponentView<Empty>()
         private let reactionButton = ComponentView<Empty>()
         
+        private var mediaRecordingVibrancyContainer: UIView
         private var mediaRecordingPanel: ComponentView<Empty>?
         private weak var dismissingMediaRecordingPanel: UIView?
+        
+        private var mediaPreviewPanel: ComponentView<Empty>?
         
         private var currentMediaInputIsVoice: Bool = true
         private var mediaCancelFraction: CGFloat = 0.0
@@ -144,6 +176,9 @@ public final class MessageInputPanelComponent: Component {
             let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
             let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
             self.vibrancyEffectView = vibrancyEffectView
+            
+            self.mediaRecordingVibrancyContainer = UIView()
+            self.vibrancyEffectView.contentView.addSubview(self.mediaRecordingVibrancyContainer)
             
             self.gradientView = UIImageView()
             self.bottomGradientView = UIView()
@@ -181,20 +216,31 @@ public final class MessageInputPanelComponent: Component {
             }
         }
         
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = super.hitTest(point, with: event)
+            
+            return result
+        }
+        
         func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             var insets = UIEdgeInsets(top: 14.0, left: 7.0, bottom: 6.0, right: 7.0)
+            
             if let _ = component.attachmentAction {
                 insets.left = 41.0
             }
             if let _ = component.setMediaRecordingActive {
                 insets.right = 41.0
             }
+            
+            let mediaInsets = UIEdgeInsets(top: insets.top, left: 7.0, bottom: insets.bottom, right: insets.right)
+            
             let baseFieldHeight: CGFloat = 40.0
             
             self.component = component
             self.state = state
 
             let hasMediaRecording = component.audioRecorder != nil || component.videoRecordingStatus != nil
+            let hasMediaEditing = component.recordedAudioPreview != nil
             
             let topGradientHeight: CGFloat = 32.0
             if self.gradientView.image == nil {
@@ -264,13 +310,20 @@ public final class MessageInputPanelComponent: Component {
             }
             
             let fieldFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: availableSize.width - insets.left - insets.right, height: textFieldSize.height))
-            transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldFrame.size))
-            transition.setAlpha(view: self.vibrancyEffectView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
             
-            transition.setFrame(view: self.fieldBackgroundView, frame: fieldFrame)
-            self.fieldBackgroundView.update(size: fieldFrame.size, cornerRadius: baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)
+            let fieldBackgroundFrame: CGRect
+            if hasMediaRecording {
+                fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - mediaInsets.right, height: textFieldSize.height))
+            } else {
+                fieldBackgroundFrame = fieldFrame
+            }
             
-            let gradientFrame = CGRect(origin: CGPoint(x: 0.0, y: -topGradientHeight), size: CGSize(width: availableSize.width, height: topGradientHeight + fieldFrame.maxY + insets.bottom))
+            transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
+            
+            transition.setFrame(view: self.fieldBackgroundView, frame: fieldBackgroundFrame)
+            self.fieldBackgroundView.update(size: fieldBackgroundFrame.size, cornerRadius: baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)
+            
+            let gradientFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX - fieldFrame.minX, y: -topGradientHeight), size: CGSize(width: availableSize.width - (fieldBackgroundFrame.minX - fieldFrame.minX), height: topGradientHeight + fieldBackgroundFrame.maxY + insets.bottom))
             transition.setFrame(view: self.gradientView, frame: gradientFrame)
             transition.setFrame(view: self.bottomGradientView, frame: CGRect(origin: CGPoint(x: 0.0, y: gradientFrame.maxY), size: CGSize(width: availableSize.width, height: component.bottomInset)))
             transition.setAlpha(view: self.gradientView, alpha: component.displayGradient ? 1.0 : 0.0)
@@ -282,7 +335,7 @@ public final class MessageInputPanelComponent: Component {
             } else {
                 placeholderOriginX = floorToScreenPixels((availableSize.width - placeholderSize.width) / 2.0)
             }
-            let placeholderFrame = CGRect(origin: CGPoint(x: placeholderOriginX, y: floor((fieldFrame.height - placeholderSize.height) * 0.5)), size: placeholderSize)
+            let placeholderFrame = CGRect(origin: CGPoint(x: placeholderOriginX, y: floor((fieldBackgroundFrame.height - placeholderSize.height) * 0.5)), size: placeholderSize)
             if let placeholderView = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
                 if vibrancyPlaceholderView.superview == nil {
                     vibrancyPlaceholderView.layer.anchorPoint = CGPoint()
@@ -298,6 +351,9 @@ public final class MessageInputPanelComponent: Component {
                 }
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                 placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
+                
+                transition.setAlpha(view: placeholderView, alpha: (hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
+                transition.setAlpha(view: vibrancyPlaceholderView, alpha: (hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
             }
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height + insets.top + insets.bottom)
@@ -306,46 +362,151 @@ public final class MessageInputPanelComponent: Component {
                 if textFieldView.superview == nil {
                     self.addSubview(textFieldView)
                 }
-                transition.setFrame(view: textFieldView, frame: CGRect(origin: CGPoint(x: fieldFrame.minX, y: fieldFrame.maxY - textFieldSize.height), size: textFieldSize))
-                transition.setAlpha(view: textFieldView, alpha: (component.audioRecorder != nil || component.videoRecordingStatus != nil) ? 0.0 : 1.0)
+                transition.setFrame(view: textFieldView, frame: CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX, y: fieldBackgroundFrame.maxY - textFieldSize.height), size: textFieldSize))
+                transition.setAlpha(view: textFieldView, alpha: (hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
             }
             
-            if let attachmentAction = component.attachmentAction {
+            if component.attachmentAction != nil {
+                let attachmentButtonMode: MessageInputActionButtonComponent.Mode
+                attachmentButtonMode = .attach
+                
                 let attachmentButtonSize = self.attachmentButton.update(
                     transition: transition,
-                    component: AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Chat/Input/Text/IconAttachment",
-                            tintColor: .white
-                        )),
-                        action: {
-                            attachmentAction()
-                        }
-                    ).minSize(CGSize(width: 41.0, height: baseFieldHeight))),
+                    component: AnyComponent(MessageInputActionButtonComponent(
+                        mode: attachmentButtonMode,
+                        action: { [weak self] mode, action, sendAction in
+                            guard let self, let component = self.component, case .up = action else {
+                                return
+                            }
+                            
+                            switch mode {
+                            case .delete:
+                                break
+                            case .attach:
+                                component.attachmentAction?()
+                            default:
+                                break
+                            }
+                        },
+                        switchMediaInputMode: {
+                        },
+                        updateMediaCancelFraction: { _ in
+                        },
+                        lockMediaRecording: {
+                        },
+                        stopAndPreviewMediaRecording: {
+                        },
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        presentController: component.presentController,
+                        audioRecorder: nil,
+                        videoRecordingStatus: nil
+                    )),
                     environment: {},
-                    containerSize: CGSize(width: 41.0, height: baseFieldHeight)
+                    containerSize: CGSize(width: 33.0, height: baseFieldHeight)
                 )
                 if let attachmentButtonView = self.attachmentButton.view {
                     if attachmentButtonView.superview == nil {
                         self.addSubview(attachmentButtonView)
                     }
-                    transition.setFrame(view: attachmentButtonView, frame: CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5), y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize))
+                    let attachmentButtonFrame = CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5) + (fieldBackgroundFrame.minX - fieldFrame.minX), y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize)
+                    transition.setPosition(view: attachmentButtonView, position: attachmentButtonFrame.center)
+                    transition.setBounds(view: attachmentButtonView, bounds: CGRect(origin: CGPoint(), size: attachmentButtonFrame.size))
+                    transition.setAlpha(view: attachmentButtonView, alpha: (hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
+                    transition.setScale(view: attachmentButtonView, scale: hasMediaEditing ? 0.001 : 1.0)
                 }
             }
             
+            if hasMediaEditing {
+                let deleteMediaPreviewButton: ComponentView<Empty>
+                var deleteMediaPreviewButtonTransition = transition
+                if let current = self.deleteMediaPreviewButton {
+                    deleteMediaPreviewButton = current
+                } else {
+                    if !transition.animation.isImmediate {
+                        deleteMediaPreviewButtonTransition = .immediate
+                    }
+                    deleteMediaPreviewButton = ComponentView()
+                    self.deleteMediaPreviewButton = deleteMediaPreviewButton
+                }
+                let buttonSize = CGSize(width: 40.0, height: 40.0)
+                let deleteMediaPreviewButtonFrame = CGRect(origin: CGPoint(x: 1.0 + (fieldBackgroundFrame.minX - fieldFrame.minX), y: 3.0 + floor((size.height - buttonSize.height) * 0.5)), size: CGSize(width: buttonSize.width, height: buttonSize.height))
+                let _ = deleteMediaPreviewButton.update(
+                    transition: deleteMediaPreviewButtonTransition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(LottieComponent(
+                            content: LottieComponent.AppBundleContent(name: "BinBlue"),
+                            color: .white,
+                            startingPosition: .begin
+                        )),
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.discardMediaRecordingPreview?()
+                        }
+                    ).minSize(buttonSize)),
+                    environment: {},
+                    containerSize: buttonSize
+                )
+                if let deleteMediaPreviewButtonView = deleteMediaPreviewButton.view {
+                    if deleteMediaPreviewButtonView.superview == nil {
+                        self.addSubview(deleteMediaPreviewButtonView)
+                        transition.animateAlpha(view: deleteMediaPreviewButtonView, from: 0.0, to: 1.0)
+                        transition.animatePosition(view: deleteMediaPreviewButtonView, from: CGPoint(x: mediaInsets.left - insets.left, y: 0.0), to: CGPoint(), additive: true)
+                    }
+                    deleteMediaPreviewButtonTransition.setFrame(view: deleteMediaPreviewButtonView, frame: deleteMediaPreviewButtonFrame)
+                }
+            } else if let deleteMediaPreviewButton = self.deleteMediaPreviewButton {
+                self.deleteMediaPreviewButton = nil
+                if let deleteMediaPreviewButtonView = deleteMediaPreviewButton.view {
+                    if component.wasRecordingDismissed, let deleteMediaPreviewButtonView = deleteMediaPreviewButtonView as? Button.View, let animationView = deleteMediaPreviewButtonView.content as? LottieComponent.View {
+                        if let attachmentButtonView = self.attachmentButton.view {
+                            attachmentButtonView.isHidden = true
+                        }
+                        animationView.playOnce(completion: { [weak self, weak deleteMediaPreviewButtonView] in
+                            guard let self, let deleteMediaPreviewButtonView else {
+                                return
+                            }
+                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            transition.setAlpha(view: deleteMediaPreviewButtonView, alpha: 0.0, completion: { [weak deleteMediaPreviewButtonView] _ in
+                                deleteMediaPreviewButtonView?.removeFromSuperview()
+                            })
+                            transition.setScale(view: deleteMediaPreviewButtonView, scale: 0.001)
+                            
+                            if let attachmentButtonView = self.attachmentButton.view {
+                                attachmentButtonView.isHidden = false
+                                
+                                transition.animateAlpha(view: attachmentButtonView, from: 0.0, to: attachmentButtonView.alpha)
+                                transition.animateScale(view: attachmentButtonView, from: 0.001, to: 1.0)
+                            }
+                        })
+                    } else {
+                        transition.setAlpha(view: deleteMediaPreviewButtonView, alpha: 0.0, completion: { [weak deleteMediaPreviewButtonView] _ in
+                            deleteMediaPreviewButtonView?.removeFromSuperview()
+                        })
+                        transition.setScale(view: deleteMediaPreviewButtonView, scale: 0.001)
+                    }
+                }
+            }
             
             let inputActionButtonMode: MessageInputActionButtonComponent.Mode
             if case .editor = component.style {
                 inputActionButtonMode = self.textFieldExternalState.isEditing ? .apply : .none
             } else {
-                inputActionButtonMode = self.textFieldExternalState.hasText ? .send : (self.currentMediaInputIsVoice ? .voiceInput : .videoInput)
+                if hasMediaEditing {
+                    inputActionButtonMode = .send
+                } else {
+                    inputActionButtonMode = self.textFieldExternalState.hasText ? .send : (self.currentMediaInputIsVoice ? .voiceInput : .videoInput)
+                }
             }
             let inputActionButtonSize = self.inputActionButton.update(
                 transition: transition,
                 component: AnyComponent(MessageInputActionButtonComponent(
                     mode: inputActionButtonMode,
                     action: { [weak self] mode, action, sendAction in
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         
@@ -354,9 +515,11 @@ public final class MessageInputPanelComponent: Component {
                             break
                         case .send:
                             if case .up = action {
-                                if case .text("") = self.getSendMessageInput() {
+                                if component.recordedAudioPreview != nil {
+                                    component.sendMessageAction()
+                                } else if case .text("") = self.getSendMessageInput() {
                                 } else {
-                                    self.component?.sendMessageAction()
+                                    component.sendMessageAction()
                                 }
                             }
                         case .apply:
@@ -364,7 +527,9 @@ public final class MessageInputPanelComponent: Component {
                                 self.component?.sendMessageAction()
                             }
                         case .voiceInput, .videoInput:
-                            self.component?.setMediaRecordingActive?(action == .down, mode == .videoInput, sendAction)
+                            component.setMediaRecordingActive?(action == .down, mode == .videoInput, sendAction)
+                        default:
+                            break
                         }
                     },
                     switchMediaInputMode: { [weak self] in
@@ -382,6 +547,18 @@ public final class MessageInputPanelComponent: Component {
                             self.mediaCancelFraction = mediaCancelFraction
                             self.state?.updated(transition: .immediate)
                         }
+                    },
+                    lockMediaRecording: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.lockMediaRecording?()
+                    },
+                    stopAndPreviewMediaRecording: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.stopAndPreviewMediaRecording?()
                     },
                     context: component.context,
                     theme: component.theme,
@@ -406,7 +583,7 @@ public final class MessageInputPanelComponent: Component {
                 transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floorToScreenPixels((baseFieldHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
             }
         
-            var fieldIconNextX = fieldFrame.maxX - 2.0
+            var fieldIconNextX = fieldBackgroundFrame.maxX - 2.0
             if case .story = component.style {
                 let stickerButtonSize = self.stickerButton.update(
                     transition: transition,
@@ -429,12 +606,12 @@ public final class MessageInputPanelComponent: Component {
                     if stickerButtonView.superview == nil {
                         self.addSubview(stickerButtonView)
                     }
-                    let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldFrame.minY + floor((fieldFrame.height - stickerButtonSize.height) * 0.5)), size: stickerButtonSize)
+                    let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldBackgroundFrame.minY + floor((fieldBackgroundFrame.height - stickerButtonSize.height) * 0.5)), size: stickerButtonSize)
                     transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
                     transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
                     
-                    transition.setAlpha(view: stickerButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording) ? 0.0 : 1.0)
-                    transition.setScale(view: stickerButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                    transition.setAlpha(view: stickerButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
+                    transition.setScale(view: stickerButtonView, scale: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.1 : 1.0)
                     
                     fieldIconNextX -= stickerButtonSize.width + 2.0
                 }
@@ -462,19 +639,18 @@ public final class MessageInputPanelComponent: Component {
                     if reactionButtonView.superview == nil {
                         self.addSubview(reactionButtonView)
                     }
-                    let reactionIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - reactionButtonSize.width, y: fieldFrame.minY + 1.0 + floor((fieldFrame.height - reactionButtonSize.height) * 0.5)), size: reactionButtonSize)
+                    let reactionIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - reactionButtonSize.width, y: fieldBackgroundFrame.minY + 1.0 + floor((fieldBackgroundFrame.height - reactionButtonSize.height) * 0.5)), size: reactionButtonSize)
                     transition.setPosition(view: reactionButtonView, position: reactionIconFrame.center)
                     transition.setBounds(view: reactionButtonView, bounds: CGRect(origin: CGPoint(), size: reactionIconFrame.size))
                     
-                    transition.setAlpha(view: reactionButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording) ? 0.0 : 1.0)
-                    transition.setScale(view: reactionButtonView, scale: self.textFieldExternalState.hasText ? 0.1 : 1.0)
+                    transition.setAlpha(view: reactionButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
+                    transition.setScale(view: reactionButtonView, scale: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.1 : 1.0)
                     
                     fieldIconNextX -= reactionButtonSize.width + 2.0
                 }
             }
             
             self.fieldBackgroundView.updateColor(color: self.textFieldExternalState.isEditing || component.style == .editor ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
-            transition.setAlpha(view: self.fieldBackgroundView, alpha: hasMediaRecording ? 0.0 : 1.0)
             if let placeholder = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
                 placeholder.isHidden = self.textFieldExternalState.hasText
                 vibrancyPlaceholderView.isHidden = placeholder.isHidden
@@ -483,7 +659,7 @@ public final class MessageInputPanelComponent: Component {
             component.externalState.isEditing = self.textFieldExternalState.isEditing
             component.externalState.hasText = self.textFieldExternalState.hasText
             
-            if component.audioRecorder != nil || component.videoRecordingStatus != nil {
+            if hasMediaRecording {
                 if let dismissingMediaRecordingPanel = self.dismissingMediaRecordingPanel {
                     self.dismissingMediaRecordingPanel = nil
                     transition.setAlpha(view: dismissingMediaRecordingPanel, alpha: 0.0, completion: { [weak dismissingMediaRecordingPanel] _ in
@@ -504,10 +680,20 @@ public final class MessageInputPanelComponent: Component {
                 let _ = mediaRecordingPanel.update(
                     transition: mediaRecordingPanelTransition,
                     component: AnyComponent(MediaRecordingPanelComponent(
+                        theme: component.theme,
+                        strings: component.strings,
                         audioRecorder: component.audioRecorder,
                         videoRecordingStatus: component.videoRecordingStatus,
+                        isRecordingLocked: component.isRecordingLocked,
                         cancelFraction: self.mediaCancelFraction,
-                        insets: insets
+                        inputInsets: insets,
+                        insets: mediaInsets,
+                        cancelAction: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.setMediaRecordingActive?(false, false, false)
+                        }
                     )),
                     environment: {},
                     containerSize: size
@@ -516,16 +702,17 @@ public final class MessageInputPanelComponent: Component {
                     var animateIn = false
                     if mediaRecordingPanelView.superview == nil {
                         animateIn = true
-                        self.insertSubview(mediaRecordingPanelView, at: 0)
+                        self.insertSubview(mediaRecordingPanelView, aboveSubview: self.fieldBackgroundView)
+                        
+                        self.mediaRecordingVibrancyContainer.addSubview(mediaRecordingPanelView.vibrancyContainer)
                     }
                     mediaRecordingPanelTransition.setFrame(view: mediaRecordingPanelView, frame: CGRect(origin: CGPoint(), size: size))
+                    
+                    transition.setFrame(view: self.mediaRecordingVibrancyContainer, frame: CGRect(origin: CGPoint(x: -fieldBackgroundFrame.minX, y: -fieldBackgroundFrame.minY), size: size))
+                    
                     if animateIn && !transition.animation.isImmediate {
                         mediaRecordingPanelView.animateIn()
                     }
-                }
-                
-                if let attachmentButtonView = self.attachmentButton.view {
-                    transition.setAlpha(view: attachmentButtonView, alpha: 0.0)
                 }
             } else {
                 if let mediaRecordingPanel = self.mediaRecordingPanel {
@@ -541,7 +728,11 @@ public final class MessageInputPanelComponent: Component {
                     self.dismissingMediaRecordingPanel = mediaRecordingPanel.view
                     
                     if let mediaRecordingPanelView = mediaRecordingPanel.view as? MediaRecordingPanelComponent.View {
-                        mediaRecordingPanelView.animateOut(dismissRecording: true, completion: { [weak self, weak mediaRecordingPanelView] in
+                        let wasRecordingDismissed = component.wasRecordingDismissed
+                        if wasRecordingDismissed, let attachmentButtonView = self.attachmentButton.view {
+                            attachmentButtonView.isHidden = true
+                        }
+                        mediaRecordingPanelView.animateOut(transition: transition, dismissRecording: wasRecordingDismissed, completion: { [weak self, weak mediaRecordingPanelView] in
                             let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
                             
                             if let mediaRecordingPanelView = mediaRecordingPanelView {
@@ -553,10 +744,63 @@ public final class MessageInputPanelComponent: Component {
                             guard let self else {
                                 return
                             }
-                            if self.mediaRecordingPanel == nil, let attachmentButtonView = self.attachmentButton.view {
-                                transition.setAlpha(view: attachmentButtonView, alpha: 1.0)
+                            if wasRecordingDismissed, self.mediaRecordingPanel == nil, let attachmentButtonView = self.attachmentButton.view {
+                                attachmentButtonView.isHidden = false
+                                
+                                transition.animateAlpha(view: attachmentButtonView, from: 0.0, to: attachmentButtonView.alpha)
                                 transition.animateScale(view: attachmentButtonView, from: 0.001, to: 1.0)
                             }
+                        })
+                    }
+                }
+            }
+            
+            if let recordedAudioPreview = component.recordedAudioPreview {
+                let mediaPreviewPanel: ComponentView<Empty>
+                var mediaPreviewPanelTransition = transition
+                if let current = self.mediaPreviewPanel {
+                    mediaPreviewPanel = current
+                } else {
+                    mediaPreviewPanelTransition = .immediate
+                    mediaPreviewPanel = ComponentView()
+                    self.mediaPreviewPanel = mediaPreviewPanel
+                }
+                
+                let _ = mediaPreviewPanel.update(
+                    transition: mediaPreviewPanelTransition,
+                    component: AnyComponent(MediaPreviewPanelComponent(
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        mediaPreview: recordedAudioPreview,
+                        insets: insets
+                    )),
+                    environment: {},
+                    containerSize: size
+                )
+                if let mediaPreviewPanelView = mediaPreviewPanel.view as? MediaPreviewPanelComponent.View {
+                    var animateIn = false
+                    if mediaPreviewPanelView.superview == nil {
+                        animateIn = true
+                        self.insertSubview(mediaPreviewPanelView, aboveSubview: self.fieldBackgroundView)
+                        
+                        self.mediaRecordingVibrancyContainer.addSubview(mediaPreviewPanelView.vibrancyContainer)
+                    }
+                    mediaPreviewPanelTransition.setFrame(view: mediaPreviewPanelView, frame: CGRect(origin: CGPoint(), size: size))
+                    
+                    transition.setFrame(view: self.mediaRecordingVibrancyContainer, frame: CGRect(origin: CGPoint(x: -fieldBackgroundFrame.minX, y: -fieldBackgroundFrame.minY), size: size))
+                    
+                    if animateIn && !transition.animation.isImmediate {
+                        mediaPreviewPanelView.animateIn()
+                    }
+                }
+            } else {
+                if let mediaPreviewPanel = self.mediaPreviewPanel {
+                    self.mediaPreviewPanel = nil
+                    
+                    if let mediaPreviewPanelView = mediaPreviewPanel.view as? MediaPreviewPanelComponent.View {
+                        mediaPreviewPanelView.animateOut(transition: transition, completion: { [weak mediaPreviewPanelView] in
+                            mediaPreviewPanelView?.removeFromSuperview()
                         })
                     }
                 }

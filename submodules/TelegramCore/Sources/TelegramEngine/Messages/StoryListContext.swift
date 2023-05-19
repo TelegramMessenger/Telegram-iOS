@@ -172,17 +172,19 @@ public final class StoryListContext {
             self.stateValue = State(itemSets: [], uploadProgress: nil, loadMoreToken: LoadMoreToken(value: nil))
             self.state.set(.single(self.stateValue))
             
-            let _ = (account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(account.peerId)
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                guard let self, let peer else {
-                    return
+            if case .all = scope {
+                let _ = (account.postbox.transaction { transaction -> Peer? in
+                    return transaction.getPeer(account.peerId)
                 }
-                self.stateValue = State(itemSets: [
-                    PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), maxReadId: 0, items: [], totalCount: 0)
-                ], uploadProgress: nil, loadMoreToken: LoadMoreToken(value: nil))
-            })
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    guard let self, let peer else {
+                        return
+                    }
+                    self.stateValue = State(itemSets: [
+                        PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), maxReadId: 0, items: [], totalCount: 0)
+                    ], uploadProgress: nil, loadMoreToken: LoadMoreToken(value: nil))
+                })
+            }
             
             self.updatesDisposable = (account.stateManager.storyUpdates
             |> deliverOn(queue)).start(next: { [weak self] updates in
@@ -253,7 +255,12 @@ public final class StoryListContext {
                                     
                                     items.sort(by: { lhsItem, rhsItem in
                                         if lhsItem.timestamp != rhsItem.timestamp {
-                                            return lhsItem.timestamp < rhsItem.timestamp
+                                            switch scope {
+                                            case .all:
+                                                return lhsItem.timestamp > rhsItem.timestamp
+                                            case .peer:
+                                                return lhsItem.timestamp < rhsItem.timestamp
+                                            }
                                         }
                                         return lhsItem.id < rhsItem.id
                                     })
@@ -267,13 +274,23 @@ public final class StoryListContext {
                                 }
                             }
                             if !found, let peer = peers[peerId] {
-                                itemSets.insert(PeerItemSet(
-                                    peerId: peerId,
-                                    peer: EnginePeer(peer),
-                                    maxReadId: 0,
-                                    items: [item],
-                                    totalCount: 1
-                                ), at: 0)
+                                let matchesScope: Bool
+                                if case .all = scope {
+                                    matchesScope = true
+                                } else if case .peer(peerId) = scope {
+                                    matchesScope = true
+                                } else {
+                                    matchesScope = false
+                                }
+                                if matchesScope {
+                                    itemSets.insert(PeerItemSet(
+                                        peerId: peerId,
+                                        peer: EnginePeer(peer),
+                                        maxReadId: 0,
+                                        items: [item],
+                                        totalCount: 1
+                                    ), at: 0)
+                                }
                             }
                         case let .read(peerId, maxId):
                             for i in 0 ..< itemSets.count {
@@ -301,7 +318,12 @@ public final class StoryListContext {
                         }
                         
                         if lhsItem.timestamp != rhsItem.timestamp {
-                            return lhsItem.timestamp > rhsItem.timestamp
+                            switch scope {
+                            case .all:
+                                return lhsItem.timestamp > rhsItem.timestamp
+                            case .peer:
+                                return lhsItem.timestamp < rhsItem.timestamp
+                            }
                         }
                         return lhsItem.id > rhsItem.id
                     })
@@ -342,7 +364,7 @@ public final class StoryListContext {
                     guard let inputPeer = inputPeer else {
                         return .single(nil)
                     }
-                    return account.network.request(Api.functions.stories.getUserStories(flags: 0, userId: inputPeer, offsetId: 0, limit: 100))
+                    return account.network.request(Api.functions.stories.getUserStories(flags: 0, userId: inputPeer, offsetId: 0, limit: 30))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
                         return .single(nil)
@@ -435,139 +457,220 @@ public final class StoryListContext {
             
             self.isLoadingMore = true
             let account = self.account
+            let scope = self.scope
             
             self.pollDisposable?.dispose()
             self.pollDisposable = nil
             
-            self.loadMoreDisposable.set((account.network.request(Api.functions.stories.getAllStories(offset: loadMoreToken))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.stories.AllStories?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { result -> Signal<([PeerItemSet], LoadMoreToken?), NoError> in
-                guard let result else {
-                    return .single(([], nil))
+            switch scope {
+            case .all:
+                self.loadMoreDisposable.set((account.network.request(Api.functions.stories.getAllStories(offset: loadMoreToken))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.stories.AllStories?, NoError> in
+                    return .single(nil)
                 }
-                return account.postbox.transaction { transaction -> ([PeerItemSet], LoadMoreToken?) in
-                    switch result {
-                    case let .allStories(_, userStorySets, nextOffset, users):
-                        var parsedItemSets: [PeerItemSet] = []
-                        
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: Api.User] = [:]
-                        
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            peerPresences[telegramUser.id] = user
-                        }
-                        
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
-                        
-                        for userStories in userStorySets {
-                            let apiUserId: Int64
-                            let apiStories: [Api.StoryItem]
-                            var apiTotalCount: Int32?
-                            var apiMaxReadId: Int32 = 0
-                            switch userStories {
-                            case let .userStories(_, userId, maxReadId, stories, missingCount):
-                                apiUserId = userId
-                                apiStories = stories
-                                apiTotalCount = (missingCount ?? 0) + Int32(stories.count)
-                                apiMaxReadId = maxReadId ?? 0
+                |> mapToSignal { result -> Signal<([PeerItemSet], LoadMoreToken?), NoError> in
+                    guard let result else {
+                        return .single(([], nil))
+                    }
+                    return account.postbox.transaction { transaction -> ([PeerItemSet], LoadMoreToken?) in
+                        switch result {
+                        case let .allStories(_, userStorySets, nextOffset, users):
+                            var parsedItemSets: [PeerItemSet] = []
+                            
+                            var peers: [Peer] = []
+                            var peerPresences: [PeerId: Api.User] = [:]
+                            
+                            for user in users {
+                                let telegramUser = TelegramUser(user: user)
+                                peers.append(telegramUser)
+                                peerPresences[telegramUser.id] = user
                             }
                             
-                            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(apiUserId))
-                            for apiStory in apiStories {
-                                if let item = _internal_parseApiStoryItem(transaction: transaction, peerId: peerId, apiStory: apiStory) {
-                                    if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
-                                        parsedItemSets[parsedItemSets.count - 1].items.append(item)
-                                    } else {
-                                        parsedItemSets.append(StoryListContext.PeerItemSet(
-                                            peerId: peerId,
-                                            peer: transaction.getPeer(peerId).flatMap(EnginePeer.init),
-                                            maxReadId: apiMaxReadId,
-                                            items: [item],
-                                            totalCount: apiTotalCount.flatMap(Int.init)
-                                        ))
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                return updated
+                            })
+                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            
+                            for userStories in userStorySets {
+                                let apiUserId: Int64
+                                let apiStories: [Api.StoryItem]
+                                var apiTotalCount: Int32?
+                                var apiMaxReadId: Int32 = 0
+                                switch userStories {
+                                case let .userStories(_, userId, maxReadId, stories, missingCount):
+                                    apiUserId = userId
+                                    apiStories = stories
+                                    apiTotalCount = (missingCount ?? 0) + Int32(stories.count)
+                                    apiMaxReadId = maxReadId ?? 0
+                                }
+                                
+                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(apiUserId))
+                                for apiStory in apiStories {
+                                    if let item = _internal_parseApiStoryItem(transaction: transaction, peerId: peerId, apiStory: apiStory) {
+                                        if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
+                                            parsedItemSets[parsedItemSets.count - 1].items.append(item)
+                                        } else {
+                                            parsedItemSets.append(StoryListContext.PeerItemSet(
+                                                peerId: peerId,
+                                                peer: transaction.getPeer(peerId).flatMap(EnginePeer.init),
+                                                maxReadId: apiMaxReadId,
+                                                items: [item],
+                                                totalCount: apiTotalCount.flatMap(Int.init)
+                                            ))
+                                        }
                                     }
                                 }
                             }
-                        }
-                        
-                        if !parsedItemSets.contains(where: { $0.peerId == account.peerId }) {
-                            if let peer = transaction.getPeer(account.peerId) {
-                                parsedItemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), maxReadId: 0, items: [], totalCount: 0), at: 0)
+                            
+                            if !parsedItemSets.contains(where: { $0.peerId == account.peerId }) {
+                                if let peer = transaction.getPeer(account.peerId) {
+                                    parsedItemSets.insert(PeerItemSet(peerId: peer.id, peer: EnginePeer(peer), maxReadId: 0, items: [], totalCount: 0), at: 0)
+                                }
                             }
+                            
+                            return (parsedItemSets, nextOffset.flatMap { LoadMoreToken(value: $0) })
                         }
-                        
-                        return (parsedItemSets, nextOffset.flatMap { LoadMoreToken(value: $0) })
                     }
                 }
-            }
-            |> deliverOn(self.queue)).start(next: { [weak self] result in
-                guard let `self` = self else {
-                    return
-                }
-                self.isLoadingMore = false
-                
-                var itemSets = self.stateValue.itemSets
-                for itemSet in result.0 {
-                    if let index = itemSets.firstIndex(where: { $0.peerId == itemSet.peerId }) {
-                        let currentItemSet = itemSets[index]
-                        
-                        var items = currentItemSet.items
-                        for item in itemSet.items {
-                            if !items.contains(where: { $0.id == item.id }) {
-                                items.append(item)
-                            }
-                        }
-                        
-                        items.sort(by: { lhsItem, rhsItem in
-                            if lhsItem.timestamp != rhsItem.timestamp {
-                                return lhsItem.timestamp < rhsItem.timestamp
-                            }
-                            return lhsItem.id < rhsItem.id
-                        })
-                        
-                        itemSets[index] = PeerItemSet(
-                            peerId: itemSet.peerId,
-                            peer: itemSet.peer,
-                            maxReadId: itemSet.maxReadId,
-                            items: items,
-                            totalCount: items.count
-                        )
-                    } else {
-                        itemSet.items.sort(by: { lhsItem, rhsItem in
-                            if lhsItem.timestamp != rhsItem.timestamp {
-                                return lhsItem.timestamp < rhsItem.timestamp
-                            }
-                            return lhsItem.id < rhsItem.id
-                        })
-                        itemSets.append(itemSet)
+                |> deliverOn(self.queue)).start(next: { [weak self] result in
+                    guard let `self` = self else {
+                        return
                     }
-                }
-                
-                itemSets.sort(by: { lhs, rhs in
-                    guard let lhsItem = lhs.items.first, let rhsItem = rhs.items.first else {
-                        if lhs.items.first != nil {
-                            return false
+                    self.isLoadingMore = false
+                    
+                    var itemSets = self.stateValue.itemSets
+                    for itemSet in result.0 {
+                        if let index = itemSets.firstIndex(where: { $0.peerId == itemSet.peerId }) {
+                            let currentItemSet = itemSets[index]
+                            
+                            var items = currentItemSet.items
+                            for item in itemSet.items {
+                                if !items.contains(where: { $0.id == item.id }) {
+                                    items.append(item)
+                                }
+                            }
+                            
+                            items.sort(by: { lhsItem, rhsItem in
+                                if lhsItem.timestamp != rhsItem.timestamp {
+                                    switch scope {
+                                    case .all:
+                                        return lhsItem.timestamp > rhsItem.timestamp
+                                    case .peer:
+                                        return lhsItem.timestamp < rhsItem.timestamp
+                                    }
+                                }
+                                return lhsItem.id < rhsItem.id
+                            })
+                            
+                            itemSets[index] = PeerItemSet(
+                                peerId: itemSet.peerId,
+                                peer: itemSet.peer,
+                                maxReadId: itemSet.maxReadId,
+                                items: items,
+                                totalCount: items.count
+                            )
                         } else {
-                            return true
+                            itemSet.items.sort(by: { lhsItem, rhsItem in
+                                if lhsItem.timestamp != rhsItem.timestamp {
+                                    switch scope {
+                                    case .all:
+                                        return lhsItem.timestamp > rhsItem.timestamp
+                                    case .peer:
+                                        return lhsItem.timestamp < rhsItem.timestamp
+                                    }
+                                }
+                                return lhsItem.id < rhsItem.id
+                            })
+                            itemSets.append(itemSet)
                         }
                     }
                     
-                    if lhsItem.timestamp != rhsItem.timestamp {
-                        return lhsItem.timestamp > rhsItem.timestamp
-                    }
-                    return lhsItem.id > rhsItem.id
-                })
+                    itemSets.sort(by: { lhs, rhs in
+                        guard let lhsItem = lhs.items.first, let rhsItem = rhs.items.first else {
+                            if lhs.items.first != nil {
+                                return false
+                            } else {
+                                return true
+                            }
+                        }
+                        
+                        if lhsItem.timestamp != rhsItem.timestamp {
+                            switch scope {
+                            case .all:
+                                return lhsItem.timestamp > rhsItem.timestamp
+                            case .peer:
+                                return lhsItem.timestamp < rhsItem.timestamp
+                            }
+                        }
+                        return lhsItem.id > rhsItem.id
+                    })
+                    
+                    self.stateValue = State(itemSets: itemSets, uploadProgress: self.stateValue.uploadProgress, loadMoreToken: result.1)
+                }))
+            case let .peer(peerId):
+                let account = self.account
+                let queue = self.queue
                 
-                self.stateValue = State(itemSets: itemSets, uploadProgress: self.stateValue.uploadProgress, loadMoreToken: result.1)
-            }))
+                self.loadMoreDisposable.set((self.account.postbox.transaction { transaction -> Api.InputUser? in
+                    return transaction.getPeer(peerId).flatMap(apiInputUser)
+                }
+                |> mapToSignal { inputPeer -> Signal<PeerItemSet?, NoError> in
+                    guard let inputPeer = inputPeer else {
+                        return .single(nil)
+                    }
+                    return account.network.request(Api.functions.stories.getUserStories(flags: 0, userId: inputPeer, offsetId: 0, limit: 30))
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { stories -> Signal<PeerItemSet?, NoError> in
+                        guard let stories = stories else {
+                            return .single(nil)
+                        }
+                        return account.postbox.transaction { transaction -> PeerItemSet? in
+                            switch stories {
+                            case let .stories(_, apiStories, users):
+                                var parsedItemSets: [PeerItemSet] = []
+                                
+                                var peers: [Peer] = []
+                                var peerPresences: [PeerId: Api.User] = [:]
+                                
+                                for user in users {
+                                    let telegramUser = TelegramUser(user: user)
+                                    peers.append(telegramUser)
+                                    peerPresences[telegramUser.id] = user
+                                }
+                                
+                                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                    return updated
+                                })
+                                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                
+                                for apiStory in apiStories {
+                                    if let item = _internal_parseApiStoryItem(transaction: transaction, peerId: peerId, apiStory: apiStory) {
+                                        if !parsedItemSets.isEmpty && parsedItemSets[parsedItemSets.count - 1].peerId == peerId {
+                                            parsedItemSets[parsedItemSets.count - 1].items.append(item)
+                                            parsedItemSets[parsedItemSets.count - 1].totalCount = parsedItemSets[parsedItemSets.count - 1].items.count
+                                        } else {
+                                            parsedItemSets.append(StoryListContext.PeerItemSet(peerId: peerId, peer: transaction.getPeer(peerId).flatMap(EnginePeer.init), maxReadId: 0, items: [item], totalCount: 1))
+                                        }
+                                    }
+                                }
+                                
+                                return parsedItemSets.first
+                            }
+                        }
+                    }
+                }
+                |> deliverOn(queue)).start(next: { [weak self] itemSet in
+                    guard let `self` = self, let itemSet = itemSet else {
+                        return
+                    }
+                    self.isLoadingMore = false
+                    self.stateValue.itemSets = [itemSet]
+                }))
+            }
         }
         
         func delete(id: Int32) {

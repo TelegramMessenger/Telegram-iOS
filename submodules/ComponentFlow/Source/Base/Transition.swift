@@ -432,7 +432,7 @@ public struct Transition {
         self.setTransform(layer: view.layer, transform: transform, completion: completion)
     }
     
-    public func setTransformAsKeyframes(view: UIView, transform: (CGFloat) -> CATransform3D, completion: ((Bool) -> Void)? = nil) {
+    public func setTransformAsKeyframes(view: UIView, transform: (CGFloat, Bool) -> CATransform3D, completion: ((Bool) -> Void)? = nil) {
         self.setTransformAsKeyframes(layer: view.layer, transform: transform, completion: completion)
     }
     
@@ -477,8 +477,8 @@ public struct Transition {
         }
     }
     
-    public func setTransformAsKeyframes(layer: CALayer, transform: (CGFloat) -> CATransform3D, completion: ((Bool) -> Void)? = nil) {
-        let finalTransform = transform(1.0)
+    public func setTransformAsKeyframes(layer: CALayer, transform: (CGFloat, Bool) -> CATransform3D, completion: ((Bool) -> Void)? = nil) {
+        let finalTransform = transform(1.0, true)
         
         let t = layer.presentation()?.transform ?? layer.transform
         if CATransform3DEqualToTransform(t, finalTransform) {
@@ -495,7 +495,7 @@ public struct Transition {
         
         switch self.animation {
         case .none:
-            layer.transform = transform(1.0)
+            layer.transform = transform(1.0, true)
             completion?(true)
         case let .curve(duration, curve):
             let framesPerSecond: CGFloat
@@ -507,7 +507,7 @@ public struct Transition {
             
             let numValues = Int(framesPerSecond * duration)
             if numValues == 0 {
-                layer.transform = transform(1.0)
+                layer.transform = transform(1.0, true)
                 completion?(true)
                 return
             }
@@ -516,10 +516,10 @@ public struct Transition {
             
             for i in 0 ... numValues {
                 let t = curve.solve(at: CGFloat(i) / CGFloat(numValues))
-                values.append(NSValue(caTransform3D: transform(t)))
+                values.append(NSValue(caTransform3D: transform(t, false)))
             }
             
-            layer.transform = transform(1.0)
+            layer.transform = transform(1.0, true)
             layer.animateKeyframes(
                 values: values,
                 duration: duration,
