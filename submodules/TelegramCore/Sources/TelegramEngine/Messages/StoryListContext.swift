@@ -395,6 +395,8 @@ public final class StoryListContext {
                     var itemSets = self.stateValue.itemSets
                     if let index = itemSets.firstIndex(where: { $0.peerId == id }) {
                         itemSets[index] = itemSet
+                    } else {
+                        itemSets.append(itemSet)
                     }
                     self.stateValue.itemSets = itemSets
                 }))
@@ -619,6 +621,12 @@ public final class StoryListContext {
     public func upload(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy) {
         self.impl.with { impl in
             impl.upload(media: media, text: text, entities: entities, privacy: privacy)
+        }
+    }
+    
+    public func loadPeer(id: EnginePeer.Id) {
+        self.impl.with { impl in
+            impl.loadPeer(id: id)
         }
     }
 }
