@@ -12,8 +12,7 @@ struct MediaPreset {
     }
     
     var hasAudio: Bool {
-        return false
-        //return !self.audioSettings.isEmpty
+        return !self.audioSettings.isEmpty
     }
 }
 

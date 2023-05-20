@@ -405,7 +405,11 @@ public final class SparseItemGrid: ASDisplayNode {
                     let itemsPerRow = CGFloat(zoomLevel.rawValue)
                     self.itemsPerRow = Int(itemsPerRow)
                     let itemSize = floorToScreenPixels((width - (self.itemSpacing * CGFloat(self.itemsPerRow - 1))) / itemsPerRow)
-                    self.itemSize = CGSize(width: itemSize, height: itemSize)
+                    if let fixedItemAspect = containerLayout.fixedItemAspect {
+                        self.itemSize = CGSize(width: itemSize, height: floor(itemSize / fixedItemAspect))
+                    } else {
+                        self.itemSize = CGSize(width: itemSize, height: itemSize)
+                    }
 
                     self.lastItemSize = width - (self.itemSize.width + self.itemSpacing) * CGFloat(self.itemsPerRow - 1)
                 }
@@ -1308,6 +1312,7 @@ public final class SparseItemGrid: ASDisplayNode {
         var scrollIndicatorInsets: UIEdgeInsets
         var lockScrollingAtTop: Bool
         var fixedItemHeight: CGFloat?
+        var fixedItemAspect: CGFloat?
     }
 
     private var tapRecognizer: UITapGestureRecognizer?
@@ -1565,9 +1570,9 @@ public final class SparseItemGrid: ASDisplayNode {
         }
     }
 
-    public func update(size: CGSize, insets: UIEdgeInsets, useSideInsets: Bool, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, items: Items, theme: PresentationTheme, synchronous: SparseItemGrid.Synchronous) {
+    public func update(size: CGSize, insets: UIEdgeInsets, useSideInsets: Bool, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, fixedItemAspect: CGFloat?, items: Items, theme: PresentationTheme, synchronous: SparseItemGrid.Synchronous) {
         self.theme = theme
-        let containerLayout = ContainerLayout(size: size, insets: insets, useSideInsets: useSideInsets, scrollIndicatorInsets: scrollIndicatorInsets, lockScrollingAtTop: lockScrollingAtTop, fixedItemHeight: fixedItemHeight)
+        let containerLayout = ContainerLayout(size: size, insets: insets, useSideInsets: useSideInsets, scrollIndicatorInsets: scrollIndicatorInsets, lockScrollingAtTop: lockScrollingAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect)
         self.containerLayout = containerLayout
         self.items = items
         self.scrollingArea.isHidden = lockScrollingAtTop

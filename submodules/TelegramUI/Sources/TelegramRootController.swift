@@ -25,6 +25,7 @@ import LegacyCamera
 import AvatarNode
 import LocalMediaResources
 import ShareWithPeersScreen
+import ImageCompression
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -367,8 +368,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         if let chatListController = self.chatListController as? ChatListControllerImpl, let storyListContext = chatListController.storyListContext {
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
-                                if let data = image.jpegData(compressionQuality: 0.8) {
-                                    storyListContext.upload(media: .image(dimensions: dimensions, data: data), text: caption?.string ?? "", entities: [], privacy: privacy)
+                                if let scaledImageData = compressImageToJPEG(image, quality: 0.6) {
+                                    storyListContext.upload(media: .image(dimensions: dimensions, data: scaledImageData), text: caption?.string ?? "", entities: [], privacy: privacy)
                                     Queue.mainQueue().after(0.2, { [weak chatListController] in
                                         chatListController?.animateStoryUploadRipple()
                                     })

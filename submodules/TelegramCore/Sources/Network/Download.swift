@@ -107,7 +107,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
         if asBigPart {
             let totalParts: Int32
-            if let bigTotalParts = bigTotalParts {
+            if let bigTotalParts = bigTotalParts, bigTotalParts > 0 && bigTotalParts < Int32.max {
                 totalParts = Int32(bigTotalParts)
             } else {
                 totalParts = -1

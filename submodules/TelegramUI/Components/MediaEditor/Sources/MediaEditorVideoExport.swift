@@ -14,7 +14,7 @@ enum ExportWriterStatus {
 
 protocol MediaEditorVideoExportWriter {
     func setup(configuration: MediaEditorVideoExport.Configuration, outputPath: String)
-    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration)
+    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, sourceFrameRate: Float)
     func setupAudioInput(configuration: MediaEditorVideoExport.Configuration)
     
     func startWriting() -> Bool
@@ -55,13 +55,16 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         writer.shouldOptimizeForNetworkUse = configuration.shouldOptimizeForNetworkUse
     }
     
-    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration) {
+    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, sourceFrameRate: Float) {
         guard let writer = self.writer else {
             return
         }
-        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: configuration.videoSettings)
-        videoInput.expectsMediaDataInRealTime = false
         
+        var videoSettings = configuration.videoSettings
+        videoSettings[AVVideoExpectedSourceFrameRateKey] = sourceFrameRate
+        
+        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
+        videoInput.expectsMediaDataInRealTime = false
         let sourcePixelBufferAttributes = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
             kCVPixelBufferWidthKey as String: UInt32(configuration.dimensions.width),
@@ -172,12 +175,18 @@ public final class MediaEditorVideoExport {
     }
     
     public struct Configuration {
+        public static let FrameRateKey = "Telegram__FrameRate"
+        
         public var shouldOptimizeForNetworkUse: Bool = true
         public var videoSettings: [String: Any]
         public var audioSettings: [String: Any]
         public var values: MediaEditorValues
         
-        public init(videoSettings: [String: Any], audioSettings: [String: Any], values: MediaEditorValues) {
+        public init(
+            videoSettings: [String: Any],
+            audioSettings: [String: Any],
+            values: MediaEditorValues
+        ) {
             self.videoSettings = videoSettings
             self.audioSettings = audioSettings
             self.values = values
@@ -200,6 +209,14 @@ public final class MediaEditorVideoExport {
                 return CGSize(width: width, height: height)
             } else {
                 return CGSize(width: 1920.0, height: 1080.0)
+            }
+        }
+        
+        var frameRate: Float {
+            if let frameRate = self.videoSettings[Configuration.FrameRateKey] as? Float {
+                return frameRate
+            } else {
+                return 30.0
             }
         }
     }
@@ -275,7 +292,7 @@ public final class MediaEditorVideoExport {
                 }
             }
         } else {
-            self.duration.set(CMTime(seconds: 3, preferredTimescale: 1))
+            self.duration.set(CMTime(seconds: 5, preferredTimescale: 1))
         }
                 
         switch self.subject {
@@ -312,6 +329,7 @@ public final class MediaEditorVideoExport {
         let videoTracks = asset.tracks(withMediaType: .video)
         if (videoTracks.count > 0) {
             let outputSettings: [String : Any]
+            var sourceFrameRate: Float = 0.0
             if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing {
                 outputSettings = [kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]]
             } else {
@@ -328,7 +346,18 @@ public final class MediaEditorVideoExport {
             }
             self.videoOutput = videoOutput
             
-            writer.setupVideoInput(configuration: self.configuration)
+            if let videoTrack = videoTracks.first {
+                if videoTrack.nominalFrameRate > 0.0 {
+                    sourceFrameRate = videoTrack.nominalFrameRate
+                } else if videoTrack.minFrameDuration.seconds > 0.0 {
+                    sourceFrameRate = Float(1.0 / videoTrack.minFrameDuration.seconds)
+                } else {
+                    sourceFrameRate = 30.0
+                }
+            } else {
+                sourceFrameRate = 30.0
+            }
+            writer.setupVideoInput(configuration: self.configuration, sourceFrameRate: sourceFrameRate)
         } else {
             self.videoOutput = nil
         }
@@ -364,7 +393,7 @@ public final class MediaEditorVideoExport {
             return
         }
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
-        writer.setupVideoInput(configuration: self.configuration)
+        writer.setupVideoInput(configuration: self.configuration, sourceFrameRate: 30.0)
     }
     
     private func finish() {
@@ -439,8 +468,8 @@ public final class MediaEditorVideoExport {
         }
         
         let duration: Double = 3.0
-        let frameRate: Double = 60.0
-        var position: CMTime = CMTime(value: 0, timescale: Int32(frameRate))
+        let frameRate: Double = Double(self.configuration.frameRate)
+        var position: CMTime = CMTime(value: 0, timescale: Int32(self.configuration.frameRate))
         
         var appendFailed = false
         while writer.isReadyForMoreVideoData {

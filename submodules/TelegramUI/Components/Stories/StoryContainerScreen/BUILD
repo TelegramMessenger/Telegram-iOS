@@ -50,6 +50,7 @@ swift_library(
         "//submodules/ReactionSelectionNode",
         "//submodules/ContextUI",
         "//submodules/AvatarNode",
+        "//submodules/ChatPresentationInterfaceState",
     ],
     visibility = [
         "//visibility:public",

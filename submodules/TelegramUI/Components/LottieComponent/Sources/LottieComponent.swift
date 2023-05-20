@@ -244,6 +244,8 @@ public final class LottieComponent: Component {
                 var advanceFrameCount = 1
                 if animationInstance.frameRate == 360 {
                     advanceFrameCount = 6
+                } else if animationInstance.frameRate == 240 {
+                    advanceFrameCount = 4
                 }
                 self.currentFrame += advanceFrameCount
                 if self.currentFrame >= Int(animationInstance.frameCount) - 1 {

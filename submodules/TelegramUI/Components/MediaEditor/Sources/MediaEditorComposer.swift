@@ -209,7 +209,7 @@ private func makeEditorImageFrameComposition(inputImage: CIImage, gradientImage:
         resultImage = drawingImage.composited(over: resultImage)
     }
     
-    let frameRate: Float = 60.0
+    let frameRate: Float = 30.0
     
     let entitiesCount = Atomic<Int>(value: 1)
     let entitiesImages = Atomic<[(CIImage, Int)]>(value: [])

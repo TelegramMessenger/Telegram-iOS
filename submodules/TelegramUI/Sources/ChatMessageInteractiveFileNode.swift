@@ -1192,6 +1192,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         backgroundColor: isTranscriptionInProgress ? messageTheme.mediaInactiveControlColor : waveformColor,
                                         foregroundColor: messageTheme.mediaActiveControlColor,
                                         shimmerColor: isTranscriptionInProgress ? messageTheme.mediaActiveControlColor : nil,
+                                        style: .bottom,
                                         samples: audioWaveform?.samples ?? Data(),
                                         peak: audioWaveform?.peak ?? 0,
                                         status: strongSelf.playbackStatus.get(),
@@ -1199,7 +1200,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                             if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(EngineMessage(message)) {
                                                 context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
                                             }
-                                        }
+                                        },
+                                        updateIsSeeking: nil
                                     )),
                                     environment: {},
                                     containerSize: scrubbingFrame.size

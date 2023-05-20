@@ -8,7 +8,7 @@ import TelegramCore
 import StoryContainerScreen
 
 public enum StoryChatContent {
-    public static func stories(context: AccountContext, storyList: StoryListContext, focusItem: Int64?) -> Signal<[StoryContentItemSlice], NoError> {
+    public static func stories(context: AccountContext, storyList: StoryListContext, focusItem: Int32?) -> Signal<[StoryContentItemSlice], NoError> {
         return storyList.state
         |> map { state -> [StoryContentItemSlice] in
             var itemSlices: [StoryContentItemSlice] = []
@@ -59,7 +59,7 @@ public enum StoryChatContent {
                 }
                 
                 var sliceFocusedItemId: AnyHashable?
-                if let focusItem, items.contains(where: { ($0.id.base as? Int64) == focusItem }) {
+                if let focusItem, items.contains(where: { ($0.id.base as? Int32) == focusItem }) {
                     sliceFocusedItemId = AnyHashable(focusItem)
                 } else {
                     if let id = itemSet.items.first(where: { $0.id > itemSet.maxReadId })?.id {
@@ -73,8 +73,8 @@ public enum StoryChatContent {
                     items: items,
                     totalCount: items.count,
                     update: { requestedItemSet, itemId in
-                        var focusItem: Int64?
-                        if let id = itemId.base as? Int64 {
+                        var focusItem: Int32?
+                        if let id = itemId.base as? Int32 {
                             focusItem = id
                         }
                         return StoryChatContent.stories(context: context, storyList: storyList, focusItem: focusItem)

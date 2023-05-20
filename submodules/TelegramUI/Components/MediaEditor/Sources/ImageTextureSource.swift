@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Metal
 import MetalKit
+import Display
 
 final class ImageTextureSource: TextureSource {
     weak var output: TextureConsumer?
@@ -10,11 +11,20 @@ final class ImageTextureSource: TextureSource {
     var texture: MTLTexture?
         
     init(image: UIImage, renderTarget: RenderTarget) {
-        guard let device = renderTarget.mtlDevice, let cgImage = image.cgImage else {
+        guard let device = renderTarget.mtlDevice, var cgImage = image.cgImage else {
             return
         }
         let textureLoader = MTKTextureLoader(device: device)
         self.textureLoader = textureLoader
+        
+        if let bitsPerPixel = image.cgImage?.bitsPerPixel, bitsPerPixel > 32 {
+            let updatedImage = generateImage(image.size, contextGenerator: { size, context in
+                context.setFillColor(UIColor.black.cgColor)
+                context.fill(CGRect(origin: .zero, size: size))
+                context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+            }, opaque: false)
+            cgImage = updatedImage?.cgImage ?? cgImage
+        }
         
         self.texture = try? textureLoader.newTexture(cgImage: cgImage, options: [.SRGB : false])
     }

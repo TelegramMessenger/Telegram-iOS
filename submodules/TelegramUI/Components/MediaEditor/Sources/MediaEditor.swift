@@ -17,6 +17,7 @@ public struct MediaEditorPlayerState {
     public let frames: [UIImage]
     public let framesCount: Int
     public let framesUpdateTimestamp: Double
+    public let hasAudio: Bool
 }
 
 public final class MediaEditor {
@@ -91,20 +92,20 @@ public final class MediaEditor {
     }
     
     private let playerPromise = Promise<AVPlayer?>()
-    private var playerPosition: (Double, Double) = (0.0, 0.0) {
+    private var playerPlaybackState: (Double, Double, Bool) = (0.0, 0.0, false) {
         didSet {
-            self.playerPositionPromise.set(.single(self.playerPosition))
+            self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
-    private let playerPositionPromise = Promise<(Double, Double)>((0.0, 0.0))
+    private let playerPlaybackStatePromise = Promise<(Double, Double, Bool)>((0.0, 0.0, false))
     
     public func playerState(framesCount: Int) -> Signal<MediaEditorPlayerState?, NoError> {
         return self.playerPromise.get()
         |> mapToSignal { [weak self] player in
             if let self, let asset = player?.currentItem?.asset {
-                return combineLatest(self.valuesPromise.get(), self.playerPositionPromise.get(), self.videoFrames(asset: asset, count: framesCount))
+                return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get(), self.videoFrames(asset: asset, count: framesCount))
                 |> map { values, durationAndPosition, framesAndUpdateTimestamp in
-                    let (duration, position) = durationAndPosition
+                    let (duration, position, hasAudio) = durationAndPosition
                     let (frames, framesUpdateTimestamp) = framesAndUpdateTimestamp
                     return MediaEditorPlayerState(
                         duration: duration,
@@ -112,7 +113,8 @@ public final class MediaEditor {
                         position: position,
                         frames: frames,
                         framesCount: framesCount,
-                        framesUpdateTimestamp: framesUpdateTimestamp
+                        framesUpdateTimestamp: framesUpdateTimestamp,
+                        hasAudio: hasAudio
                     )
                 }
             } else {
@@ -334,7 +336,9 @@ public final class MediaEditor {
                         PHImageManager.default().cancelImageRequest(requestId)
                     }
                 } else {
-                    let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 1920.0, height: 1920.0), contentMode: .aspectFit, options: nil, resultHandler: { image, info in
+                    let options = PHImageRequestOptions()
+                    options.deliveryMode = .highQualityFormat
+                    let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 1920.0, height: 1920.0), contentMode: .aspectFit, options: options, resultHandler: { image, info in
                         if let image {
                             var degraded = false
                             if let info {
@@ -376,7 +380,11 @@ public final class MediaEditor {
                         guard let self, let duration = player.currentItem?.duration.seconds else {
                             return
                         }
-                        self.playerPosition = (duration, time.seconds)
+                        var hasAudio = false
+                        if let audioTracks = player.currentItem?.asset.tracks(withMediaType: .audio) {
+                            hasAudio = !audioTracks.isEmpty
+                        }
+                        self.playerPlaybackState = (duration, time.seconds, hasAudio)
                     }
                     self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil, using: { [weak self] notification in
                         if let self {
@@ -434,7 +442,7 @@ public final class MediaEditor {
     }
     
     public func setVideoTrimStart(_ trimStart: Double) {
-        let trimEnd = self.values.videoTrimRange?.upperBound ?? self.playerPosition.0
+        let trimEnd = self.values.videoTrimRange?.upperBound ?? self.playerPlaybackState.0
         let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
     }

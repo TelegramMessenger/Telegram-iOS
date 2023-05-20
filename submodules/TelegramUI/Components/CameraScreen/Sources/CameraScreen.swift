@@ -704,7 +704,10 @@ public class CameraScreen: ViewController {
                 }
                 self.camera = Camera(configuration: Camera.Configuration(preset: .hd1920x1080, position: .back, audio: true, photo: true, metadata: false, preferredFps: 60.0), previewView: self.simplePreviewView)
                 if !useSimplePreviewView {
+#if targetEnvironment(simulator)
+#else
                     self.camera.attachPreviewView(self.previewView!)
+#endif
                 }
             }
 
@@ -1049,7 +1052,7 @@ public class CameraScreen: ViewController {
             
             let parentFrame = self.view.convert(self.bounds, to: nil)
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 3.0), size: CGSize())
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 25.0), size: CGSize())
                         
             let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Draft Saved", location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore

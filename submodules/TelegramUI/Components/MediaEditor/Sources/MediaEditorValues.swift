@@ -920,7 +920,7 @@ extension CodableToolValue: Codable {
     }
 }
 
-public func recommendedVideoExportConfiguration(values: MediaEditorValues) -> MediaEditorVideoExport.Configuration {
+public func recommendedVideoExportConfiguration(values: MediaEditorValues, frameRate: Float) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any] = [
         AVVideoAverageBitRateKey: 2000000,
         AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
@@ -933,7 +933,8 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues) -> Me
         AVVideoCodecKey: AVVideoCodecType.hevc,
         AVVideoCompressionPropertiesKey: compressionProperties,
         AVVideoWidthKey: 720,
-        AVVideoHeightKey: 1280
+        AVVideoHeightKey: 1280,
+        MediaEditorVideoExport.Configuration.FrameRateKey: frameRate
     ]
     
     let audioSettings: [String: Any] = [

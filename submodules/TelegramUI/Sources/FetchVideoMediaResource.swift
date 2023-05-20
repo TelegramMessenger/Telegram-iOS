@@ -258,7 +258,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                 let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
                 let updatedSize = Atomic<Int64>(value: 0)
                 if let mediaEditorValues {
-                    let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues)
+                    let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
                     let videoExport = MediaEditorVideoExport(account: account, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
                     videoExport.startExport()
                     
@@ -405,7 +405,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
         let updatedSize = Atomic<Int64>(value: 0)
         if let mediaEditorValues {
-            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues)
+            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
             let subject: MediaEditorVideoExport.Subject
             if filteredPath.contains(".jpg"), let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
                 subject = .image(image)

@@ -95,13 +95,12 @@ final class MediaEditorScreenComponent: Component {
                 case .tools:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Tools"), color: .white)!
                 case .done:
-                    let accentColor = self.context.sharedContext.currentPresentationData.with { $0 }.theme.chat.inputPanel.panelControlAccentColor
                     image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
-                        context.setFillColor(accentColor.cgColor)
+                        context.setFillColor(UIColor.white.cgColor)
                         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                         context.setBlendMode(.copy)
-                        context.setStrokeColor(UIColor.white.cgColor)
+                        context.setStrokeColor(UIColor.black.cgColor)
                         context.setLineWidth(2.0)
                         context.setLineCap(.round)
                         context.setLineJoin(.round)
@@ -661,6 +660,9 @@ final class MediaEditorScreenComponent: Component {
                         self.endEditing(true)
                     },
                     setMediaRecordingActive: nil,
+                    lockMediaRecording: nil,
+                    stopAndPreviewMediaRecording: nil,
+                    discardMediaRecordingPreview: nil,
                     attachmentAction: nil,
                     reactionAction: nil,
                     timeoutAction: { view in
@@ -668,6 +670,9 @@ final class MediaEditorScreenComponent: Component {
                     },
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
+                    isRecordingLocked: false,
+                    recordedAudioPreview: nil,
+                    wasRecordingDismissed: false,
                     timeoutValue: 24,
                     timeoutSelected: component.timeout,
                     displayGradient: false,//component.inputHeight != 0.0,
@@ -780,7 +785,7 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: saveButtonView, alpha: self.inputPanelExternalState.isEditing ? 0.0 : 1.0)
             }
              
-            if let _ = state.playerState {
+            if let playerState = state.playerState, playerState.hasAudio {
                 let isVideoMuted = component.mediaEditor?.values.videoIsMuted ?? false
                 let muteButtonSize = self.muteButton.update(
                     transition: transition,
@@ -1030,7 +1035,7 @@ public final class MediaEditorScreen: ViewController {
             let mediaEntity = DrawingMediaEntity(content: subject.mediaContent, size: fittedSize)
             mediaEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
             if fittedSize.height > fittedSize.width {
-                mediaEntity.scale = storyDimensions.height / fittedSize.height
+                mediaEntity.scale = storyDimensions.height / fittedSize.height 
             } else {
                 mediaEntity.scale = storyDimensions.width / fittedSize.width
             }
@@ -1144,6 +1149,8 @@ public final class MediaEditorScreen: ViewController {
             guard let controller = self.controller else {
                 return
             }
+            controller.statusBar.statusBarStyle = .Ignore
+            
             if let transitionOut = controller.transitionOut(finished), let destinationView = transitionOut.destinationView {
                 let destinationLocalFrame = destinationView.convert(transitionOut.destinationRect, to: self.view)
                 
@@ -1570,23 +1577,28 @@ public final class MediaEditorScreen: ViewController {
     func requestDismiss(saveDraft: Bool, animated: Bool) {
         if saveDraft, let subject = self.node.subject, let values = self.node.mediaEditor?.values {
             if let resultImage = self.node.mediaEditor?.resultImage {
-                let fittedSize = resultImage.size.aspectFitted(CGSize(width: 128.0, height: 128.0))
-                if case let .image(image, dimensions) = subject {
-                    if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
-                        let path = NSTemporaryDirectory() + "\(Int64.random(in: .min ... .max)).jpg"
-                        if let data = image.jpegData(compressionQuality: 0.87) {
-                            try? data.write(to: URL(fileURLWithPath: path))
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, values: values)
+                makeEditorImageComposition(account: self.context.account, inputImage: resultImage, dimensions: storyDimensions, values: values, time: .zero, completion: { resultImage in
+                    guard let resultImage else {
+                        return
+                    }
+                    let fittedSize = resultImage.size.aspectFitted(CGSize(width: 128.0, height: 128.0))
+                    if case let .image(image, dimensions) = subject {
+                        if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
+                            let path = NSTemporaryDirectory() + "\(Int64.random(in: .min ... .max)).jpg"
+                            if let data = image.jpegData(compressionQuality: 0.87) {
+                                try? data.write(to: URL(fileURLWithPath: path))
+                                let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, values: values)
+                                addStoryDraft(engine: self.context.engine, item: draft)
+                            }
+                        }
+                    } else if case let .draft(draft) = subject {
+                        if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
+                            removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
+                            let draft = MediaEditorDraft(path: draft.path, isVideo: draft.isVideo, thumbnail: thumbnailImage, dimensions: draft.dimensions, values: values)
                             addStoryDraft(engine: self.context.engine, item: draft)
                         }
                     }
-                } else if case let .draft(draft) = subject {
-                    if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
-                        removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
-                        let draft = MediaEditorDraft(path: draft.path, isVideo: draft.isVideo, thumbnail: thumbnailImage, dimensions: draft.dimensions, values: values)
-                        addStoryDraft(engine: self.context.engine, item: draft)
-                    }
-                }
+                })
             }
         } else {
             if case let .draft(draft) = self.node.subject {
@@ -1749,7 +1761,7 @@ public final class MediaEditorScreen: ViewController {
                 guard let self else {
                     return
                 }
-                let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values)
+                let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, frameRate: 60.0)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
                 let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath)
                 self.videoExport = videoExport

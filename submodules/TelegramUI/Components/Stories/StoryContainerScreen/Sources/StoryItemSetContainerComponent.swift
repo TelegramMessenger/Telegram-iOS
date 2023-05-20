@@ -250,27 +250,12 @@ public final class StoryItemSetContainerComponent: Component {
                     self.sendMessageContext.audioRecorderValue = audioRecorder
                     self.component?.controller()?.lockOrientation = audioRecorder != nil
                     
-                    /*strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                        $0.updatedInputTextPanelState { panelState in
-                            let isLocked = strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId
-                            if let audioRecorder = audioRecorder {
-                                if panelState.mediaRecordingState == nil {
-                                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: isLocked))
-                                }
-                            } else {
-                                if case .waitingForPreview = panelState.mediaRecordingState {
-                                    return panelState
-                                }
-                                return panelState.withUpdatedMediaRecordingState(nil)
-                            }
-                            return panelState
-                        }
-                    })*/
-                    
                     self.audioRecorderStatusDisposable?.dispose()
                     self.audioRecorderStatusDisposable = nil
                     
                     if let audioRecorder = audioRecorder {
+                        self.sendMessageContext.wasRecordingDismissed = false
+                        
                         if !audioRecorder.beginWithTone {
                             HapticFeedback().impact(.light)
                         }
@@ -281,7 +266,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 return
                             }
                             if case .stopped = value {
-                                self.sendMessageContext.stopMediaRecorder()
+                                self.sendMessageContext.stopMediaRecording(view: self)
                             }
                         })
                     }
@@ -300,15 +285,14 @@ public final class StoryItemSetContainerComponent: Component {
                     self.sendMessageContext.videoRecorderValue = videoRecorder
                     
                     if let videoRecorder = videoRecorder {
+                        self.sendMessageContext.wasRecordingDismissed = false
                         HapticFeedback().impact(.light)
                         
                         videoRecorder.onDismiss = { [weak self] isCancelled in
                             guard let self else {
                                 return
                             }
-                            //self?.chatDisplayNode.updateRecordedMediaDeleted(isCancelled)
-                            //self?.beginMediaRecordingRequestId += 1
-                            //self?.lockMediaRecordingRequestId = nil
+                            self.sendMessageContext.wasRecordingDismissed = true
                             self.sendMessageContext.videoRecorder.set(.single(nil))
                         }
                         videoRecorder.onStop = { [weak self] in
@@ -327,9 +311,9 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.component?.controller()?.present(videoRecorder, in: .window(.root))
                         
-                        /*if strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId {
+                        if self.sendMessageContext.isMediaRecordingLocked {
                             videoRecorder.lockVideo()
-                        }*/
+                        }
                     }
                     
                     if let previousVideoRecorderValue {
@@ -353,7 +337,17 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func isPointInsideContentArea(point: CGPoint) -> Bool {
-            return self.contentContainerView.frame.contains(point)
+            if let inputPanelView = self.inputPanel.view {
+                if inputPanelView.frame.contains(point) {
+                    return false
+                }
+            }
+            
+            if self.contentContainerView.frame.contains(point) {
+                return true
+            }
+            
+            return false
         }
         
         @objc public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -539,7 +533,7 @@ public final class StoryItemSetContainerComponent: Component {
             for (_, visibleItem) in self.visibleItems {
                 if let view = visibleItem.view.view {
                     if let view = view as? StoryContentItem.View {
-                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.reactionItems != nil || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil)
+                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil)
                     }
                 }
             }
@@ -813,6 +807,25 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.sendMessageContext.setMediaRecordingActive(view: self, isActive: isActive, isVideo: isVideo, sendAction: sendAction)
                     },
+                    lockMediaRecording: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.lockMediaRecording()
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    },
+                    stopAndPreviewMediaRecording: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.stopMediaRecording(view: self)
+                    },
+                    discardMediaRecordingPreview: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.discardMediaRecordingPreview(view: self)
+                    },
                     attachmentAction: { [weak self] in
                         guard let self else {
                             return
@@ -844,6 +857,9 @@ public final class StoryItemSetContainerComponent: Component {
                     timeoutAction: nil,
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
                     videoRecordingStatus: self.sendMessageContext.videoRecorderValue?.audioStatus,
+                    isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,
+                    recordedAudioPreview: self.sendMessageContext.recordedAudioPreview,
+                    wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
                     timeoutValue: nil,
                     timeoutSelected: false,
                     displayGradient: component.inputHeight != 0.0,
@@ -1162,7 +1178,18 @@ public final class StoryItemSetContainerComponent: Component {
             
             let reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrame.maxX - 40.0, y: inputPanelFrame.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
             
-            if let reactionItems = self.reactionItems, (self.displayReactions || self.inputPanelExternalState.isEditing) {
+            var effectiveDisplayReactions = self.displayReactions
+            if self.inputPanelExternalState.isEditing && !self.inputPanelExternalState.hasText {
+                effectiveDisplayReactions = true
+            }
+            if self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil {
+                effectiveDisplayReactions = false
+            }
+            if self.sendMessageContext.recordedAudioPreview != nil {
+                effectiveDisplayReactions = false
+            }
+            
+            if let reactionItems = self.reactionItems, effectiveDisplayReactions {
                 let reactionContextNode: ReactionContextNode
                 var reactionContextNodeTransition = transition
                 if let current = self.reactionContextNode {
