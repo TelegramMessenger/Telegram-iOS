@@ -947,6 +947,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     destinationView: self.view,
                                     destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),
                                     destinationCornerRadius: 0.0,
+                                    destinationIsAvatar: false,
                                     completed: {}
                                 )
                             }

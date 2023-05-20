@@ -177,7 +177,7 @@ public final class StoryListContext {
                     return transaction.getPeer(account.peerId)
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let self, let peer else {
+                    guard let `self` = self, let peer = peer else {
                         return
                     }
                     self.stateValue = State(itemSets: [
@@ -213,7 +213,7 @@ public final class StoryListContext {
                     }
                     return peers
                 }).start(next: { peers in
-                    guard let self else {
+                    guard let `self` = self else {
                         return
                     }
                     if self.isLoadingMore {
@@ -257,7 +257,7 @@ public final class StoryListContext {
                                         if lhsItem.timestamp != rhsItem.timestamp {
                                             switch scope {
                                             case .all:
-                                                return lhsItem.timestamp > rhsItem.timestamp
+                                                return lhsItem.timestamp < rhsItem.timestamp
                                             case .peer:
                                                 return lhsItem.timestamp < rhsItem.timestamp
                                             }
@@ -309,7 +309,7 @@ public final class StoryListContext {
                     }
                     
                     itemSets.sort(by: { lhs, rhs in
-                        guard let lhsItem = lhs.items.first, let rhsItem = rhs.items.first else {
+                        guard let lhsItem = lhs.items.last, let rhsItem = rhs.items.last else {
                             if lhs.items.first != nil {
                                 return false
                             } else {
@@ -417,6 +417,8 @@ public final class StoryListContext {
                     var itemSets = self.stateValue.itemSets
                     if let index = itemSets.firstIndex(where: { $0.peerId == id }) {
                         itemSets[index] = itemSet
+                    } else {
+                        itemSets.append(itemSet)
                     }
                     self.stateValue.itemSets = itemSets
                 }))
@@ -468,7 +470,7 @@ public final class StoryListContext {
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<([PeerItemSet], LoadMoreToken?), NoError> in
-                    guard let result else {
+                    guard let result = result else {
                         return .single(([], nil))
                     }
                     return account.postbox.transaction { transaction -> ([PeerItemSet], LoadMoreToken?) in
@@ -553,7 +555,7 @@ public final class StoryListContext {
                                 if lhsItem.timestamp != rhsItem.timestamp {
                                     switch scope {
                                     case .all:
-                                        return lhsItem.timestamp > rhsItem.timestamp
+                                        return lhsItem.timestamp < rhsItem.timestamp
                                     case .peer:
                                         return lhsItem.timestamp < rhsItem.timestamp
                                     }
@@ -573,7 +575,7 @@ public final class StoryListContext {
                                 if lhsItem.timestamp != rhsItem.timestamp {
                                     switch scope {
                                     case .all:
-                                        return lhsItem.timestamp > rhsItem.timestamp
+                                        return lhsItem.timestamp < rhsItem.timestamp
                                     case .peer:
                                         return lhsItem.timestamp < rhsItem.timestamp
                                     }
@@ -585,8 +587,8 @@ public final class StoryListContext {
                     }
                     
                     itemSets.sort(by: { lhs, rhs in
-                        guard let lhsItem = lhs.items.first, let rhsItem = rhs.items.first else {
-                            if lhs.items.first != nil {
+                        guard let lhsItem = lhs.items.last, let rhsItem = rhs.items.last else {
+                            if lhs.items.last != nil {
                                 return false
                             } else {
                                 return true
@@ -722,6 +724,12 @@ public final class StoryListContext {
     public func upload(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy) {
         self.impl.with { impl in
             impl.upload(media: media, text: text, entities: entities, privacy: privacy)
+        }
+    }
+    
+    public func loadPeer(id: EnginePeer.Id) {
+        self.impl.with { impl in
+            impl.loadPeer(id: id)
         }
     }
 }

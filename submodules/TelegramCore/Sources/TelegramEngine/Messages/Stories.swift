@@ -329,7 +329,7 @@ func _internal_getStoryById(accountPeerId: PeerId, postbox: Postbox, network: Ne
         return .single(nil)
     }
     |> mapToSignal { result -> Signal<StoryListContext.Item?, NoError> in
-        guard let result else {
+        guard let result = result else {
             return .single(nil)
         }
         return postbox.transaction { transaction -> StoryListContext.Item? in
@@ -382,7 +382,7 @@ func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: In
         return .single(nil)
     }
     |> mapToSignal { result -> Signal<StoryViewList?, NoError> in
-        guard let result else {
+        guard let result = result else {
             return .single(nil)
         }
         return account.postbox.transaction { transaction -> StoryViewList? in
@@ -425,7 +425,7 @@ func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: S
         return .single(nil)
     }
     |> mapToSignal { result -> Signal<[Int32: StoryListContext.Views], NoError> in
-        guard let result else {
+        guard let result = result else {
             return .single([:])
         }
         return account.postbox.transaction { transaction -> [Int32: StoryListContext.Views] in

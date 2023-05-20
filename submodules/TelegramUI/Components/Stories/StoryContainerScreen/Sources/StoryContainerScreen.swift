@@ -756,17 +756,20 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         public weak var destinationView: UIView?
         public let destinationRect: CGRect
         public let destinationCornerRadius: CGFloat
+        public let destinationIsAvatar: Bool
         public let completed: () -> Void
         
         public init(
             destinationView: UIView,
             destinationRect: CGRect,
             destinationCornerRadius: CGFloat,
+            destinationIsAvatar: Bool,
             completed: @escaping () -> Void
         ) {
             self.destinationView = destinationView
             self.destinationRect = destinationRect
             self.destinationCornerRadius = destinationCornerRadius
+            self.destinationIsAvatar = destinationIsAvatar
             self.completed = completed
         }
     }
