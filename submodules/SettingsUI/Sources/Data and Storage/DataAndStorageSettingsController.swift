@@ -592,7 +592,9 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     var entries: [DataAndStorageEntry] = []
     
     entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache, dataSizeString(storageUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
+    /*
     entries.append(.networkUsage(presentationData.theme, presentationData.strings.NetworkUsageSettings_Title, dataSizeString(networkUsage, formatting: DataSizeStringFormatting(presentationData: presentationData))))
+    */
     
     entries.append(.automaticDownloadHeader(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadTitle.uppercased()))
     entries.append(.automaticDownloadCellular(presentationData.theme, presentationData.strings.ChatSettings_AutoDownloadUsingCellular, stringForAutoDownloadSetting(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, settings: data.automaticMediaDownloadSettings, connectionType: .cellular)))
@@ -786,6 +788,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
             return storageUsageExceptionsScreen(context: context, category: category)
         }))
     }, openNetworkUsage: {
+        /*
         let mediaAutoDownloadSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
         |> map { sharedData -> MediaAutoDownloadSettings in
             var automaticMediaDownloadSettings: MediaAutoDownloadSettings
@@ -816,6 +819,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
                 return autodownloadMediaConnectionTypeController(context: context, connectionType: isCellular ? .cellular : .wifi)
             }))
         })
+        */
     }, openProxy: {
         pushControllerImpl?(proxySettingsController(context: context))
     }, openAutomaticDownloadConnectionType: { connectionType in
