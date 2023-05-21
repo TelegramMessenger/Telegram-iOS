@@ -61,7 +61,10 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         }
         
         var videoSettings = configuration.videoSettings
-        videoSettings[AVVideoExpectedSourceFrameRateKey] = sourceFrameRate
+        if var compressionSettings = videoSettings[AVVideoCompressionPropertiesKey] as? [String: Any] {
+            compressionSettings[AVVideoExpectedSourceFrameRateKey] = sourceFrameRate
+            videoSettings[AVVideoCompressionPropertiesKey] = compressionSettings
+        }
         
         let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
         videoInput.expectsMediaDataInRealTime = false
@@ -175,21 +178,22 @@ public final class MediaEditorVideoExport {
     }
     
     public struct Configuration {
-        public static let FrameRateKey = "Telegram__FrameRate"
-        
         public var shouldOptimizeForNetworkUse: Bool = true
         public var videoSettings: [String: Any]
         public var audioSettings: [String: Any]
         public var values: MediaEditorValues
+        public var frameRate: Float
         
         public init(
             videoSettings: [String: Any],
             audioSettings: [String: Any],
-            values: MediaEditorValues
+            values: MediaEditorValues,
+            frameRate: Float
         ) {
             self.videoSettings = videoSettings
             self.audioSettings = audioSettings
             self.values = values
+            self.frameRate = frameRate
         }
         
         var timeRange: CMTimeRange? {
@@ -209,14 +213,6 @@ public final class MediaEditorVideoExport {
                 return CGSize(width: width, height: height)
             } else {
                 return CGSize(width: 1920.0, height: 1080.0)
-            }
-        }
-        
-        var frameRate: Float {
-            if let frameRate = self.videoSettings[Configuration.FrameRateKey] as? Float {
-                return frameRate
-            } else {
-                return 30.0
             }
         }
     }

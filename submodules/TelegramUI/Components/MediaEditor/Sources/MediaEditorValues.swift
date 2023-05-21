@@ -933,8 +933,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, frame
         AVVideoCodecKey: AVVideoCodecType.hevc,
         AVVideoCompressionPropertiesKey: compressionProperties,
         AVVideoWidthKey: 720,
-        AVVideoHeightKey: 1280,
-        MediaEditorVideoExport.Configuration.FrameRateKey: frameRate
+        AVVideoHeightKey: 1280
     ]
     
     let audioSettings: [String: Any] = [
@@ -947,6 +946,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, frame
     return MediaEditorVideoExport.Configuration(
         videoSettings: videoSettings,
         audioSettings: audioSettings,
-        values: values
+        values: values,
+        frameRate: frameRate
     )
 }
