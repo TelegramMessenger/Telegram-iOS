@@ -633,18 +633,6 @@ private final class FetchManagerCategoryContext {
     var isEmpty: Bool {
         return self.entries.isEmpty && self.activeContexts.isEmpty && self.statusContexts.isEmpty
     }
-    
-    func getResources(peerIds: Set<PeerId>) -> [MediaResourceReference] {
-        var result: [MediaResourceReference] = []
-        for (id, entry) in self.entries {
-            if case let .messageId(messageId) = id.locationKey {
-                if peerIds.contains(messageId.peerId) {
-                    result.append(entry.resourceReference)
-                }
-            }
-        }
-        return result
-    }
 }
 
 public struct FetchManagerEntrySummary: Equatable {
@@ -911,16 +899,6 @@ public final class FetchManagerImpl: FetchManager {
             }
             
             self.postbox.mediaBox.cancelInteractiveResourceFetch(resourceId: MediaResourceId(resourceId))
-        }
-    }
-    
-    public func cancelInteractiveFetches(peerIds: Set<PeerId>) {
-        self.queue.async {
-            for (_, categoryContext) in self.categoryContexts {
-                for resourceReference in categoryContext.getResources(peerIds: peerIds) {
-                    self.cancelInteractiveFetches(resourceId: resourceReference.resource.id.stringRepresentation)
-                }
-            }
         }
     }
     

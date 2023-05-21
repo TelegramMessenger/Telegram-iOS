@@ -399,22 +399,11 @@ public final class AccountContextImpl: AccountContext {
                 return
             }
             
-            let newlyHiddenPeerIds = next.subtracting(strongSelf.currentInactiveSecretChatPeerIds.with { $0 })
-            
             let _ = strongSelf.currentInactiveSecretChatPeerIds.swap(next)
             
             let _ = (strongSelf.account.postbox.transaction { transaction in
                 transaction.updatePeerIdsExcludedFromUnreadCounters(next)
             }).start()
-            
-            if !newlyHiddenPeerIds.isEmpty && sharedContext.applicationBindings.isMainApp && !temp {
-                (strongSelf.fetchManager as! FetchManagerImpl).cancelInteractiveFetches(peerIds: newlyHiddenPeerIds)
-                
-                // delay to allow dismissed UI release used media in hiding secret chats
-                DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1.0, execute: {
-                    let _ = strongSelf.engine.resources.clearStorage(peerIds: newlyHiddenPeerIds, includeMessages: [], excludeMessages: []).start()
-                })
-            }
         })
         
         if !temp {
