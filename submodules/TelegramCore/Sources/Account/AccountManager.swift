@@ -228,10 +228,14 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
         }
     }
     
+    excludePathFromBackup(rootPath)
+}
+
+public func excludePathFromBackup(_ path: String) {
     do {
         var resourceValues = URLResourceValues()
         resourceValues.isExcludedFromBackup = true
-        var mutableUrl = URL(fileURLWithPath: rootPath)
+        var mutableUrl = URL(fileURLWithPath: path)
         try mutableUrl.setResourceValues(resourceValues)
     } catch let e {
         print("\(e)")

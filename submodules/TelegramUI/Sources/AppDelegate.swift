@@ -1584,6 +1584,11 @@ extension UserDefaults {
             })
         })
         
+        // exclude from backup folders that may reveal hidden secrets
+        let libraryPath = NSSearchPathForDirectoriesInDomains(.libraryDirectory, .userDomainMask, true)[0]
+        excludePathFromBackup(libraryPath + "/Cookies")
+        excludePathFromBackup(libraryPath + "/WebKit")
+        
         return true
     }
     
