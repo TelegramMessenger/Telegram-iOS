@@ -190,50 +190,48 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         accountSettingsController.parentController = self
         controllers.append(accountSettingsController)
                 
-        if self.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
-            tabBarController.cameraItemAndAction = (
-                UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2),
-                { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    var transitionIn: StoryCameraTransitionIn?
-                    if let cameraItemView = self.rootTabController?.viewForCameraItem() {
-                        transitionIn = StoryCameraTransitionIn(
-                            sourceView: cameraItemView,
-                            sourceRect: cameraItemView.bounds,
-                            sourceCornerRadius: cameraItemView.bounds.height / 2.0
-                        )
-                    }
-                    self.openStoryCamera(
-                        transitionIn: transitionIn,
-                        transitionOut: { [weak self] finished in
-                            guard let self else {
-                                return nil
-                            }
-                            if finished {
-                                if let chatListController = self.chatListController as? ChatListControllerImpl, let transitionView = chatListController.transitionViewForOwnStoryItem() {
-                                    return StoryCameraTransitionOut(
-                                        destinationView: transitionView,
-                                        destinationRect: transitionView.bounds,
-                                        destinationCornerRadius: transitionView.bounds.height / 2.0
-                                    )
-                                }
-                            } else {
-                                if let cameraItemView = self.rootTabController?.viewForCameraItem() {
-                                    return StoryCameraTransitionOut(
-                                        destinationView: cameraItemView,
-                                        destinationRect: cameraItemView.bounds,
-                                        destinationCornerRadius: cameraItemView.bounds.height / 2.0
-                                    )
-                                }
-                            }
-                            return nil
-                        }
+        tabBarController.cameraItemAndAction = (
+            UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2),
+            { [weak self] in
+                guard let self else {
+                    return
+                }
+                var transitionIn: StoryCameraTransitionIn?
+                if let cameraItemView = self.rootTabController?.viewForCameraItem() {
+                    transitionIn = StoryCameraTransitionIn(
+                        sourceView: cameraItemView,
+                        sourceRect: cameraItemView.bounds,
+                        sourceCornerRadius: cameraItemView.bounds.height / 2.0
                     )
                 }
-            )
-        }
+                self.openStoryCamera(
+                    transitionIn: transitionIn,
+                    transitionOut: { [weak self] finished in
+                        guard let self else {
+                            return nil
+                        }
+                        if finished {
+                            if let chatListController = self.chatListController as? ChatListControllerImpl, let transitionView = chatListController.transitionViewForOwnStoryItem() {
+                                return StoryCameraTransitionOut(
+                                    destinationView: transitionView,
+                                    destinationRect: transitionView.bounds,
+                                    destinationCornerRadius: transitionView.bounds.height / 2.0
+                                )
+                            }
+                        } else {
+                            if let cameraItemView = self.rootTabController?.viewForCameraItem() {
+                                return StoryCameraTransitionOut(
+                                    destinationView: cameraItemView,
+                                    destinationRect: cameraItemView.bounds,
+                                    destinationCornerRadius: cameraItemView.bounds.height / 2.0
+                                )
+                            }
+                        }
+                        return nil
+                    }
+                )
+            }
+        )
         
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
