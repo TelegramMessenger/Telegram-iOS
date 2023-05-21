@@ -90,6 +90,8 @@
 
 "ChatList.EmptyChatSelectionList" = "No chats to select.";
 
+"Login.HaveNotReceivedCodeInThirdPartyApp" = "Since third-party Telegram clients cannot request SMS, please make sure you are already logged in with this number in another app or device. If that's not the case, log in with the official Telegram app first. Later you may log out from this account there.";
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Notifications
