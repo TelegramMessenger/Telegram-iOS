@@ -360,56 +360,76 @@ public extension Api.storage {
 }
 public extension Api.stories {
     enum AllStories: TypeConstructorDescription {
-        case allStories(flags: Int32, userStories: [Api.UserStories], nextOffset: String?, users: [Api.User])
+        case allStories(flags: Int32, state: String, userStories: [Api.UserStories], users: [Api.User])
+        case allStoriesNotModified(state: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .allStories(let flags, let userStories, let nextOffset, let users):
+                case .allStories(let flags, let state, let userStories, let users):
                     if boxed {
-                        buffer.appendInt32(1214632796)
+                        buffer.appendInt32(1528473228)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(state, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(userStories.count))
                     for item in userStories {
                         item.serialize(buffer, true)
                     }
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
                         item.serialize(buffer, true)
                     }
                     break
+                case .allStoriesNotModified(let state):
+                    if boxed {
+                        buffer.appendInt32(1205903486)
+                    }
+                    serializeString(state, buffer: buffer, boxed: false)
+                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .allStories(let flags, let userStories, let nextOffset, let users):
-                return ("allStories", [("flags", flags as Any), ("userStories", userStories as Any), ("nextOffset", nextOffset as Any), ("users", users as Any)])
+                case .allStories(let flags, let state, let userStories, let users):
+                return ("allStories", [("flags", flags as Any), ("state", state as Any), ("userStories", userStories as Any), ("users", users as Any)])
+                case .allStoriesNotModified(let state):
+                return ("allStoriesNotModified", [("state", state as Any)])
     }
     }
     
         public static func parse_allStories(_ reader: BufferReader) -> AllStories? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: [Api.UserStories]?
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.UserStories]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.UserStories.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.UserStories.self)
             }
-            var _3: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
             var _4: [Api.User]?
             if let _ = reader.readInt32() {
                 _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c3 = _3 != nil
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.stories.AllStories.allStories(flags: _1!, userStories: _2!, nextOffset: _3, users: _4!)
+                return Api.stories.AllStories.allStories(flags: _1!, state: _2!, userStories: _3!, users: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_allStoriesNotModified(_ reader: BufferReader) -> AllStories? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.stories.AllStories.allStoriesNotModified(state: _1!)
             }
             else {
                 return nil

@@ -454,6 +454,7 @@ public final class StoryListContext {
             guard let loadMoreToken = effectiveLoadMoreToken else {
                 return
             }
+            let _ = loadMoreToken
             
             self.isLoadingMore = true
             let account = self.account
@@ -464,7 +465,7 @@ public final class StoryListContext {
             
             switch scope {
             case .all:
-                self.loadMoreDisposable.set((account.network.request(Api.functions.stories.getAllStories(offset: loadMoreToken))
+                self.loadMoreDisposable.set((account.network.request(Api.functions.stories.getAllStories(flags: 0, state: nil))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stories.AllStories?, NoError> in
                     return .single(nil)
@@ -475,7 +476,8 @@ public final class StoryListContext {
                     }
                     return account.postbox.transaction { transaction -> ([PeerItemSet], LoadMoreToken?) in
                         switch result {
-                        case let .allStories(_, userStorySets, nextOffset, users):
+                        case let .allStories(_, state, userStorySets, users):
+                            let _ = state
                             var parsedItemSets: [PeerItemSet] = []
                             
                             var peers: [Peer] = []
@@ -498,10 +500,10 @@ public final class StoryListContext {
                                 var apiTotalCount: Int32?
                                 var apiMaxReadId: Int32 = 0
                                 switch userStories {
-                                case let .userStories(_, userId, maxReadId, stories, missingCount):
+                                case let .userStories(_, userId, maxReadId, stories):
                                     apiUserId = userId
                                     apiStories = stories
-                                    apiTotalCount = (missingCount ?? 0) + Int32(stories.count)
+                                    apiTotalCount = Int32(stories.count)
                                     apiMaxReadId = maxReadId ?? 0
                                 }
                                 
@@ -529,7 +531,9 @@ public final class StoryListContext {
                                 }
                             }
                             
-                            return (parsedItemSets, nextOffset.flatMap { LoadMoreToken(value: $0) })
+                            return (parsedItemSets, nil)
+                        case .allStoriesNotModified:
+                            return ([], nil)
                         }
                     }
                 }

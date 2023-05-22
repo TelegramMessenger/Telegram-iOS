@@ -183,7 +183,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                             for update in updates.allUpdates {
                                 if case let .updateStories(stories) = update {
                                     switch stories {
-                                    case let .userStories(_, userId, _, apiStories, _):
+                                    case let .userStories(_, userId, _, apiStories):
                                         if PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)) == account.peerId, apiStories.count == 1 {
                                             switch apiStories[0] {
                                             case let .storyItem(_, _, _, _, _, media, _, _):
@@ -251,6 +251,8 @@ extension Api.StoryItem {
             return id
         case let .storyItemDeleted(id):
             return id
+        case let .storyItemSkipped(id, _):
+            return id
         }
     }
 }
@@ -305,6 +307,8 @@ func _internal_parseApiStoryItem(transaction: Transaction, peerId: PeerId, apiSt
         } else {
             return nil
         }
+    case .storyItemSkipped:
+        return nil
     case .storyItemDeleted:
         return nil
     }

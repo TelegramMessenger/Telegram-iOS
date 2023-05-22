@@ -8477,11 +8477,12 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func getAllStories(offset: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.AllStories>) {
+                static func getAllStories(flags: Int32, state: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.AllStories>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1976539530)
-                    serializeString(offset, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.getAllStories", parameters: [("offset", String(describing: offset))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.AllStories? in
+                    buffer.appendInt32(-290400731)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(state!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stories.getAllStories", parameters: [("flags", String(describing: flags)), ("state", String(describing: state))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.AllStories? in
                         let reader = BufferReader(buffer)
                         var result: Api.stories.AllStories?
                         if let signature = reader.readInt32() {

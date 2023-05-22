@@ -330,6 +330,7 @@ public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
         case storyItem(flags: Int32, id: Int32, date: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
         case storyItemDeleted(id: Int32)
+        case storyItemSkipped(id: Int32, date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -360,6 +361,13 @@ public extension Api {
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
+                case .storyItemSkipped(let id, let date):
+                    if boxed {
+                        buffer.appendInt32(-1579626609)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -369,6 +377,8 @@ public extension Api {
                 return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("views", views as Any)])
                 case .storyItemDeleted(let id):
                 return ("storyItemDeleted", [("id", id as Any)])
+                case .storyItemSkipped(let id, let date):
+                return ("storyItemSkipped", [("id", id as Any), ("date", date as Any)])
     }
     }
     
@@ -418,6 +428,20 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.StoryItem.storyItemDeleted(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_storyItemSkipped(_ reader: BufferReader) -> StoryItem? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StoryItem.storyItemSkipped(id: _1!, date: _2!)
             }
             else {
                 return nil

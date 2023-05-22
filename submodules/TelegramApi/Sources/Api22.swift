@@ -888,13 +888,13 @@ public extension Api {
 }
 public extension Api {
     enum UserStories: TypeConstructorDescription {
-        case userStories(flags: Int32, userId: Int64, maxReadId: Int32?, stories: [Api.StoryItem], missingCount: Int32?)
+        case userStories(flags: Int32, userId: Int64, maxReadId: Int32?, stories: [Api.StoryItem])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userStories(let flags, let userId, let maxReadId, let stories, let missingCount):
+                case .userStories(let flags, let userId, let maxReadId, let stories):
                     if boxed {
-                        buffer.appendInt32(-144780892)
+                        buffer.appendInt32(-2045664768)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
@@ -904,15 +904,14 @@ public extension Api {
                     for item in stories {
                         item.serialize(buffer, true)
                     }
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(missingCount!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userStories(let flags, let userId, let maxReadId, let stories, let missingCount):
-                return ("userStories", [("flags", flags as Any), ("userId", userId as Any), ("maxReadId", maxReadId as Any), ("stories", stories as Any), ("missingCount", missingCount as Any)])
+                case .userStories(let flags, let userId, let maxReadId, let stories):
+                return ("userStories", [("flags", flags as Any), ("userId", userId as Any), ("maxReadId", maxReadId as Any), ("stories", stories as Any)])
     }
     }
     
@@ -927,15 +926,12 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
             }
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.UserStories.userStories(flags: _1!, userId: _2!, maxReadId: _3, stories: _4!, missingCount: _5)
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.UserStories.userStories(flags: _1!, userId: _2!, maxReadId: _3, stories: _4!)
             }
             else {
                 return nil
