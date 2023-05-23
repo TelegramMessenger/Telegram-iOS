@@ -347,16 +347,20 @@ public enum Stories {
         private enum CodingKeys: CodingKey {
             case opaqueState
             case hasMore
+            case refreshId
         }
         
         public let opaqueState: String
+        public let refreshId: UInt64
         public let hasMore: Bool
         
         public init(
             opaqueState: String,
+            refreshId: UInt64,
             hasMore: Bool
         ) {
             self.opaqueState = opaqueState
+            self.refreshId = refreshId
             self.hasMore = hasMore
         }
         
@@ -364,6 +368,7 @@ public enum Stories {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
             self.opaqueState = try container.decode(String.self, forKey: .opaqueState)
+            self.refreshId = UInt64(bitPattern: (try container.decodeIfPresent(Int64.self, forKey: .refreshId)) ?? 0)
             self.hasMore = try container.decode(Bool.self, forKey: .hasMore)
         }
         
@@ -371,11 +376,15 @@ public enum Stories {
             var container = encoder.container(keyedBy: CodingKeys.self)
             
             try container.encode(self.opaqueState, forKey: .opaqueState)
+            try container.encode(Int64(bitPattern: self.refreshId), forKey: .refreshId)
             try container.encode(self.hasMore, forKey: .hasMore)
         }
         
         public static func ==(lhs: SubscriptionsState, rhs: SubscriptionsState) -> Bool {
             if lhs.opaqueState != rhs.opaqueState {
+                return false
+            }
+            if lhs.refreshId != rhs.refreshId {
                 return false
             }
             if lhs.hasMore != rhs.hasMore {

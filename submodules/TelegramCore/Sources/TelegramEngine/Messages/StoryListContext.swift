@@ -33,6 +33,7 @@ public final class StorySubscriptionsContext {
         private var loadedStateMark: OpaqueStateMark?
         private var stateDisposable: Disposable?
         private let loadMoreDisposable = MetaDisposable()
+        private let refreshTimerDisposable = MetaDisposable()
         
         init(queue: Queue, accountPeerId: PeerId, postbox: Postbox, network: Network) {
             self.accountPeerId = accountPeerId
@@ -48,6 +49,7 @@ public final class StorySubscriptionsContext {
         deinit {
             self.stateDisposable?.dispose()
             self.loadMoreDisposable.dispose()
+            self.refreshTimerDisposable.dispose()
         }
         
         func loadMore() {
@@ -151,7 +153,11 @@ public final class StorySubscriptionsContext {
                             hasMore = currentState.hasMore
                         }
                         
-                        transaction.setSubscriptionsStoriesState(state: CodableEntry(Stories.SubscriptionsState(opaqueState: state, hasMore: hasMore)))
+                        transaction.setSubscriptionsStoriesState(state: CodableEntry(Stories.SubscriptionsState(
+                            opaqueState: state,
+                            refreshId: currentState?.refreshId ?? UInt64.random(in: 0 ... UInt64.max),
+                            hasMore: hasMore
+                        )))
                     case let .allStories(flags, state, userStories, users):
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: Api.User] = [:]
@@ -209,7 +215,11 @@ public final class StorySubscriptionsContext {
                             }
                         }
                         
-                        transaction.replaceAllStorySubscriptions(state: CodableEntry(Stories.SubscriptionsState(opaqueState: state, hasMore: hasMore)), peerIds: peerEntries)
+                        transaction.replaceAllStorySubscriptions(state: CodableEntry(Stories.SubscriptionsState(
+                            opaqueState: state,
+                            refreshId: UInt64.random(in: 0 ... UInt64.max),
+                            hasMore: hasMore
+                        )), peerIds: peerEntries)
                     }
                 }
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
@@ -220,6 +230,14 @@ public final class StorySubscriptionsContext {
                     self.isLoading = false
                     if isRefresh {
                         self.taskState.isRefreshScheduled = false
+                        self.refreshTimerDisposable.set((Signal<Never, NoError>.complete()
+                        |> suspendAwareDelay(60.0, queue: self.queue)).start(completed: { [weak self] in
+                            guard let `self` = self else {
+                                return
+                            }
+                            self.taskState.isRefreshScheduled = true
+                            self.updateTasks()
+                        }))
                     } else {
                         self.taskState.isLoadMoreScheduled = false
                     }

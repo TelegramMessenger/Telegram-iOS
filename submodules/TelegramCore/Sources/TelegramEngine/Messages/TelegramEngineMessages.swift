@@ -628,7 +628,7 @@ public extension TelegramEngine {
                     var hasMoreToken: String?
                     if let subscriptionsState = storiesStateView.value?.get(Stories.SubscriptionsState.self) {
                         if subscriptionsState.hasMore {
-                            hasMoreToken = subscriptionsState.opaqueState
+                            hasMoreToken = subscriptionsState.opaqueState + "_\(subscriptionsState.refreshId)"
                         } else {
                             hasMoreToken = nil
                         }

@@ -2137,12 +2137,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 for (_, info) in resources.sorted(by: { $0.value.priority < $1.value.priority }) {
                     let resource = info.resource
                     validIds.append(resource.resource.id)
-                    if preloadStoryResourceDisposables[resource.resource.id] == nil {
+                    if self.preloadStoryResourceDisposables[resource.resource.id] == nil {
                         var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
                         if let size = info.size {
                             fetchRange = (0 ..< Int64(size), .default)
                         }
-                        preloadStoryResourceDisposables[resource.resource.id] = fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource, range: fetchRange).start()
+                        self.preloadStoryResourceDisposables[resource.resource.id] = fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource, range: fetchRange).start()
                     }
                 }
                 
