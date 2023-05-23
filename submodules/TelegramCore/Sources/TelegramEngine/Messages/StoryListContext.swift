@@ -9,6 +9,439 @@ enum InternalStoryUpdate {
     case read(peerId: PeerId, maxId: Int32)
 }
 
+public final class StorySubscriptionsContext {
+    private enum OpaqueStateMark: Equatable {
+        case empty
+        case value(String)
+    }
+    
+    private struct TaskState {
+        var isRefreshScheduled: Bool = false
+        var isLoadMoreScheduled: Bool = false
+    }
+    
+    private final class Impl {
+        private let accountPeerId: PeerId
+        private let queue: Queue
+        private let postbox: Postbox
+        private let network: Network
+        
+        private var taskState = TaskState()
+        
+        private var isLoading: Bool = false
+        
+        private var loadedStateMark: OpaqueStateMark?
+        private var stateDisposable: Disposable?
+        private let loadMoreDisposable = MetaDisposable()
+        
+        init(queue: Queue, accountPeerId: PeerId, postbox: Postbox, network: Network) {
+            self.accountPeerId = accountPeerId
+            self.queue = queue
+            self.postbox = postbox
+            self.network = network
+            
+            self.taskState.isRefreshScheduled = true
+            
+            self.updateTasks()
+        }
+        
+        deinit {
+            self.stateDisposable?.dispose()
+            self.loadMoreDisposable.dispose()
+        }
+        
+        func loadMore() {
+            self.taskState.isLoadMoreScheduled = true
+            self.updateTasks()
+        }
+        
+        private func updateTasks() {
+            if self.isLoading {
+                return
+            }
+            
+            if self.taskState.isRefreshScheduled {
+                self.isLoading = true
+                
+                self.stateDisposable = (postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .subscriptions)])
+                |> take(1)
+                |> deliverOn(self.queue)).start(next: { [weak self] views in
+                    guard let `self` = self else {
+                        return
+                    }
+                    guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                        return
+                    }
+                    
+                    let stateMark: OpaqueStateMark
+                    if let subscriptionsState = storiesStateView.value?.get(Stories.SubscriptionsState.self) {
+                        stateMark = .value(subscriptionsState.opaqueState)
+                    } else {
+                        stateMark = .empty
+                    }
+                    
+                    self.loadImpl(isRefresh: true, stateMark: stateMark)
+                })
+            } else if self.taskState.isLoadMoreScheduled {
+                self.isLoading = true
+                
+                self.stateDisposable = (postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .subscriptions)])
+                |> take(1)
+                |> deliverOn(self.queue)).start(next: { [weak self] views in
+                    guard let `self` = self else {
+                        return
+                    }
+                    guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                        return
+                    }
+                    
+                    let hasMore: Bool
+                    let stateMark: OpaqueStateMark
+                    if let subscriptionsState = storiesStateView.value?.get(Stories.SubscriptionsState.self) {
+                        hasMore = subscriptionsState.hasMore
+                        stateMark = .value(subscriptionsState.opaqueState)
+                    } else {
+                        stateMark = .empty
+                        hasMore = true
+                    }
+                    
+                    if hasMore && self.loadedStateMark != stateMark {
+                        self.loadImpl(isRefresh: false, stateMark: stateMark)
+                    } else {
+                        self.isLoading = false
+                        self.taskState.isLoadMoreScheduled = false
+                        self.updateTasks()
+                    }
+                })
+            }
+        }
+        
+        private func loadImpl(isRefresh: Bool, stateMark: OpaqueStateMark) {
+            var flags: Int32 = 0
+            var state: String?
+            switch stateMark {
+            case .empty:
+                break
+            case let .value(value):
+                state = value
+                flags |= 1 << 0
+                
+                if !isRefresh {
+                    flags |= 1 << 1
+                }
+            }
+            
+            let accountPeerId = self.accountPeerId
+            
+            self.loadMoreDisposable.set((self.network.request(Api.functions.stories.getAllStories(flags: flags, state: state))
+            |> deliverOn(self.queue)).start(next: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                
+                let _ = (self.postbox.transaction { transaction -> Void in
+                    switch result {
+                    case let .allStoriesNotModified(state):
+                        self.loadedStateMark = .value(state)
+                        let (currentStateValue, _) = transaction.getAllStorySubscriptions()
+                        let currentState = currentStateValue.flatMap { $0.get(Stories.SubscriptionsState.self) }
+                        
+                        var hasMore = false
+                        if let currentState = currentState {
+                            hasMore = currentState.hasMore
+                        }
+                        
+                        transaction.setSubscriptionsStoriesState(state: CodableEntry(Stories.SubscriptionsState(opaqueState: state, hasMore: hasMore)))
+                    case let .allStories(flags, state, userStories, users):
+                        var peers: [Peer] = []
+                        var peerPresences: [PeerId: Api.User] = [:]
+                        
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                            peerPresences[telegramUser.id] = user
+                        }
+                        
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                        
+                        let hasMore: Bool = (flags & (1 << 0)) != 0
+                        
+                        let (_, currentPeerItems) = transaction.getAllStorySubscriptions()
+                        var peerEntries: [PeerId] = []
+                        
+                        for userStorySet in userStories {
+                            switch userStorySet {
+                            case let .userStories(_, userId, maxReadId, stories):
+                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                
+                                let previousPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
+                                
+                                var updatedPeerEntries: [StoryItemsTableEntry] = []
+                                for story in stories {
+                                    if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
+                                        if case .placeholder = storedItem, let previousEntry = previousPeerEntries.first(where: { $0.id == storedItem.id }) {
+                                            updatedPeerEntries.append(previousEntry)
+                                        } else {
+                                            if let codedEntry = CodableEntry(storedItem) {
+                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                peerEntries.append(peerId)
+                                
+                                transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
+                                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                                    subscriptionsOpaqueState: state,
+                                    maxReadId: maxReadId ?? 0
+                                )))
+                            }
+                        }
+                        
+                        if !isRefresh {
+                            let leftPeerIds = currentPeerItems.filter({ !peerEntries.contains($0) })
+                            if !leftPeerIds.isEmpty {
+                                peerEntries = leftPeerIds + peerEntries
+                            }
+                        }
+                        
+                        transaction.replaceAllStorySubscriptions(state: CodableEntry(Stories.SubscriptionsState(opaqueState: state, hasMore: hasMore)), peerIds: peerEntries)
+                    }
+                }
+                |> deliverOn(self.queue)).start(completed: { [weak self] in
+                    guard let `self` = self else {
+                        return
+                    }
+                    
+                    self.isLoading = false
+                    if isRefresh {
+                        self.taskState.isRefreshScheduled = false
+                    } else {
+                        self.taskState.isLoadMoreScheduled = false
+                    }
+                    
+                    self.updateTasks()
+                })
+            }))
+        }
+    }
+    
+    private let queue = Queue(name: "StorySubscriptionsContext")
+    private let impl: QueueLocalObject<Impl>
+    
+    init(accountPeerId: PeerId, postbox: Postbox, network: Network) {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            Impl(queue: queue, accountPeerId: accountPeerId, postbox: postbox, network: network)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+}
+
+public final class PeerStoryFocusContext {
+    private final class Impl {
+        private let queue: Queue
+        private let account: Account
+        private let peerId: PeerId
+        private let focusItemId: Int32?
+        
+        let state = Promise<State>()
+        private var disposable: Disposable?
+        
+        private var isLoadingPlaceholder: Bool = false
+        private let loadDisposable = MetaDisposable()
+        private var placeholderLoadWasUnsuccessful: Bool = false
+        
+        init(
+            queue: Queue,
+            account: Account,
+            peerId: PeerId,
+            focusItemId: Int32?
+        ) {
+            self.queue = queue
+            self.account = account
+            self.peerId = peerId
+            self.focusItemId = focusItemId
+            
+            self.disposable = (account.postbox.combinedView(keys: [
+                PostboxViewKey.storiesState(key: .peer(peerId)),
+                PostboxViewKey.storyItems(peerId: peerId)
+            ])
+            |> deliverOn(self.queue)).start(next: { [weak self] views in
+                guard let `self` = self else {
+                    return
+                }
+                guard let peerStateView = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView else {
+                    return
+                }
+                guard let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView else {
+                    return
+                }
+                
+                let peerState = peerStateView.value?.get(Stories.PeerState.self)
+                
+                let items = itemsView.items.compactMap { $0.value.get(Stories.StoredItem.self) }
+                var item: (value: Stories.StoredItem, position: Int, previousId: Int32?, nextId: Int32?)?
+                
+                var focusItemId = self.focusItemId
+                if focusItemId == nil {
+                    if let peerState = peerState {
+                        focusItemId = peerState.maxReadId + 1
+                    }
+                }
+                
+                if let focusItemId = focusItemId {
+                    if let index = items.firstIndex(where: { $0.id >= focusItemId }) {
+                        var previousId: Int32?
+                        var nextId: Int32?
+                        if index != 0 {
+                            previousId = items[index - 1].id
+                        }
+                        if index != items.count - 1 {
+                            nextId = items[index + 1].id
+                        }
+                        
+                        item = (items[index], index, previousId, nextId)
+                    } else {
+                        if !items.isEmpty {
+                            var nextId: Int32?
+                            if 0 != items.count - 1 {
+                                nextId = items[0 + 1].id
+                            }
+                            item = (items[0], 0, nil, nextId)
+                        }
+                    }
+                } else {
+                    if !items.isEmpty {
+                        var nextId: Int32?
+                        if 0 != items.count - 1 {
+                            nextId = items[0 + 1].id
+                        }
+                        item = (items[0], 0, nil, nextId)
+                    }
+                }
+                
+                if let (item, position, previousId, nextId) = item {
+                    switch item {
+                    case let .item(item):
+                        self.state.set(.single(State(item: item, previousId: previousId, nextId: nextId, isLoading: false, count: items.count, position: position)))
+                    case .placeholder:
+                        let count = items.count
+                        
+                        if !self.isLoadingPlaceholder {
+                            self.isLoadingPlaceholder = true
+                            self.loadDisposable.set((_internal_getStoriesById(
+                                accountPeerId: self.account.peerId,
+                                postbox: self.account.postbox,
+                                network: self.account.network,
+                                peerId: self.peerId,
+                                ids: [item.id]
+                            )
+                            |> deliverOn(self.queue)).start(next: { [weak self] result in
+                                guard let self else {
+                                    return
+                                }
+                                if let loadedItem = result.first, case let .item(item) = loadedItem {
+                                    self.state.set(.single(State(item: item, previousId: previousId, nextId: nextId, isLoading: false, count: count, position: position)))
+                                } else {
+                                    self.placeholderLoadWasUnsuccessful = false
+                                    self.state.set(.single(State(item: nil, previousId: nil, nextId: nil, isLoading: !self.placeholderLoadWasUnsuccessful, count: count, position: position)))
+                                }
+                            }))
+                        }
+                        self.state.set(.single(State(item: nil, previousId: nil, nextId: nil, isLoading: !self.placeholderLoadWasUnsuccessful, count: count, position: position)))
+                    }
+                } else {
+                    self.state.set(.single(State(item: nil, previousId: nil, nextId: nil, isLoading: false, count: 0, position: 0)))
+                }
+            })
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+            self.loadDisposable.dispose()
+        }
+    }
+    
+    public final class State: Equatable {
+        public let item: Stories.Item?
+        public let previousId: Int32?
+        public let nextId: Int32?
+        public let isLoading: Bool
+        public let count: Int
+        public let position: Int
+        
+        public init(
+            item: Stories.Item?,
+            previousId: Int32?,
+            nextId: Int32?,
+            isLoading: Bool,
+            count: Int,
+            position: Int
+        ) {
+            self.item = item
+            self.previousId = previousId
+            self.nextId = nextId
+            self.isLoading = isLoading
+            self.count = count
+            self.position = position
+        }
+        
+        public static func ==(lhs: State, rhs: State) -> Bool {
+            if lhs.item != rhs.item {
+                return false
+            }
+            if lhs.previousId != rhs.previousId {
+                return false
+            }
+            if lhs.nextId != rhs.nextId {
+                return false
+            }
+            if lhs.isLoading != rhs.isLoading {
+                return false
+            }
+            if lhs.count != rhs.count {
+                return false
+            }
+            if lhs.position != rhs.position {
+                return false
+            }
+            return true
+        }
+    }
+    
+    private static let sharedQueue = Queue(name: "PeerStoryFocusContext")
+    private let queue: Queue
+    private let impl: QueueLocalObject<Impl>
+    
+    public var state: Signal<State, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.state.get().start(next: subscriber.putNext)
+        }
+    }
+    
+    init(
+        account: Account,
+        peerId: PeerId,
+        focusItemId: Int32?
+    ) {
+        let queue = PeerStoryFocusContext.sharedQueue
+        self.queue = queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue, account: account, peerId: peerId, focusItemId: focusItemId)
+        })
+    }
+}
+
 public final class StoryListContext {
     public enum Scope {
         case all

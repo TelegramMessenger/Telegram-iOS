@@ -83,6 +83,8 @@ public final class StoryContentItemSlice {
     public let focusedItemId: AnyHashable?
     public let items: [StoryContentItem]
     public let totalCount: Int
+    public let previousItemId: AnyHashable?
+    public let nextItemId: AnyHashable?
     public let update: (StoryContentItemSlice, AnyHashable) -> Signal<StoryContentItemSlice, NoError>
 
     public init(
@@ -90,12 +92,16 @@ public final class StoryContentItemSlice {
         focusedItemId: AnyHashable?,
         items: [StoryContentItem],
         totalCount: Int,
+        previousItemId: AnyHashable?,
+        nextItemId: AnyHashable?,
         update: @escaping (StoryContentItemSlice, AnyHashable) -> Signal<StoryContentItemSlice, NoError>
     ) {
         self.id = id
         self.focusedItemId = focusedItemId
         self.items = items
         self.totalCount = totalCount
+        self.previousItemId = previousItemId
+        self.nextItemId = nextItemId
         self.update = update
     }
 }

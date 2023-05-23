@@ -50,7 +50,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             var isAnimated = false
             inner: for attribute in file.attributes {
                 switch attribute {
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             refinedTag = .voiceOrInstantVideo
                         } else {

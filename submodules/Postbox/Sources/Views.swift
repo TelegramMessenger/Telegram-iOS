@@ -40,6 +40,9 @@ public enum PostboxViewKey: Hashable {
     case peerTimeoutAttributes
     case messageHistoryThreadIndex(id: PeerId, summaryComponents: ChatListEntrySummaryComponents)
     case messageHistoryThreadInfo(peerId: PeerId, threadId: Int64)
+    case storySubscriptions
+    case storiesState(key: PostboxStoryStatesKey)
+    case storyItems(peerId: PeerId)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -134,6 +137,12 @@ public enum PostboxViewKey: Hashable {
         case let .messageHistoryThreadInfo(peerId, threadId):
             hasher.combine(peerId)
             hasher.combine(threadId)
+        case .storySubscriptions:
+            hasher.combine(18)
+        case let .storiesState(key):
+            hasher.combine(key)
+        case let .storyItems(peerId):
+            hasher.combine(peerId)
         }
     }
     
@@ -373,6 +382,24 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case .storySubscriptions:
+            if case .storySubscriptions = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .storiesState(key):
+            if case .storiesState(key) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .storyItems(peerId):
+            if case .storyItems(peerId) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -457,5 +484,11 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableMessageHistoryThreadIndexView(postbox: postbox, peerId: id, summaryComponents: summaryComponents)
     case let .messageHistoryThreadInfo(peerId, threadId):
         return MutableMessageHistoryThreadInfoView(postbox: postbox, peerId: peerId, threadId: threadId)
+    case .storySubscriptions:
+        return MutableStorySubscriptionsView(postbox: postbox)
+    case let .storiesState(key):
+        return MutableStoryStatesView(postbox: postbox, key: key)
+    case let .storyItems(peerId):
+        return MutableStoryItemsView(postbox: postbox, peerId: peerId)
     }
 }

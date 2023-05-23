@@ -745,9 +745,9 @@ public final class ChatListHeaderComponent: Component {
             return defaultResult
         }
         
-        public func updateStories(offset: CGFloat, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, storyListState: StoryListContext.State?, transition: Transition) {
+        public func updateStories(offset: CGFloat, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, storySubscriptions: EngineStorySubscriptions?, transition: Transition) {
             var storyOffsetFraction: CGFloat = 1.0
-            if let storyListState, storyListState.itemSets.count > 1 {
+            if let storySubscriptions, !storySubscriptions.items.isEmpty {
                 storyOffsetFraction = offset
             }
             
@@ -770,7 +770,7 @@ public final class ChatListHeaderComponent: Component {
                         context: context,
                         theme: theme,
                         strings: strings,
-                        state: storyListState,
+                        storySubscriptions: storySubscriptions,
                         collapseFraction: 1.0 - offset,
                         peerAction: { [weak self] peer in
                             guard let self else {
@@ -795,7 +795,7 @@ public final class ChatListHeaderComponent: Component {
                     storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: storyPeerListPosition), size: CGSize(width: self.bounds.width, height: 94.0)))
                     
                     var storyListAlpha: CGFloat = 1.0
-                    if let storyListState, storyListState.itemSets.count > 1 {
+                    if let storySubscriptions, !storySubscriptions.items.isEmpty {
                     } else {
                         storyListAlpha = offset
                     }

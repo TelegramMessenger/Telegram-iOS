@@ -374,32 +374,63 @@ public final class StoryItemSetContainerComponent: Component {
                     } else {
                         nextIndex = currentIndex + 1
                     }
-                    nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
-                    if nextIndex != currentIndex {
-                        let focusedItemId = currentSlice.items[nextIndex].id
-                        self.focusedItemId = focusedItemId
-                        
-                        currentSlice.items[nextIndex].markAsSeen?()
-                        
-                        self.state?.updated(transition: .immediate)
-                        
+                    
+                    if nextIndex < 0, let previousId = currentSlice.previousItemId {
                         self.currentSliceDisposable?.dispose()
                         self.currentSliceDisposable = (currentSlice.update(
                             currentSlice,
-                            focusedItemId
+                            previousId
                         )
                         |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
                             guard let self else {
                                 return
                             }
                             self.currentSlice = contentSlice
+                            self.focusedItemId = previousId
+                            self.state?.updated(transition: .immediate)
+                        })
+                    } else if nextIndex >= currentSlice.items.count - 1, let nextId = currentSlice.nextItemId {
+                        self.currentSliceDisposable?.dispose()
+                        self.currentSliceDisposable = (currentSlice.update(
+                            currentSlice,
+                            nextId
+                        )
+                        |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
+                            guard let self else {
+                                return
+                            }
+                            self.currentSlice = contentSlice
+                            self.focusedItemId = nextId
                             self.state?.updated(transition: .immediate)
                         })
                     } else {
-                        if point.x < itemLayout.size.width * 0.25 {
-                            self.component?.navigateToItemSet(.previous)
+                        nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
+                        if nextIndex != currentIndex {
+                            let focusedItemId = currentSlice.items[nextIndex].id
+                            self.focusedItemId = focusedItemId
+                            
+                            currentSlice.items[nextIndex].markAsSeen?()
+                            
+                            self.state?.updated(transition: .immediate)
+                            
+                            self.currentSliceDisposable?.dispose()
+                            self.currentSliceDisposable = (currentSlice.update(
+                                currentSlice,
+                                focusedItemId
+                            )
+                            |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
+                                guard let self else {
+                                    return
+                                }
+                                self.currentSlice = contentSlice
+                                self.state?.updated(transition: .immediate)
+                            })
                         } else {
-                            self.component?.navigateToItemSet(.next)
+                            if point.x < itemLayout.size.width * 0.25 {
+                                self.component?.navigateToItemSet(.previous)
+                            } else {
+                                self.component?.navigateToItemSet(.next)
+                            }
                         }
                     }
                 }
@@ -854,7 +885,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 return true
                             }
                             
-                            self.displayReactions = true
+                            self.displayReactions = !self.displayReactions
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                         })
                     },
@@ -914,31 +945,6 @@ public final class StoryItemSetContainerComponent: Component {
                                             
                                             currentSlice.items[nextIndex].markAsSeen?()
                                             
-                                            /*var updatedItems: [StoryContentItem] = []
-                                            for item in currentSlice.items {
-                                                if item.id != focusedItemId {
-                                                    updatedItems.append(StoryContentItem(
-                                                        id: item.id,
-                                                        position: updatedItems.count,
-                                                        component: item.component,
-                                                        centerInfoComponent: item.centerInfoComponent,
-                                                        rightInfoComponent: item.rightInfoComponent,
-                                                        targetMessageId: item.targetMessageId,
-                                                        preload: item.preload,
-                                                        delete: item.delete,
-                                                        hasLike: item.hasLike,
-                                                        isMy: item.isMy
-                                                    ))
-                                                }
-                                            }*/
-                                            
-                                            /*self.currentSlice = StoryContentItemSlice(
-                                                id: currentSlice.id,
-                                                focusedItemId: nil,
-                                                items: updatedItems,
-                                                totalCount: currentSlice.totalCount - 1,
-                                                update: currentSlice.update
-                                            )*/
                                             self.state?.updated(transition: .immediate)
                                         }
                                         
@@ -1455,7 +1461,7 @@ public final class StoryItemSetContainerComponent: Component {
                         if self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil {
                             inlineActionsAlpha = 0.0
                         }
-                        if self.reactionItems != nil {
+                        if self.displayReactions {
                             inlineActionsAlpha = 0.0
                         }
                         if component.hideUI {
