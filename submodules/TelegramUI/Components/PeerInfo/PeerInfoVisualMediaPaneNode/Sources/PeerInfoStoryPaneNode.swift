@@ -889,7 +889,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
                 strongSelf.chatControllerInteraction.toggleMessagesSelection([item.message.id], toggledValue)*/
             } else {
-                let _ = (StoryChatContent.stories(
+                /*let _ = (StoryChatContent.stories(
                     context: self.context,
                     storyList: self.listSource,
                     focusItem: item.story.id
@@ -956,7 +956,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         }
                     )
                     navigationController.pushViewController(storyContainerScreen)
-                })
+                })*/
                 //TODO:open
                 //let _ = strongSelf.chatControllerInteraction.openMessage(item.message, .default)
             }

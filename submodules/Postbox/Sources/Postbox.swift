@@ -1266,6 +1266,11 @@ public final class Transaction {
         self.postbox!.replaceAllStorySubscriptions(state: state, peerIds: peerIds)
     }
     
+    public func getSubscriptionsStoriesState() -> CodableEntry? {
+        assert(!self.disposed)
+        return self.postbox!.getSubscriptionsStoriesState()
+    }
+    
     public func setSubscriptionsStoriesState(state: CodableEntry?) {
         assert(!self.disposed)
         self.postbox!.setSubscriptionsStoriesState(state: state)
@@ -2175,6 +2180,10 @@ final class PostboxImpl {
     
     fileprivate func getLocalStoryState() -> CodableEntry? {
         return self.storyStatesTable.get(key: .local)
+    }
+    
+    fileprivate func getSubscriptionsStoriesState() -> CodableEntry? {
+        return self.storyStatesTable.get(key: .subscriptions)
     }
     
     fileprivate func setSubscriptionsStoriesState(state: CodableEntry?) {

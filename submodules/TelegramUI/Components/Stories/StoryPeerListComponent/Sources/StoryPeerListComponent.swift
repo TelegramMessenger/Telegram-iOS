@@ -189,14 +189,15 @@ public final class StoryPeerListComponent: Component {
             }
             
             var hasStories: Bool = false
+            var storyCount = 0
             if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
                 hasStories = true
+                storyCount = storySubscriptions.items.count
             }
             
             let titleSpacing: CGFloat = 8.0
             
             let titleText: String
-            let storyCount = self.sortedItems.count
             if storyCount <= 0 {
                 titleText = "No Stories"
             } else {
@@ -291,10 +292,15 @@ public final class StoryPeerListComponent: Component {
                 var hasUnseen = false
                 hasUnseen = itemSet.hasUnseen
                 
-                let hasItems = true
+                var hasItems = true
                 var itemProgress: CGFloat?
                 if peer.id == component.context.account.peerId {
                     itemProgress = nil
+                    if let storySubscriptions = component.storySubscriptions, let accountItem = storySubscriptions.accountItem {
+                        hasItems = accountItem.storyCount != 0
+                    } else {
+                        hasItems = false
+                    }
                     //itemProgress = component.state?.uploadProgress
                     //itemProgress = 0.0
                 }
@@ -421,9 +427,10 @@ public final class StoryPeerListComponent: Component {
             
             self.sortedItems.removeAll(keepingCapacity: true)
             if let storySubscriptions = component.storySubscriptions {
-                if let myIndex = storySubscriptions.items.firstIndex(where: { $0.peer.id == component.context.account.peerId }) {
-                    self.sortedItems.append(storySubscriptions.items[myIndex])
+                if let accountItem = storySubscriptions.accountItem {
+                    self.sortedItems.append(accountItem)
                 }
+                
                 for itemSet in storySubscriptions.items {
                     if itemSet.peer.id == component.context.account.peerId {
                         continue

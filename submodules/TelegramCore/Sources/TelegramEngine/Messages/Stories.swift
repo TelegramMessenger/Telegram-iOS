@@ -432,15 +432,20 @@ public final class EngineStorySubscriptions: Equatable {
         }
     }
     
+    public let accountItem: Item?
     public let items: [Item]
     public let hasMoreToken: String?
     
-    public init(items: [Item], hasMoreToken: String?) {
+    public init(accountItem: Item?, items: [Item], hasMoreToken: String?) {
+        self.accountItem = accountItem
         self.items = items
         self.hasMoreToken = hasMoreToken
     }
     
     public static func ==(lhs: EngineStorySubscriptions, rhs: EngineStorySubscriptions) -> Bool {
+        if lhs.accountItem != rhs.accountItem {
+            return false
+        }
         if lhs.items != rhs.items {
             return false
         }

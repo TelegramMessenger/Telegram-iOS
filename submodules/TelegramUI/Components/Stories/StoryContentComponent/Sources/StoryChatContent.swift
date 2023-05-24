@@ -8,61 +8,6 @@ import TelegramCore
 import Postbox
 import StoryContainerScreen
 
-public final class StoryContentContextState {
-    public final class FocusedSlice {
-        public let peer: EnginePeer
-        public let item: StoryContentItem
-        public let totalCount: Int
-        public let previousItemId: Int32?
-        public let nextItemId: Int32?
-        
-        public init(
-            peer: EnginePeer,
-            item: StoryContentItem,
-            totalCount: Int,
-            previousItemId: Int32?,
-            nextItemId: Int32?
-        ) {
-            self.peer = peer
-            self.item = item
-            self.totalCount = totalCount
-            self.previousItemId = previousItemId
-            self.nextItemId = nextItemId
-        }
-    }
-    
-    public let slice: FocusedSlice?
-    public let previousSlice: FocusedSlice?
-    public let nextSlice: FocusedSlice?
-    
-    public init(
-        slice: FocusedSlice?,
-        previousSlice: FocusedSlice?,
-        nextSlice: FocusedSlice?
-    ) {
-        self.slice = slice
-        self.previousSlice = previousSlice
-        self.nextSlice = nextSlice
-    }
-}
-
-public enum StoryContentContextNavigation {
-    public enum Direction {
-        case previous
-        case next
-    }
-    
-    case item(Direction)
-    case peer(Direction)
-}
-
-public protocol StoryContentContext {
-    var stateValue: StoryContentContextState? { get }
-    var state: Signal<StoryContentContextState, NoError> { get }
-    
-    func navigate(navigation: StoryContentContextNavigation)
-}
-
 public final class StoryContentContextImpl: StoryContentContext {
     private struct StoryKey: Hashable {
         var peerId: EnginePeer.Id
@@ -77,25 +22,39 @@ public final class StoryContentContextImpl: StoryContentContext {
         
         let updated = Promise<Void>()
         
-        var isReady: Bool {
-            return false
-        }
+        private(set) var isReady: Bool = false
         
         private var disposable: Disposable?
         private var loadDisposable: Disposable?
         
-        init(context: AccountContext, peerId: EnginePeer.Id, focusedId: Int32?, loadIds: @escaping ([StoryKey]) -> Void) {
+        private let currentFocusedIdPromise = Promise<Int32?>()
+        private var storedFocusedId: Int32?
+        var currentFocusedId: Int32? {
+            didSet {
+                if self.currentFocusedId != self.storedFocusedId {
+                    self.storedFocusedId = self.currentFocusedId
+                    self.currentFocusedIdPromise.set(.single(self.currentFocusedId))
+                }
+            }
+        }
+        
+        init(context: AccountContext, peerId: EnginePeer.Id, focusedId initialFocusedId: Int32?, loadIds: @escaping ([StoryKey]) -> Void) {
             self.context = context
             self.peerId = peerId
             
-            self.disposable = (context.account.postbox.combinedView(
-                keys: [
-                    PostboxViewKey.basicPeer(peerId),
-                    PostboxViewKey.storiesState(key: .peer(peerId)),
-                    PostboxViewKey.storyItems(peerId: peerId)
-                ]
+            self.currentFocusedIdPromise.set(.single(initialFocusedId))
+            
+            self.disposable = (combineLatest(queue: .mainQueue(),
+                self.currentFocusedIdPromise.get(),
+                context.account.postbox.combinedView(
+                    keys: [
+                        PostboxViewKey.basicPeer(peerId),
+                        PostboxViewKey.storiesState(key: .peer(peerId)),
+                        PostboxViewKey.storyItems(peerId: peerId)
+                    ]
+                )
             )
-            |> deliverOnMainQueue).start(next: { [weak self] views in
+            |> deliverOnMainQueue).start(next: { [weak self] currentFocusedId, views in
                 guard let self else {
                     return
                 }
@@ -114,11 +73,15 @@ public final class StoryContentContextImpl: StoryContentContext {
                 let state = stateView.value?.get(Stories.PeerState.self)
                 
                 var focusedIndex: Int?
-                if let focusedId {
-                    focusedIndex = itemsView.items.firstIndex(where: { $0.id == focusedId })
+                if let currentFocusedId {
+                    focusedIndex = itemsView.items.firstIndex(where: { $0.id == currentFocusedId })
                 }
                 if focusedIndex == nil, let state {
-                    focusedIndex = itemsView.items.firstIndex(where: { $0.id >= state.maxReadId })
+                    if let storedFocusedId = self.storedFocusedId {
+                        focusedIndex = itemsView.items.firstIndex(where: { $0.id >= storedFocusedId })
+                    } else {
+                        focusedIndex = itemsView.items.firstIndex(where: { $0.id > state.maxReadId })
+                    }
                 }
                 if focusedIndex == nil {
                     if !itemsView.items.isEmpty {
@@ -127,6 +90,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 if let focusedIndex {
+                    self.storedFocusedId = itemsView.items[focusedIndex].id
+                    
                     var previousItemId: Int32?
                     var nextItemId: Int32?
                     
@@ -198,8 +163,12 @@ public final class StoryContentContextImpl: StoryContentContext {
                             previousItemId: previousItemId,
                             nextItemId: nextItemId
                         )
+                        self.isReady = true
                         self.updated.set(.single(Void()))
                     }
+                } else {
+                    self.isReady = true
+                    self.updated.set(.single(Void()))
                 }
             })
         }
@@ -219,12 +188,6 @@ public final class StoryContentContextImpl: StoryContentContext {
         
         var isReady: Bool {
             if !self.centralPeerContext.isReady {
-                return false
-            }
-            if let previousPeerContext = self.previousPeerContext, !previousPeerContext.isReady {
-                return false
-            }
-            if let nextPeerContext = self.nextPeerContext, !nextPeerContext.isReady {
                 return false
             }
             return true
@@ -277,6 +240,19 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.previousDisposable?.dispose()
             self.nextDisposable?.dispose()
         }
+        
+        func findPeerContext(id: EnginePeer.Id) -> PeerContext? {
+            if self.centralPeerContext.sliceValue?.peer.id == id {
+                return self.centralPeerContext
+            }
+            if let previousPeerContext = self.previousPeerContext, previousPeerContext.sliceValue?.peer.id == id {
+                return previousPeerContext
+            }
+            if let nextPeerContext = self.nextPeerContext, nextPeerContext.sliceValue?.peer.id == id {
+                return nextPeerContext
+            }
+            return nil
+        }
     }
     
     private let context: AccountContext
@@ -286,6 +262,11 @@ public final class StoryContentContextImpl: StoryContentContext {
         return self.statePromise.get()
     }
     private let statePromise = Promise<StoryContentContextState>()
+    
+    private let updatedPromise = Promise<Void>()
+    public var updated: Signal<Void, NoError> {
+        return self.updatedPromise.get()
+    }
     
     private var focusedItem: (peerId: EnginePeer.Id, storyId: Int32?)?
     
@@ -336,42 +317,33 @@ public final class StoryContentContextImpl: StoryContentContext {
     private func switchToFocusedPeerId() {
         if let storySubscriptions = self.storySubscriptions {
             if self.pendingState == nil {
-                var centralIndex: Int?
-                if let (focusedPeerId, _) = self.focusedItem {
-                    if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
-                        centralIndex = index
+                let loadIds: ([StoryKey]) -> Void = { [weak self] keys in
+                    guard let self else {
+                        return
                     }
-                }
-                if centralIndex == nil {
-                    if !storySubscriptions.items.isEmpty {
-                        centralIndex = 0
+                    let missingKeys = Set(keys).subtracting(self.requestedStoryKeys)
+                    if !missingKeys.isEmpty {
+                        var idsByPeerId: [EnginePeer.Id: [Int32]] = [:]
+                        for key in missingKeys {
+                            if idsByPeerId[key.peerId] == nil {
+                                idsByPeerId[key.peerId] = [key.id]
+                            } else {
+                                idsByPeerId[key.peerId]?.append(key.id)
+                            }
+                        }
+                        for (peerId, ids) in idsByPeerId {
+                            self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: peerId, ids: ids).start())
+                        }
                     }
                 }
                 
-                if let centralIndex {
-                    let loadIds: ([StoryKey]) -> Void = { [weak self] keys in
-                        guard let self else {
-                            return
-                        }
-                        let missingKeys = Set(keys).subtracting(self.requestedStoryKeys)
-                        if !missingKeys.isEmpty {
-                            var idsByPeerId: [EnginePeer.Id: [Int32]] = [:]
-                            for key in missingKeys {
-                                if idsByPeerId[key.peerId] == nil {
-                                    idsByPeerId[key.peerId] = [key.id]
-                                } else {
-                                    idsByPeerId[key.peerId]?.append(key.id)
-                                }
-                            }
-                            for (peerId, ids) in idsByPeerId {
-                                self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: peerId, ids: ids).start())
-                            }
-                        }
-                    }
+                if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId {
+                    let centralPeerContext = PeerContext(context: self.context, peerId: self.context.account.peerId, focusedId: nil, loadIds: loadIds)
+                    
                     let pendingState = StateContext(
-                        centralPeerContext: PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex].peer.id, focusedId: nil, loadIds: loadIds),
-                        previousPeerContext: centralIndex == 0 ? nil : PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex - 1].peer.id, focusedId: nil, loadIds: loadIds),
-                        nextPeerContext: (centralIndex == storySubscriptions.items.count - 1) ? nil : PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex + 1].peer.id, focusedId: nil, loadIds: loadIds)
+                        centralPeerContext: centralPeerContext,
+                        previousPeerContext: nil,
+                        nextPeerContext: nil
                     )
                     self.pendingState = pendingState
                     self.pendingStateReadyDisposable = (pendingState.updated.get()
@@ -396,17 +368,143 @@ public final class StoryContentContextImpl: StoryContentContext {
                             self.updateState()
                         })
                     })
+                } else {
+                    var centralIndex: Int?
+                    if let (focusedPeerId, _) = self.focusedItem {
+                        if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                            centralIndex = index
+                        }
+                    }
+                    if centralIndex == nil {
+                        if !storySubscriptions.items.isEmpty {
+                            centralIndex = 0
+                        }
+                    }
+                    
+                    if let centralIndex {
+                        let centralPeerContext: PeerContext
+                        if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: storySubscriptions.items[centralIndex].peer.id) {
+                            centralPeerContext = existingContext
+                        } else {
+                            centralPeerContext = PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
+                        }
+                        
+                        var previousPeerContext: PeerContext?
+                        if centralIndex != 0 {
+                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: storySubscriptions.items[centralIndex - 1].peer.id) {
+                                previousPeerContext = existingContext
+                            } else {
+                                previousPeerContext = PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex - 1].peer.id, focusedId: nil, loadIds: loadIds)
+                            }
+                        }
+                        
+                        var nextPeerContext: PeerContext?
+                        if centralIndex != storySubscriptions.items.count - 1 {
+                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: storySubscriptions.items[centralIndex + 1].peer.id) {
+                                nextPeerContext = existingContext
+                            } else {
+                                nextPeerContext = PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex + 1].peer.id, focusedId: nil, loadIds: loadIds)
+                            }
+                        }
+                        
+                        let pendingState = StateContext(
+                            centralPeerContext: centralPeerContext,
+                            previousPeerContext: previousPeerContext,
+                            nextPeerContext: nextPeerContext
+                        )
+                        self.pendingState = pendingState
+                        self.pendingStateReadyDisposable = (pendingState.updated.get()
+                        |> deliverOnMainQueue).start(next: { [weak self, weak pendingState] _ in
+                            guard let self, let pendingState, self.pendingState === pendingState, pendingState.isReady else {
+                                return
+                            }
+                            self.pendingState = nil
+                            self.pendingStateReadyDisposable?.dispose()
+                            self.pendingStateReadyDisposable = nil
+                            
+                            self.currentState = pendingState
+                            
+                            self.updateState()
+                            
+                            self.currentStateUpdatedDisposable?.dispose()
+                            self.currentStateUpdatedDisposable = (pendingState.updated.get()
+                            |> deliverOnMainQueue).start(next: { [weak self, weak pendingState] _ in
+                                guard let self, let pendingState, self.currentState === pendingState else {
+                                    return
+                                }
+                                self.updateState()
+                            })
+                        })
+                    }
                 }
             }
         }
     }
     
     private func updateState() {
-        preconditionFailure()
+        guard let currentState = self.currentState else {
+            return
+        }
+        let stateValue = StoryContentContextState(
+            slice: currentState.centralPeerContext.sliceValue,
+            previousSlice: currentState.previousPeerContext?.sliceValue,
+            nextSlice: currentState.nextPeerContext?.sliceValue
+        )
+        self.stateValue = stateValue
+        self.statePromise.set(.single(stateValue))
+        
+        self.updatedPromise.set(.single(Void()))
+    }
+    
+    public func resetSideStates() {
+        guard let currentState = self.currentState else {
+            return
+        }
+        if let previousPeerContext = currentState.previousPeerContext {
+            previousPeerContext.currentFocusedId = nil
+        }
+        if let nextPeerContext = currentState.nextPeerContext {
+            nextPeerContext.currentFocusedId = nil
+        }
     }
     
     public func navigate(navigation: StoryContentContextNavigation) {
+        guard let currentState = self.currentState else {
+            return
+        }
         
+        switch navigation {
+        case let .peer(direction):
+            switch direction {
+            case .previous:
+                if let previousPeerContext = currentState.previousPeerContext, let previousSlice = previousPeerContext.sliceValue {
+                    self.pendingStateReadyDisposable?.dispose()
+                    self.pendingState = nil
+                    self.focusedItem = (previousSlice.peer.id, nil)
+                    self.switchToFocusedPeerId()
+                }
+            case .next:
+                if let nextPeerContext = currentState.nextPeerContext, let nextSlice = nextPeerContext.sliceValue {
+                    self.pendingStateReadyDisposable?.dispose()
+                    self.pendingState = nil
+                    self.focusedItem = (nextSlice.peer.id, nil)
+                    self.switchToFocusedPeerId()
+                }
+            }
+        case let .item(direction):
+            if let slice = currentState.centralPeerContext.sliceValue {
+                switch direction {
+                case .previous:
+                    if let previousItemId = slice.previousItemId {
+                        currentState.centralPeerContext.currentFocusedId = previousItemId
+                    }
+                case .next:
+                    if let nextItemId = slice.nextItemId {
+                        currentState.centralPeerContext.currentFocusedId = nextItemId
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -599,13 +599,13 @@ public extension TelegramEngine {
             ])
             |> mapToSignal { views -> Signal<EngineStorySubscriptions, NoError> in
                 guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
-                    return .single(EngineStorySubscriptions(items: [], hasMoreToken: nil))
+                    return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
                 }
                 guard let storySubscriptionsView = views.views[PostboxViewKey.storySubscriptions] as? StorySubscriptionsView else {
-                    return .single(EngineStorySubscriptions(items: [], hasMoreToken: nil))
+                    return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
                 }
                 guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
-                    return .single(EngineStorySubscriptions(items: [], hasMoreToken: nil))
+                    return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
                 }
                 
                 var additionalDataKeys: [PostboxViewKey] = []
@@ -622,8 +622,6 @@ public extension TelegramEngine {
                 return self.account.postbox.combinedView(keys: additionalDataKeys)
                 |> map { views -> EngineStorySubscriptions in
                     let _ = accountPeer
-                    let _ = storySubscriptionsView
-                    let _ = storiesStateView
                     
                     var hasMoreToken: String?
                     if let subscriptionsState = storiesStateView.value?.get(Stories.SubscriptionsState.self) {
@@ -635,6 +633,13 @@ public extension TelegramEngine {
                     } else {
                         hasMoreToken = ""
                     }
+                    
+                    var accountItem: EngineStorySubscriptions.Item = EngineStorySubscriptions.Item(
+                        peer: EnginePeer(accountPeer),
+                        hasUnseen: false,
+                        storyCount: 0,
+                        lastTimestamp: 0
+                    )
                     
                     var items: [EngineStorySubscriptions.Item] = []
                     for peerId in storySubscriptionsView.peerIds {
@@ -660,19 +665,25 @@ public extension TelegramEngine {
                             hasUnseen = peerState.maxReadId < lastEntry.id
                         }
                         
-                        items.append(EngineStorySubscriptions.Item(
+                        let item = EngineStorySubscriptions.Item(
                             peer: EnginePeer(peer),
                             hasUnseen: hasUnseen,
                             storyCount: itemsView.items.count,
                             lastTimestamp: lastEntry.timestamp
-                        ))
+                        )
+                        
+                        if peerId == accountPeer.id {
+                            accountItem = item
+                        } else {
+                            items.append(item)
+                        }
                     }
                     
                     items.sort(by: { lhs, rhs in
                         return lhs.lastTimestamp > rhs.lastTimestamp
                     })
                     
-                    return EngineStorySubscriptions(items: items, hasMoreToken: hasMoreToken)
+                    return EngineStorySubscriptions(accountItem: accountItem, items: items, hasMoreToken: hasMoreToken)
                 }
             }
         }
