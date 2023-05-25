@@ -774,7 +774,7 @@ public extension TelegramEngine {
                                     let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: file), resource: file.resource)
                                     resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
                                         resource: resource,
-                                        size: nil,
+                                        size: file.preloadSize,
                                         priority: .top(position: nextPriority)
                                     )
                                     nextPriority += 1
@@ -786,10 +786,6 @@ public extension TelegramEngine {
                     return resultResources
                 }
             }
-        }
-        
-        public func peerStoryFocusContext(id: EnginePeer.Id, focusItemId: Int32?) -> PeerStoryFocusContext {
-            return PeerStoryFocusContext(account: self.account, peerId: id, focusItemId: focusItemId)
         }
         
         public func refreshStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
@@ -810,10 +806,6 @@ public extension TelegramEngine {
                 }
                 |> ignoreValues
             }
-        }
-        
-        public func peerStories(id: EnginePeer.Id) -> StoryListContext {
-            return StoryListContext(account: self.account, scope: .peer(id))
         }
         
         public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {

@@ -367,7 +367,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
                                 if let imageData = compressImageToJPEG(image, quality: 0.6) {
-                                    //storyListContext.upload(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], privacy: privacy)
                                     let _ = self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], privacy: privacy).start()
                                     Queue.mainQueue().after(0.2, { [weak chatListController] in
                                         chatListController?.animateStoryUploadRipple()

@@ -85,7 +85,7 @@ public enum MediaPlayerStreaming {
             case .earlierStart:
                 return (1.0, 1.0, 2.0)
             case .story:
-                return (0.25, 0.5, 2.0)
+                return (0.25, 0.5, 0.5)
         }
     }
 }

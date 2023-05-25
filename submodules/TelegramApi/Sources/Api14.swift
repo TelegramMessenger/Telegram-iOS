@@ -323,6 +323,7 @@ public extension Api {
 public extension Api {
     enum MessageReplyHeader: TypeConstructorDescription {
         case messageReplyHeader(flags: Int32, replyToMsgId: Int32, replyToPeerId: Api.Peer?, replyToTopId: Int32?)
+        case messageReplyStoryHeader(userId: Int64, storyId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -335,6 +336,13 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {replyToPeerId!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(replyToTopId!, buffer: buffer, boxed: false)}
                     break
+                case .messageReplyStoryHeader(let userId, let storyId):
+                    if boxed {
+                        buffer.appendInt32(-1667711039)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(storyId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -342,6 +350,8 @@ public extension Api {
         switch self {
                 case .messageReplyHeader(let flags, let replyToMsgId, let replyToPeerId, let replyToTopId):
                 return ("messageReplyHeader", [("flags", flags as Any), ("replyToMsgId", replyToMsgId as Any), ("replyToPeerId", replyToPeerId as Any), ("replyToTopId", replyToTopId as Any)])
+                case .messageReplyStoryHeader(let userId, let storyId):
+                return ("messageReplyStoryHeader", [("userId", userId as Any), ("storyId", storyId as Any)])
     }
     }
     
@@ -362,6 +372,20 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.MessageReplyHeader.messageReplyHeader(flags: _1!, replyToMsgId: _2!, replyToPeerId: _3, replyToTopId: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageReplyStoryHeader(_ reader: BufferReader) -> MessageReplyHeader? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageReplyHeader.messageReplyStoryHeader(userId: _1!, storyId: _2!)
             }
             else {
                 return nil
@@ -772,106 +796,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    enum NotifyPeer: TypeConstructorDescription {
-        case notifyBroadcasts
-        case notifyChats
-        case notifyForumTopic(peer: Api.Peer, topMsgId: Int32)
-        case notifyPeer(peer: Api.Peer)
-        case notifyUsers
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .notifyBroadcasts:
-                    if boxed {
-                        buffer.appendInt32(-703403793)
-                    }
-                    
-                    break
-                case .notifyChats:
-                    if boxed {
-                        buffer.appendInt32(-1073230141)
-                    }
-                    
-                    break
-                case .notifyForumTopic(let peer, let topMsgId):
-                    if boxed {
-                        buffer.appendInt32(577659656)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeInt32(topMsgId, buffer: buffer, boxed: false)
-                    break
-                case .notifyPeer(let peer):
-                    if boxed {
-                        buffer.appendInt32(-1613493288)
-                    }
-                    peer.serialize(buffer, true)
-                    break
-                case .notifyUsers:
-                    if boxed {
-                        buffer.appendInt32(-1261946036)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .notifyBroadcasts:
-                return ("notifyBroadcasts", [])
-                case .notifyChats:
-                return ("notifyChats", [])
-                case .notifyForumTopic(let peer, let topMsgId):
-                return ("notifyForumTopic", [("peer", peer as Any), ("topMsgId", topMsgId as Any)])
-                case .notifyPeer(let peer):
-                return ("notifyPeer", [("peer", peer as Any)])
-                case .notifyUsers:
-                return ("notifyUsers", [])
-    }
-    }
-    
-        public static func parse_notifyBroadcasts(_ reader: BufferReader) -> NotifyPeer? {
-            return Api.NotifyPeer.notifyBroadcasts
-        }
-        public static func parse_notifyChats(_ reader: BufferReader) -> NotifyPeer? {
-            return Api.NotifyPeer.notifyChats
-        }
-        public static func parse_notifyForumTopic(_ reader: BufferReader) -> NotifyPeer? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.NotifyPeer.notifyForumTopic(peer: _1!, topMsgId: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_notifyPeer(_ reader: BufferReader) -> NotifyPeer? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.NotifyPeer.notifyPeer(peer: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_notifyUsers(_ reader: BufferReader) -> NotifyPeer? {
-            return Api.NotifyPeer.notifyUsers
         }
     
     }

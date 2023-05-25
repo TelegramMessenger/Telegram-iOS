@@ -17,9 +17,9 @@ final class StoryItemContentComponent: Component {
     
 	let context: AccountContext
     let peer: EnginePeer
-    let item: StoryListContext.Item
+    let item: EngineStoryItem
 
-    init(context: AccountContext, peer: EnginePeer, item: StoryListContext.Item) {
+    init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem) {
 		self.context = context
         self.peer = peer
 		self.item = item

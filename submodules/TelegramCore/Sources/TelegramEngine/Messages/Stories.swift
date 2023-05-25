@@ -704,8 +704,12 @@ extension Api.StoryItem {
 extension Stories.Item.Views {
     init(apiViews: Api.StoryViews) {
         switch apiViews {
-        case let .storyViews(recentViewers, viewsCount):
-            self.init(seenCount: Int(viewsCount), seenPeerIds: recentViewers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) })
+        case let .storyViews(_, viewsCount, recentViewers):
+            var seenPeerIds: [PeerId] = []
+            if let recentViewers = recentViewers {
+                seenPeerIds = recentViewers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
+            }
+            self.init(seenCount: Int(viewsCount), seenPeerIds: seenPeerIds)
         }
     }
 }
@@ -769,69 +773,42 @@ extension Stories.StoredItem {
     }
 }
 
-func _internal_parseApiStoryItem(transaction: Transaction, peerId: PeerId, apiStory: Api.StoryItem) -> StoryListContext.Item? {
-    switch apiStory {
-    case let .storyItem(flags, id, date, caption, entities, media, privacy, views):
-        let _ = flags
-        let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
-        if let parsedMedia = parsedMedia {
-            var parsedPrivacy: EngineStoryPrivacy?
-            if let privacy = privacy {
-                var base: EngineStoryPrivacy.Base = .everyone
-                var additionalPeerIds: [EnginePeer.Id] = []
-                for rule in privacy {
-                    switch rule {
-                    case .privacyValueAllowAll:
-                        base = .everyone
-                    case .privacyValueAllowContacts:
-                        base = .contacts
-                    case .privacyValueAllowCloseFriends:
-                        base = .closeFriends
-                    case let .privacyValueAllowUsers(users):
-                        for id in users {
-                            additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
-                        }
-                    case let .privacyValueAllowChatParticipants(chats):
-                        for id in chats {
-                            if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudGroup, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
-                                additionalPeerIds.append(peer.id)
-                            } else if let peer = transaction.getPeer(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(id))) {
-                                additionalPeerIds.append(peer.id)
-                            }
-                        }
-                    default:
-                        break
-                    }
-                }
-                parsedPrivacy = EngineStoryPrivacy(base: base, additionallyIncludePeers: additionalPeerIds)
-            }
-            
-            let item = StoryListContext.Item(
-                id: id,
-                timestamp: date,
-                media: EngineMedia(parsedMedia),
-                text: caption ?? "",
-                entities: entities.flatMap { entities in return messageTextEntitiesFromApiEntities(entities) } ?? [],
-                views: views.flatMap { _internal_parseApiStoryViews(transaction: transaction, views: $0) },
-                privacy: parsedPrivacy
-            )
-            return item
-        } else {
-            return nil
-        }
-    case .storyItemSkipped:
-        return nil
-    case .storyItemDeleted:
-        return nil
+func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: Network, peer: PeerReference, ids: [Int32]) -> Signal<[Stories.StoredItem], NoError> {
+    guard let inputUser = peer.inputUser else {
+        return .single([])
     }
-}
-
-func _internal_parseApiStoryViews(transaction: Transaction, views: Api.StoryViews) -> StoryListContext.Views {
-    switch views {
-    case let .storyViews(recentViewers, viewsCount):
-        return StoryListContext.Views(seenCount: Int(viewsCount), seenPeers: recentViewers.compactMap { id -> EnginePeer? in
-            return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))).flatMap(EnginePeer.init)
-        })
+    
+    return network.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: ids))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<[Stories.StoredItem], NoError> in
+        guard let result = result else {
+            return .single([])
+        }
+        return postbox.transaction { transaction -> [Stories.StoredItem] in
+            switch result {
+            case let .stories(_, stories, users):
+                var peers: [Peer] = []
+                var peerPresences: [PeerId: Api.User] = [:]
+                
+                for user in users {
+                    let telegramUser = TelegramUser(user: user)
+                    peers.append(telegramUser)
+                    peerPresences[telegramUser.id] = user
+                }
+                
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                    return updated
+                })
+                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                
+                return stories.compactMap { apiStoryItem -> Stories.StoredItem? in
+                    return Stories.StoredItem(apiStoryItem: apiStoryItem, peerId: peer.id, transaction: transaction)
+                }
+            }
+        }
     }
 }
 
@@ -874,42 +851,6 @@ func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: 
                         return Stories.StoredItem(apiStoryItem: apiStoryItem, peerId: peerId, transaction: transaction)
                     }
                 }
-            }
-        }
-    }
-}
-
-func _internal_getStoryById(accountPeerId: PeerId, postbox: Postbox, network: Network, peer: PeerReference, id: Int32) -> Signal<StoryListContext.Item?, NoError> {
-    guard let inputUser = peer.inputUser else {
-        return .single(nil)
-    }
-    return network.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: [id]))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
-        return .single(nil)
-    }
-    |> mapToSignal { result -> Signal<StoryListContext.Item?, NoError> in
-        guard let result = result else {
-            return .single(nil)
-        }
-        return postbox.transaction { transaction -> StoryListContext.Item? in
-            switch result {
-            case let .stories(_, stories, users):
-                var peers: [Peer] = []
-                var peerPresences: [PeerId: Api.User] = [:]
-                
-                for user in users {
-                    let telegramUser = TelegramUser(user: user)
-                    peers.append(telegramUser)
-                    peerPresences[telegramUser.id] = user
-                }
-                
-                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                    return updated
-                })
-                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                
-                return stories.first.flatMap { _internal_parseApiStoryItem(transaction: transaction, peerId: peer.id, apiStory: $0) }
             }
         }
     }
@@ -978,18 +919,18 @@ func _internal_getStoryViewList(account: Account, id: Int32, offsetTimestamp: In
     }
 }
 
-func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: StoryListContext.Views], NoError> {
+func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: Stories.Item.Views], NoError> {
     return account.network.request(Api.functions.stories.getStoriesViews(id: ids))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.stories.StoryViews?, NoError> in
         return .single(nil)
     }
-    |> mapToSignal { result -> Signal<[Int32: StoryListContext.Views], NoError> in
+    |> mapToSignal { result -> Signal<[Int32: Stories.Item.Views], NoError> in
         guard let result = result else {
             return .single([:])
         }
-        return account.postbox.transaction { transaction -> [Int32: StoryListContext.Views] in
-            var parsedViews: [Int32: StoryListContext.Views] = [:]
+        return account.postbox.transaction { transaction -> [Int32: Stories.Item.Views] in
+            var parsedViews: [Int32: Stories.Item.Views] = [:]
             switch result {
             case let .storyViews(views, users):
                 var peers: [Peer] = []
@@ -1008,7 +949,7 @@ func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: S
                 
                 for i in 0 ..< views.count {
                     if i < ids.count {
-                        parsedViews[ids[i]] = _internal_parseApiStoryViews(transaction: transaction, views: views[i])
+                        parsedViews[ids[i]] = Stories.Item.Views(apiViews: views[i])
                     }
                 }
             }

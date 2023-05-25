@@ -11,13 +11,13 @@ import TelegramCore
 
 public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext
-    public let storyItem: StoryListContext.Item?
+    public let storyItem: EngineStoryItem?
     public let deleteAction: () -> Void
     public let moreAction: (UIView, ContextGesture?) -> Void
     
     public init(
         context: AccountContext,
-        storyItem: StoryListContext.Item?,
+        storyItem: EngineStoryItem?,
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void
     ) {

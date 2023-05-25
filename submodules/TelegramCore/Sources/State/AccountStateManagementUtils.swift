@@ -4377,7 +4377,7 @@ func replayFinalState(
                     )))
                     
                     for storyItem in stories {
-                        if let parsedItem = _internal_parseApiStoryItem(transaction: transaction, peerId: peerId, apiStory: storyItem) {
+                        if let parsedItem = Stories.StoredItem(apiStoryItem: storyItem, peerId: peerId, transaction: transaction) {
                             storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: parsedItem))
                         } else {
                             storyUpdates.append(InternalStoryUpdate.deleted(peerId: peerId, id: storyItem.id))
@@ -4385,6 +4385,20 @@ func replayFinalState(
                     }
                 }
             case let .UpdateReadStories(peerId, maxId):
+                var appliedMaxReadId = maxId
+                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
+                    appliedMaxReadId = max(appliedMaxReadId, currentState.maxReadId)
+                }
+                
+                var subscriptionsOpaqueState: String?
+                if let state = transaction.getSubscriptionsStoriesState()?.get(Stories.SubscriptionsState.self) {
+                    subscriptionsOpaqueState = state.opaqueState
+                }
+                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                    subscriptionsOpaqueState: subscriptionsOpaqueState,
+                    maxReadId: appliedMaxReadId
+                )))
+            
                 storyUpdates.append(InternalStoryUpdate.read(peerId: peerId, maxId: maxId))
         }
     }

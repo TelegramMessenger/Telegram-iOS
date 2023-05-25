@@ -81,7 +81,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     }
     let localMonthTimestamp: Int32
     let peer: PeerReference
-    let story: StoryListContext.Item
+    let story: EngineStoryItem
 
     override var id: AnyHashable {
         return AnyHashable(self.story.id)
@@ -95,7 +95,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
         return VisualMediaHoleAnchor(index: self.index, storyId: self.story.id, localMonthTimestamp: self.localMonthTimestamp)
     }
     
-    init(index: Int, peer: PeerReference, story: StoryListContext.Item, localMonthTimestamp: Int32) {
+    init(index: Int, peer: PeerReference, story: EngineStoryItem, localMonthTimestamp: Int32) {
         self.indexValue = index
         self.peer = peer
         self.story = story
@@ -738,7 +738,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     }
 }
 
-public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+/*public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     public enum ContentType {
         case photoOrVideo
         case photo
@@ -815,7 +815,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var animationTimer: SwiftSignalKit.Timer?
 
     public private(set) var calendarSource: SparseMessageCalendar?
-    private var listSource: StoryListContext
+    private var listSource: StorySubscriptionsContext
 
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
@@ -848,7 +848,6 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             captureProtected: captureProtected
         )
 
-        self.listSource = context.engine.messages.peerStories(id: self.peerId)
         //self.listSource = context.engine.messages.allStories()
         self.calendarSource = nil
         
@@ -1934,3 +1933,4 @@ private class MediaListSelectionRecognizer: UIPanGestureRecognizer {
         }
     }
 }
+*/

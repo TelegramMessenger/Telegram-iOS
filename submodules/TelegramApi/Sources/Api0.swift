@@ -382,6 +382,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-380694650] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowChatParticipants($0) }
     dict[195371015] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowContacts($0) }
     dict[-1877932953] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowUsers($0) }
+    dict[-1672247580] = { return Api.InputReplyTo.parse_inputReplyToMessage($0) }
+    dict[-1139169566] = { return Api.InputReplyTo.parse_inputReplyToStory($0) }
     dict[1399317950] = { return Api.InputSecureFile.parse_inputSecureFile($0) }
     dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
     dict[-618540889] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
@@ -535,6 +537,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1328256121] = { return Api.MessageReactions.parse_messageReactions($0) }
     dict[-2083123262] = { return Api.MessageReplies.parse_messageReplies($0) }
     dict[-1495959709] = { return Api.MessageReplyHeader.parse_messageReplyHeader($0) }
+    dict[-1667711039] = { return Api.MessageReplyHeader.parse_messageReplyStoryHeader($0) }
     dict[1163625789] = { return Api.MessageViews.parse_messageViews($0) }
     dict[975236280] = { return Api.MessagesFilter.parse_inputMessagesFilterChatPhotos($0) }
     dict[-530392189] = { return Api.MessagesFilter.parse_inputMessagesFilterContacts($0) }
@@ -790,7 +793,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1374088783] = { return Api.StoryItem.parse_storyItemDeleted($0) }
     dict[-1579626609] = { return Api.StoryItem.parse_storyItemSkipped($0) }
     dict[-1491424062] = { return Api.StoryView.parse_storyView($0) }
-    dict[1368082392] = { return Api.StoryViews.parse_storyViews($0) }
+    dict[-748199729] = { return Api.StoryViews.parse_storyViews($0) }
     dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
@@ -1155,7 +1158,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[172975040] = { return Api.storage.FileType.parse_filePng($0) }
     dict[-1432995067] = { return Api.storage.FileType.parse_fileUnknown($0) }
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
-    dict[1528473228] = { return Api.stories.AllStories.parse_allStories($0) }
+    dict[-2086796248] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[1205903486] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
     dict[1340440049] = { return Api.stories.Stories.parse_stories($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
@@ -1478,6 +1481,8 @@ public extension Api {
             case let _1 as Api.InputPrivacyKey:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputPrivacyRule:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputReplyTo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputSecureFile:
                 _1.serialize(buffer, boxed)

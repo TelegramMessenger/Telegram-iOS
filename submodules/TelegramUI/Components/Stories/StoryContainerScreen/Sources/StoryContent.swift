@@ -45,7 +45,7 @@ public final class StoryContentItem {
     public let centerInfoComponent: AnyComponent<Empty>?
     public let rightInfoComponent: AnyComponent<Empty>?
     public let peerId: EnginePeer.Id?
-    public let storyItem: StoryListContext.Item
+    public let storyItem: EngineStoryItem
     public let preload: Signal<Never, NoError>?
     public let delete: (() -> Void)?
     public let markAsSeen: (() -> Void)?
@@ -59,7 +59,7 @@ public final class StoryContentItem {
         centerInfoComponent: AnyComponent<Empty>?,
         rightInfoComponent: AnyComponent<Empty>?,
         peerId: EnginePeer.Id?,
-        storyItem: StoryListContext.Item,
+        storyItem: EngineStoryItem,
         preload: Signal<Never, NoError>?,
         delete: (() -> Void)?,
         markAsSeen: (() -> Void)?,

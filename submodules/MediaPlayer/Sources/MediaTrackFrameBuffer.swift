@@ -16,7 +16,13 @@ public enum MediaTrackFrameResult {
     case finished
 }
 
-private let traceEvents = false
+private let traceEvents: Bool = {
+    #if DEBUG
+    return true
+    #else
+    return false
+    #endif
+}()
 
 public final class MediaTrackFrameBuffer {
     private let stallDuration: Double
@@ -89,7 +95,7 @@ public final class MediaTrackFrameBuffer {
         
         if let maxUntilTime = maxUntilTime {
             if traceEvents {
-                print("added \(frames.count) frames until \(CMTimeGetSeconds(maxUntilTime)), \(self.frames.count) total")
+                print("\(self.type) added \(frames.count) frames until \(CMTimeGetSeconds(maxUntilTime)), \(self.frames.count) total")
             }
         }
         
@@ -123,7 +129,7 @@ public final class MediaTrackFrameBuffer {
         
         if bufferedDuration < self.lowWaterDuration {
             if traceEvents {
-                print("buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+                print("\(self.type) buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
             }
             let delayIncrement = 0.3
             var generateUntil = timestamp + delayIncrement
@@ -134,7 +140,7 @@ public final class MediaTrackFrameBuffer {
             
             if bufferedDuration > self.stallDuration && !self.isWaitingForLowWaterDuration {
                 if traceEvents {
-                    print("buffered1 duration: \(bufferedDuration), wait until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
+                    print("\(self.type) buffered1 duration: \(bufferedDuration), wait until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
                 }
                 return .full(until: timestamp + self.highWaterDuration)
             } else {
@@ -144,7 +150,7 @@ public final class MediaTrackFrameBuffer {
         } else {
             self.isWaitingForLowWaterDuration = false
             if traceEvents {
-                print("buffered2 duration: \(bufferedDuration), wait until \(timestamp) + \(bufferedDuration - self.lowWaterDuration)")
+                print("\(self.type) buffered2 duration: \(bufferedDuration), wait until \(timestamp) + \(bufferedDuration - self.lowWaterDuration)")
             }
             return .full(until: timestamp + max(0.0, bufferedDuration - self.lowWaterDuration))
         }

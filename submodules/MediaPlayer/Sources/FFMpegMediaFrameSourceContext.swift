@@ -95,6 +95,9 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         if readCount == 0 {
             fetchedData = Data()
         } else {
+            #if DEBUG
+            print("requestRange: \(requestRange)")
+            #endif
             if let tempFilePath = context.tempFilePath, let fileData = (try? Data(contentsOf: URL(fileURLWithPath: tempFilePath), options: .mappedRead))?.subdata(in: Int(requestRange.lowerBound) ..< Int(requestRange.upperBound)) {
                 fetchedData = fileData
             } else {
