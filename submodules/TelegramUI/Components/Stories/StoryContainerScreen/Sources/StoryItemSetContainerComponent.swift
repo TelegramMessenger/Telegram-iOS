@@ -657,6 +657,10 @@ public final class StoryItemSetContainerComponent: Component {
                 })
             }
             
+            if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
+                let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id).start()
+            }
+            
             if self.topContentGradientLayer.colors == nil {
                 var locations: [NSNumber] = []
                 var colors: [CGColor] = []

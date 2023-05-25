@@ -54,7 +54,26 @@ public final class StoryContentContextImpl: StoryContentContext {
                     ]
                 )
             )
-            |> deliverOnMainQueue).start(next: { [weak self] currentFocusedId, views in
+            |> mapToSignal { currentFocusedId, views -> Signal<(Int32?, CombinedView, [PeerId: Peer]), NoError> in
+                return context.account.postbox.transaction { transaction -> (Int32?, CombinedView, [PeerId: Peer]) in
+                    var peers: [PeerId: Peer] = [:]
+                    if let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView {
+                        for item in itemsView.items {
+                            if let item = item.value.get(Stories.StoredItem.self), case let .item(itemValue) = item {
+                                if let views = itemValue.views {
+                                    for peerId in views.seenPeerIds {
+                                        if let peer = transaction.getPeer(peerId) {
+                                            peers[peer.id] = peer
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return (currentFocusedId, views, peers)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] currentFocusedId, views, peers in
                 guard let self else {
                     return
                 }
@@ -118,7 +137,14 @@ public final class StoryContentContextImpl: StoryContentContext {
                             media: EngineMedia(media),
                             text: item.text,
                             entities: item.entities,
-                            views: nil,
+                            views: item.views.flatMap { views in
+                                return EngineStoryItem.Views(
+                                    seenCount: views.seenCount,
+                                    seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                        return peers[id].flatMap(EnginePeer.init)
+                                    }
+                                )
+                            },
                             privacy: nil
                         )
                         
