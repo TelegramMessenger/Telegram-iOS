@@ -11,7 +11,7 @@ final class MutableStoryItemsView: MutablePostboxView {
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
-        if !transaction.storyStatesEvents.isEmpty {
+        if !transaction.storyItemsEvents.isEmpty {
             loop: for event in transaction.storyItemsEvents {
                 switch event {
                 case .replace(peerId):

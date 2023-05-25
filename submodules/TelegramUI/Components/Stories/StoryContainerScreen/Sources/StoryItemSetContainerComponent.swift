@@ -43,6 +43,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let presentController: (ViewController) -> Void
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
+    public let delete: () -> Void
     public let controller: () -> ViewController?
     
     public init(
@@ -59,6 +60,7 @@ public final class StoryItemSetContainerComponent: Component {
         presentController: @escaping (ViewController) -> Void,
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
+        delete: @escaping () -> Void,
         controller: @escaping () -> ViewController?
     ) {
         self.context = context
@@ -74,6 +76,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.presentController = presentController
         self.close = close
         self.navigate = navigate
+        self.delete = delete
         self.controller = controller
     }
     
@@ -813,8 +816,7 @@ public final class StoryItemSetContainerComponent: Component {
                     context: component.context,
                     storyItem: currentItem?.storyItem,
                     deleteAction: { [weak self] in
-                        let _ = self
-                        /*guard let self, let component = self.component, let focusedItemId = self.focusedItemId else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         
@@ -829,8 +831,9 @@ public final class StoryItemSetContainerComponent: Component {
                                     guard let self, let component = self.component else {
                                         return
                                     }
+                                    component.delete()
                                     
-                                    if let currentSlice = self.currentSlice, let index = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
+                                    /*if let currentSlice = self.currentSlice, let index = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
                                         let item = currentSlice.items[index]
                                         
                                         if currentSlice.items.count == 1 {
@@ -848,7 +851,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         }
                                         
                                         item.delete?()
-                                    }
+                                    }*/
                                 })
                             ]),
                             ActionSheetItemGroup(items: [
@@ -868,7 +871,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.actionSheet = actionSheet
                         self.updateIsProgressPaused()
                         
-                        component.presentController(actionSheet)*/
+                        component.presentController(actionSheet)
                     },
                     moreAction: { [weak self] sourceView, gesture in
                         guard let self, let component = self.component, let controller = component.controller() else {

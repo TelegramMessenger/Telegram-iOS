@@ -647,12 +647,21 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
 }
 
 func _internal_deleteStory(account: Account, id: Int32) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.stories.deleteStories(id: [id]))
-    |> `catch` { _ -> Signal<[Int32], NoError> in
-        return .single([])
+    return account.postbox.transaction { transaction -> Void in
+        var items = transaction.getStoryItems(peerId: account.peerId)
+        if let index = items.firstIndex(where: { $0.id == id }) {
+            items.remove(at: index)
+            transaction.setStoryItems(peerId: account.peerId, items: items)
+        }
     }
     |> mapToSignal { _ -> Signal<Never, NoError> in
-        return .complete()
+        return account.network.request(Api.functions.stories.deleteStories(id: [id]))
+        |> `catch` { _ -> Signal<[Int32], NoError> in
+            return .single([])
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
     }
 }
 
@@ -676,7 +685,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32) -> S
         
         #if DEBUG
         if "".isEmpty {
-            return .complete()
+            //return .complete()
         }
         #endif
         

@@ -589,6 +589,22 @@ private final class StoryContainerScreenComponent: Component {
                                         }
                                     }
                                 },
+                                delete: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if let stateValue = component.content.stateValue, let slice = stateValue.slice {
+                                        if slice.nextItemId != nil {
+                                            component.content.navigate(navigation: .item(.next))
+                                        } else if slice.previousItemId != nil {
+                                            component.content.navigate(navigation: .item(.previous))
+                                        } else if let environment = self.environment {
+                                            environment.controller()?.dismiss()
+                                        }
+                                        
+                                        let _ = component.context.engine.messages.deleteStory(id: slice.item.storyItem.id).start()
+                                    }
+                                },
                                 controller: { [weak self] in
                                     return self?.environment?.controller()
                                 }
