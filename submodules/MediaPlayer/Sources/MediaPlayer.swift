@@ -68,6 +68,7 @@ public enum MediaPlayerStreaming {
     case none
     case conservative
     case earlierStart
+    case story
     
     public var enabled: Bool {
         if case .none = self {
@@ -83,6 +84,8 @@ public enum MediaPlayerStreaming {
                 return (1.0, 2.0, 3.0)
             case .earlierStart:
                 return (1.0, 1.0, 2.0)
+            case .story:
+                return (0.25, 0.5, 1.0)
         }
     }
 }

@@ -1222,7 +1222,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 if let file = file {
                     for attribute in file.attributes {
-                        if case let .Video(duration, _, _) = attribute, duration >= 30 {
+                        if case let .Video(duration, _, _, _) = attribute, duration >= 30 {
                             hintSeekable = true
                             break
                         }

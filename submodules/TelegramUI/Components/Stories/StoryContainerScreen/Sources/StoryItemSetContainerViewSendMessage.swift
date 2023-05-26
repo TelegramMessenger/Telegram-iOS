@@ -59,9 +59,7 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
-        guard let focusedItemId = view.focusedItemId, let focusedItem = view.currentSlice?.items.first(where: { $0.id == focusedItemId }) else {
-            return
-        }
+        let focusedItem = component.slice.item
         guard let peerId = focusedItem.peerId else {
             return
         }
@@ -117,9 +115,7 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
-        guard let focusedItemId = view.focusedItemId, let focusedItem = view.currentSlice?.items.first(where: { $0.id == focusedItemId }) else {
-            return
-        }
+        let focusedItem = component.slice.item
         guard let peerId = focusedItem.peerId else {
             return
         }
@@ -335,9 +331,7 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
-        guard let focusedItemId = view.focusedItemId, let focusedItem = view.currentSlice?.items.first(where: { $0.id == focusedItemId }) else {
-            return
-        }
+        let focusedItem = component.slice.item
         guard let peerId = focusedItem.peerId else {
             return
         }
@@ -1582,10 +1576,6 @@ final class StoryItemSetContainerSendMessage {
     }
     
     private func transformEnqueueMessages(view: StoryItemSetContainerComponent.View, messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil) -> [EnqueueMessage] {
-        guard let focusedItemId = view.focusedItemId, let _ = view.currentSlice?.items.first(where: { $0.id == focusedItemId }) else {
-            return []
-        }
-        
         let defaultReplyMessageId: EngineMessage.Id? = nil
         
         return messages.map { message in

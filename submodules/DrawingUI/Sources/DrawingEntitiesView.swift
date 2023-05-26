@@ -127,7 +127,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         self.angleLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: 6.0))
     }
     
-    var entities: [DrawingEntity] {
+    public var entities: [DrawingEntity] {
         var entities: [DrawingEntity] = []
         for case let view as DrawingEntityView in self.subviews {
             entities.append(view.entity)

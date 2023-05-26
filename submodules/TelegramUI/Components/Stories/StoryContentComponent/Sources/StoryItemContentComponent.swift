@@ -17,9 +17,9 @@ final class StoryItemContentComponent: Component {
     
 	let context: AccountContext
     let peer: EnginePeer
-    let item: StoryListContext.Item
+    let item: EngineStoryItem
 
-    init(context: AccountContext, peer: EnginePeer, item: StoryListContext.Item) {
+    init(context: AccountContext, peer: EnginePeer, item: EngineStoryItem) {
 		self.context = context
         self.peer = peer
 		self.item = item
@@ -156,6 +156,7 @@ final class StoryItemContentComponent: Component {
                             userLocation: .other,
                             fileReference: .story(peer: peerReference, id: component.item.id, media: file),
                             imageReference: nil,
+                            streamVideo: .story,
                             loopVideo: true,
                             enableSound: true,
                             tempFilePath: nil,
@@ -189,6 +190,15 @@ final class StoryItemContentComponent: Component {
             if self.isProgressPaused != isProgressPaused {
                 self.isProgressPaused = isProgressPaused
                 self.updateIsProgressPaused()
+            }
+        }
+        
+        override func rewind() {
+            self.currentProgressTimerValue = 0.0
+            if let videoNode = self.videoNode {
+                if self.contentLoaded {
+                    videoNode.seek(0.0)
+                }
             }
         }
         
@@ -229,7 +239,7 @@ final class StoryItemContentComponent: Component {
                                 }
                                 
                                 #if DEBUG// && false
-                                let currentProgressTimerLimit: Double = 5 * 60.0
+                                let currentProgressTimerLimit: Double = 1 * 60.0
                                 #else
                                 let currentProgressTimerLimit: Double = 5.0
                                 #endif

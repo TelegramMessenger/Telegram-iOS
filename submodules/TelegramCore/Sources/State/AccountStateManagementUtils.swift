@@ -4331,10 +4331,53 @@ func replayFinalState(
             case let .UpdateStories(updateStories):
                 switch updateStories {
                 case let .userStories(_, userId, maxReadId, stories):
-                    let _ = maxReadId
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    
+                    var updatedPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
+                    
+                    for story in stories {
+                        if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
+                            if let currentIndex = updatedPeerEntries.firstIndex(where: { $0.id == storedItem.id }) {
+                                if case .item = storedItem {
+                                    if let codedEntry = CodableEntry(storedItem) {
+                                        updatedPeerEntries[currentIndex] = StoryItemsTableEntry(value: codedEntry, id: storedItem.id)
+                                    }
+                                }
+                            } else {
+                                if let codedEntry = CodableEntry(storedItem) {
+                                    updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                                }
+                            }
+                        } else {
+                            if case let .storyItemDeleted(id) = story {
+                                if let index = updatedPeerEntries.firstIndex(where: { $0.id == id }) {
+                                    updatedPeerEntries.remove(at: index)
+                                }
+                            }
+                        }
+                    }
+                    
+                    var subscriptionsOpaqueState: String?
+                    if let state = transaction.getSubscriptionsStoriesState()?.get(Stories.SubscriptionsState.self) {
+                        subscriptionsOpaqueState = state.opaqueState
+                    }
+                    var appliedMaxReadId = maxReadId
+                    if let currentState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
+                        if let appliedMaxReadIdValue = appliedMaxReadId {
+                            appliedMaxReadId = max(appliedMaxReadIdValue, currentState.maxReadId)
+                        } else {
+                            appliedMaxReadId = currentState.maxReadId
+                        }
+                    }
+                    
+                    transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
+                    transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                        subscriptionsOpaqueState: subscriptionsOpaqueState,
+                        maxReadId: appliedMaxReadId ?? 0
+                    )))
+                    
                     for storyItem in stories {
-                        if let parsedItem = _internal_parseApiStoryItem(transaction: transaction, peerId: peerId, apiStory: storyItem) {
+                        if let parsedItem = Stories.StoredItem(apiStoryItem: storyItem, peerId: peerId, transaction: transaction) {
                             storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: parsedItem))
                         } else {
                             storyUpdates.append(InternalStoryUpdate.deleted(peerId: peerId, id: storyItem.id))
@@ -4342,6 +4385,20 @@ func replayFinalState(
                     }
                 }
             case let .UpdateReadStories(peerId, maxId):
+                var appliedMaxReadId = maxId
+                if let currentState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
+                    appliedMaxReadId = max(appliedMaxReadId, currentState.maxReadId)
+                }
+                
+                var subscriptionsOpaqueState: String?
+                if let state = transaction.getSubscriptionsStoriesState()?.get(Stories.SubscriptionsState.self) {
+                    subscriptionsOpaqueState = state.opaqueState
+                }
+                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                    subscriptionsOpaqueState: subscriptionsOpaqueState,
+                    maxReadId: appliedMaxReadId
+                )))
+            
                 storyUpdates.append(InternalStoryUpdate.read(peerId: peerId, maxId: maxId))
         }
     }

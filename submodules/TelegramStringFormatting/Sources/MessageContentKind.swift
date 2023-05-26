@@ -285,7 +285,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
                         return .file(performer)
                     }
                 }
-            case let .Video(_, _, flags):
+            case let .Video(_, _, flags, _):
                 if file.isAnimated {
                     result = .animation
                 } else {

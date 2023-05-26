@@ -244,9 +244,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var powerSavingMonitoringDisposable: Disposable?
     
-    public private(set) var storyListContext: StoryListContext?
-    private var storyListState: StoryListContext.State?
-    private var storyListStateDisposable: Disposable?
+    private var storySubscriptions: EngineStorySubscriptions?
+    
+    private var storySubscriptionsDisposable: Disposable?
+    private var preloadStorySubscriptionsDisposable: Disposable?
+    private var preloadStoryResourceDisposables: [MediaResourceId: Disposable] = [:]
     
     private var storyListHeight: CGFloat
     
@@ -802,7 +804,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.joinForumDisposable.dispose()
         self.actionDisposables.dispose()
         self.powerSavingMonitoringDisposable?.dispose()
-        self.storyListStateDisposable?.dispose()
+        self.storySubscriptionsDisposable?.dispose()
+        self.preloadStorySubscriptionsDisposable?.dispose()
     }
     
     private func updateNavigationMetadata() {
@@ -1379,25 +1382,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         self.chatListDisplayNode.mainContainerNode.openStories = { [weak self] peerId in
-            guard let self, let storyListContext = self.storyListContext else {
+            guard let self else {
                 return
             }
             
-            let _ = (StoryChatContent.stories(
-                context: self.context,
-                storyList: storyListContext,
-                focusItem: nil
-            )
+            let storyContent = StoryContentContextImpl(context: self.context, focusedPeerId: peerId)
+            let _ = (storyContent.state
+            |> filter { $0.slice != nil }
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] initialContent in
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self else {
                     return
                 }
                 
                 let storyContainerScreen = StoryContainerScreen(
                     context: self.context,
-                    initialFocusedId: AnyHashable(peerId),
-                    initialContent: initialContent,
+                    content: storyContent,
                     transitionIn: nil,
                     transitionOut: { _, _ in
                         return nil
@@ -2123,30 +2123,59 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             })
             
-            let storyListContext = self.context.engine.messages.allStories()
-            self.storyListContext = storyListContext
-            self.storyListStateDisposable = (storyListContext.state
-            |> deliverOnMainQueue).start(next: { [weak self] state in
+            self.preloadStorySubscriptionsDisposable = (self.context.engine.messages.preloadStorySubscriptions()
+            |> deliverOnMainQueue).start(next: { [weak self] resources in
                 guard let self else {
                     return
                 }
+                
+                var validIds: [MediaResourceId] = []
+                for (_, info) in resources.sorted(by: { $0.value.priority < $1.value.priority }) {
+                    let resource = info.resource
+                    validIds.append(resource.resource.id)
+                    if self.preloadStoryResourceDisposables[resource.resource.id] == nil {
+                        var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
+                        if let size = info.size {
+                            fetchRange = (0 ..< Int64(size), .default)
+                        }
+                        self.preloadStoryResourceDisposables[resource.resource.id] = fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource, range: fetchRange).start()
+                    }
+                }
+                
+                var removeIds: [MediaResourceId] = []
+                for (id, disposable) in self.preloadStoryResourceDisposables {
+                    if !validIds.contains(id) {
+                        removeIds.append(id)
+                        disposable.dispose()
+                    }
+                }
+                for id in removeIds {
+                    self.preloadStoryResourceDisposables.removeValue(forKey: id)
+                }
+            })
+            self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions()
+            |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
+                guard let self else {
+                    return
+                }
+                
                 var wasEmpty = true
-                if let storyListState = self.storyListState, !storyListState.itemSets.isEmpty {
+                if let storySubscriptions = self.storySubscriptions, !storySubscriptions.items.isEmpty {
                     wasEmpty = false
                 }
-                self.storyListState = state
-                let isEmpty = state.itemSets.isEmpty
+                self.storySubscriptions = storySubscriptions
+                let isEmpty = storySubscriptions.items.isEmpty
                 
                 self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
                     var chatListState = chatListState
                     
                     var peersWithNewStories = Set<EnginePeer.Id>()
-                    for itemSet in state.itemSets {
-                        if itemSet.peerId == self.context.account.peerId {
+                    for item in storySubscriptions.items {
+                        if item.peer.id == self.context.account.peerId {
                             continue
                         }
-                        if itemSet.items.contains(where: { $0.id > itemSet.maxReadId }) {
-                            peersWithNewStories.insert(itemSet.peerId)
+                        if item.hasUnseen {
+                            peersWithNewStories.insert(item.peer.id)
                         }
                     }
                     chatListState.peersWithNewStories = peersWithNewStories
@@ -2156,14 +2185,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 self.storyListHeight = isEmpty ? 0.0 : 94.0
                 
-                let tabsIsEmpty: Bool
-                if let (resolvedItems, displayTabsAtBottom, _) = self.tabContainerData {
-                    tabsIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
-                } else {
-                    tabsIsEmpty = true
-                }
-                
-                self.navigationBar?.secondaryContentHeight = (!tabsIsEmpty ? NavigationBar.defaultSecondaryContentHeight : 0.0)
                 if case .chatList(.root) = self.location {
                     self.searchContentNode?.additionalHeight = 94.0
                 }
@@ -2413,38 +2434,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if let searchContentNode = self.searchContentNode, case .chatList(.root) = self.location {
             if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
                 componentView.storyPeerAction = { [weak self] peer in
-                    guard let self, let storyListContext = self.storyListContext else {
+                    guard let self else {
                         return
                     }
                     
-                    let _ = (StoryChatContent.stories(
-                        context: self.context,
-                        storyList: storyListContext,
-                        focusItem: nil
-                    )
+                    let storyContent = StoryContentContextImpl(context: self.context, focusedPeerId: peer?.id)
+                    let _ = (storyContent.state
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] initialContent in
+                    |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
                         guard let self else {
                             return
                         }
-                        
-                        var transitionIn: StoryContainerScreen.TransitionIn?
-                        if let peer, let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
-                            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
-                                transitionIn = StoryContainerScreen.TransitionIn(
-                                    sourceView: transitionView,
-                                    sourceRect: transitionView.bounds,
-                                    sourceCornerRadius: transitionView.bounds.height * 0.5
-                                )
-                            }
-                        }
-                        
-                        var initialFocusedId: AnyHashable?
-                        if let peer {
-                            initialFocusedId = AnyHashable(peer.id)
-                        }
-                        
-                        if initialFocusedId == AnyHashable(self.context.account.peerId), let firstItem = initialContent.first, firstItem.id == initialFocusedId && firstItem.items.isEmpty {
+                        if let peer, peer.id == self.context.account.peerId, storyContentState.slice == nil {
                             if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
                                 let coordinator = rootController.openStoryCamera(transitionIn: nil, transitionOut: { [weak self] finished in
                                     guard let self else {
@@ -2467,10 +2468,46 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             return
                         }
                         
+                        var transitionIn: StoryContainerScreen.TransitionIn?
+                        if let peer, let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
+                                transitionIn = StoryContainerScreen.TransitionIn(
+                                    sourceView: transitionView,
+                                    sourceRect: transitionView.bounds,
+                                    sourceCornerRadius: transitionView.bounds.height * 0.5
+                                )
+                            }
+                        }
+                        
+                        if let peer, peer.id == self.context.account.peerId {
+                            if let stateValue = storyContent.stateValue {
+                                let _ = stateValue
+                            }
+                            
+                            /*if initialFocusedId == AnyHashable(self.context.account.peerId), let firstItem = initialContent.first, firstItem.id == initialFocusedId && firstItem.items.isEmpty {
+                                if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                                    rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionOut: { [weak self] _ in
+                                        guard let self else {
+                                            return nil
+                                        }
+                                        if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                                            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                                                return StoryCameraTransitionOut(
+                                                    destinationView: transitionView,
+                                                    destinationRect: transitionView.bounds,
+                                                    destinationCornerRadius: transitionView.bounds.height * 0.5
+                                                )
+                                            }
+                                        }
+                                        return nil
+                                    })
+                                }
+                            }*/
+                        }
+                        
                         let storyContainerScreen = StoryContainerScreen(
                             context: self.context,
-                            initialFocusedId: initialFocusedId,
-                            initialContent: initialContent,
+                            content: storyContent,
                             transitionIn: transitionIn,
                             transitionOut: { [weak self] peerId, _ in
                                 guard let self else {
@@ -2502,7 +2539,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 visibleProgress = (1.0 / fraction) * visibleProgress
                 visibleProgress = max(0.0, min(1.0, visibleProgress))
                 
-                componentView.updateStories(offset: visibleProgress, context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, storyListState: self.storyListState, transition: Transition(transition))
+                componentView.updateStories(offset: visibleProgress, context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, storySubscriptions: self.storySubscriptions, transition: Transition(transition))
             }
         }
     }

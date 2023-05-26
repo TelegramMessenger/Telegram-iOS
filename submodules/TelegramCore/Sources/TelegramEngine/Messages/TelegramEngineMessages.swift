@@ -7,6 +7,27 @@ public enum EngineOutgoingMessageContent {
     case text(String)
 }
 
+public final class StoryPreloadInfo {
+    public enum Priority: Comparable {
+        case top(position: Int)
+        case next(position: Int)
+    }
+    
+    public let resource: MediaResourceReference
+    public let size: Int32?
+    public let priority: Priority
+    
+    public init(
+        resource: MediaResourceReference,
+        size: Int32?,
+        priority: Priority
+    ) {
+        self.resource = resource
+        self.size = size
+        self.priority = priority
+    }
+}
+
 public extension TelegramEngine {
     final class Messages {
         private let account: Account
@@ -569,12 +590,251 @@ public extension TelegramEngine {
             }).start()
         }
         
-        public func allStories() -> StoryListContext {
-            return StoryListContext(account: self.account, scope: .all)
+        public func storySubscriptions() -> Signal<EngineStorySubscriptions, NoError> {
+            let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
+            return self.account.postbox.combinedView(keys: [
+                basicPeerKey,
+                PostboxViewKey.storySubscriptions,
+                PostboxViewKey.storiesState(key: .subscriptions)
+            ])
+            |> mapToSignal { views -> Signal<EngineStorySubscriptions, NoError> in
+                guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
+                    return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
+                }
+                guard let storySubscriptionsView = views.views[PostboxViewKey.storySubscriptions] as? StorySubscriptionsView else {
+                    return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
+                }
+                guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                    return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
+                }
+                
+                var additionalDataKeys: [PostboxViewKey] = []
+                
+                additionalDataKeys.append(PostboxViewKey.storyItems(peerId: self.account.peerId))
+                additionalDataKeys.append(PostboxViewKey.storiesState(key: .peer(self.account.peerId)))
+                
+                let subscriptionPeerIds = storySubscriptionsView.peerIds.filter { $0 != self.account.peerId }
+                
+                additionalDataKeys.append(contentsOf: subscriptionPeerIds.map { peerId -> PostboxViewKey in
+                    return PostboxViewKey.storyItems(peerId: peerId)
+                })
+                additionalDataKeys.append(contentsOf: subscriptionPeerIds.map { peerId -> PostboxViewKey in
+                    return PostboxViewKey.storiesState(key: .peer(peerId))
+                })
+                additionalDataKeys.append(contentsOf: subscriptionPeerIds.map { peerId -> PostboxViewKey in
+                    return PostboxViewKey.basicPeer(peerId)
+                })
+                
+                return self.account.postbox.combinedView(keys: additionalDataKeys)
+                |> map { views -> EngineStorySubscriptions in
+                    let _ = accountPeer
+                    
+                    var hasMoreToken: String?
+                    if let subscriptionsState = storiesStateView.value?.get(Stories.SubscriptionsState.self) {
+                        if subscriptionsState.hasMore {
+                            hasMoreToken = subscriptionsState.opaqueState + "_\(subscriptionsState.refreshId)"
+                        } else {
+                            hasMoreToken = nil
+                        }
+                    } else {
+                        hasMoreToken = ""
+                    }
+                    
+                    var accountItem: EngineStorySubscriptions.Item = EngineStorySubscriptions.Item(
+                        peer: EnginePeer(accountPeer),
+                        hasUnseen: false,
+                        storyCount: 0,
+                        lastTimestamp: 0
+                    )
+                    
+                    var items: [EngineStorySubscriptions.Item] = []
+                    
+                    do {
+                        let peerId = self.account.peerId
+                        
+                        if let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView, let stateView = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView {
+                            if let lastEntry = itemsView.items.last?.value.get(Stories.StoredItem.self) {
+                                let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
+                                var hasUnseen = false
+                                if let peerState = peerState {
+                                    hasUnseen = peerState.maxReadId < lastEntry.id
+                                }
+                                
+                                let item = EngineStorySubscriptions.Item(
+                                    peer: EnginePeer(accountPeer),
+                                    hasUnseen: hasUnseen,
+                                    storyCount: itemsView.items.count,
+                                    lastTimestamp: lastEntry.timestamp
+                                )
+                                accountItem = item
+                            }
+                        }
+                    }
+                    
+                    for peerId in subscriptionPeerIds {
+                        guard let peerView = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView else {
+                            continue
+                        }
+                        guard let peer = peerView.peer else {
+                            continue
+                        }
+                        guard let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView else {
+                            continue
+                        }
+                        guard let stateView = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView else {
+                            continue
+                        }
+                        guard let lastEntry = itemsView.items.last?.value.get(Stories.StoredItem.self) else {
+                            continue
+                        }
+                        
+                        let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
+                        var hasUnseen = false
+                        if let peerState = peerState {
+                            hasUnseen = peerState.maxReadId < lastEntry.id
+                        }
+                        
+                        let item = EngineStorySubscriptions.Item(
+                            peer: EnginePeer(peer),
+                            hasUnseen: hasUnseen,
+                            storyCount: itemsView.items.count,
+                            lastTimestamp: lastEntry.timestamp
+                        )
+                        
+                        if peerId == accountPeer.id {
+                            accountItem = item
+                        } else {
+                            items.append(item)
+                        }
+                    }
+                    
+                    items.sort(by: { lhs, rhs in
+                        return lhs.lastTimestamp > rhs.lastTimestamp
+                    })
+                    
+                    return EngineStorySubscriptions(accountItem: accountItem, items: items, hasMoreToken: hasMoreToken)
+                }
+            }
         }
         
-        public func peerStories(id: EnginePeer.Id) -> StoryListContext {
-            return StoryListContext(account: self.account, scope: .peer(id))
+        public func preloadStorySubscriptions() -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> {
+            let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
+            return self.account.postbox.combinedView(keys: [
+                basicPeerKey,
+                PostboxViewKey.storySubscriptions,
+                PostboxViewKey.storiesState(key: .subscriptions)
+            ])
+            |> mapToSignal { views -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> in
+                guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
+                    return .single([:])
+                }
+                guard let storySubscriptionsView = views.views[PostboxViewKey.storySubscriptions] as? StorySubscriptionsView else {
+                    return .single([:])
+                }
+                guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                    return .single([:])
+                }
+                
+                var additionalDataKeys: [PostboxViewKey] = []
+                additionalDataKeys.append(contentsOf: storySubscriptionsView.peerIds.map { peerId -> PostboxViewKey in
+                    return PostboxViewKey.storyItems(peerId: peerId)
+                })
+                additionalDataKeys.append(contentsOf: storySubscriptionsView.peerIds.map { peerId -> PostboxViewKey in
+                    return PostboxViewKey.storiesState(key: .peer(peerId))
+                })
+                additionalDataKeys.append(contentsOf: storySubscriptionsView.peerIds.map { peerId -> PostboxViewKey in
+                    return PostboxViewKey.basicPeer(peerId)
+                })
+                
+                return self.account.postbox.combinedView(keys: additionalDataKeys)
+                |> map { views -> [EngineMediaResource.Id: StoryPreloadInfo] in
+                    let _ = accountPeer
+                    let _ = storySubscriptionsView
+                    let _ = storiesStateView
+                    
+                    var nextPriority: Int = 0
+                    
+                    var resultResources: [EngineMediaResource.Id: StoryPreloadInfo] = [:]
+                    
+                    for peerId in storySubscriptionsView.peerIds {
+                        guard let peerView = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView else {
+                            continue
+                        }
+                        guard let peer = peerView.peer else {
+                            continue
+                        }
+                        guard let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView else {
+                            continue
+                        }
+                        guard let stateView = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView else {
+                            continue
+                        }
+                        
+                        var nextItem: Stories.StoredItem? = itemsView.items.first?.value.get(Stories.StoredItem.self)
+                        
+                        let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
+                        if let peerState = peerState {
+                            if let item = itemsView.items.first(where: { $0.id >= peerState.maxReadId }) {
+                                nextItem = item.value.get(Stories.StoredItem.self)
+                            }
+                        }
+                        
+                        if let peerReference = PeerReference(peer) {
+                            if let nextItem = nextItem, case let .item(item) = nextItem, let media = item.media {
+                                if let image = media as? TelegramMediaImage, let resource = image.representations.last?.resource {
+                                    let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: media), resource: resource)
+                                    resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                                        resource: resource,
+                                        size: nil,
+                                        priority: .top(position: nextPriority)
+                                    )
+                                    nextPriority += 1
+                                } else if let file = media as? TelegramMediaFile {
+                                    if let preview = file.previewRepresentations.last {
+                                        let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: file), resource: preview.resource)
+                                        resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                                            resource: resource,
+                                            size: nil,
+                                            priority: .top(position: nextPriority)
+                                        )
+                                        nextPriority += 1
+                                    }
+                                    
+                                    let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: file), resource: file.resource)
+                                    resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                                        resource: resource,
+                                        size: file.preloadSize,
+                                        priority: .top(position: nextPriority)
+                                    )
+                                    nextPriority += 1
+                                }
+                            }
+                        }
+                    }
+                    
+                    return resultResources
+                }
+            }
+        }
+        
+        public func refreshStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
+            return _internal_getStoriesById(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peerId: peerId, ids: ids)
+            |> mapToSignal { result -> Signal<Never, NoError> in
+                return self.account.postbox.transaction { transaction -> Void in
+                    var currentItems = transaction.getStoryItems(peerId: peerId)
+                    for i in 0 ..< currentItems.count {
+                        if let updatedItem = result.first(where: { $0.id == currentItems[i].id }) {
+                            if case .item = updatedItem {
+                                if let entry = CodableEntry(updatedItem) {
+                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)
+                                }
+                            }
+                        }
+                    }
+                    transaction.setStoryItems(peerId: peerId, items: currentItems)
+                }
+                |> ignoreValues
+            }
         }
         
         public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {

@@ -214,7 +214,7 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
 
         self.colorPixelFormat = .bgra8Unorm
         self.framebufferOnly = true
-        self.presentsWithTransaction = true
+        //self.presentsWithTransaction = true
         self.isPaused = true
         self.delegate = self
         
@@ -294,25 +294,19 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
 
     private func tick() {
         self.updateAnimations()
-        autoreleasepool {
-            self.draw(in: self)
-        }
+        self.draw()
     }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        self.tick()
+
+    override public func draw(_ rect: CGRect) {
+        self.redraw(drawable: self.currentDrawable!)
     }
-    
-    func draw(in view: MTKView) {
+
+    private func redraw(drawable: MTLDrawable) {
         guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
             return
         }
-                        
-        guard let renderPassDescriptor = self.currentRenderPassDescriptor else {
-            return
-        }
+
+        let renderPassDescriptor = self.currentRenderPassDescriptor!
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0.0)
         
@@ -355,13 +349,18 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         renderEncoder.setFragmentBytes(&secondaryParameters, length: MemoryLayout<simd_float3>.size, index: 2)
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)
         renderEncoder.endEncoding()
-        
-        if let currentDrawable = self.currentDrawable {
-            commandBuffer.present(currentDrawable)
-        }
+
+        commandBuffer.present(drawable)
         commandBuffer.commit()
-        //commandBuffer.waitUntilScheduled()
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
         
-        //self.currentDrawable?.present()
+        self.tick()
+    }
+    
+    func draw(in view: MTKView) {
+        
     }
 }

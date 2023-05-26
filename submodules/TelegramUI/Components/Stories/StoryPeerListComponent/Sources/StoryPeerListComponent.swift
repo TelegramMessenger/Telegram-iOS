@@ -13,7 +13,7 @@ public final class StoryPeerListComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
-    public let state: StoryListContext.State?
+    public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
     public let peerAction: (EnginePeer?) -> Void
     
@@ -21,14 +21,14 @@ public final class StoryPeerListComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
-        state: StoryListContext.State?,
+        storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
         peerAction: @escaping (EnginePeer?) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
-        self.state = state
+        self.storySubscriptions = storySubscriptions
         self.collapseFraction = collapseFraction
         self.peerAction = peerAction
     }
@@ -43,7 +43,7 @@ public final class StoryPeerListComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
-        if lhs.state != rhs.state {
+        if lhs.storySubscriptions != rhs.storySubscriptions {
             return false
         }
         if lhs.collapseFraction != rhs.collapseFraction {
@@ -102,13 +102,16 @@ public final class StoryPeerListComponent: Component {
         private var ignoreScrolling: Bool = false
         private var itemLayout: ItemLayout?
         
-        private var sortedItemSets: [StoryListContext.PeerItemSet] = []
+        private var sortedItems: [EngineStorySubscriptions.Item] = []
         private var visibleItems: [EnginePeer.Id: VisibleItem] = [:]
         
         private let title = ComponentView<Empty>()
         
         private var component: StoryPeerListComponent?
         private weak var state: EmptyComponentState?
+        
+        private var requestedLoadMoreToken: String?
+        private let loadMoreDisposable = MetaDisposable()
         
         public override init(frame: CGRect) {
             self.collapsedButton = HighlightableButton()
@@ -153,6 +156,10 @@ public final class StoryPeerListComponent: Component {
             preconditionFailure()
         }
         
+        deinit {
+            self.loadMoreDisposable.dispose()
+        }
+        
         @objc private func collapsedButtonPressed() {
             guard let component = self.component else {
                 return
@@ -182,14 +189,15 @@ public final class StoryPeerListComponent: Component {
             }
             
             var hasStories: Bool = false
-            if let state = component.state, state.itemSets.count > 1 {
+            var storyCount = 0
+            if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
                 hasStories = true
+                storyCount = storySubscriptions.items.count
             }
             
             let titleSpacing: CGFloat = 8.0
             
             let titleText: String
-            let storyCount = self.sortedItemSets.count - 1
             if storyCount <= 0 {
                 titleText = "No Stories"
             } else {
@@ -211,7 +219,7 @@ public final class StoryPeerListComponent: Component {
             
             let collapsedItemWidth: CGFloat = 24.0
             let collapsedItemDistance: CGFloat = 14.0
-            let collapsedItemCount: CGFloat = CGFloat(min(self.sortedItemSets.count - collapseStartIndex, 3))
+            let collapsedItemCount: CGFloat = CGFloat(min(self.sortedItems.count - collapseStartIndex, 3))
             var collapsedContentWidth: CGFloat = 0.0
             if collapsedItemCount > 0 {
                 collapsedContentWidth = 1.0 * collapsedItemWidth + (collapsedItemDistance) * max(0.0, collapsedItemCount - 1.0)
@@ -257,11 +265,9 @@ public final class StoryPeerListComponent: Component {
             let visibleBounds = self.scrollView.bounds
             
             var validIds: [EnginePeer.Id] = []
-            for i in 0 ..< self.sortedItemSets.count {
-                let itemSet = self.sortedItemSets[i]
-                guard let peer = itemSet.peer else {
-                    continue
-                }
+            for i in 0 ..< self.sortedItems.count {
+                let itemSet = self.sortedItems[i]
+                let peer = itemSet.peer
                 
                 let regularItemFrame = itemLayout.frame(at: i)
                 if !visibleBounds.intersects(regularItemFrame) {
@@ -271,30 +277,32 @@ public final class StoryPeerListComponent: Component {
                     //}
                 }
                 
-                validIds.append(itemSet.peerId)
+                validIds.append(itemSet.peer.id)
                 
                 let visibleItem: VisibleItem
                 var itemTransition = transition
-                if let current = self.visibleItems[itemSet.peerId] {
+                if let current = self.visibleItems[itemSet.peer.id] {
                     visibleItem = current
                 } else {
                     itemTransition = .immediate
                     visibleItem = VisibleItem()
-                    self.visibleItems[itemSet.peerId] = visibleItem
+                    self.visibleItems[itemSet.peer.id] = visibleItem
                 }
                 
                 var hasUnseen = false
-                let hasItems = !itemSet.items.isEmpty
+                hasUnseen = itemSet.hasUnseen
+                
+                var hasItems = true
                 var itemProgress: CGFloat?
                 if peer.id == component.context.account.peerId {
-                    itemProgress = component.state?.uploadProgress
-                    //itemProgress = 0.0
-                }
-                
-                for item in itemSet.items {
-                    if item.id > itemSet.maxReadId {
-                        hasUnseen = true
+                    itemProgress = nil
+                    if let storySubscriptions = component.storySubscriptions, let accountItem = storySubscriptions.accountItem {
+                        hasItems = accountItem.storyCount != 0
+                    } else {
+                        hasItems = false
                     }
+                    //itemProgress = component.state?.uploadProgress
+                    //itemProgress = 0.0
                 }
                 
                 let collapsedItemFrame = CGRect(origin: CGPoint(x: collapsedContentOrigin + CGFloat(i - collapseStartIndex) * collapsedItemDistance, y: regularItemFrame.minY + collapsedItemOffsetY), size: CGSize(width: collapsedItemWidth, height: regularItemFrame.height))
@@ -406,24 +414,28 @@ public final class StoryPeerListComponent: Component {
             self.component = component
             self.state = state
             
+            if let storySubscriptions = component.storySubscriptions, let hasMoreToken = storySubscriptions.hasMoreToken {
+                if self.requestedLoadMoreToken != hasMoreToken {
+                    self.requestedLoadMoreToken = hasMoreToken
+                    if let storySubscriptionsContext = component.context.account.storySubscriptionsContext {
+                        storySubscriptionsContext.loadMore()
+                    }
+                }
+            }
+            
             self.collapsedButton.isUserInteractionEnabled = component.collapseFraction >= 1.0 - .ulpOfOne
             
-            self.sortedItemSets.removeAll(keepingCapacity: true)
-            if let state = component.state {
-                if let myIndex = state.itemSets.firstIndex(where: { $0.peerId == component.context.account.peerId }) {
-                    self.sortedItemSets.append(state.itemSets[myIndex])
+            self.sortedItems.removeAll(keepingCapacity: true)
+            if let storySubscriptions = component.storySubscriptions {
+                if let accountItem = storySubscriptions.accountItem {
+                    self.sortedItems.append(accountItem)
                 }
-                for i in 0 ..< 1 {
-                    for itemSet in state.itemSets {
-                        if itemSet.peerId == component.context.account.peerId {
-                            continue
-                        }
-                        if i == 0 {
-                            self.sortedItemSets.append(itemSet)
-                        } else {
-                            self.sortedItemSets.append(StoryListContext.PeerItemSet(peerId: EnginePeer.Id(namespace: itemSet.peerId.namespace, id: EnginePeer.Id.Id._internalFromInt64Value(itemSet.peerId.id._internalGetInt64Value() + Int64(i))), peer: itemSet.peer, maxReadId: itemSet.maxReadId, items: itemSet.items, totalCount: itemSet.totalCount))
-                        }
+                
+                for itemSet in storySubscriptions.items {
+                    if itemSet.peer.id == component.context.account.peerId {
+                        continue
                     }
+                    self.sortedItems.append(itemSet)
                 }
             }
             
@@ -432,7 +444,7 @@ public final class StoryPeerListComponent: Component {
                 containerInsets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0),
                 itemSize: CGSize(width: 60.0, height: 77.0),
                 itemSpacing: 24.0,
-                itemCount: self.sortedItemSets.count
+                itemCount: self.sortedItems.count
             )
             self.itemLayout = itemLayout
             

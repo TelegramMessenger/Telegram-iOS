@@ -177,7 +177,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                         processed = true
                                         break inner
                                     }
-                                case let .Video(_, _, flags):
+                                case let .Video(_, _, flags, _):
                                     if flags.contains(.instantRoundVideo) {
                                         messageText = strings.Message_VideoMessage
                                         processed = true

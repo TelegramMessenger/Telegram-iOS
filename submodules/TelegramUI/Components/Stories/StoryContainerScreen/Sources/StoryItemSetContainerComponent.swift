@@ -32,7 +32,7 @@ public final class StoryItemSetContainerComponent: Component {
     
     public let context: AccountContext
     public let externalState: ExternalState
-    public let initialItemSlice: StoryContentItemSlice
+    public let slice: StoryContentContextState.FocusedSlice
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let containerInsets: UIEdgeInsets
@@ -42,13 +42,14 @@ public final class StoryItemSetContainerComponent: Component {
     public let hideUI: Bool
     public let presentController: (ViewController) -> Void
     public let close: () -> Void
-    public let navigateToItemSet: (NavigationDirection) -> Void
+    public let navigate: (NavigationDirection) -> Void
+    public let delete: () -> Void
     public let controller: () -> ViewController?
     
     public init(
         context: AccountContext,
         externalState: ExternalState,
-        initialItemSlice: StoryContentItemSlice,
+        slice: StoryContentContextState.FocusedSlice,
         theme: PresentationTheme,
         strings: PresentationStrings,
         containerInsets: UIEdgeInsets,
@@ -58,12 +59,13 @@ public final class StoryItemSetContainerComponent: Component {
         hideUI: Bool,
         presentController: @escaping (ViewController) -> Void,
         close: @escaping () -> Void,
-        navigateToItemSet: @escaping (NavigationDirection) -> Void,
+        navigate: @escaping (NavigationDirection) -> Void,
+        delete: @escaping () -> Void,
         controller: @escaping () -> ViewController?
     ) {
         self.context = context
         self.externalState = externalState
-        self.initialItemSlice = initialItemSlice
+        self.slice = slice
         self.theme = theme
         self.strings = strings
         self.containerInsets = containerInsets
@@ -73,7 +75,8 @@ public final class StoryItemSetContainerComponent: Component {
         self.hideUI = hideUI
         self.presentController = presentController
         self.close = close
-        self.navigateToItemSet = navigateToItemSet
+        self.navigate = navigate
+        self.delete = delete
         self.controller = controller
     }
     
@@ -81,7 +84,7 @@ public final class StoryItemSetContainerComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.initialItemSlice !== rhs.initialItemSlice {
+        if lhs.slice != rhs.slice {
             return false
         }
         if lhs.theme !== rhs.theme {
@@ -170,10 +173,6 @@ public final class StoryItemSetContainerComponent: Component {
         
         var itemLayout: ItemLayout?
         var ignoreScrolling: Bool = false
-        
-        var focusedItemId: AnyHashable?
-        var currentSlice: StoryContentItemSlice?
-        var currentSliceDisposable: Disposable?
         
         var visibleItems: [AnyHashable: VisibleItem] = [:]
         
@@ -330,7 +329,6 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         deinit {
-            self.currentSliceDisposable?.dispose()
             self.audioRecorderDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
@@ -350,6 +348,18 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         
+        func rewindCurrentItem() {
+            guard let component = self.component else {
+                return
+            }
+            guard let visibleItem = self.visibleItems[component.slice.item.id] else {
+                return
+            }
+            if let itemView = visibleItem.view.view as? StoryContentItem.View {
+                itemView.rewind()
+            }
+        }
+        
         @objc public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if otherGestureRecognizer is UIPanGestureRecognizer {
                 return true
@@ -358,7 +368,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-            if case .ended = recognizer.state, let currentSlice = self.currentSlice, let focusedItemId = self.focusedItemId, let currentIndex = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }), let itemLayout = self.itemLayout {
+            if case .ended = recognizer.state, let component = self.component, let itemLayout = self.itemLayout {
                 if hasFirstResponder(self) {
                     self.displayReactions = false
                     self.endEditing(true)
@@ -368,39 +378,15 @@ public final class StoryItemSetContainerComponent: Component {
                 } else {
                     let point = recognizer.location(in: self)
                     
-                    var nextIndex: Int
+                    var direction: NavigationDirection?
                     if point.x < itemLayout.size.width * 0.25 {
-                        nextIndex = currentIndex - 1
+                        direction = .previous
                     } else {
-                        nextIndex = currentIndex + 1
+                        direction = .next
                     }
-                    nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
-                    if nextIndex != currentIndex {
-                        let focusedItemId = currentSlice.items[nextIndex].id
-                        self.focusedItemId = focusedItemId
-                        
-                        currentSlice.items[nextIndex].markAsSeen?()
-                        
-                        self.state?.updated(transition: .immediate)
-                        
-                        self.currentSliceDisposable?.dispose()
-                        self.currentSliceDisposable = (currentSlice.update(
-                            currentSlice,
-                            focusedItemId
-                        )
-                        |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
-                            guard let self else {
-                                return
-                            }
-                            self.currentSlice = contentSlice
-                            self.state?.updated(transition: .immediate)
-                        })
-                    } else {
-                        if point.x < itemLayout.size.width * 0.25 {
-                            self.component?.navigateToItemSet(.previous)
-                        } else {
-                            self.component?.navigateToItemSet(.next)
-                        }
+                    
+                    if let direction {
+                        component.navigate(direction)
                     }
                 }
             }
@@ -432,83 +418,57 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var validIds: [AnyHashable] = []
-            if let focusedItemId = self.focusedItemId, let focusedItem = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) {
-                validIds.append(focusedItemId)
+            let focusedItem = component.slice.item
+            
+            validIds.append(focusedItem.id)
                 
-                var itemTransition = transition
-                let visibleItem: VisibleItem
-                if let current = self.visibleItems[focusedItemId] {
-                    visibleItem = current
-                } else {
-                    itemTransition = .immediate
-                    visibleItem = VisibleItem()
-                    self.visibleItems[focusedItemId] = visibleItem
-                }
-                
-                let _ = visibleItem.view.update(
-                    transition: itemTransition,
-                    component: focusedItem.component,
-                    environment: {
-                        StoryContentItem.Environment(
-                            externalState: visibleItem.externalState,
-                            presentationProgressUpdated: { [weak self, weak visibleItem] progress in
-                                guard let self = self else {
-                                    return
-                                }
-                                guard let visibleItem else {
-                                    return
-                                }
-                                visibleItem.currentProgress = progress
-                                
-                                if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
-                                    navigationStripView.updateCurrentItemProgress(value: progress, transition: .immediate)
-                                }
-                                if progress >= 1.0 && !visibleItem.requestedNext {
-                                    visibleItem.requestedNext = true
-                                    
-                                    if let currentSlice = self.currentSlice, let focusedItemId = self.focusedItemId, let currentIndex = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
-                                        var nextIndex = currentIndex + 1
-                                        nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
-                                        if nextIndex != currentIndex {
-                                            let focusedItemId = currentSlice.items[nextIndex].id
-                                            self.focusedItemId = focusedItemId
-                                            
-                                            currentSlice.items[nextIndex].markAsSeen?()
-                                            
-                                            self.state?.updated(transition: .immediate)
-                                            
-                                            self.currentSliceDisposable?.dispose()
-                                            self.currentSliceDisposable = (currentSlice.update(
-                                                currentSlice,
-                                                focusedItemId
-                                            )
-                                            |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
-                                                guard let self else {
-                                                    return
-                                                }
-                                                self.currentSlice = contentSlice
-                                                self.state?.updated(transition: .immediate)
-                                            })
-                                        } else {
-                                            self.component?.navigateToItemSet(.next)
-                                        }
-                                    }
-                                }
+            var itemTransition = transition
+            let visibleItem: VisibleItem
+            if let current = self.visibleItems[focusedItem.id] {
+                visibleItem = current
+            } else {
+                itemTransition = .immediate
+                visibleItem = VisibleItem()
+                self.visibleItems[focusedItem.id] = visibleItem
+            }
+            
+            let _ = visibleItem.view.update(
+                transition: itemTransition,
+                component: focusedItem.component,
+                environment: {
+                    StoryContentItem.Environment(
+                        externalState: visibleItem.externalState,
+                        presentationProgressUpdated: { [weak self, weak visibleItem] progress in
+                            guard let self = self, let component = self.component else {
+                                return
                             }
-                        )
-                    },
-                    containerSize: itemLayout.size
-                )
-                if let view = visibleItem.view.view {
-                    if view.superview == nil {
-                        view.isUserInteractionEnabled = false
-                        self.contentContainerView.insertSubview(view, at: 0)
-                    }
-                    itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
-                    
-                    if let view = view as? StoryContentItem.View {
-                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil)
-                    }
+                            guard let visibleItem else {
+                                return
+                            }
+                            visibleItem.currentProgress = progress
+                            
+                            if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
+                                navigationStripView.updateCurrentItemProgress(value: progress, transition: .immediate)
+                            }
+                            if progress >= 1.0 && !visibleItem.requestedNext {
+                                visibleItem.requestedNext = true
+                                
+                                component.navigate(.next)
+                            }
+                        }
+                    )
+                },
+                containerSize: itemLayout.size
+            )
+            if let view = visibleItem.view.view {
+                if view.superview == nil {
+                    view.isUserInteractionEnabled = false
+                    self.contentContainerView.insertSubview(view, at: 0)
+                }
+                itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
+                
+                if let view = view as? StoryContentItem.View {
+                    view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil)
                 }
             }
             
@@ -586,7 +546,7 @@ public final class StoryItemSetContainerComponent: Component {
                     duration: 0.3
                 )
                 
-                if let focusedItemId = self.focusedItemId, let visibleItemView = self.visibleItems[focusedItemId]?.view.view {
+                if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view {
                     let innerScale = innerSourceLocalFrame.width / visibleItemView.bounds.width
                     let innerFromFrame = CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: CGSize(width: innerSourceLocalFrame.width, height: visibleItemView.bounds.height * innerScale))
                     
@@ -657,7 +617,7 @@ public final class StoryItemSetContainerComponent: Component {
                     removeOnCompletion: false
                 )
                 
-                if let focusedItemId = self.focusedItemId, let visibleItemView = self.visibleItems[focusedItemId]?.view.view {
+                if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view {
                     let innerScale = innerSourceLocalFrame.width / visibleItemView.bounds.width
                     let innerFromFrame = CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: CGSize(width: innerSourceLocalFrame.width, height: visibleItemView.bounds.height * innerScale))
                     
@@ -680,24 +640,6 @@ public final class StoryItemSetContainerComponent: Component {
             let isFirstTime = self.component == nil
             
             if self.component == nil {
-                self.focusedItemId = component.initialItemSlice.focusedItemId ?? component.initialItemSlice.items.first?.id
-                self.currentSlice = component.initialItemSlice
-                
-                self.currentSliceDisposable?.dispose()
-                if let focusedItemId = self.focusedItemId {
-                    self.currentSliceDisposable = (component.initialItemSlice.update(
-                        component.initialItemSlice,
-                        focusedItemId
-                    )
-                    |> deliverOnMainQueue).start(next: { [weak self] contentSlice in
-                        guard let self else {
-                            return
-                        }
-                        self.currentSlice = contentSlice
-                        self.state?.updated(transition: .immediate)
-                    })
-                }
-                
                 let _ = (allowedStoryReactions(context: component.context)
                 |> deliverOnMainQueue).start(next: { [weak self] reactionItems in
                     guard let self, let component = self.component else {
@@ -716,6 +658,10 @@ public final class StoryItemSetContainerComponent: Component {
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                     }
                 })
+            }
+            
+            if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
+                let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id).start()
             }
             
             if self.topContentGradientLayer.colors == nil {
@@ -757,18 +703,6 @@ public final class StoryItemSetContainerComponent: Component {
                 self.bottomContentGradientLayer.type = .axial
                 
                 self.contentDimLayer.backgroundColor = UIColor(white: 0.0, alpha: 0.3).cgColor
-            }
-            
-            if let focusedItemId = self.focusedItemId {
-                if let currentSlice = self.currentSlice {
-                    if !currentSlice.items.contains(where: { $0.id == focusedItemId }) {
-                        self.focusedItemId = currentSlice.items.first?.id
-                        
-                        currentSlice.items.first?.markAsSeen?()
-                    }
-                } else {
-                    self.focusedItemId = nil
-                }
             }
             
             //self.updatePreloads()
@@ -854,7 +788,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 return true
                             }
                             
-                            self.displayReactions = true
+                            self.displayReactions = !self.displayReactions
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                         })
                     },
@@ -874,9 +808,7 @@ public final class StoryItemSetContainerComponent: Component {
             )
             
             var currentItem: StoryContentItem?
-            if let focusedItemId = self.focusedItemId, let currentSlice = self.currentSlice, let item = currentSlice.items.first(where: { $0.id == focusedItemId }) {
-                currentItem = item
-            }
+            currentItem = component.slice.item
             
             let footerPanelSize = self.footerPanel.update(
                 transition: transition,
@@ -884,7 +816,7 @@ public final class StoryItemSetContainerComponent: Component {
                     context: component.context,
                     storyItem: currentItem?.storyItem,
                     deleteAction: { [weak self] in
-                        guard let self, let component = self.component, let focusedItemId = self.focusedItemId else {
+                        guard let self, let component = self.component else {
                             return
                         }
                         
@@ -899,8 +831,9 @@ public final class StoryItemSetContainerComponent: Component {
                                     guard let self, let component = self.component else {
                                         return
                                     }
+                                    component.delete()
                                     
-                                    if let currentSlice = self.currentSlice, let index = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
+                                    /*if let currentSlice = self.currentSlice, let index = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
                                         let item = currentSlice.items[index]
                                         
                                         if currentSlice.items.count == 1 {
@@ -914,36 +847,11 @@ public final class StoryItemSetContainerComponent: Component {
                                             
                                             currentSlice.items[nextIndex].markAsSeen?()
                                             
-                                            /*var updatedItems: [StoryContentItem] = []
-                                            for item in currentSlice.items {
-                                                if item.id != focusedItemId {
-                                                    updatedItems.append(StoryContentItem(
-                                                        id: item.id,
-                                                        position: updatedItems.count,
-                                                        component: item.component,
-                                                        centerInfoComponent: item.centerInfoComponent,
-                                                        rightInfoComponent: item.rightInfoComponent,
-                                                        targetMessageId: item.targetMessageId,
-                                                        preload: item.preload,
-                                                        delete: item.delete,
-                                                        hasLike: item.hasLike,
-                                                        isMy: item.isMy
-                                                    ))
-                                                }
-                                            }*/
-                                            
-                                            /*self.currentSlice = StoryContentItemSlice(
-                                                id: currentSlice.id,
-                                                focusedItemId: nil,
-                                                items: updatedItems,
-                                                totalCount: currentSlice.totalCount - 1,
-                                                update: currentSlice.update
-                                            )*/
                                             self.state?.updated(transition: .immediate)
                                         }
                                         
                                         item.delete?()
-                                    }
+                                    }*/
                                 })
                             ]),
                             ActionSheetItemGroup(items: [
@@ -970,7 +878,9 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         
-                        var items: [ContextMenuItem] = []
+                        let _ = controller
+                        
+                        /*var items: [ContextMenuItem] = []
                         
                         items.append(.action(ContextMenuActionItem(text: "Who can see", textLayout: .secondLineWithValue("Everyone"), icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.contextMenu.primaryColor)
@@ -1029,7 +939,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.contextController = contextController
                         self.updateIsProgressPaused()
-                        controller.present(contextController, in: .window(.root))
+                        controller.present(contextController, in: .window(.root))*/
                     }
                 )),
                 environment: {},
@@ -1065,15 +975,16 @@ public final class StoryItemSetContainerComponent: Component {
                 transition.setAlpha(view: self.closeButton, alpha: component.hideUI ? 0.0 : 1.0)
             }
             
-            var focusedItem: StoryContentItem?
-            if let currentSlice = self.currentSlice, let item = currentSlice.items.first(where: { $0.id == self.focusedItemId }) {
+            let focusedItem: StoryContentItem? = component.slice.item
+            let _ = focusedItem
+            /*if let currentSlice = self.currentSlice, let item = currentSlice.items.first(where: { $0.id == self.focusedItemId }) {
                 focusedItem = item
-            }
+            }*/
             
             var currentRightInfoItem: InfoItem?
-            if let currentSlice = self.currentSlice, let item = currentSlice.items.first(where: { $0.id == self.focusedItemId }) {
-                if let rightInfoComponent = item.rightInfoComponent {
-                    if let rightInfoItem = self.rightInfoItem, rightInfoItem.component == item.rightInfoComponent {
+            if let focusedItem {
+                if let rightInfoComponent = focusedItem.rightInfoComponent {
+                    if let rightInfoItem = self.rightInfoItem, rightInfoItem.component == focusedItem.rightInfoComponent {
                         currentRightInfoItem = rightInfoItem
                     } else {
                         currentRightInfoItem = InfoItem(component: rightInfoComponent)
@@ -1092,9 +1003,9 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var currentCenterInfoItem: InfoItem?
-            if let currentSlice = self.currentSlice, let item = currentSlice.items.first(where: { $0.id == self.focusedItemId }) {
-                if let centerInfoComponent = item.centerInfoComponent {
-                    if let centerInfoItem = self.centerInfoItem, centerInfoItem.component == item.centerInfoComponent {
+            if let focusedItem {
+                if let centerInfoComponent = focusedItem.centerInfoComponent {
+                    if let centerInfoItem = self.centerInfoItem, centerInfoItem.component == focusedItem.centerInfoComponent {
                         currentCenterInfoItem = centerInfoItem
                     } else {
                         currentCenterInfoItem = InfoItem(component: centerInfoComponent)
@@ -1389,17 +1300,17 @@ public final class StoryItemSetContainerComponent: Component {
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
-            if let currentSlice = self.currentSlice, let focusedItemId = self.focusedItemId, let visibleItem = self.visibleItems[focusedItemId] {
+            if let focusedItem, let visibleItem = self.visibleItems[focusedItem.storyItem.id] {
                 let navigationStripSideInset: CGFloat = 8.0
                 let navigationStripTopInset: CGFloat = 8.0
                 
-                let index = currentSlice.items.first(where: { $0.id == self.focusedItemId })?.position ?? 0
+                let index = focusedItem.position
                 
                 let _ = self.navigationStrip.update(
                     transition: transition,
                     component: AnyComponent(MediaNavigationStripComponent(
-                        index: max(0, min(index, currentSlice.totalCount - 1)),
-                        count: currentSlice.totalCount
+                        index: max(0, min(index, component.slice.totalCount - 1)),
+                        count: component.slice.totalCount
                     )),
                     environment: {
                         MediaNavigationStripComponent.EnvironmentType(
@@ -1417,53 +1328,45 @@ public final class StoryItemSetContainerComponent: Component {
                     transition.setAlpha(view: navigationStripView, alpha: component.hideUI ? 0.0 : 1.0)
                 }
                 
-                if let focusedItemId = self.focusedItemId, let focusedItem = self.currentSlice?.items.first(where: { $0.id == focusedItemId }) {
-                    var items: [StoryActionsComponent.Item] = []
-                    let _ = focusedItem
-                    /*if !focusedItem.isMy {
-                        items.append(StoryActionsComponent.Item(
-                            kind: .like,
-                            isActivated: focusedItem.hasLike
-                        ))
-                    }*/
-                    items.append(StoryActionsComponent.Item(
-                        kind: .share,
-                        isActivated: false
-                    ))
-                    
-                    let inlineActionsSize = self.inlineActions.update(
-                        transition: transition,
-                        component: AnyComponent(StoryActionsComponent(
-                            items: items,
-                            action: { [weak self] item in
-                                guard let self else {
-                                    return
-                                }
-                                self.sendMessageContext.performInlineAction(view: self, item: item)
+                var items: [StoryActionsComponent.Item] = []
+                let _ = focusedItem
+                items.append(StoryActionsComponent.Item(
+                    kind: .share,
+                    isActivated: false
+                ))
+                
+                let inlineActionsSize = self.inlineActions.update(
+                    transition: transition,
+                    component: AnyComponent(StoryActionsComponent(
+                        items: items,
+                        action: { [weak self] item in
+                            guard let self else {
+                                return
                             }
-                        )),
-                        environment: {},
-                        containerSize: contentFrame.size
-                    )
-                    if let inlineActionsView = self.inlineActions.view {
-                        if inlineActionsView.superview == nil {
-                            self.contentContainerView.addSubview(inlineActionsView)
+                            self.sendMessageContext.performInlineAction(view: self, item: item)
                         }
-                        transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.width - 10.0 - inlineActionsSize.width, y: contentFrame.height - 20.0 - inlineActionsSize.height), size: inlineActionsSize))
-                        
-                        var inlineActionsAlpha: CGFloat = inputPanelIsOverlay ? 0.0 : 1.0
-                        if self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil {
-                            inlineActionsAlpha = 0.0
-                        }
-                        if self.reactionItems != nil {
-                            inlineActionsAlpha = 0.0
-                        }
-                        if component.hideUI {
-                            inlineActionsAlpha = 0.0
-                        }
-                        
-                        transition.setAlpha(view: inlineActionsView, alpha: inlineActionsAlpha)
+                    )),
+                    environment: {},
+                    containerSize: contentFrame.size
+                )
+                if let inlineActionsView = self.inlineActions.view {
+                    if inlineActionsView.superview == nil {
+                        self.contentContainerView.addSubview(inlineActionsView)
                     }
+                    transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.width - 10.0 - inlineActionsSize.width, y: contentFrame.height - 20.0 - inlineActionsSize.height), size: inlineActionsSize))
+                    
+                    var inlineActionsAlpha: CGFloat = inputPanelIsOverlay ? 0.0 : 1.0
+                    if self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil {
+                        inlineActionsAlpha = 0.0
+                    }
+                    if self.displayReactions {
+                        inlineActionsAlpha = 0.0
+                    }
+                    if component.hideUI {
+                        inlineActionsAlpha = 0.0
+                    }
+                    
+                    transition.setAlpha(view: inlineActionsView, alpha: inlineActionsAlpha)
                 }
             }
             

@@ -50,7 +50,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             var isAnimated = false
             inner: for attribute in file.attributes {
                 switch attribute {
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             refinedTag = .voiceOrInstantVideo
                         } else {
@@ -250,6 +250,8 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                     var replyIds = ReferencedReplyMessageIds()
                     replyIds.add(sourceId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
                     return (replyIds, [])
+                case .messageReplyStoryHeader:
+                    break
                 }
             }
         case .messageEmpty:
@@ -262,6 +264,8 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                     var replyIds = ReferencedReplyMessageIds()
                     replyIds.add(sourceId: MessageId(peerId: chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
                     return (replyIds, [])
+                case .messageReplyStoryHeader:
+                    break
                 }
             }
     }
@@ -479,6 +483,8 @@ extension StoreMessage {
                             }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    case .messageReplyStoryHeader:
+                        break
                     }
                 }
             
@@ -728,6 +734,8 @@ extension StoreMessage {
                             break
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    case .messageReplyStoryHeader:
+                        break
                     }
                 } else {
                     switch action {

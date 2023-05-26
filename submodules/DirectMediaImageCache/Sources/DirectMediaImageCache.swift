@@ -351,11 +351,11 @@ public final class DirectMediaImageCache {
         return self.getProgressiveSize(mediaReference: MediaReference.message(message: MessageReference(message), media: file).abstract, width: width, representations: file.previewRepresentations)
     }
     
-    private func getResource(peer: PeerReference, story: StoryListContext.Item, image: TelegramMediaImage, width: Int) -> (resource: MediaResourceReference, size: Int64)? {
+    private func getResource(peer: PeerReference, story: EngineStoryItem, image: TelegramMediaImage, width: Int) -> (resource: MediaResourceReference, size: Int64)? {
         return self.getProgressiveSize(mediaReference: MediaReference.story(peer: peer, id: story.id, media: image).abstract, width: width, representations: image.representations)
     }
 
-    private func getResource(peer: PeerReference, story: StoryListContext.Item, file: TelegramMediaFile, width: Int) -> (resource: MediaResourceReference, size: Int64)? {
+    private func getResource(peer: PeerReference, story: EngineStoryItem, file: TelegramMediaFile, width: Int) -> (resource: MediaResourceReference, size: Int64)? {
         return self.getProgressiveSize(mediaReference: MediaReference.story(peer: peer, id: story.id, media: file).abstract, width: width, representations: file.previewRepresentations)
     }
 
@@ -445,7 +445,7 @@ public final class DirectMediaImageCache {
         }
     }
     
-    private func getImageSynchronous(peer: PeerReference, story: StoryListContext.Item, userLocation: MediaResourceUserLocation, media: Media, width: Int, aspectRatio: CGFloat, possibleWidths: [Int], includeBlurred: Bool) -> GetMediaResult? {
+    private func getImageSynchronous(peer: PeerReference, story: EngineStoryItem, userLocation: MediaResourceUserLocation, media: Media, width: Int, aspectRatio: CGFloat, possibleWidths: [Int], includeBlurred: Bool) -> GetMediaResult? {
         var immediateThumbnailData: Data?
         var resource: (resource: MediaResourceReference, size: Int64)?
         if let image = media as? TelegramMediaImage {
@@ -492,7 +492,7 @@ public final class DirectMediaImageCache {
         return GetMediaResult(image: resultImage, blurredImage: blurredImage, loadSignal: self.getLoadSignal(width: width, aspectRatio: aspectRatio, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
     }
 
-    public func getImage(peer: PeerReference, story: StoryListContext.Item, media: Media, width: Int, aspectRatio: CGFloat, possibleWidths: [Int], includeBlurred: Bool = false, synchronous: Bool) -> GetMediaResult? {
+    public func getImage(peer: PeerReference, story: EngineStoryItem, media: Media, width: Int, aspectRatio: CGFloat, possibleWidths: [Int], includeBlurred: Bool = false, synchronous: Bool) -> GetMediaResult? {
         if synchronous {
             return self.getImageSynchronous(peer: peer, story: story, userLocation: .peer(peer.id), media: media, width: width, aspectRatio: aspectRatio, possibleWidths: possibleWidths, includeBlurred: includeBlurred)
         } else {

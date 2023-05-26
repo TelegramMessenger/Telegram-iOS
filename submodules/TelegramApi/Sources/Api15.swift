@@ -1,4 +1,104 @@
 public extension Api {
+    enum NotifyPeer: TypeConstructorDescription {
+        case notifyBroadcasts
+        case notifyChats
+        case notifyForumTopic(peer: Api.Peer, topMsgId: Int32)
+        case notifyPeer(peer: Api.Peer)
+        case notifyUsers
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .notifyBroadcasts:
+                    if boxed {
+                        buffer.appendInt32(-703403793)
+                    }
+                    
+                    break
+                case .notifyChats:
+                    if boxed {
+                        buffer.appendInt32(-1073230141)
+                    }
+                    
+                    break
+                case .notifyForumTopic(let peer, let topMsgId):
+                    if boxed {
+                        buffer.appendInt32(577659656)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(topMsgId, buffer: buffer, boxed: false)
+                    break
+                case .notifyPeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-1613493288)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+                case .notifyUsers:
+                    if boxed {
+                        buffer.appendInt32(-1261946036)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .notifyBroadcasts:
+                return ("notifyBroadcasts", [])
+                case .notifyChats:
+                return ("notifyChats", [])
+                case .notifyForumTopic(let peer, let topMsgId):
+                return ("notifyForumTopic", [("peer", peer as Any), ("topMsgId", topMsgId as Any)])
+                case .notifyPeer(let peer):
+                return ("notifyPeer", [("peer", peer as Any)])
+                case .notifyUsers:
+                return ("notifyUsers", [])
+    }
+    }
+    
+        public static func parse_notifyBroadcasts(_ reader: BufferReader) -> NotifyPeer? {
+            return Api.NotifyPeer.notifyBroadcasts
+        }
+        public static func parse_notifyChats(_ reader: BufferReader) -> NotifyPeer? {
+            return Api.NotifyPeer.notifyChats
+        }
+        public static func parse_notifyForumTopic(_ reader: BufferReader) -> NotifyPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.NotifyPeer.notifyForumTopic(peer: _1!, topMsgId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_notifyPeer(_ reader: BufferReader) -> NotifyPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.NotifyPeer.notifyPeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_notifyUsers(_ reader: BufferReader) -> NotifyPeer? {
+            return Api.NotifyPeer.notifyUsers
+        }
+    
+    }
+}
+public extension Api {
     enum Page: TypeConstructorDescription {
         case page(flags: Int32, url: String, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document], views: Int32?)
     
@@ -882,114 +982,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.PageBlock.pageBlockVideo(flags: _1!, videoId: _2!, caption: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum PageCaption: TypeConstructorDescription {
-        case pageCaption(text: Api.RichText, credit: Api.RichText)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .pageCaption(let text, let credit):
-                    if boxed {
-                        buffer.appendInt32(1869903447)
-                    }
-                    text.serialize(buffer, true)
-                    credit.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .pageCaption(let text, let credit):
-                return ("pageCaption", [("text", text as Any), ("credit", credit as Any)])
-    }
-    }
-    
-        public static func parse_pageCaption(_ reader: BufferReader) -> PageCaption? {
-            var _1: Api.RichText?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.RichText
-            }
-            var _2: Api.RichText?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.RichText
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.PageCaption.pageCaption(text: _1!, credit: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum PageListItem: TypeConstructorDescription {
-        case pageListItemBlocks(blocks: [Api.PageBlock])
-        case pageListItemText(text: Api.RichText)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .pageListItemBlocks(let blocks):
-                    if boxed {
-                        buffer.appendInt32(635466748)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(blocks.count))
-                    for item in blocks {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .pageListItemText(let text):
-                    if boxed {
-                        buffer.appendInt32(-1188055347)
-                    }
-                    text.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .pageListItemBlocks(let blocks):
-                return ("pageListItemBlocks", [("blocks", blocks as Any)])
-                case .pageListItemText(let text):
-                return ("pageListItemText", [("text", text as Any)])
-    }
-    }
-    
-        public static func parse_pageListItemBlocks(_ reader: BufferReader) -> PageListItem? {
-            var _1: [Api.PageBlock]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageBlock.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.PageListItem.pageListItemBlocks(blocks: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_pageListItemText(_ reader: BufferReader) -> PageListItem? {
-            var _1: Api.RichText?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.RichText
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.PageListItem.pageListItemText(text: _1!)
             }
             else {
                 return nil

@@ -659,8 +659,8 @@ public final class MessageInputPanelComponent: Component {
                     transition.setPosition(view: reactionButtonView, position: reactionIconFrame.center)
                     transition.setBounds(view: reactionButtonView, bounds: CGRect(origin: CGPoint(), size: reactionIconFrame.size))
                     
-                    transition.setAlpha(view: reactionButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
-                    transition.setScale(view: reactionButtonView, scale: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.1 : 1.0)
+                    transition.setAlpha(view: reactionButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing || self.textFieldExternalState.isEditing) ? 0.0 : 1.0)
+                    transition.setScale(view: reactionButtonView, scale: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing || self.textFieldExternalState.isEditing) ? 0.1 : 1.0)
                     
                     fieldIconNextX -= reactionButtonSize.width + 2.0
                 }

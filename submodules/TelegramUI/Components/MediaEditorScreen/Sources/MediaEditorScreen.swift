@@ -1259,16 +1259,30 @@ public final class MediaEditorScreen: ViewController {
                     view.animateOut(to: .gallery)
                 }
                 let destinationLocalFrame = destinationView.convert(transitionOut.destinationRect, to: self.view)
-                let destinatinoScale = destinationLocalFrame.width / self.previewContainerView.frame.width
+                let destinationScale = destinationLocalFrame.width / self.previewContainerView.frame.width
                 let destinationAspectRatio = destinationLocalFrame.height / destinationLocalFrame.width
                 
                 var destinationSnapshotView: UIView?
                 if let destinationNode = destinationView.asyncdisplaykit_node, destinationNode is AvatarNode, let snapshotView = destinationView.snapshotView(afterScreenUpdates: false) {
                     destinationView.isHidden = true
                     
+                    snapshotView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
                     let snapshotScale = self.previewContainerView.bounds.width / snapshotView.frame.width
-                    snapshotView.center = CGPoint(x: self.previewContainerView.bounds.width / 2.0, y: self.previewContainerView.bounds.height / 2.0)
-                    snapshotView.transform = CGAffineTransform(scaleX: snapshotScale, y: snapshotScale)
+                    snapshotView.center = CGPoint(x: 0.0, y: self.previewContainerView.bounds.height / 2.0)
+                                                        
+                    let snapshotTransform = CATransform3DMakeScale(0.001, snapshotScale, 1.0)
+                    //snapshotTransform.m34 = 1.0 / -500
+                    //snapshotTransform = CATransform3DRotate(snapshotTransform, -90.0 * .pi / 180.0, 0.0, 1.0, 0.0)
+                    
+                    let targetTransform = CATransform3DMakeScale(snapshotScale, snapshotScale, 1.0)
+                    //snapshotTransform
+                    //targetTransform = CATransform3DRotate(targetTransform, 0.0, 0.0, 1.0, 0.0)
+                    
+                    snapshotView.layer.transform = snapshotTransform
+                    Queue.mainQueue().after(0.15) {
+                        snapshotView.layer.transform = targetTransform
+                        snapshotView.layer.animate(from: NSValue(caTransform3D: snapshotTransform), to: NSValue(caTransform3D: targetTransform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+                    }
                     
                     self.previewContainerView.addSubview(snapshotView)
                     destinationSnapshotView = snapshotView
@@ -1279,7 +1293,7 @@ public final class MediaEditorScreen: ViewController {
                     destinationSnapshotView?.removeFromSuperview()
                     completion()
                 })
-                self.previewContainerView.layer.animateScale(from: 1.0, to: destinatinoScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                self.previewContainerView.layer.animateScale(from: 1.0, to: destinationScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width * destinationAspectRatio) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width * destinationAspectRatio)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 
                 let targetCornerRadius: CGFloat
@@ -1301,7 +1315,7 @@ public final class MediaEditorScreen: ViewController {
                 if let componentView = self.componentHost.view {
                     componentView.clipsToBounds = true
                     componentView.layer.animatePosition(from: componentView.center, to: destinationLocalFrame.center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    componentView.layer.animateScale(from: 1.0, to: destinatinoScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    componentView.layer.animateScale(from: 1.0, to: destinationScale, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     componentView.layer.animateBounds(from: componentView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (componentView.bounds.height - componentView.bounds.width) / 2.0), size: CGSize(width: componentView.bounds.width, height: componentView.bounds.width)), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     componentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     componentView.layer.animate(
@@ -2031,6 +2045,9 @@ public final class MediaEditorScreen: ViewController {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
             return
         }
+        
+        let codableEntities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }.compactMap({ CodableDrawingEntity(entity: $0) })
+        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
         let tempVideoPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
         let saveToPhotos: (String, Bool) -> Void = { path, isVideo in

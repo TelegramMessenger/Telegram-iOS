@@ -360,16 +360,17 @@ public extension Api.storage {
 }
 public extension Api.stories {
     enum AllStories: TypeConstructorDescription {
-        case allStories(flags: Int32, state: String, userStories: [Api.UserStories], users: [Api.User])
+        case allStories(flags: Int32, count: Int32, state: String, userStories: [Api.UserStories], users: [Api.User])
         case allStoriesNotModified(state: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .allStories(let flags, let state, let userStories, let users):
+                case .allStories(let flags, let count, let state, let userStories, let users):
                     if boxed {
-                        buffer.appendInt32(1528473228)
+                        buffer.appendInt32(-2086796248)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
                     serializeString(state, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(userStories.count))
@@ -393,8 +394,8 @@ public extension Api.stories {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .allStories(let flags, let state, let userStories, let users):
-                return ("allStories", [("flags", flags as Any), ("state", state as Any), ("userStories", userStories as Any), ("users", users as Any)])
+                case .allStories(let flags, let count, let state, let userStories, let users):
+                return ("allStories", [("flags", flags as Any), ("count", count as Any), ("state", state as Any), ("userStories", userStories as Any), ("users", users as Any)])
                 case .allStoriesNotModified(let state):
                 return ("allStoriesNotModified", [("state", state as Any)])
     }
@@ -403,22 +404,25 @@ public extension Api.stories {
         public static func parse_allStories(_ reader: BufferReader) -> AllStories? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: [Api.UserStories]?
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.UserStories]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.UserStories.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.UserStories.self)
             }
-            var _4: [Api.User]?
+            var _5: [Api.User]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.stories.AllStories.allStories(flags: _1!, state: _2!, userStories: _3!, users: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.stories.AllStories.allStories(flags: _1!, count: _2!, state: _3!, userStories: _4!, users: _5!)
             }
             else {
                 return nil

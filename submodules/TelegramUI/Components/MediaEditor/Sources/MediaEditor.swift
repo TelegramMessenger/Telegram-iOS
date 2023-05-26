@@ -496,7 +496,7 @@ public final class MediaEditor {
         let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
     }
-    
+        
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
         self.values = self.values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
     }

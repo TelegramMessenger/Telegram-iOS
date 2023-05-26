@@ -6,7 +6,7 @@ import TelegramApi
 func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> PixelDimensions? {
     for attribute in attributes {
         switch attribute {
-            case let .Video(_, size, _):
+            case let .Video(_, size, _, _):
                 return size
             case let .ImageSize(size):
                 return size
@@ -20,7 +20,7 @@ func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> 
 func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> Int32? {
     for attribute in attributes {
         switch attribute {
-            case let .Video(duration, _, _):
+            case let .Video(duration, _, _, _):
                 return Int32(duration)
             case let .Audio(_, duration, _, _, _):
                 return Int32(duration)
@@ -97,7 +97,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 result.append(.ImageSize(size: PixelDimensions(width: w, height: h)))
             case .documentAttributeAnimated:
                 result.append(.Animated)
-            case let .documentAttributeVideo(flags, duration, w, h, _):
+            case let .documentAttributeVideo(flags, duration, w, h, preloadSize):
                 var videoFlags = TelegramMediaVideoFlags()
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)
@@ -105,7 +105,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 if (flags & (1 << 1)) != 0 {
                     videoFlags.insert(.supportsStreaming)
                 }
-                result.append(.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags))
+                result.append(.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
                 let waveformBuffer: Data? = waveform?.makeData()

@@ -86,7 +86,7 @@ private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
             switch attribute {
                 case .Sticker:
                     return .semanticallyMerged
-                case let .Video(_, _, flags):
+                case let .Video(_, _, flags, _):
                     if flags.contains(.instantRoundVideo) {
                         return .none
                     }
@@ -462,7 +462,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                                 viewClassName = ChatMessageStickerItemNode.self
                             }
                             break loop
-                        case let .Video(_, _, flags):
+                        case let .Video(_, _, flags, _):
                             if flags.contains(.instantRoundVideo) {
 //                                viewClassName = ChatMessageInstantVideoItemNode.self
                                 viewClassName = ChatMessageBubbleItemNode.self

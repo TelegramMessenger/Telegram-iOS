@@ -659,13 +659,13 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
-    func story(accountPeerId: PeerId, postbox: Postbox, network: Network, background: Bool, peer: PeerReference, id: Int32) -> Signal<StoryListContext.Item, RevalidateMediaReferenceError> {
+    func story(accountPeerId: PeerId, postbox: Postbox, network: Network, background: Bool, peer: PeerReference, id: Int32) -> Signal<Stories.StoredItem, RevalidateMediaReferenceError> {
         return self.genericItem(key: .story(peer: peer, id: id), background: background, request: { next, error in
-            return (_internal_getStoryById(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, id: id)
+            return (_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, ids: [id])
             |> castError(RevalidateMediaReferenceError.self)
-            |> mapToSignal { result -> Signal<StoryListContext.Item, RevalidateMediaReferenceError> in
-                if let result = result {
-                    return .single(result)
+            |> mapToSignal { result -> Signal<Stories.StoredItem, RevalidateMediaReferenceError> in
+                if let item = result.first {
+                    return .single(item)
                 } else {
                     return .fail(.generic)
                 }
@@ -675,8 +675,8 @@ final class MediaReferenceRevalidationContext {
                 error(.generic)
             })
         })
-        |> mapToSignal { next -> Signal<StoryListContext.Item, RevalidateMediaReferenceError> in
-            if let next = next as? StoryListContext.Item {
+        |> mapToSignal { next -> Signal<Stories.StoredItem, RevalidateMediaReferenceError> in
+            if let next = next as? Stories.StoredItem {
                 return .single(next)
             } else {
                 return .fail(.generic)
@@ -834,10 +834,14 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                 case let .story(peer, id, _):
                     return revalidationContext.story(accountPeerId: accountPeerId, postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer, id: id)
                     |> mapToSignal { storyItem -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
-                        if let updatedResource = findUpdatedMediaResource(media: storyItem.media._asMedia(), previousMedia: nil, resource: resource) {
-                            return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                        guard case let .item(item) = storyItem, let media = item.media else {
+                            return .fail(.generic)
                         }
-                        return .fail(.generic)
+                        if let updatedResource = findUpdatedMediaResource(media: media, previousMedia: nil, resource: resource) {
+                            return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                        } else {
+                            return .fail(.generic)
+                        }
                     }
                 case let .standalone(media):
                     if let file = media as? TelegramMediaFile {

@@ -104,9 +104,6 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                 }
             }
             
-            if let _ = replyMessageId {
-                flags |= Int32(1 << 0)
-            }
             if let _ = messageEntities {
                 flags |= Int32(1 << 3)
             }
@@ -120,12 +117,28 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             let sendMessageRequest: Signal<Api.Updates, NoError>
             switch content {
                 case let .text(text):
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: nil, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                    var replyTo: Api.InputReplyTo?
+                    if let replyMessageId = replyMessageId {
+                        flags |= 1 << 0
+                        
+                        let replyFlags: Int32 = 0
+                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil)
+                    }
+                
+                    sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }
                 case let .media(inputMedia, text):
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: nil, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                    var replyTo: Api.InputReplyTo?
+                    if let replyMessageId = replyMessageId {
+                        flags |= 1 << 0
+                        
+                        let replyFlags: Int32 = 0
+                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil)
+                    }
+                
+                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }
