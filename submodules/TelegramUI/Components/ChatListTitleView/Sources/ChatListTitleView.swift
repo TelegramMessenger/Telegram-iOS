@@ -62,7 +62,7 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
     
     public var openStatusSetup: ((UIView) -> Void)?
     
-    private var validLayout: (CGSize, CGRect)?
+    private var validLayout: (CGSize, CGRect, CGFloat)?
     
     public var manualLayout: Bool = false
     
@@ -316,13 +316,13 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+        if !self.manualLayout, let (size, clearBounds, sideContentWidth) = self.validLayout {
+            let _ = self.updateLayout(size: size, clearBounds: clearBounds, sideContentWidth: sideContentWidth, transition: .immediate)
         }
     }
     
-    public func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, clearBounds)
+    public func updateLayout(size: CGSize, clearBounds: CGRect, sideContentWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (size, clearBounds, sideContentWidth)
         
         var indicatorPadding: CGFloat = 0.0
         let indicatorSize = self.activityIndicator.bounds.size
@@ -344,7 +344,10 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
         
         let combinedHeight = titleSize.height
         
-        var titleContentRect = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - titleSize.width - indicatorPadding) / 2.0), y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+        let combinedWidth = sideContentWidth + titleSize.width
+        
+        var titleContentRect = CGRect(origin: CGPoint(x: indicatorPadding + floor((size.width - combinedWidth - indicatorPadding) / 2.0) + sideContentWidth, y: floor((size.height - combinedHeight) / 2.0)), size: titleSize)
+        
         titleContentRect.origin.x = min(titleContentRect.origin.x, clearBounds.maxX - proxyPadding - titleContentRect.width)
         
         let titleFrame = titleContentRect
@@ -425,6 +428,8 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
                 }
             }
         }
+        
+        return combinedWidth
     }
     
     @objc private func buttonPressed() {

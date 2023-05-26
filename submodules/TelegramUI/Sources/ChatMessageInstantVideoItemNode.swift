@@ -475,6 +475,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             context: item.context,
                             type: .standalone,
                             message: replyMessage,
+                            story: nil,
                             parentMessage: item.message,
                             constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                             animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -1400,6 +1401,22 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
         if !self.interactiveVideoNode.dateAndStatusNode.isHidden {
             return self.interactiveVideoNode.dateAndStatusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override func targetForStoryTransition(id: StoryId) -> UIView? {
+        guard let item = self.item else {
+            return nil
+        }
+        for attribute in item.message.attributes {
+            if let attribute = attribute as? ReplyStoryAttribute {
+                if attribute.storyId == id {
+                    if let replyInfoNode = self.replyInfoNode {
+                        return replyInfoNode.mediaTransitionView()
+                    }
+                }
+            }
         }
         return nil
     }

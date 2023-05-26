@@ -1956,7 +1956,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     associatedMessages: initialMessage.associatedMessages,
                     associatedMessageIds: initialMessage.associatedMessageIds,
                     associatedMedia: initialMessage.associatedMedia,
-                    associatedThreadInfo: initialMessage.associatedThreadInfo
+                    associatedThreadInfo: initialMessage.associatedThreadInfo,
+                    associatedStories: initialMessage.associatedStories
                 )
                 self.nextPendingDynamicMessageId += 1
                 

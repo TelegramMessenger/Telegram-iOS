@@ -948,7 +948,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         if let mainContainerNode = self.mainContainerNode {
             transition.updateFrame(node: mainContainerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-            mainContainerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: actualNavigationBarHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, insets: insets, isReorderingFilters: false, isEditing: false, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, transition: transition)
+            mainContainerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: actualNavigationBarHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, insets: insets, isReorderingFilters: false, isEditing: false, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, storiesInset: 0.0, transition: transition)
         }
         
         if let requestPeerTypes = self.requestPeerType, let requestPeerType = requestPeerTypes.first {
@@ -1062,7 +1062,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
         
         if let chatListNode = self.chatListNode {
-            chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
+            chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, storiesInset: 0.0, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
         }
         
         if let contactListNode = self.contactListNode {

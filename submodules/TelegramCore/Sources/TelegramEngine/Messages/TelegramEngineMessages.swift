@@ -218,6 +218,7 @@ public extension TelegramEngine {
         public func enqueueOutgoingMessage(
             to peerId: EnginePeer.Id,
             replyTo replyToMessageId: EngineMessage.Id?,
+            storyId: StoryId? = nil,
             content: EngineOutgoingMessageContent
         ) {
             switch content {
@@ -228,6 +229,7 @@ public extension TelegramEngine {
                     inlineStickers: [:],
                     mediaReference: nil,
                     replyToMessageId: replyToMessageId,
+                    replyToStoryId: storyId,
                     localGroupingKey: nil,
                     correlationId: nil,
                     bubbleUpEmojiOrStickersets: []
@@ -240,12 +242,12 @@ public extension TelegramEngine {
             }
         }
 
-        public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {
-            return _internal_enqueueOutgoingMessageWithChatContextResult(account: self.account, to: peerId, threadId: threadId, botId: botId, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
+        public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId? = nil, replyToStoryId: StoryId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {
+            return _internal_enqueueOutgoingMessageWithChatContextResult(account: self.account, to: peerId, threadId: threadId, botId: botId, result: result, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
         }
         
-        public func outgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId?, hideVia: Bool, silentPosting: Bool, scheduleTime: Int32?, correlationId: Int64?) -> EnqueueMessage? {
-            return _internal_outgoingMessageWithChatContextResult(to: peerId, threadId: threadId, botId: botId, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
+        public func outgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId?, replyToStoryId: StoryId?, hideVia: Bool, silentPosting: Bool, scheduleTime: Int32?, correlationId: Int64?) -> EnqueueMessage? {
+            return _internal_outgoingMessageWithChatContextResult(to: peerId, threadId: threadId, botId: botId, result: result, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
         }
         
         public func setMessageReactions(
@@ -591,13 +593,30 @@ public extension TelegramEngine {
         }
         
         public func storySubscriptions() -> Signal<EngineStorySubscriptions, NoError> {
+            let debugTimerSignal: Signal<Bool, NoError>
+            #if DEBUG && false
+            debugTimerSignal = Signal<Bool, NoError>.single(true)
+            |> then(
+                Signal<Bool, NoError>.single(true)
+                |> delay(1.0, queue: .mainQueue())
+                |> then(
+                    Signal<Bool, NoError>.single(false)
+                    |> delay(1.0, queue: .mainQueue())
+                )
+                |> restart
+            )
+            #else
+            debugTimerSignal = .single(true)
+            #endif
+            
             let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
-            return self.account.postbox.combinedView(keys: [
+            return combineLatest(debugTimerSignal |> distinctUntilChanged,
+                self.account.postbox.combinedView(keys: [
                 basicPeerKey,
                 PostboxViewKey.storySubscriptions,
                 PostboxViewKey.storiesState(key: .subscriptions)
-            ])
-            |> mapToSignal { views -> Signal<EngineStorySubscriptions, NoError> in
+            ]))
+            |> mapToSignal { debugTimer, views -> Signal<EngineStorySubscriptions, NoError> in
                 guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
                     return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
                 }
@@ -613,7 +632,10 @@ public extension TelegramEngine {
                 additionalDataKeys.append(PostboxViewKey.storyItems(peerId: self.account.peerId))
                 additionalDataKeys.append(PostboxViewKey.storiesState(key: .peer(self.account.peerId)))
                 
-                let subscriptionPeerIds = storySubscriptionsView.peerIds.filter { $0 != self.account.peerId }
+                var subscriptionPeerIds = storySubscriptionsView.peerIds.filter { $0 != self.account.peerId }
+                if !debugTimer {
+                    subscriptionPeerIds.removeAll()
+                }
                 
                 additionalDataKeys.append(contentsOf: subscriptionPeerIds.map { peerId -> PostboxViewKey in
                     return PostboxViewKey.storyItems(peerId: peerId)

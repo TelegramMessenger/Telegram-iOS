@@ -75,7 +75,8 @@ func chatHistoryEntriesForView(
             associatedMessages: SimpleDictionary<MessageId, Message>(),
             associatedMessageIds: [],
             associatedMedia: [:],
-            associatedThreadInfo: nil
+            associatedThreadInfo: nil,
+            associatedStories: [:]
         )
     }
     
@@ -391,7 +392,8 @@ func chatHistoryEntriesForView(
                     associatedMessages: message.associatedMessages,
                     associatedMessageIds: message.associatedMessageIds,
                     associatedMedia: message.associatedMedia,
-                    associatedThreadInfo: message.associatedThreadInfo
+                    associatedThreadInfo: message.associatedThreadInfo,
+                    associatedStories: message.associatedStories
                 )
                 nextAdMessageId += 1
                 entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))

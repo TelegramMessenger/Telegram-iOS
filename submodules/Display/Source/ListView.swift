@@ -196,6 +196,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private final var lastContentOffsetTimestamp: CFAbsoluteTime = 0.0
     private final var ignoreScrollingEvents: Bool = false
     public final var globalIgnoreScrollingEvents: Bool = false
+    public final var ignoreStopScrolling: Bool = false
 
     private let infiniteScrollSize: CGFloat
     
@@ -2930,7 +2931,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }
         } else if !additionalScrollDistance.isZero {
-            self.stopScrolling()
+            if !self.ignoreStopScrolling {
+                self.stopScrolling()
+            }
         }
         
         self.debugCheckMonotonity()

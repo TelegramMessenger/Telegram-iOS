@@ -292,7 +292,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             combinedInsets.right += layout.safeInsets.right
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: combinedInsets, headerInsets: headerInsets, duration: duration, curve: curve)
-            chatsNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
+            chatsNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, storiesInset: 0.0, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
         }
         self.contentNode.node.frame = CGRect(origin: CGPoint(), size: layout.size)
         

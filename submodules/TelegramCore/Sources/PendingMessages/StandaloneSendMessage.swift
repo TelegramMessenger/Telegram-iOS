@@ -77,6 +77,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
             var messageEntities: [Api.MessageEntity]?
             var replyMessageId: Int32?
+            var replyToStoryId: StoryId?
             var scheduleTime: Int32?
             var sendAsPeerId: PeerId?
             
@@ -86,6 +87,8 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             for attribute in attributes {
                 if let replyAttribute = attribute as? ReplyMessageAttribute {
                     replyMessageId = replyAttribute.messageId.id
+                } else if let attribute = attribute as? ReplyStoryAttribute {
+                    replyToStoryId = attribute.storyId
                 } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                     uniqueId = outgoingInfo.uniqueId
                 } else if let _ = attribute as? ForwardSourceInfoAttribute {
@@ -123,6 +126,11 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         
                         let replyFlags: Int32 = 0
                         replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil)
+                    } else if let replyToStoryId = replyToStoryId {
+                        if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
+                            flags |= 1 << 0
+                            replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                        }
                     }
                 
                     sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
@@ -136,6 +144,11 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         
                         let replyFlags: Int32 = 0
                         replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil)
+                    } else if let replyToStoryId = replyToStoryId {
+                        if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
+                            flags |= 1 << 0
+                            replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                        }
                     }
                 
                     sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
