@@ -54,7 +54,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public weak var selectionContainerView: DrawingSelectionContainerView?
     
     private var tapGestureRecognizer: UITapGestureRecognizer!
-    private(set) var selectedEntityView: DrawingEntityView?
+    public private(set) var selectedEntityView: DrawingEntityView?
     
     public var getEntityCenterPosition: () -> CGPoint = { return .zero }
     public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
@@ -593,7 +593,7 @@ protocol DrawingEntityMediaView: DrawingEntityView {
 
 public class DrawingEntityView: UIView {
     let context: AccountContext
-    let entity: DrawingEntity
+    public let entity: DrawingEntity
     var isTracking = false
     
     public weak var selectionView: DrawingEntitySelectionView?
@@ -645,7 +645,7 @@ public class DrawingEntityView: UIView {
         
     }
     
-    func update(animated: Bool = false) {
+    public func update(animated: Bool = false) {
         self.updateSelectionView()
     }
     

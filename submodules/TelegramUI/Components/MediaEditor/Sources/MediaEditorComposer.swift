@@ -85,46 +85,35 @@ final class MediaEditorComposer {
         self.renderChain.update(values: self.values)
     }
     
-    func processSampleBuffer(_ sampleBuffer: CMSampleBuffer, pool: CVPixelBufferPool?, completion: @escaping (CVPixelBuffer?) -> Void) {
-        guard let textureCache = self.textureCache, let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let pool = pool else {
+    func processSampleBuffer(_ sampleBuffer: CMSampleBuffer, pool: CVPixelBufferPool?, textureRotation: TextureRotation, completion: @escaping (CVPixelBuffer?) -> Void) {
+        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let pool = pool else {
             completion(nil)
             return
         }
         let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         
-        let width = CVPixelBufferGetWidth(imageBuffer)
-        let height = CVPixelBufferGetHeight(imageBuffer)
-        let format: MTLPixelFormat = .bgra8Unorm
-        var textureRef : CVMetalTexture?
-        let status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, imageBuffer, nil, format, width, height, 0, &textureRef)
-        var texture: MTLTexture?
-        if status == kCVReturnSuccess {
-            texture = CVMetalTextureGetTexture(textureRef!)
-        }
-        if let texture {
-            self.renderer.consumeTexture(texture)
-            self.renderer.renderFrame()
+        self.renderer.consumeVideoPixelBuffer(imageBuffer, rotation: textureRotation)
+        self.renderer.renderFrame()
+        
+        if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
+            ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
             
-            if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
-                ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
-                
-                var pixelBuffer: CVPixelBuffer?
-                CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer)
-                
-                if let pixelBuffer {
-                    processImage(inputImage: ciImage, time: time, completion: { compositedImage in
-                        if var compositedImage {
-                            let scale = self.outputDimensions.width / self.dimensions.width
-                            compositedImage = compositedImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-                            
-                            self.ciContext?.render(compositedImage, to: pixelBuffer)
-                            completion(pixelBuffer)
-                        } else {
-                            completion(nil)
-                        }
-                    })
-                    return
-                }
+            var pixelBuffer: CVPixelBuffer?
+            CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer)
+            
+            if let pixelBuffer {
+                processImage(inputImage: ciImage, time: time, completion: { compositedImage in
+                    if var compositedImage {
+                        let scale = self.outputDimensions.width / self.dimensions.width
+                        compositedImage = compositedImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                        
+                        self.ciContext?.render(compositedImage, to: pixelBuffer)
+                        completion(pixelBuffer)
+                    } else {
+                        completion(nil)
+                    }
+                })
+                return
             }
         }
         completion(nil)

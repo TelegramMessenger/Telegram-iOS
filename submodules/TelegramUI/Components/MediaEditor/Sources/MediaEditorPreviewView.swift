@@ -50,7 +50,7 @@ public final class MediaEditorPreviewView: MTKView, MTKViewDelegate, RenderTarge
     }
     
     func scheduleFrame() {
-        Queue.mainQueue().async {
+        Queue.mainQueue().justDispatch {
             self.draw()
         }
     }

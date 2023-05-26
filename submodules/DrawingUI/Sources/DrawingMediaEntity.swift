@@ -89,7 +89,7 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     }
             
     public var updated: (() -> Void)?
-    override func update(animated: Bool) {
+    public override func update(animated: Bool) {
         self.center = self.mediaEntity.position
         
         let size = self.mediaEntity.baseSize

@@ -247,10 +247,7 @@ public final class MediaEditorVideoExport {
     private let subject: Subject
     private let configuration: Configuration
     private let outputPath: String
-    
-    private var previousSampleTime: CMTime = .zero
-    private var processedPixelBuffer: CVPixelBuffer?
-    
+        
     private var reader: AVAssetReader?
     
     private var videoOutput: AVAssetReaderOutput?
@@ -260,6 +257,7 @@ public final class MediaEditorVideoExport {
     private var writer: MediaEditorVideoExportWriter?
     private var composer: MediaEditorComposer?
     
+    private var textureRotation: TextureRotation = .rotate0Degrees
     private let duration = ValuePromise<CMTime>()
     
     private let pauseDispatchGroup = DispatchGroup()
@@ -320,16 +318,23 @@ public final class MediaEditorVideoExport {
             return
         }
         
+        self.textureRotation = textureRotatonForAVAsset(asset)
+        
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
                 
         let videoTracks = asset.tracks(withMediaType: .video)
         if (videoTracks.count > 0) {
-            let outputSettings: [String : Any]
             var sourceFrameRate: Float = 0.0
+            let outputSettings: [String: Any]  = [
+                kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange],
+                AVVideoColorPropertiesKey: [
+                    AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+                    AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+                    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
+                ]
+            ]
             if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing {
-                outputSettings = [kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]]
             } else {
-                outputSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
                 self.setupComposer()
             }
             let videoOutput = AVAssetReaderTrackOutput(track: videoTracks.first!, outputSettings: outputSettings)
@@ -516,7 +521,7 @@ public final class MediaEditorVideoExport {
             if let buffer = output.copyNextSampleBuffer() {
                 if let composer = self.composer {
                     let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer)
-                    composer.processSampleBuffer(buffer, pool: writer.pixelBufferPool, completion: { pixelBuffer in
+                    composer.processSampleBuffer(buffer, pool: writer.pixelBufferPool, textureRotation: self.textureRotation, completion: { pixelBuffer in
                         if let pixelBuffer {
                             if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
                                 writer.markVideoAsFinished()

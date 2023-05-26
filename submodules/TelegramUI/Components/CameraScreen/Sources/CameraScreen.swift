@@ -872,7 +872,7 @@ public class CameraScreen: ViewController {
                     
                 } else {
                     if translation.x < -10.0 {
-                        let transitionFraction = 1.0 - abs(translation.x) / self.frame.width
+                        let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                         controller.updateTransitionProgress(transitionFraction, transition: .immediate)
                     } else if translation.y < -10.0 {
                         controller.presentGallery()
@@ -882,7 +882,7 @@ public class CameraScreen: ViewController {
                 }
             case .ended:
                 let velocity = gestureRecognizer.velocity(in: self.view)
-                let transitionFraction = 1.0 - abs(translation.x) / self.frame.width
+                let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                 controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
             default:
                 break
@@ -982,26 +982,28 @@ public class CameraScreen: ViewController {
         }
         
         func resumeCameraCapture() {
-            if let snapshot = self.simplePreviewView?.snapshotView(afterScreenUpdates: false) {
-                self.simplePreviewView?.addSubview(snapshot)
-                self.previewSnapshotView = snapshot
-            }
-            self.simplePreviewView?.isEnabled = true
-            self.camera.startCapture()
-            
-            if #available(iOS 13.0, *), let isPreviewing = self.simplePreviewView?.isPreviewing {
-                let _ = (isPreviewing
-                |> filter {
-                    $0
+            if self.simplePreviewView?.isEnabled == false {
+                if let snapshot = self.simplePreviewView?.snapshotView(afterScreenUpdates: false) {
+                    self.simplePreviewView?.addSubview(snapshot)
+                    self.previewSnapshotView = snapshot
                 }
-                |> take(1)).start(next: { [weak self] _ in
-                    if let self {
+                self.simplePreviewView?.isEnabled = true
+                self.camera.startCapture()
+                
+                if #available(iOS 13.0, *), let isPreviewing = self.simplePreviewView?.isPreviewing {
+                    let _ = (isPreviewing
+                    |> filter {
+                        $0
+                    }
+                    |> take(1)).start(next: { [weak self] _ in
+                        if let self {
+                            self.previewBlurPromise.set(false)
+                        }
+                    })
+                } else {
+                    Queue.mainQueue().after(1.0) {
                         self.previewBlurPromise.set(false)
                     }
-                })
-            } else {
-                Queue.mainQueue().after(1.0) {
-                    self.previewBlurPromise.set(false)
                 }
             }
         }
@@ -1344,7 +1346,7 @@ public class CameraScreen: ViewController {
     private var isTransitioning = false
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         self.isTransitioning = true
-        let offsetX = (1.0 - transitionFraction) * self.node.frame.width * -1.0
+        let offsetX = floorToScreenPixels((1.0 - transitionFraction) * self.node.frame.width * -1.0)
         transition.updateTransform(layer: self.node.backgroundView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
         transition.updateTransform(layer: self.node.containerView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
         let scale = max(0.8, min(1.0, 0.8 + 0.2 * transitionFraction))
@@ -1359,7 +1361,7 @@ public class CameraScreen: ViewController {
         self.statusBar.updateStatusBarStyle(transitionFraction > 0.45 ? .White : .Ignore, animated: true)
                 
         if let navigationController = self.navigationController as? NavigationController {
-            let offsetX = transitionFraction * self.node.frame.width
+            let offsetX = floorToScreenPixels(transitionFraction * self.node.frame.width)
             navigationController.updateRootContainerTransitionOffset(offsetX, transition: transition)
         }
     }
@@ -1367,7 +1369,7 @@ public class CameraScreen: ViewController {
     public func completeWithTransitionProgress(_ transitionFraction: CGFloat, velocity: CGFloat, dismissing: Bool) {
         self.isTransitioning = false
         if dismissing {
-            if transitionFraction < 0.7 || velocity > 1000.0 {
+            if transitionFraction < 0.7 || velocity < -1000.0 {
                 self.requestDismiss(animated: true, interactive: true)
             } else {
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in

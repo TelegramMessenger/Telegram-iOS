@@ -65,7 +65,6 @@ final class CameraOutput: NSObject {
         super.init()
 
         self.videoOutput.alwaysDiscardsLateVideoFrames = false
-        //self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA] as [String : Any]
         self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
         
         self.faceLandmarksOutput.outputFaceObservations = { [weak self] observations in

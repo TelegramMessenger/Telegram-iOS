@@ -496,7 +496,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let drawButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 4.0 - 3.0 - drawButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset),
+                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 4.0 - 3.0 - drawButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
                 size: drawButtonSize
             )
             if let drawButtonView = self.drawButton.view {
@@ -521,7 +521,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let textButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 2.5 + 5.0 - textButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset),
+                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 2.5 + 5.0 - textButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
                 size: textButtonSize
             )
             if let textButtonView = self.textButton.view {
@@ -546,7 +546,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let stickerButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width - availableSize.width / 2.5 - 5.0 - stickerButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset),
+                origin: CGPoint(x: floorToScreenPixels(availableSize.width - availableSize.width / 2.5 - 5.0 - stickerButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
                 size: stickerButtonSize
             )
             if let stickerButtonView = self.stickerButton.view {
@@ -571,7 +571,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let toolsButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 4.0 * 3.0 + 3.0 - toolsButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset),
+                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 4.0 * 3.0 + 3.0 - toolsButtonSize.width / 2.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + 1.0),
                 size: toolsButtonSize
             )
             if let toolsButtonView = self.toolsButton.view {
@@ -592,24 +592,19 @@ final class MediaEditorScreenComponent: Component {
                         context: component.context,
                         duration: playerState.duration,
                         startPosition: playerState.timeRange?.lowerBound ?? 0.0,
-                        endPosition: playerState.timeRange?.upperBound ?? playerState.duration,
+                        endPosition: playerState.timeRange?.upperBound ?? min(playerState.duration, storyMaxVideoDuration),
                         position: playerState.position,
+                        maxDuration: storyMaxVideoDuration,
                         frames: playerState.frames,
                         framesUpdateTimestamp: playerState.framesUpdateTimestamp,
-                        startPositionUpdated: { [weak mediaEditor] position, done in
+                        trimUpdated: { [weak mediaEditor] start, end, updatedEnd, done in
                             if let mediaEditor {
-                                mediaEditor.setVideoTrimStart(position)
-                                mediaEditor.seek(position, andPlay: done)
-                            }
-                        },
-                        endPositionUpdated: { [weak mediaEditor] position, done in
-                            if let mediaEditor {
-                                mediaEditor.setVideoTrimEnd(position)
+                                mediaEditor.setVideoTrimStart(start)
+                                mediaEditor.setVideoTrimEnd(end)
                                 if done {
-                                    let start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
                                     mediaEditor.seek(start, andPlay: true)
                                 } else {
-                                    mediaEditor.seek(position, andPlay: false)
+                                    mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
                                 }
                             }
                         },
@@ -730,7 +725,7 @@ final class MediaEditorScreenComponent: Component {
                 }
             case let .message(peerIds, _):
                 if peerIds.count == 1 {
-                    privacyText = "User Test"
+                    privacyText = "1 Recipient"
                 } else {
                     privacyText = "\(peerIds.count) Recipients"
                 }
@@ -871,6 +866,7 @@ final class MediaEditorScreenComponent: Component {
 }
 
 private let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
+private let storyMaxVideoDuration: Double = 60.0
 
 public enum MediaEditorResultPrivacy: Equatable {
     case story(privacy: EngineStoryPrivacy, archive: Bool)
@@ -928,6 +924,7 @@ public final class MediaEditorScreen: ViewController {
     fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private weak var controller: MediaEditorScreen?
         private let context: AccountContext
+        private var interaction: DrawingToolsInteraction?
         private let initializationTimestamp = CACurrentMediaTime()
         
         fileprivate var subject: MediaEditorScreen.Subject?
@@ -1162,6 +1159,51 @@ public final class MediaEditorScreen: ViewController {
             let rotateGestureRecognizer = UIRotationGestureRecognizer(target: self, action: #selector(self.handleRotate(_:)))
             rotateGestureRecognizer.delegate = self
             self.previewContainerView.addGestureRecognizer(rotateGestureRecognizer)
+            
+            let tapGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
+            self.previewContainerView.addGestureRecognizer(tapGestureRecognizer)
+            
+            self.interaction = DrawingToolsInteraction(
+                context: self.context,
+                drawingView: self.drawingView,
+                entitiesView: self.entitiesView,
+                selectionContainerView: self.selectionContainerView,
+                isVideo: false,
+                updateSelectedEntity: { _ in
+                    
+                },
+                updateVideoPlayback: { [weak self] isPlaying in
+                    if let self, let mediaEditor = self.mediaEditor {
+                        if isPlaying {
+                            mediaEditor.play()
+                        } else {
+                            mediaEditor.stop()
+                        }
+                    }
+                },
+                updateColor: { [weak self] color in
+                    if let self, let selectedEntityView = self.entitiesView.selectedEntityView {
+                        selectedEntityView.entity.color = color
+                        selectedEntityView.update(animated: false)
+                    }
+                },
+                getCurrentImage: {
+                    return nil
+                },
+                getControllerNode: { [weak self] in
+                    return self
+                },
+                present: { [weak self] c, i, a in
+                    if let self {
+                        self.controller?.present(c, in: i, with: a)
+                    }
+                },
+                addSubview: { [weak self] view in
+                    if let self {
+                        self.view.addSubview(view)
+                    }
+                }
+            )
         }
         
         @objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -1178,6 +1220,12 @@ public final class MediaEditorScreen: ViewController {
         
         @objc func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
             self.entitiesView.handleRotate(gestureRecognizer)
+        }
+        
+        @objc func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            if self.entitiesView.hasSelection {
+                self.entitiesView.selectEntity(nil)
+            }
         }
         
         func animateIn() {
@@ -1435,21 +1483,6 @@ public final class MediaEditorScreen: ViewController {
             }
         }
         
-        private func insertDrawingEntity(_ entity: DrawingEntity) {
-            self.entitiesView.prepareNewEntity(entity)
-            self.entitiesView.add(entity)
-            self.entitiesView.selectEntity(entity)
-            
-            if let entityView = entitiesView.getView(for: entity.uuid) {
-                entityView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                entityView.layer.animateScale(from: 0.1, to: entity.scale, duration: 0.2)
-                
-                if let selectionView = entityView.selectionView {
-                    selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.2)
-                }
-            }
-        }
-        
         private var drawingScreen: DrawingScreen?
         func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, animateOut: Bool = false, transition: Transition) {
             guard let controller = self.controller else {
@@ -1492,71 +1525,65 @@ public final class MediaEditorScreen: ViewController {
                         privacy: controller.state.privacy,
                         openDrawing: { [weak self] mode in
                             if let self {
+                                if self.entitiesView.hasSelection {
+                                    self.entitiesView.selectEntity(nil)
+                                }
                                 switch mode {
                                 case .sticker:
                                     let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
                                     controller.completion = { [weak self] file in
                                         if let self, let file {
                                             let stickerEntity = DrawingStickerEntity(content: .file(file))
-                                            self.insertDrawingEntity(stickerEntity)
+                                            self.interaction?.insertEntity(stickerEntity)
                                         }
                                     }
                                     self.controller?.present(controller, in: .current)
                                     return
                                 case .text:
-                                    break
-                                default:
-                                    break
-                                }
-                                
-                                let controller = DrawingScreen(context: self.context, sourceHint: .storyEditor, size: self.previewContainerView.frame.size, originalSize: storyDimensions, isVideo: false, isAvatar: false, drawingView: self.drawingView, entitiesView: self.entitiesView, selectionContainerView: self.selectionContainerView, existingStickerPickerInputData: self.stickerPickerInputData)
-                                self.drawingScreen = controller
-                                self.drawingView.isUserInteractionEnabled = true
-                                                                
-                                controller.requestDismiss = { [weak controller, weak self] in
-                                    self?.drawingScreen = nil
-                                    controller?.animateOut({
-                                        controller?.dismiss()
-                                    })
-                                    self?.drawingView.isUserInteractionEnabled = false
-                                    self?.animateInFromTool()
+                                    let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
+                                    self.interaction?.insertEntity(textEntity)
+                                    return
+                                case .drawing:
+                                    let controller = DrawingScreen(context: self.context, sourceHint: .storyEditor, size: self.previewContainerView.frame.size, originalSize: storyDimensions, isVideo: false, isAvatar: false, drawingView: self.drawingView, entitiesView: self.entitiesView, selectionContainerView: self.selectionContainerView, existingStickerPickerInputData: self.stickerPickerInputData)
+                                    self.drawingScreen = controller
+                                    self.drawingView.isUserInteractionEnabled = true
                                     
-                                    self?.entitiesView.selectEntity(nil)
-                                }
-                                controller.requestApply = { [weak controller, weak self] in
-                                    self?.drawingScreen = nil
-                                    controller?.animateOut({
-                                        controller?.dismiss()
-                                    })
-                                    self?.drawingView.isUserInteractionEnabled = false
-                                    self?.animateInFromTool()
-                                    
-                                    if let result = controller?.generateDrawingResultData() {
-                                        self?.mediaEditor?.setDrawingAndEntities(data: result.data, image: result.drawingImage, entities: result.entities)
-                                    } else {
-                                        self?.mediaEditor?.setDrawingAndEntities(data: nil, image: nil, entities: [])
+                                    controller.requestDismiss = { [weak controller, weak self] in
+                                        self?.drawingScreen = nil
+                                        controller?.animateOut({
+                                            controller?.dismiss()
+                                        })
+                                        self?.drawingView.isUserInteractionEnabled = false
+                                        self?.animateInFromTool()
+                                        
+                                        self?.entitiesView.selectEntity(nil)
                                     }
-                                    
-                                    self?.entitiesView.selectEntity(nil)
+                                    controller.requestApply = { [weak controller, weak self] in
+                                        self?.drawingScreen = nil
+                                        controller?.animateOut({
+                                            controller?.dismiss()
+                                        })
+                                        self?.drawingView.isUserInteractionEnabled = false
+                                        self?.animateInFromTool()
+                                        
+                                        if let result = controller?.generateDrawingResultData() {
+                                            self?.mediaEditor?.setDrawingAndEntities(data: result.data, image: result.drawingImage, entities: result.entities)
+                                        } else {
+                                            self?.mediaEditor?.setDrawingAndEntities(data: nil, image: nil, entities: [])
+                                        }
+                                        
+                                        self?.entitiesView.selectEntity(nil)
+                                    }
+                                    self.controller?.present(controller, in: .current)
+                                    self.animateOutToTool()
                                 }
-                                self.controller?.present(controller, in: .current)
-                                
-                                switch mode {
-                                case .sticker:
-                                    controller.presentStickerSelection()
-                                case .text:
-                                    Queue.mainQueue().after(0.05, {
-                                        controller.addTextEntity()
-                                    })
-                                default:
-                                    break
-                                }
-                                
-                                self.animateOutToTool()
                             }
                         },
                         openTools: { [weak self] in
                             if let self, let mediaEditor = self.mediaEditor {
+                                if self.entitiesView.hasSelection {
+                                    self.entitiesView.selectEntity(nil)
+                                }
                                 let controller = MediaToolsScreen(context: self.context, mediaEditor: mediaEditor)
                                 controller.dismissed = { [weak self] in
                                     if let self {
@@ -1604,6 +1631,8 @@ public final class MediaEditorScreen: ViewController {
             transition.setFrame(view: self.drawingView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
+            
+            self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
             
             if isFirstTime {
                 self.animateIn()
@@ -1968,7 +1997,10 @@ public final class MediaEditorScreen: ViewController {
         }
         
         mediaEditor.stop()
-                
+        
+        let codableEntities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }.compactMap({ CodableDrawingEntity(entity: $0) })
+        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
+        
         if mediaEditor.resultIsVideo {
             let videoResult: Result.VideoResult
             let duration: Double

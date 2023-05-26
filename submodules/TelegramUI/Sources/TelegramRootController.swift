@@ -376,7 +376,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     switch privacy {
                                     case let .story(storyPrivacy, _):
                                         let _ = self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], privacy: storyPrivacy).start()
-                                        Queue.mainQueue().after(0.2, { [weak chatListController] in
+                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
                                             chatListController?.animateStoryUploadRipple()
                                         })
                                     case let .message(peerIds, timeout):
@@ -457,7 +457,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     if case let .story(storyPrivacy, _) = privacy {
                                         let _ = self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: storyPrivacy).start()
-                                        Queue.mainQueue().after(0.2, { [weak chatListController] in
+                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
                                             chatListController?.animateStoryUploadRipple()
                                         })
                                     } else {
@@ -468,7 +468,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         
                         dismissCameraImpl?()
-                        commit()
+                        Queue.mainQueue().after(0.1) {
+                            commit()
+                        }
                     }
                 )
                 controller.cancelled = { showDraftTooltip in

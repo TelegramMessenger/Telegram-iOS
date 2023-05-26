@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import SwiftSignalKit
+import TelegramCore
 
 private let defaultFPS: Double = 30.0
 
@@ -68,6 +69,14 @@ final class CameraDevice {
             
             if let bestFormat = candidates.last {
                 device.activeFormat = bestFormat
+                
+                Logger.shared.log("Camera", "Available formats:")
+                for format in device.formats {
+                    Logger.shared.log("Camera", format.description)
+                }
+                
+                Logger.shared.log("Camera", "Selected format:")
+                Logger.shared.log("Camera", bestFormat.description)
             }
             
             if let targetFPS = device.actualFPS(maxFramerate) {

@@ -3,6 +3,28 @@ import AVFoundation
 import Metal
 import MetalKit
 
+func textureRotatonForAVAsset(_ asset: AVAsset) -> TextureRotation {
+    for track in asset.tracks {
+        if track.mediaType == .video {            
+            let t = track.preferredTransform
+            if t.a == -1.0 && t.d == -1.0 {
+                return .rotate180Degrees
+            } else if t.a == 1.0 && t.d == 1.0 {
+                return .rotate0Degrees
+            } else if t.b == -1.0 && t.c == 1.0 {
+                return .rotate270Degrees
+            }  else if t.a == -1.0 && t.d == 1.0 {
+                return .rotate270Degrees
+            } else if t.a == 1.0 && t.d == -1.0  {
+                return .rotate180Degrees
+            } else {
+                return .rotate90Degrees
+            }
+        }
+    }
+    return .rotate0Degrees
+}
+
 final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullDelegate {
     private let player: AVPlayer
     private var playerItem: AVPlayerItem?
@@ -80,23 +102,10 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         for track in playerItem.asset.tracks {
             if track.mediaType == .video {
                 hasVideoTrack = true
-                
-                let t = track.preferredTransform
-                if t.a == -1.0 && t.d == -1.0 {
-                    self.textureRotation = .rotate180Degrees
-                } else if t.a == 1.0 && t.d == 1.0 {
-                    self.textureRotation = .rotate0Degrees
-                } else if t.b == -1.0 && t.c == 1.0 {
-                    self.textureRotation = .rotate270Degrees
-                }  else if t.a == -1.0 && t.d == 1.0 {
-                    self.textureRotation = .rotate270Degrees
-                } else if t.a == 1.0 && t.d == -1.0  {
-                    self.textureRotation = .rotate180Degrees
-                } else {
-                    self.textureRotation = .rotate90Degrees
-                }
+                break
             }
         }
+        self.textureRotation = textureRotatonForAVAsset(playerItem.asset)
         if !hasVideoTrack {
             assertionFailure("No video track found.")
             return

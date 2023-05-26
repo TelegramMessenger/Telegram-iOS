@@ -464,6 +464,10 @@ public final class MediaEditor {
         }
     }
     
+    public func play() {
+        self.player?.play()
+    }
+    
     public func stop() {
         self.player?.pause()
     }
