@@ -10,6 +10,7 @@ import MultilineTextComponent
 import AvatarNode
 import TelegramPresentationData
 import CheckNode
+import BundleIconComponent
 
 final class CategoryListItemComponent: Component {
     enum SelectionState: Equatable {
@@ -27,6 +28,7 @@ final class CategoryListItemComponent: Component {
     let selectionState: SelectionState
     let hasNext: Bool
     let action: () -> Void
+    let secondaryAction: () -> Void
     
     init(
         context: AccountContext,
@@ -38,7 +40,8 @@ final class CategoryListItemComponent: Component {
         subtitle: String?,
         selectionState: SelectionState,
         hasNext: Bool,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        secondaryAction: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -50,6 +53,7 @@ final class CategoryListItemComponent: Component {
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
+        self.secondaryAction = secondaryAction
     }
     
     static func ==(lhs: CategoryListItemComponent, rhs: CategoryListItemComponent) -> Bool {
@@ -88,6 +92,7 @@ final class CategoryListItemComponent: Component {
         
         private let title = ComponentView<Empty>()
         private let label = ComponentView<Empty>()
+        private let labelArrow = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
         private let iconView: UIImageView
         
@@ -120,7 +125,11 @@ final class CategoryListItemComponent: Component {
             guard let component = self.component else {
                 return
             }
-            component.action()
+            if case .editing(true, _) = component.selectionState {
+                component.secondaryAction()
+            } else {
+                component.action()
+            }
         }
         
         func update(component: CategoryListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -223,13 +232,25 @@ final class CategoryListItemComponent: Component {
             
             transition.setFrame(view: self.iconView, frame: avatarFrame)
             
-            let labelData: (String, Bool) = ("", false)
+            let labelData: (String, Bool, Bool)
+            if let subtitle = component.subtitle {
+                labelData = (subtitle, true, true)
+            } else {
+                labelData = ("", false, false)
+            }
             
             let labelSize = self.label.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(string: labelData.0, font: Font.regular(15.0), textColor: labelData.1 ? component.theme.list.itemAccentColor : component.theme.list.itemSecondaryTextColor))
                 )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+            )
+            
+            let labelArrowSize = self.labelArrow.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(name: "Contact List/SubtitleArrow", tintColor: component.theme.list.itemAccentColor)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
             )
@@ -283,6 +304,13 @@ final class CategoryListItemComponent: Component {
                     self.containerButton.addSubview(labelView)
                 }
                 transition.setFrame(view: labelView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + titleSpacing), size: labelSize))
+            }
+            if let labelArrowView = self.labelArrow.view, !labelData.0.isEmpty {
+                if labelArrowView.superview == nil {
+                    labelArrowView.isUserInteractionEnabled = false
+                    self.containerButton.addSubview(labelArrowView)
+                }
+                transition.setFrame(view: labelArrowView, frame: CGRect(origin: CGPoint(x: titleFrame.minX + labelSize.width + 5.0, y: titleFrame.maxY + titleSpacing + floorToScreenPixels(labelSize.height / 2.0 - labelArrowSize.height / 2.0)), size: labelArrowSize))
             }
             
             if themeUpdated {

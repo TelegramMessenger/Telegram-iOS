@@ -19,7 +19,7 @@ public class CameraSimplePreviewView: UIView {
         }
     }
     
-    static func saveLastState(_ image: UIImage) {
+    static func saveLastStateImage(_ image: UIImage) {
         let imagePath = NSTemporaryDirectory() + "cameraImage.jpg"
         if let blurredImage = blurredImage(image, radius: 60.0), let data = blurredImage.jpegData(compressionQuality: 0.85) {
             try? data.write(to: URL(fileURLWithPath: imagePath))

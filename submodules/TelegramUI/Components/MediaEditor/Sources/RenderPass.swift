@@ -102,7 +102,7 @@ class DefaultRenderPass: RenderPass {
         }
     }
     
-    func setupVerticesBuffer(device: MTLDevice, rotation: TextureRotation) {
+    func setupVerticesBuffer(device: MTLDevice, rotation: TextureRotation = .rotate0Degrees) {
         if self.verticesBuffer == nil || rotation != self.textureRotation {
             self.textureRotation = rotation
             let vertices = verticesDataForRotation(rotation)
@@ -113,8 +113,8 @@ class DefaultRenderPass: RenderPass {
         }
     }
     
-    func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device, rotation: rotation)
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.setupVerticesBuffer(device: device)
         return nil
     }
     
@@ -131,11 +131,11 @@ class DefaultRenderPass: RenderPass {
 final class OutputRenderPass: DefaultRenderPass {
     weak var renderTarget: RenderTarget?
     
-    override func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    override func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         guard let renderTarget = self.renderTarget, let renderPassDescriptor = renderTarget.renderPassDescriptor else {
             return nil
         }
-        self.setupVerticesBuffer(device: device, rotation: rotation)
+        self.setupVerticesBuffer(device: device)
         
         let drawableSize = renderTarget.drawableSize
         

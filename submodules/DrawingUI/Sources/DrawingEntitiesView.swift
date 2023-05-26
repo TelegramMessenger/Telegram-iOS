@@ -51,7 +51,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private let size: CGSize
     
     weak var drawingView: DrawingView?
-    weak var selectionContainerView: DrawingSelectionContainerView?
+    public weak var selectionContainerView: DrawingSelectionContainerView?
     
     private var tapGestureRecognizer: UITapGestureRecognizer!
     private(set) var selectedEntityView: DrawingEntityView?
@@ -220,7 +220,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return CGSize(width: width, height: width)
     }
     
-    func prepareNewEntity(_ entity: DrawingEntity, setup: Bool = true, relativeTo: DrawingEntity? = nil) {
+    public func prepareNewEntity(_ entity: DrawingEntity, setup: Bool = true, relativeTo: DrawingEntity? = nil) {
         let center = self.startPosition(relativeTo: relativeTo)
         let rotation = self.getEntityInitialRotation()
         let zoomScale = 1.0 / (self.drawingView?.zoomScale ?? 1.0)
@@ -485,7 +485,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
-    func selectEntity(_ entity: DrawingEntity?) {
+    public func selectEntity(_ entity: DrawingEntity?) {
         if entity?.isMedia == true {
             return
         }
@@ -596,7 +596,7 @@ public class DrawingEntityView: UIView {
     let entity: DrawingEntity
     var isTracking = false
     
-    weak var selectionView: DrawingEntitySelectionView?
+    public weak var selectionView: DrawingEntitySelectionView?
     weak var containerView: DrawingEntitiesView?
     
     var onSnapToXAxis: (Bool) -> Void = { _ in }

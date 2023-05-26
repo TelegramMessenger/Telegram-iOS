@@ -2310,8 +2310,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         
         private var _selectionContainerView: DrawingSelectionContainerView?
         var selectionContainerView: DrawingSelectionContainerView {
-            if self._selectionContainerView == nil {
-                self._selectionContainerView = DrawingSelectionContainerView(frame: .zero)
+            if self._selectionContainerView == nil, let controller = self.controller {
+                if let externalSelectionContainerView = controller.externalSelectionContainerView {
+                    self._selectionContainerView = externalSelectionContainerView
+                } else {
+                    self._selectionContainerView = DrawingSelectionContainerView(frame: .zero)
+                }
+                
             }
             return self._selectionContainerView!
         }
@@ -3013,6 +3018,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     private let isAvatar: Bool
     private let externalDrawingView: DrawingView?
     private let externalEntitiesView: DrawingEntitiesView?
+    private let externalSelectionContainerView: DrawingSelectionContainerView?
     private let existingStickerPickerInputData: Promise<StickerPickerInputData>?
     
     public var requestDismiss: () -> Void = {}
@@ -3020,7 +3026,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     public var getCurrentImage: () -> UIImage? = { return nil }
     public var updateVideoPlayback: (Bool) -> Void = { _ in }
     
-    public init(context: AccountContext, sourceHint: SourceHint? = nil, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, drawingView: DrawingView?, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?, existingStickerPickerInputData: Promise<StickerPickerInputData>? = nil) {
+    public init(context: AccountContext, sourceHint: SourceHint? = nil, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, drawingView: DrawingView?, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?, selectionContainerView: DrawingSelectionContainerView?, existingStickerPickerInputData: Promise<StickerPickerInputData>? = nil) {
         self.context = context
         self.sourceHint = sourceHint
         self.size = size
@@ -3039,6 +3045,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             self.externalEntitiesView = entitiesView
         } else {
             self.externalEntitiesView = nil
+        }
+        
+        if let selectionContainerView = selectionContainerView {
+            self.externalSelectionContainerView = selectionContainerView
+        } else {
+            self.externalSelectionContainerView = nil
         }
         
         super.init(navigationBarPresentationData: nil)
@@ -3081,13 +3093,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             return nil
         }
         
-        let drawingImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
-            let bounds = CGRect(origin: .zero, size: size)
-            context.clear(bounds)
-            if let cgImage = self.drawingView.drawingImage?.cgImage {
-                context.draw(cgImage, in: bounds)
-            }
-        }, opaque: false, scale: 1.0)
+        let drawingImage = self.drawingView.drawingImage
         
         let _ = self.entitiesView.entitiesData
         let codableEntities = self.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }.compactMap({ CodableDrawingEntity(entity: $0) })

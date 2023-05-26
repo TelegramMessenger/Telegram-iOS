@@ -93,7 +93,7 @@ final class VideoRecorder {
             
             self.isRecording = true
             
-            assetWriter.startWriting()
+            //assetWriter.startWriting()
         }
     }
     
@@ -132,17 +132,15 @@ final class VideoRecorder {
         }
     }
     
-    private var skippedCount = 0
     func appendVideo(sampleBuffer: CMSampleBuffer) {
-        if self.skippedCount < 2 {
-            self.skippedCount += 1
-            return
-        }
         self.queue.async {
             guard let assetWriter = self.assetWriter, let videoInput = self.videoInput, (self.isRecording || self.isStopping) && !self.finishedWriting else {
                 return
             }
             let timestamp = sampleBuffer.presentationTimestamp
+            if let startTimestamp = self.captureStartTimestamp, timestamp.seconds < startTimestamp {
+                return
+            }
 
             switch assetWriter.status {
             case .unknown:

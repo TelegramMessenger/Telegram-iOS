@@ -1274,9 +1274,6 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.filterController(controller, animated: false)
     }
     
-    public func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
-    }
-    
     private func scrollToTop(_ subject: NavigationSplitContainerScrollToTop) {
         if let _ = self.inCallStatusBar {
             self.inCallNavigate?()
@@ -1764,5 +1761,12 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     private func notifyAccessibilityScreenChanged() {
         UIAccessibility.post(notification: UIAccessibility.Notification.screenChanged, argument: nil)
+    }
+    
+    public func updateRootContainerTransitionOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let rootContainer = self.rootContainer, case let .flat(container) = rootContainer else {
+            return
+        }
+        transition.updateTransform(node: container, transform: CGAffineTransformMakeTranslation(offset, 0.0))
     }
 }

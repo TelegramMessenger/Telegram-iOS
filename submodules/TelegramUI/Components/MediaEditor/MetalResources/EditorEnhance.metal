@@ -78,7 +78,7 @@ fragment half4 enhanceColorLookupFragmentShader(RasterizerData in [[stage_in]],
     constexpr sampler lutSampler(min_filter::linear, mag_filter::linear, address::clamp_to_zero);
     
     float2 sourceCoord = in.texCoord;
-    half4 color = sourceTexture.sample(colorSampler,sourceCoord);
+    half4 color = sourceTexture.sample(colorSampler, sourceCoord);
     half3 hslColor = rgbToHsl(color.rgb);
     
     float txf = sourceCoord.x * tileGridSize.x - 0.5;

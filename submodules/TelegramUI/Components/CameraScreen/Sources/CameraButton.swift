@@ -3,14 +3,14 @@ import UIKit
 import ComponentFlow
 
 final class CameraButton: Component {
-    let content: AnyComponent<Empty>
+    let content: AnyComponentWithIdentity<Empty>
     let minSize: CGSize?
     let tag: AnyObject?
     let isEnabled: Bool
     let action: () -> Void
 
     init(
-        content: AnyComponent<Empty>,
+        content: AnyComponentWithIdentity<Empty>,
         minSize: CGSize? = nil,
         tag: AnyObject? = nil,
         isEnabled: Bool = true,
@@ -50,7 +50,7 @@ final class CameraButton: Component {
     }
     
     final class View: UIButton, ComponentTaggedView {
-        private let contentView: ComponentHostView<Empty>
+        private var contentView: ComponentHostView<Empty>
         
         private var component: CameraButton?
         private var currentIsHighlighted: Bool = false {
@@ -123,9 +123,17 @@ final class CameraButton: Component {
         }
         
         func update(component: CameraButton, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            if let currentId = self.component?.content.id, currentId != component.content.id {
+                self.contentView.removeFromSuperview()
+                
+                self.contentView = ComponentHostView<Empty>()
+                self.contentView.isUserInteractionEnabled = false
+                self.contentView.layer.allowsGroupOpacity = true
+                self.addSubview(self.contentView)
+            }
             let contentSize = self.contentView.update(
                 transition: transition,
-                component: component.content,
+                component: component.content.component,
                 environment: {},
                 containerSize: availableSize
             )

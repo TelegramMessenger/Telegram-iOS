@@ -1081,8 +1081,11 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 }
                 
                 if selectedIndex <= 0 && translation.x > 0.0 {
-                    let overscroll = translation.x
-                    transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
+                    //let overscroll = translation.x
+                    //transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
+                    transitionFraction = 0.0
+
+                    self.controller?.storyCameraPanGestureChanged(transitionFraction: translation.x / layout.size.width)
                 }
                 
                 if selectedIndex >= maxFilterIndex && translation.x < 0.0 {
@@ -1159,6 +1162,8 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                         self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
                     }
                 }
+                
+                self.controller?.storyCameraPanGestureEnded(transitionFraction: translation.x / layout.size.width, velocity: velocity.x)
             }
         default:
             break

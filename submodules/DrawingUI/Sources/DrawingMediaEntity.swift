@@ -22,6 +22,7 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         didSet {
             if let previewView = self.previewView {
                 previewView.isUserInteractionEnabled = false
+                previewView.layer.allowsEdgeAntialiasing = true
                 self.addSubview(previewView)
             }
         }

@@ -29,11 +29,11 @@ private final class BlurGaussianPass: RenderPass {
         
     }
     
-    func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         return nil
     }
     
-    func process(input: MTLTexture, intensity: Float, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(input: MTLTexture, intensity: Float, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         let radius = round(4.0 + intensity * 26.0)
         if self.blur?.sigma != radius {
             self.blur = MPSImageGaussianBlur(device: device, sigma: radius)
@@ -67,10 +67,8 @@ private final class BlurLinearPass: DefaultRenderPass {
         return "blurLinearFragmentShader"
     }
     
-    func process(input: MTLTexture, blurredTexture: MTLTexture, values: MediaEditorBlur, output: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device, rotation: rotation)
-        
-        let (width, height) = textureDimensionsForRotation(texture: input, rotation: rotation)
+    func process(input: MTLTexture, blurredTexture: MTLTexture, values: MediaEditorBlur, output: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.setupVerticesBuffer(device: device)
         
         let renderPassDescriptor = MTLRenderPassDescriptor()
         renderPassDescriptor.colorAttachments[0].texture = output
@@ -83,7 +81,7 @@ private final class BlurLinearPass: DefaultRenderPass {
         
         renderCommandEncoder.setViewport(MTLViewport(
             originX: 0, originY: 0,
-            width: Double(width), height: Double(height),
+            width: Double(input.width), height: Double(input.height),
             znear: -1.0, zfar: 1.0)
         )
         
@@ -105,10 +103,8 @@ private final class BlurRadialPass: DefaultRenderPass {
         return "blurRadialFragmentShader"
     }
     
-    func process(input: MTLTexture, blurredTexture: MTLTexture, values: MediaEditorBlur, output: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device, rotation: rotation)
-        
-        let (width, height) = textureDimensionsForRotation(texture: input, rotation: rotation)
+    func process(input: MTLTexture, blurredTexture: MTLTexture, values: MediaEditorBlur, output: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.setupVerticesBuffer(device: device)
         
         let renderPassDescriptor = MTLRenderPassDescriptor()
         renderPassDescriptor.colorAttachments[0].texture = output
@@ -121,7 +117,7 @@ private final class BlurRadialPass: DefaultRenderPass {
         
         renderCommandEncoder.setViewport(MTLViewport(
             originX: 0, originY: 0,
-            width: Double(width), height: Double(height),
+            width: Double(input.width), height: Double(input.height),
             znear: -1.0, zfar: 1.0)
         )
         
@@ -145,11 +141,9 @@ private final class BlurPortraitPass: DefaultRenderPass {
         return "blurPortraitFragmentShader"
     }
     
-    func process(input: MTLTexture, blurredTexture: MTLTexture, maskTexture: MTLTexture, values: MediaEditorBlur, output: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device, rotation: rotation)
+    func process(input: MTLTexture, blurredTexture: MTLTexture, maskTexture: MTLTexture, values: MediaEditorBlur, output: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.setupVerticesBuffer(device: device)
         
-        let (width, height) = textureDimensionsForRotation(texture: input, rotation: rotation)
-
         let renderPassDescriptor = MTLRenderPassDescriptor()
         renderPassDescriptor.colorAttachments[0].texture = output
         renderPassDescriptor.colorAttachments[0].loadAction = .dontCare
@@ -161,7 +155,7 @@ private final class BlurPortraitPass: DefaultRenderPass {
         
         renderCommandEncoder.setViewport(MTLViewport(
             originX: 0, originY: 0,
-            width: Double(width), height: Double(height),
+            width: Double(input.width), height: Double(input.height),
             znear: -1.0, zfar: 1.0)
         )
         
@@ -208,17 +202,18 @@ final class BlurRenderPass: RenderPass {
         self.portraitPass.setup(device: device, library: library)
     }
     
-    func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.process(input: input, maskTexture: self.maskTexture, rotation: rotation, device: device, commandBuffer: commandBuffer)
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.process(input: input, maskTexture: self.maskTexture, device: device, commandBuffer: commandBuffer)
     }
     
-    func process(input: MTLTexture, maskTexture: MTLTexture?, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(input: MTLTexture, maskTexture: MTLTexture?, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         guard self.intensity > 0.005 && self.mode != .off else {
             return input
         }
         
-        let (width, height) = textureDimensionsForRotation(texture: input, rotation: rotation)
-        
+        let width = input.width
+        let height = input.height
+                
         if self.cachedTexture == nil {
             self.value.aspectRatio = Float(height) / Float(width)
             
@@ -235,18 +230,18 @@ final class BlurRenderPass: RenderPass {
             self.cachedTexture = texture
         }
         
-        guard let blurredTexture = self.blurPass.process(input: input, intensity: self.intensity, rotation: rotation, device: device, commandBuffer: commandBuffer), let output = self.cachedTexture else {
+        guard let blurredTexture = self.blurPass.process(input: input, intensity: self.intensity, device: device, commandBuffer: commandBuffer), let output = self.cachedTexture else {
             return input
         }
         
         switch self.mode {
         case .linear:
-            return self.linearPass.process(input: input, blurredTexture: blurredTexture, values: self.value, output: output, rotation: rotation, device: device, commandBuffer: commandBuffer)
+            return self.linearPass.process(input: input, blurredTexture: blurredTexture, values: self.value, output: output, device: device, commandBuffer: commandBuffer)
         case .radial:
-            return self.radialPass.process(input: input, blurredTexture: blurredTexture, values: self.value, output: output, rotation: rotation, device: device, commandBuffer: commandBuffer)
+            return self.radialPass.process(input: input, blurredTexture: blurredTexture, values: self.value, output: output, device: device, commandBuffer: commandBuffer)
         case .portrait:
             if let maskTexture {
-                return self.portraitPass.process(input: input, blurredTexture: blurredTexture, maskTexture: maskTexture, values: self.value, output: output, rotation: rotation, device: device, commandBuffer: commandBuffer)
+                return self.portraitPass.process(input: input, blurredTexture: blurredTexture, maskTexture: maskTexture, values: self.value, output: output, device: device, commandBuffer: commandBuffer)
             } else {
                 return input
             }

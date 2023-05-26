@@ -17,6 +17,7 @@ import PlainButtonComponent
 import AnimatedCounterComponent
 import TokenListTextField
 import AvatarNode
+import LocalizedPeerData
 
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -26,19 +27,25 @@ final class ShareWithPeersScreenComponent: Component {
     let initialPrivacy: EngineStoryPrivacy
     let categoryItems: [CategoryItem]
     let completion: (EngineStoryPrivacy) -> Void
+    let editCategory: (EngineStoryPrivacy) -> Void
+    let secondaryAction: () -> Void
     
     init(
         context: AccountContext,
         stateContext: ShareWithPeersScreen.StateContext,
         initialPrivacy: EngineStoryPrivacy,
         categoryItems: [CategoryItem],
-        completion: @escaping (EngineStoryPrivacy) -> Void
+        completion: @escaping (EngineStoryPrivacy) -> Void,
+        editCategory: @escaping (EngineStoryPrivacy) -> Void,
+        secondaryAction: @escaping () -> Void
     ) {
         self.context = context
         self.stateContext = stateContext
         self.initialPrivacy = initialPrivacy
         self.categoryItems = categoryItems
         self.completion = completion
+        self.editCategory = editCategory
+        self.secondaryAction = secondaryAction
     }
     
     static func ==(lhs: ShareWithPeersScreenComponent, rhs: ShareWithPeersScreenComponent) -> Bool {
@@ -204,6 +211,7 @@ final class ShareWithPeersScreenComponent: Component {
         private let navigationBackgroundView: BlurredBackgroundView
         private let navigationTitle = ComponentView<Empty>()
         private let navigationLeftButton = ComponentView<Empty>()
+        private let navigationRightButton = ComponentView<Empty>()
         private let navigationSeparatorLayer: SimpleLayer
         private let navigationTextFieldState = TokenListTextField.ExternalState()
         private let navigationTextField = ComponentView<Empty>()
@@ -440,7 +448,11 @@ final class ShareWithPeersScreenComponent: Component {
                         if section.id == 0 {
                             sectionTitle = "WHO CAN VIEW FOR 24 HOURS"
                         } else {
-                            sectionTitle = "CONTACTS"
+                            if case .chats = component.stateContext.subject {
+                                sectionTitle = "CHATS"
+                            } else {
+                                sectionTitle = "CONTACTS"
+                            }
                         }
                         
                         let _ = sectionHeader.update(
@@ -521,6 +533,26 @@ final class ShareWithPeersScreenComponent: Component {
                                         }
                                     }
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                                },
+                                secondaryAction: { [weak self] in
+                                    guard let self, let environment = self.environment, let controller = environment.controller() else {
+                                        return
+                                    }
+                                    let base: EngineStoryPrivacy.Base?
+                                    switch categoryId {
+                                    case .everyone:
+                                        base = nil
+                                    case .contacts:
+                                        base = .contacts
+                                    case .closeFriends:
+                                        base = .closeFriends
+                                    case .selectedContacts:
+                                        base = .nobody
+                                    }
+                                    if let base {
+                                        component.editCategory(EngineStoryPrivacy(base: base, additionallyIncludePeers: self.selectedPeers))
+                                        controller.dismiss()
+                                    }
                                 }
                             )),
                             environment: {},
@@ -700,6 +732,8 @@ final class ShareWithPeersScreenComponent: Component {
                 
                 var applyState = false
                 self.defaultStateValue = component.stateContext.stateValue
+                self.selectedPeers = Array(component.stateContext.initialPeerIds)
+                
                 self.stateDisposable = (component.stateContext.state
                 |> deliverOnMainQueue).start(next: { [weak self] stateValue in
                     guard let self else {
@@ -738,97 +772,85 @@ final class ShareWithPeersScreenComponent: Component {
                 self.bottomSeparatorLayer.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
             }
             
-            var tokens: [TokenListTextField.Token] = []
-            for categoryId in self.selectedCategories.sorted(by: { $0.rawValue < $1.rawValue }) {
-                let categoryTitle: String
-                var categoryImage: UIImage?
-                switch categoryId {
-                case .everyone:
-                    categoryTitle = "Everyone"
-                    categoryImage = generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Channel"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue)
-                case .contacts:
-                    categoryTitle = "Contacts"
-                    categoryImage = generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Tabs/IconContacts"), color: .white), iconScale: 0.6 * 0.9, cornerRadius: 6.0, circleCorners: true, color: .yellow)
-                case .closeFriends:
-                    categoryTitle = "Close Friends"
-                    categoryImage = generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Call/StarHighlighted"), color: .white), iconScale: 0.6 * 1.0, cornerRadius: 6.0, circleCorners: true, color: .green)
-                case .selectedContacts:
-                    categoryTitle = "Selected Contacts"
-                    categoryImage = generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Group"), color: .white), iconScale: 0.6 * 1.0, cornerRadius: 6.0, circleCorners: true, color: .purple)
-                }
-                tokens.append(TokenListTextField.Token(
-                    id: AnyHashable(categoryId),
-                    title: categoryTitle,
-                    fixedPosition: categoryId.rawValue,
-                    content: .category(categoryImage)
-                ))
-            }
-            for peerId in self.selectedPeers {
-                guard let stateValue = self.defaultStateValue, let peer = stateValue.peers.first(where: { $0.id == peerId }) else {
-                    continue
-                }
-                tokens.append(TokenListTextField.Token(
-                    id: AnyHashable(peerId),
-                    title: peer.compactDisplayTitle,
-                    fixedPosition: nil,
-                    content: .peer(peer)
-                ))
-            }
-            
-            self.navigationTextField.parentState = state
-            let navigationTextFieldSize = self.navigationTextField.update(
-                transition: transition,
-                component: AnyComponent(TokenListTextField(
-                    externalState: self.navigationTextFieldState,
-                    context: component.context,
-                    theme: environment.theme,
-                    placeholder: "Search Contacts",
-                    tokens: tokens,
-                    sideInset: sideInset,
-                    deleteToken: { [weak self] tokenId in
-                        guard let self else {
-                            return
-                        }
-                        if let categoryId = tokenId.base as? CategoryId {
-                            self.selectedCategories.remove(categoryId)
-                        } else if let peerId = tokenId.base as? EnginePeer.Id {
-                            self.selectedPeers.removeAll(where: { $0 == peerId })
-                        }
-                        if self.selectedCategories.isEmpty {
-                            self.selectedCategories.insert(.everyone)
-                        }
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+            let navigationTextFieldSize: CGSize
+            if case .stories = component.stateContext.subject {
+                navigationTextFieldSize = .zero
+            } else {
+                var tokens: [TokenListTextField.Token] = []
+                for peerId in self.selectedPeers {
+                    guard let stateValue = self.defaultStateValue, let peer = stateValue.peers.first(where: { $0.id == peerId }) else {
+                        continue
                     }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
-            )
-            
-            if !self.navigationTextFieldState.text.isEmpty {
-                if let searchStateContext = self.searchStateContext, searchStateContext.subject == .search(self.navigationTextFieldState.text) {
-                } else {
-                    self.searchStateDisposable?.dispose()
-                    let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .search(self.navigationTextFieldState.text))
-                    var applyState = false
-                    self.searchStateDisposable = (searchStateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
-                        guard let self else {
-                            return
-                        }
-                        self.searchStateContext = searchStateContext
-                        if applyState {
-                            self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(contentReloaded: true)))
-                        }
-                    })
-                    applyState = true
+                    tokens.append(TokenListTextField.Token(
+                        id: AnyHashable(peerId),
+                        title: peer.compactDisplayTitle,
+                        fixedPosition: nil,
+                        content: .peer(peer)
+                    ))
                 }
-            } else if let _ = self.searchStateContext {
-                self.searchStateContext = nil
-                self.searchStateDisposable?.dispose()
-                self.searchStateDisposable = nil
                 
-                contentTransition = contentTransition.withUserData(AnimationHint(contentReloaded: true))
+                let placeholder: String
+                switch component.stateContext.subject {
+                case .chats:
+                    placeholder = "Search Chats"
+                default:
+                    placeholder = "Search Contacts"
+                }
+                self.navigationTextField.parentState = state
+                navigationTextFieldSize = self.navigationTextField.update(
+                    transition: transition,
+                    component: AnyComponent(TokenListTextField(
+                        externalState: self.navigationTextFieldState,
+                        context: component.context,
+                        theme: environment.theme,
+                        placeholder: placeholder,
+                        tokens: tokens,
+                        sideInset: sideInset,
+                        deleteToken: { [weak self] tokenId in
+                            guard let self else {
+                                return
+                            }
+                            if let categoryId = tokenId.base as? CategoryId {
+                                self.selectedCategories.remove(categoryId)
+                            } else if let peerId = tokenId.base as? EnginePeer.Id {
+                                self.selectedPeers.removeAll(where: { $0 == peerId })
+                            }
+                            if self.selectedCategories.isEmpty {
+                                self.selectedCategories.insert(.everyone)
+                            }
+                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: 1000.0)
+                )
+                
+                if !self.navigationTextFieldState.text.isEmpty {
+                    if let searchStateContext = self.searchStateContext, searchStateContext.subject == .search(self.navigationTextFieldState.text) {
+                    } else {
+                        self.searchStateDisposable?.dispose()
+                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .search(self.navigationTextFieldState.text))
+                        var applyState = false
+                        self.searchStateDisposable = (searchStateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.searchStateContext = searchStateContext
+                            if applyState {
+                                self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(contentReloaded: true)))
+                            }
+                        })
+                        applyState = true
+                    }
+                } else if let _ = self.searchStateContext {
+                    self.searchStateContext = nil
+                    self.searchStateDisposable?.dispose()
+                    self.searchStateDisposable = nil
+                    
+                    contentTransition = contentTransition.withUserData(AnimationHint(contentReloaded: true))
+                }
             }
-            
+                
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             let categoryItemSize = self.categoryTemplateItem.update(
@@ -843,7 +865,8 @@ final class ShareWithPeersScreenComponent: Component {
                     subtitle: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
                     hasNext: true,
-                    action: {}
+                    action: {},
+                    secondaryAction: {}
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 1000.0)
@@ -870,54 +893,121 @@ final class ShareWithPeersScreenComponent: Component {
             
             var sections: [ItemLayout.Section] = []
             if let stateValue = self.effectiveStateValue {
-                if self.searchStateContext == nil {
+                if case .stories = component.stateContext.subject {
                     sections.append(ItemLayout.Section(
                         id: 0,
-                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 00, right: 0.0),
+                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
                         itemHeight: categoryItemSize.height,
                         itemCount: component.categoryItems.count
                     ))
+                } else {
+                    sections.append(ItemLayout.Section(
+                        id: 1,
+                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
+                        itemHeight: peerItemSize.height,
+                        itemCount: stateValue.peers.count
+                    ))
                 }
-                sections.append(ItemLayout.Section(
-                    id: 1,
-                    insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 00, right: 0.0),
-                    itemHeight: peerItemSize.height,
-                    itemCount: stateValue.peers.count
-                ))
             }
             
             let containerInset: CGFloat = environment.statusBarHeight + 10.0
             
             var navigationHeight: CGFloat = 56.0
-            
             let navigationSideInset: CGFloat = 16.0
-            let navigationLeftButtonSize = self.navigationLeftButton.update(
+            var navigationButtonsWidth: CGFloat = 0.0
+            
+            if case .stories = component.stateContext.subject {
+            } else {
+                let navigationLeftButtonSize = self.navigationLeftButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
+                        action: { [weak self] in
+                            guard let self, let environment = self.environment, let controller = environment.controller() else {
+                                return
+                            }
+                            controller.dismiss()
+                        }
+                    ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: navigationHeight)
+                )
+                let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
+                if let navigationLeftButtonView = self.navigationLeftButton.view {
+                    if navigationLeftButtonView.superview == nil {
+                        self.navigationContainerView.addSubview(navigationLeftButtonView)
+                    }
+                    transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
+                }
+                navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
+            }
+            
+            let navigationRightButtonSize = self.navigationRightButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
+                    content: AnyComponent(Text(text: "Done", font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
-                        guard let self, let environment = self.environment, let controller = environment.controller() else {
+                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
                             return
                         }
+                        
+                        let base: EngineStoryPrivacy.Base
+                        if self.selectedCategories.contains(.everyone) {
+                            base = .everyone
+                        } else if self.selectedCategories.contains(.closeFriends) {
+                            base = .closeFriends
+                        } else if self.selectedCategories.contains(.contacts) {
+                            base = .contacts
+                        } else if self.selectedCategories.contains(.selectedContacts) {
+                            base = .nobody
+                        } else {
+                            base = .nobody
+                        }
+                        
+                        component.completion(EngineStoryPrivacy(
+                            base: base,
+                            additionallyIncludePeers: self.selectedPeers
+                        ))
                         controller.dismiss()
                     }
                 ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: navigationHeight)
             )
-            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
-            if let navigationLeftButtonView = self.navigationLeftButton.view {
-                if navigationLeftButtonView.superview == nil {
-                    self.navigationContainerView.addSubview(navigationLeftButtonView)
+            let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - navigationSideInset - navigationRightButtonSize.width, y: floor((navigationHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
+            if let navigationRightButtonView = self.navigationRightButton.view {
+                if navigationRightButtonView.superview == nil {
+                    self.navigationContainerView.addSubview(navigationRightButtonView)
                 }
-                transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
+                transition.setFrame(view: navigationRightButtonView, frame: navigationRightButtonFrame)
             }
+            navigationButtonsWidth += navigationRightButtonSize.width + navigationSideInset
             
+            let title: String
+            switch component.stateContext.subject {
+            case .stories:
+                title = "Share Story"
+            case .chats:
+                title = "Send as a Message"
+            case let .contacts(category):
+                switch category {
+                case .closeFriends:
+                    title = "Close Friends"
+                case .contacts:
+                    title = "Excluded People"
+                case .nobody:
+                    title = "Selected Contacts"
+                case .everyone:
+                    title = ""
+                }
+            case .search:
+                title = ""
+            }
             let navigationTitleSize = self.navigationTitle.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: "Share Story", font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.primaryTextColor)),
+                component: AnyComponent(Text(text: title, font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.primaryTextColor)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - navigationSideInset - navigationLeftButtonFrame.maxX, height: navigationHeight)
+                containerSize: CGSize(width: availableSize.width - navigationButtonsWidth, height: navigationHeight)
             )
             let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) * 0.5), y: floor((navigationHeight - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
@@ -943,7 +1033,11 @@ final class ShareWithPeersScreenComponent: Component {
             if environment.inputHeight != 0.0 || !self.navigationTextFieldState.text.isEmpty {
                 topInset = 0.0
             } else {
-                topInset = max(0.0, availableSize.height - containerInset - 600.0)
+                if case .stories = component.stateContext.subject {
+                    topInset = max(0.0, availableSize.height - containerInset - 410.0)
+                } else {
+                    topInset = max(0.0, availableSize.height - containerInset - 600.0)
+                }
             }
             
             self.navigationBackgroundView.update(size: CGSize(width: availableSize.width, height: navigationHeight), cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
@@ -951,83 +1045,46 @@ final class ShareWithPeersScreenComponent: Component {
             
             transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             
-            var actionButtonTitle: String = "Post Story"
-            if self.selectedCategories.contains(.everyone) {
-                actionButtonTitle = "Post Story"
-            } else if self.selectedCategories.contains(.closeFriends) {
-                actionButtonTitle = "Send to Close Friends"
-            } else if self.selectedCategories.contains(.contacts) {
-                actionButtonTitle = "Send to Contacts"
-            } else if self.selectedCategories.contains(.selectedContacts) {
-                actionButtonTitle = "Send to Selected Contacts"
-            }
-            
-            let actionButtonSize = self.actionButton.update(
-                transition: transition,
-                component: AnyComponent(ButtonComponent(
-                    background: ButtonComponent.Background(
-                        color: environment.theme.list.itemCheckColors.fillColor,
-                        foreground: environment.theme.list.itemCheckColors.foregroundColor,
-                        pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
-                    ),
-                    content: AnyComponentWithIdentity(
-                        id: actionButtonTitle,
-                        component: AnyComponent(ButtonTextContentComponent(
-                            text: actionButtonTitle,
-                            badge: 0,
-                            textColor: environment.theme.list.itemCheckColors.foregroundColor,
-                            badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
-                            badgeForeground: environment.theme.list.itemCheckColors.fillColor
-                        ))
-                    ),
-                    isEnabled: true,
-                    displaysProgress: false,
-                    action: { [weak self] in
-                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
-                            return
-                        }
-                        
-                        let base: EngineStoryPrivacy.Base
-                        if self.selectedCategories.contains(.everyone) {
-                            base = .everyone
-                        } else if self.selectedCategories.contains(.closeFriends) {
-                            base = .closeFriends
-                        } else if self.selectedCategories.contains(.contacts) {
-                            base = .contacts
-                        } else if self.selectedCategories.contains(.selectedContacts) {
-                            base = .nobody
-                        } else {
-                            base = .nobody
-                        }
-                        
-                        component.completion(EngineStoryPrivacy(
-                            base: base,
-                            additionallyIncludePeers: self.selectedPeers
-                        ))
-                        controller.dismiss()
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - navigationSideInset * 2.0, height: 50.0)
-            )
-            
             var bottomPanelHeight: CGFloat = 0.0
-            if environment.inputHeight != 0.0 {
-                bottomPanelHeight += environment.inputHeight + 8.0 + actionButtonSize.height
-            } else {
-                bottomPanelHeight += 10.0 + environment.safeInsets.bottom + actionButtonSize.height
-            }
-            let actionButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
-            if let actionButtonView = self.actionButton.view {
-                if actionButtonView.superview == nil {
-                    self.addSubview(actionButtonView)
+            if case .stories = component.stateContext.subject {
+                let actionButtonSize = self.actionButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(Text(
+                            text: "Send as a Message",
+                            font: Font.regular(17.0),
+                            color: environment.theme.list.itemAccentColor
+                        )),
+                        action: { [weak self] in
+                            guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                                return
+                            }
+                            
+                            component.secondaryAction()
+                            controller.dismiss()
+                        }
+                    ).minSize(CGSize(width: 200.0, height: 44.0))),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - navigationSideInset * 2.0, height: 44.0)
+                )
+                
+                if environment.inputHeight != 0.0 {
+                    bottomPanelHeight += environment.inputHeight + 8.0 + actionButtonSize.height
+                } else {
+                    bottomPanelHeight += environment.safeInsets.bottom + actionButtonSize.height
                 }
-                transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
+                let actionButtonFrame = CGRect(origin: CGPoint(x: (availableSize.width - actionButtonSize.width) / 2.0, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
+                if let actionButtonView = self.actionButton.view {
+                    if actionButtonView.superview == nil {
+                        self.addSubview(actionButtonView)
+                    }
+                    transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
+                }
+                
+                transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: availableSize.width, height: bottomPanelHeight + 8.0)))
+                self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
+                transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             }
-            
-            transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: availableSize.width, height: bottomPanelHeight + 8.0)))
-            self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
-            transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             
             let itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: bottomPanelHeight + environment.safeInsets.bottom, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
             let previousItemLayout = self.itemLayout
@@ -1099,13 +1156,16 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     public final class StateContext {
         public enum Subject: Equatable {
-            case contacts
+            case stories
+            case chats
+            case contacts(EngineStoryPrivacy.Base)
             case search(String)
         }
         
         fileprivate var stateValue: State?
         
         public let subject: Subject
+        public private(set) var initialPeerIds: Set<EnginePeer.Id> = Set()
         
         private var stateDisposable: Disposable?
         private let stateSubject = Promise<State>()
@@ -1119,12 +1179,51 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         
         public init(
             context: AccountContext,
-            subject: Subject = .contacts
+            subject: Subject = .chats,
+            initialPeerIds: Set<EnginePeer.Id> = Set()
         ) {
             self.subject = subject
+            self.initialPeerIds = initialPeerIds
             
             switch subject {
-            case .contacts:
+            case .stories:
+                let state = State(peers: [], presences: [:])
+                self.stateValue = state
+                self.stateSubject.set(.single(state))
+                self.readySubject.set(true)
+            case .chats:
+                self.stateDisposable = (context.engine.messages.chatList(group: .root, count: 200)
+                |> deliverOnMainQueue).start(next: { [weak self] chatList in
+                    guard let self else {
+                        return
+                    }
+                    
+                    var selectedPeers: [EnginePeer] = []
+                    for item in chatList.items.reversed() {
+                        if self.initialPeerIds.contains(item.renderedPeer.peerId), let peer = item.renderedPeer.peer {
+                            selectedPeers.append(peer)
+                        }
+                    }
+                    
+                    var presences: [EnginePeer.Id: EnginePeer.Presence] = [:]
+                    for item in chatList.items {
+                        presences[item.renderedPeer.peerId] = item.presence
+                    }
+                    
+                    var peers: [EnginePeer] = []
+                    peers = chatList.items.filter { !self.initialPeerIds.contains($0.renderedPeer.peerId) }.reversed().compactMap { $0.renderedPeer.peer }
+                    peers.insert(contentsOf: selectedPeers, at: 0)
+                    
+                    let state = State(
+                        peers: peers,
+                        presences: presences
+                    )
+                    self.stateValue = state
+                    self.stateSubject.set(.single(state))
+                    
+                    self.readySubject.set(true)
+                })
+            case let .contacts(base):
                 self.stateDisposable = (context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)
                 )
@@ -1133,23 +1232,40 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         return
                     }
                     
-                    let state = State(
-                        peers: contactList.peers.sorted(by: { lhs, rhs in
-                            let lhsPresence = contactList.presences[lhs.id]
-                            let rhsPresence = contactList.presences[rhs.id]
-                            
-                            if let lhsPresence, let rhsPresence {
-                                return lhsPresence.status > rhsPresence.status
-                            } else if lhsPresence != nil {
-                                return true
-                            } else if rhsPresence != nil {
-                                return false
-                            } else {
-                                return lhs.id < rhs.id
+                    var selectedPeers: [EnginePeer] = []
+                    if case .closeFriends = base {
+                        for peer in contactList.peers {
+                            if case let .user(user) = peer, user.flags.contains(.isCloseFriend) {
+                                selectedPeers.append(peer)
                             }
-                        }),
+                        }
+                        selectedPeers = selectedPeers.sorted(by: { lhs, rhs in
+                            let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
+                            if result == .orderedSame {
+                                return lhs.id < rhs.id
+                            } else {
+                                return result == .orderedAscending
+                            }
+                        })
+                        self.initialPeerIds = Set(selectedPeers.map { $0.id })
+                    }
+                    
+                    var peers: [EnginePeer] = []
+                    peers = contactList.peers.filter { !self.initialPeerIds.contains($0.id) }.sorted(by: { lhs, rhs in
+                        let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
+                        if result == .orderedSame {
+                            return lhs.id < rhs.id
+                        } else {
+                            return result == .orderedAscending
+                        }
+                    })
+                    peers.insert(contentsOf: selectedPeers, at: 0)
+                    
+                    let state = State(
+                        peers: peers,
                         presences: contactList.presences
                     )
+                                        
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
                     
@@ -1183,45 +1299,49 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void) {
+    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void, editCategory: @escaping (EngineStoryPrivacy) -> Void, secondaryAction: @escaping () -> Void) {
         self.context = context
         
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []
-        categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
-            id: .everyone,
-            title: "Everyone",
-            icon: "Chat List/Filters/Channel",
-            iconColor: .blue,
-            actionTitle: nil
-        ))
-        categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
-            id: .contacts,
-            title: "Contacts",
-            icon: "Chat List/Tabs/IconContacts",
-            iconColor: .yellow,
-            actionTitle: nil
-        ))
-        categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
-            id: .closeFriends,
-            title: "Close Friends",
-            icon: "Call/StarHighlighted",
-            iconColor: .green,
-            actionTitle: nil
-        ))
-        categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
-            id: .selectedContacts,
-            title: "Selected Contacts",
-            icon: "Chat List/Filters/Group",
-            iconColor: .purple,
-            actionTitle: nil
-        ))
+        if case .stories = stateContext.subject {
+            categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
+                id: .everyone,
+                title: "Everyone",
+                icon: "Chat List/Filters/Channel",
+                iconColor: .blue,
+                actionTitle: nil
+            ))
+            categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
+                id: .contacts,
+                title: "Contacts",
+                icon: "Chat List/Tabs/IconContacts",
+                iconColor: .yellow,
+                actionTitle: "exclude people"
+            ))
+            categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
+                id: .closeFriends,
+                title: "Close Friends",
+                icon: "Call/StarHighlighted",
+                iconColor: .green,
+                actionTitle: "edit list"
+            ))
+            categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
+                id: .selectedContacts,
+                title: "Selected Contacts",
+                icon: "Chat List/Filters/Group",
+                iconColor: .violet,
+                actionTitle: "edit list"
+            ))
+        }
         
         super.init(context: context, component: ShareWithPeersScreenComponent(
             context: context,
             stateContext: stateContext,
             initialPrivacy: initialPrivacy,
             categoryItems: categoryItems,
-            completion: completion
+            completion: completion,
+            editCategory: editCategory,
+            secondaryAction: secondaryAction
         ), navigationBarAppearance: .none, theme: .dark)
         
         self.statusBar.statusBarStyle = .Ignore

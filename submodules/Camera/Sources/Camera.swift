@@ -46,9 +46,10 @@ private final class CameraContext {
             let ciContext = CIContext()
             var ciImage = CIImage(cvImageBuffer: pixelBuffer)
             ciImage = ciImage.transformed(by: CGAffineTransform(scaleX: 0.33, y: 0.33))
+            ciImage = ciImage.clampedToExtent()
             if let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) {
                 let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
-                CameraSimplePreviewView.saveLastState(uiImage)
+                CameraSimplePreviewView.saveLastStateImage(uiImage)
             }
         }
     }

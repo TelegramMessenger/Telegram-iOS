@@ -16,6 +16,7 @@ public struct UserInfoFlags: OptionSet {
     public static let isScam = UserInfoFlags(rawValue: (1 << 2))
     public static let isFake = UserInfoFlags(rawValue: (1 << 3))
     public static let isPremium = UserInfoFlags(rawValue: (1 << 4))
+    public static let isCloseFriend = UserInfoFlags(rawValue: (1 << 5))
 }
 
 public struct BotUserInfoFlags: OptionSet {
@@ -350,5 +351,9 @@ public final class TelegramUser: Peer, Equatable {
     
     public func withUpdatedEmojiStatus(_ emojiStatus: PeerEmojiStatus?) -> TelegramUser {
         return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: emojiStatus, usernames: self.usernames)
+    }
+    
+    public func withUpdatedFlags(_ flags: UserInfoFlags) -> TelegramUser {
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: emojiStatus, usernames: self.usernames)
     }
 }

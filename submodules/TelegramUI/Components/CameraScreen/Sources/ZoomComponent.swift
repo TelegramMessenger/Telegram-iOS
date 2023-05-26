@@ -120,15 +120,6 @@ final class ZoomComponent: Component {
             let spacing: CGFloat = 3.0
             let buttonSize = CGSize(width: 37.0, height: 37.0)
             let size: CGSize = CGSize(width: buttonSize.width * CGFloat(component.availableValues.count) + spacing * CGFloat(component.availableValues.count - 1) + sideInset * 2.0, height: 43.0)
-
-            if let screenTransition = transition.userData(CameraScreenTransition.self) {
-                switch screenTransition {
-                case .animateIn:
-                    self.animateIn()
-                case .animateOut:
-                    self.animateOut()
-                }
-            }
             
             var i = 0
             var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: 3.0), size: buttonSize)

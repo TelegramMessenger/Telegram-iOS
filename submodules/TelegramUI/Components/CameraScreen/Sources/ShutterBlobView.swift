@@ -41,15 +41,15 @@ private final class AnimatableProperty<T: Interpolatable> {
     }
     
     func update(value: T, transition: Transition = .immediate) {
+        let currentTimestamp = CACurrentMediaTime()
         if case .none = transition.animation {
             if let animation = self.animation, case let .curve(duration, curve) = animation.animation {
                 self.value = value
-                let elapsed = duration - (CACurrentMediaTime() - animation.startTimestamp)
-                if elapsed < 0.1 {
-                    self.presentationValue = value
-                    self.animation = nil
+                let elapsed = duration - (currentTimestamp - animation.startTimestamp)
+                if let presentationValue = self.presentationValue as? CGFloat, let newValue = value as? CGFloat, abs(presentationValue - newValue) > 0.56 {
+                    self.animation = PropertyAnimation(fromValue: self.presentationValue, toValue: value, animation: .curve(duration: elapsed * 0.8, curve: curve), startTimestamp: currentTimestamp)
                 } else {
-                    self.animation = PropertyAnimation(fromValue: self.presentationValue, toValue: value, animation: .curve(duration: elapsed, curve: curve), startTimestamp: CACurrentMediaTime())
+                    self.animation = PropertyAnimation(fromValue: self.presentationValue, toValue: value, animation: .curve(duration: elapsed, curve: curve), startTimestamp: currentTimestamp)
                 }
             } else {
                 self.value = value
@@ -58,7 +58,7 @@ private final class AnimatableProperty<T: Interpolatable> {
             }
         } else {
             self.value = value
-            self.animation = PropertyAnimation(fromValue: self.presentationValue, toValue: value, animation: transition.animation, startTimestamp: CACurrentMediaTime())
+            self.animation = PropertyAnimation(fromValue: self.presentationValue, toValue: value, animation: transition.animation, startTimestamp: currentTimestamp)
         }
     }
     
@@ -73,13 +73,18 @@ private final class AnimatableProperty<T: Interpolatable> {
         case .easeInOut:
             t = listViewAnimationCurveEaseInOut(t)
         case .spring:
-            t = listViewAnimationCurveSystem(t)
+            t = listViewAnimationCurveEaseInOut(t)
+            //t = listViewAnimationCurveSystem(t)
         case let .custom(x1, y1, x2, y2):
             t = bezierPoint(CGFloat(x1), CGFloat(y1), CGFloat(x2), CGFloat(y2), t)
         }
         self.presentationValue = animation.valueAt(t) as! T
     
-        return timeFromStart <= duration
+        if timeFromStart <= duration {
+            return true
+        }
+        self.animation = nil
+        return false
     }
 }
 
@@ -204,32 +209,31 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
   
         super.init(frame: CGRect(), device: device)
         
-        self.delegate = self
-
         self.isOpaque = false
         self.backgroundColor = .clear
 
-        self.framebufferOnly = true
         self.colorPixelFormat = .bgra8Unorm
+        self.framebufferOnly = true
+        self.presentsWithTransaction = true
+        self.isPaused = true
+        self.delegate = self
         
         self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
             self?.tick()
         }
         self.displayLink?.isPaused = true
-        
-        self.isPaused = true
     }
     
-    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        self.viewportDimensions = size
-    }
-
     required public init(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
     deinit {
         self.displayLink?.invalidate()
+    }
+    
+    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+        self.viewportDimensions = size
     }
     
     func updateState(_ state: BlobState, transition: Transition = .immediate) {
@@ -253,6 +257,7 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         }
         let mappedOffset = offset / self.frame.height * 2.0
         self.primaryOffset.update(value: mappedOffset, transition: transition)
+        
         self.tick()
     }
     
@@ -262,6 +267,7 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         }
         let mappedOffset = offset / self.frame.height * 2.0
         self.secondaryOffset.update(value: mappedOffset, transition: transition)
+        
         self.tick()
     }
     
@@ -288,47 +294,51 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
 
     private func tick() {
         self.updateAnimations()
-        self.draw()
+        autoreleasepool {
+            self.draw(in: self)
+        }
     }
-
-    override public func draw(_ rect: CGRect) {
-        self.redraw(drawable: self.currentDrawable!)
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        self.tick()
     }
-
-    private func redraw(drawable: MTLDrawable) {
+    
+    func draw(in view: MTKView) {
         guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
             return
         }
-
-        let renderPassDescriptor = self.currentRenderPassDescriptor!
+                        
+        guard let renderPassDescriptor = self.currentRenderPassDescriptor else {
+            return
+        }
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0.0)
-
+        
         guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
             return
         }
-
+        
         let viewportDimensions = self.viewportDimensions
         renderEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: viewportDimensions.width, height: viewportDimensions.height, znear: -1.0, zfar: 1.0))
-        
         renderEncoder.setRenderPipelineState(self.drawPassthroughPipelineState)
-
+        
         let w = Float(1)
         let h = Float(1)
-        
         var vertices: [Float] = [
-             w,  -h,
+            w,  -h,
             -w,  -h,
             -w,   h,
-             w,  -h,
+            w,  -h,
             -w,   h,
-             w,   h
+            w,   h
         ]
         renderEncoder.setVertexBytes(&vertices, length: 4 * vertices.count, index: 0)
-                
+        
         var resolution = simd_uint2(UInt32(viewportDimensions.width), UInt32(viewportDimensions.height))
         renderEncoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
-                    
+        
         var primaryParameters = simd_float4(
             Float(self.primarySize.presentationValue),
             Float(self.primaryOffset.presentationValue),
@@ -343,23 +353,15 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
             Float(self.secondaryRedness.presentationValue)
         )
         renderEncoder.setFragmentBytes(&secondaryParameters, length: MemoryLayout<simd_float3>.size, index: 2)
-        
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)
-        
         renderEncoder.endEncoding()
-        drawable.present()
-         //commandBuffer.present(drawable)
+        
+        if let currentDrawable = self.currentDrawable {
+            commandBuffer.present(currentDrawable)
+        }
         commandBuffer.commit()
-        commandBuffer.waitUntilScheduled()
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
+        //commandBuffer.waitUntilScheduled()
         
-        self.tick()
-    }
-    
-    func draw(in view: MTKView) {
-        
+        //self.currentDrawable?.present()
     }
 }
