@@ -108,6 +108,10 @@ public class CameraSimplePreviewView: UIView {
         }
         |> distinctUntilChanged
     }
+    
+    public func cameraPoint(for location: CGPoint) -> CGPoint {
+        return self.videoPreviewLayer.captureDevicePointConverted(fromLayerPoint: location)
+    }
 }
 
 public class CameraPreviewView: MTKView {

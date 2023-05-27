@@ -109,11 +109,12 @@ final class CameraOutput: NSObject {
     
     func configureVideoStabilization() {
         if let videoDataOutputConnection = self.videoOutput.connection(with: .video), videoDataOutputConnection.isVideoStabilizationSupported {
-            if #available(iOS 13.0, *) {
-                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematicExtended
-            } else {
-                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematic
-            }
+            videoDataOutputConnection.preferredVideoStabilizationMode = .standard
+//            if #available(iOS 13.0, *) {
+//                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematicExtended
+//            } else {
+//                videoDataOutputConnection.preferredVideoStabilizationMode = .cinematic
+//            }
         }
     }
     
@@ -178,7 +179,7 @@ final class CameraOutput: NSObject {
         let outputFileName = NSUUID().uuidString
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
-        let videoRecorder = VideoRecorder(preset: MediaPreset(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
+        let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
             if case .success = result {
                 self?.recordingCompletionPipe.putNext(outputFilePath)
             } else {
@@ -186,7 +187,8 @@ final class CameraOutput: NSObject {
             }
         })
         
-        videoRecorder.start()
+        
+        videoRecorder?.start()
         self.videoRecorder = videoRecorder
         
         return Signal { subscriber in
@@ -244,13 +246,8 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
 //            self.processSampleBuffer?(finalVideoPixelBuffer, connection)
 //        }
         
-        if let videoRecorder = self.videoRecorder, videoRecorder.isRecording || videoRecorder.isStopping {
-            let mediaType = sampleBuffer.type
-            if mediaType == kCMMediaType_Video {
-                videoRecorder.appendVideo(sampleBuffer: sampleBuffer)
-            } else if mediaType == kCMMediaType_Audio {
-                videoRecorder.appendAudio(sampleBuffer: sampleBuffer)
-            }
+        if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
+            videoRecorder.appendSampleBuffer(sampleBuffer)
         }
     }
     

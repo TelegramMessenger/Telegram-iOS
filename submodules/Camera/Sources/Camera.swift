@@ -142,8 +142,17 @@ private final class CameraContext {
         self.session.stopRunning()
     }
     
-    func focus(at point: CGPoint) {
-        self.device.setFocusPoint(point, focusMode: .continuousAutoFocus, exposureMode: .continuousAutoExposure, monitorSubjectAreaChange: true)
+    func focus(at point: CGPoint, autoFocus: Bool) {
+        let focusMode: AVCaptureDevice.FocusMode
+        let exposureMode: AVCaptureDevice.ExposureMode
+        if autoFocus {
+            focusMode = .continuousAutoFocus
+            exposureMode = .continuousAutoExposure
+        } else {
+            focusMode = .autoFocus
+            exposureMode = .autoExpose
+        }
+        self.device.setFocusPoint(point, focusMode: focusMode, exposureMode: exposureMode, monitorSubjectAreaChange: true)
     }
     
     func setFps(_ fps: Float64) {
@@ -276,6 +285,9 @@ public final class Camera {
         self.metrics = Camera.Metrics(model: DeviceModel.current)
         
         let session = AVCaptureSession()
+        session.usesApplicationAudioSession = true
+        session.automaticallyConfiguresApplicationAudioSession = false
+        session.automaticallyConfiguresCaptureDeviceForWideColor = false
         if let previewView {
             previewView.session = session
         }
@@ -373,10 +385,10 @@ public final class Camera {
         }
     }
     
-    public func focus(at point: CGPoint) {
+    public func focus(at point: CGPoint, autoFocus: Bool = true) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.focus(at: point)
+                context.focus(at: point, autoFocus: autoFocus)
             }
         }
     }

@@ -840,7 +840,10 @@ public class CameraScreen: ViewController {
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             self.effectivePreviewView.addGestureRecognizer(panGestureRecognizer)
             
-            self.camera.focus(at: CGPoint(x: 0.5, y: 0.5))
+            let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
+            self.effectivePreviewView.addGestureRecognizer(tapGestureRecognizer)
+            
+            self.camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
             self.camera.startCapture()
         }
         
@@ -856,8 +859,6 @@ public class CameraScreen: ViewController {
             }
         }
         
-        private var previewInitialPosition: CGPoint?
-        private var controlsInitialPosition: CGPoint?
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let controller = self.controller else {
                 return
@@ -865,8 +866,7 @@ public class CameraScreen: ViewController {
             let translation = gestureRecognizer.translation(in: gestureRecognizer.view)
             switch gestureRecognizer.state {
             case .began:
-                self.previewInitialPosition = self.previewContainerView.center
-                self.controlsInitialPosition = self.componentHost.view?.center
+                break
             case .changed:
                 if !"".isEmpty {
                     
@@ -887,6 +887,15 @@ public class CameraScreen: ViewController {
             default:
                 break
             }
+        }
+        
+        @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            guard let previewView = self.simplePreviewView else {
+                return
+            }
+            let location = gestureRecognizer.location(in: previewView)
+            let point = previewView.cameraPoint(for: location)
+            self.camera.focus(at: point, autoFocus: false)
         }
 
         func animateIn() {

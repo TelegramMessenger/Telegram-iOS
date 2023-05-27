@@ -1160,7 +1160,7 @@ public final class MediaEditorScreen: ViewController {
             rotateGestureRecognizer.delegate = self
             self.previewContainerView.addGestureRecognizer(rotateGestureRecognizer)
             
-            let tapGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
+            let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
             self.previewContainerView.addGestureRecognizer(tapGestureRecognizer)
             
             self.interaction = DrawingToolsInteraction(
