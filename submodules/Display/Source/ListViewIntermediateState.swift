@@ -108,13 +108,13 @@ public struct ListViewDeleteAndInsertOptions: OptionSet {
 }
 
 public struct ListViewUpdateSizeAndInsets {
-    public let size: CGSize
-    public let insets: UIEdgeInsets
-    public let headerInsets: UIEdgeInsets?
-    public let scrollIndicatorInsets: UIEdgeInsets?
-    public let duration: Double
-    public let curve: ListViewAnimationCurve
-    public let ensureTopInsetForOverlayHighlightedItems: CGFloat?
+    public var size: CGSize
+    public var insets: UIEdgeInsets
+    public var headerInsets: UIEdgeInsets?
+    public var scrollIndicatorInsets: UIEdgeInsets?
+    public var duration: Double
+    public var curve: ListViewAnimationCurve
+    public var ensureTopInsetForOverlayHighlightedItems: CGFloat?
     
     public init(size: CGSize, insets: UIEdgeInsets, headerInsets: UIEdgeInsets? = nil, scrollIndicatorInsets: UIEdgeInsets? = nil, duration: Double, curve: ListViewAnimationCurve, ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil) {
         self.size = size

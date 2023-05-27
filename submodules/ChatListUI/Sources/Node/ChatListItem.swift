@@ -2745,6 +2745,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         avatarScaleOffset = targetAvatarScaleOffset * inlineNavigationLocation.progress
                     }
                     
+                    let storyIndicatorScale = avatarScale
                     if displayStoryIndicator {
                         avatarScale *= (avatarFrame.width - 4.0 * 2.0) / avatarFrame.width
                     }
@@ -2795,7 +2796,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
                             })
                         }
-                        transition.updateFrame(node: avatarStoryIndicatorNode, frame: avatarFrame)
+                        transition.updateFrame(node: avatarStoryIndicatorNode, frame: CGRect(origin: CGPoint(x: avatarFrame.minX, y: avatarFrame.minY + (avatarFrame.height - avatarFrame.height * storyIndicatorScale) * 0.5), size: CGSize(width: avatarFrame.width * storyIndicatorScale, height: avatarFrame.height * storyIndicatorScale)))
                     } else {
                         if let avatarStoryIndicatorNode = strongSelf.avatarStoryIndicatorNode {
                             strongSelf.avatarStoryIndicatorNode = nil

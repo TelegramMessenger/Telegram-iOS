@@ -10,6 +10,14 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 public final class StoryPeerListComponent: Component {
+    public final class ExternalState {
+        public fileprivate(set) var collapsedWidth: CGFloat = 0.0
+        
+        public init() {
+        }
+    }
+    
+    public let externalState: ExternalState
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -18,6 +26,7 @@ public final class StoryPeerListComponent: Component {
     public let peerAction: (EnginePeer?) -> Void
     
     public init(
+        externalState: ExternalState,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -25,6 +34,7 @@ public final class StoryPeerListComponent: Component {
         collapseFraction: CGFloat,
         peerAction: @escaping (EnginePeer?) -> Void
     ) {
+        self.externalState = externalState
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -104,8 +114,6 @@ public final class StoryPeerListComponent: Component {
         
         private var sortedItems: [EngineStorySubscriptions.Item] = []
         private var visibleItems: [EnginePeer.Id: VisibleItem] = [:]
-        
-        private let title = ComponentView<Empty>()
         
         private var component: StoryPeerListComponent?
         private weak var state: EmptyComponentState?
@@ -189,31 +197,10 @@ public final class StoryPeerListComponent: Component {
             }
             
             var hasStories: Bool = false
-            var storyCount = 0
             if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
                 hasStories = true
-                storyCount = storySubscriptions.items.count
             }
-            
-            let titleSpacing: CGFloat = 8.0
-            
-            let titleText: String
-            if storyCount <= 0 {
-                titleText = "No Stories"
-            } else {
-                if storyCount == 1 {
-                    titleText = "1 Story"
-                } else {
-                    titleText = "\(storyCount) Stories"
-                }
-            }
-            
-            let titleSize = self.title.update(
-                transition: .immediate,
-                component: AnyComponent(Text(text: titleText, font: Font.semibold(17.0), color: component.theme.rootController.navigationBar.primaryTextColor)),
-                environment: {},
-                containerSize: CGSize(width: itemLayout.containerSize.width, height: 100.0)
-            )
+            let _ = hasStories
             
             let collapseStartIndex = 1
             
@@ -223,44 +210,19 @@ public final class StoryPeerListComponent: Component {
             var collapsedContentWidth: CGFloat = 0.0
             if collapsedItemCount > 0 {
                 collapsedContentWidth = 1.0 * collapsedItemWidth + (collapsedItemDistance) * max(0.0, collapsedItemCount - 1.0)
-                collapsedContentWidth += titleSpacing
             }
             
             let collapseEndIndex = collapseStartIndex + max(0, Int(collapsedItemCount) - 1)
             
-            let titleOffset = collapsedContentWidth
-            collapsedContentWidth += titleSize.width
-            
             let collapsedContentOrigin: CGFloat
             let collapsedItemOffsetY: CGFloat
             let itemScale: CGFloat
-            if hasStories {
-                collapsedContentOrigin = floor((itemLayout.containerSize.width - collapsedContentWidth) * 0.5)
-                itemScale = 1.0
-                collapsedItemOffsetY = 0.0
-            } else {
-                collapsedContentOrigin = itemLayout.frame(at: 0).minX + 30.0
-                itemScale = 1.0//1.0 * (1.0 - component.collapseFraction) + 0.001 * component.collapseFraction
-                collapsedItemOffsetY = 16.0
-            }
             
-            let titleFrame = CGRect(origin: CGPoint(x: component.collapseFraction * (collapsedContentOrigin + titleOffset) + (1.0 - component.collapseFraction) * (itemLayout.containerSize.width), y: 19.0/* * component.collapseFraction + (1.0 - component.collapseFraction) * (-40.0)*/), size: titleSize)
-            if let titleView = self.title.view {
-                if titleView.superview == nil {
-                    titleView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-                    self.scrollView.addSubview(titleView)
-                }
-                transition.setPosition(view: titleView, position: CGPoint(x: titleFrame.midX, y: titleFrame.midY))
-                transition.setBounds(view: titleView, bounds: CGRect(origin: CGPoint(), size: titleFrame.size))
-                
-                var titleAlpha: CGFloat = pow(component.collapseFraction, 1.5)
-                if !hasStories {
-                    titleAlpha = 0.0
-                }
-                transition.setAlpha(view: titleView, alpha: titleAlpha)
-                
-                transition.setScale(view: titleView, scale: (component.collapseFraction) * 1.0 + (1.0 - component.collapseFraction) * 0.001)
-            }
+            collapsedContentOrigin = floor((itemLayout.containerSize.width - collapsedContentWidth) * 0.5)
+            itemScale = 1.0
+            collapsedItemOffsetY = 0.0
+            
+            component.externalState.collapsedWidth = collapsedContentWidth
             
             let visibleBounds = self.scrollView.bounds
             
@@ -389,11 +351,23 @@ public final class StoryPeerListComponent: Component {
                 self.visibleItems.removeValue(forKey: id)
             }
             
-            transition.setFrame(view: self.collapsedButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 8.0), size: CGSize(width: itemLayout.containerSize.width, height: itemLayout.containerSize.height - 8.0)))
+            transition.setFrame(view: self.collapsedButton, frame: CGRect(origin: CGPoint(x: collapsedContentOrigin, y: 6.0), size: CGSize(width: collapsedContentWidth, height: 44.0 - 4.0)))
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            return super.hitTest(point, with: event)
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            if self.collapsedButton.isUserInteractionEnabled {
+                if result !== self.collapsedButton {
+                    return nil
+                }
+            } else {
+                if !result.isDescendant(of: self.scrollView) {
+                    return nil
+                }
+            }
+            return result
         }
         
         func update(component: StoryPeerListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {

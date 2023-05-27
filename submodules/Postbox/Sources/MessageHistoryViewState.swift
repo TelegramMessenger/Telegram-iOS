@@ -1442,7 +1442,7 @@ final class HistoryViewLoadedState {
                                     messageMedia.append(media)
                                 }
                             }
-                            let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds, associatedMedia: message.associatedMedia, associatedThreadInfo: message.associatedThreadInfo)
+                            let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds, associatedMedia: message.associatedMedia, associatedThreadInfo: message.associatedThreadInfo, associatedStories: message.associatedStories)
                             return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                         }
                     case .IntermediateMessageEntry:
@@ -1643,7 +1643,7 @@ final class HistoryViewLoadedState {
                         case let .MessageEntry(value, reloadAssociatedMessages, reloadPeers):
                             var updatedMessage = value.message
                             if reloadAssociatedMessages {
-                                let associatedMessages = postbox.messageHistoryTable.renderAssociatedMessages(associatedMessageIds: value.message.associatedMessageIds, peerTable: postbox.peerTable, threadIndexTable: postbox.messageHistoryThreadIndexTable)
+                                let associatedMessages = postbox.messageHistoryTable.renderAssociatedMessages(associatedMessageIds: value.message.associatedMessageIds, peerTable: postbox.peerTable, storyTable: postbox.storyTable, threadIndexTable: postbox.messageHistoryThreadIndexTable)
                                 updatedMessage = value.message.withUpdatedAssociatedMessages(associatedMessages)
                             }
                             if reloadPeers {
@@ -1662,7 +1662,7 @@ final class HistoryViewLoadedState {
                                 result.append(value)
                             }
                         case let .IntermediateMessageEntry(message, location, monthLocation):
-                            let renderedMessage = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable, threadIndexTable: postbox.messageHistoryThreadIndexTable)
+                            let renderedMessage = postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable, threadIndexTable: postbox.messageHistoryThreadIndexTable, storyTable: postbox.storyTable)
                             var authorIsContact = false
                             if let author = renderedMessage.author {
                                 authorIsContact = postbox.contactsTable.isContact(peerId: author.id)

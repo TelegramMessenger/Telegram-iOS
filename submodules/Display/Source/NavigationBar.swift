@@ -1395,7 +1395,11 @@ open class NavigationBar: ASDisplayNode {
         
         if let customHeaderContentView = self.customHeaderContentView {
             let headerSize = CGSize(width: size.width, height: nominalHeight)
-            transition.updateFrame(view: customHeaderContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize))
+            var customHeaderFrame = CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize)
+            if appearsHidden {
+                customHeaderFrame.origin.y = -customHeaderFrame.height
+            }
+            transition.updateFrame(view: customHeaderContentView, frame: customHeaderFrame)
         }
         
         if self.titleNode.supernode != nil {
@@ -1446,7 +1450,7 @@ open class NavigationBar: ASDisplayNode {
             if let titleView = titleView as? NavigationBarTitleView {
                 let titleWidth = size.width - (leftTitleInset > 0.0 ? leftTitleInset : rightTitleInset) - (rightTitleInset > 0.0 ? rightTitleInset : leftTitleInset)
                 
-                titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), transition: titleViewTransition)
+                let _ = titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), sideContentWidth: 0.0, transition: titleViewTransition)
             }
             
             if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {

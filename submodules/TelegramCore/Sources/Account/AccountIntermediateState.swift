@@ -189,6 +189,7 @@ struct AccountMutableState {
     var channelStates: [PeerId: AccountStateChannelState]
     var peerChatInfos: [PeerId: PeerChatInfo]
     var referencedReplyMessageIds: ReferencedReplyMessageIds
+    var referencedStoryIds = Set<StoryId>()
     var referencedGeneralMessageIds: Set<MessageId>
     var storedMessages: Set<MessageId>
     var readInboxMaxIds: [PeerId: MessageId]
@@ -641,7 +642,8 @@ struct AccountMutableState {
                         inner: for attribute in message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
                                 self.referencedReplyMessageIds.add(sourceId: id, targetId: attribute.messageId)
-                                break inner
+                            } else if let attribute = attribute as? ReplyStoryAttribute {
+                                self.referencedStoryIds.insert(attribute.storyId)
                             }
                         }
                     }
@@ -653,7 +655,8 @@ struct AccountMutableState {
                         inner: for attribute in message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
                                 self.referencedReplyMessageIds.add(sourceId: id, targetId: attribute.messageId)
-                                break inner
+                            } else if let attribute = attribute as? ReplyStoryAttribute {
+                                self.referencedStoryIds.insert(attribute.storyId)
                             }
                         }
                     }

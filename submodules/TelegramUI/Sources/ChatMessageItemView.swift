@@ -922,6 +922,10 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         return nil
     }
     
+    public func targetForStoryTransition(id: StoryId) -> UIView? {
+        return nil
+    }
+    
     func getStatusNode() -> ASDisplayNode? {
         return nil
     }

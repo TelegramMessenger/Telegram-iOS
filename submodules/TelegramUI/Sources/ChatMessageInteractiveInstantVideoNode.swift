@@ -346,6 +346,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 context: item.context,
                                 type: .standalone,
                                 message: replyMessage,
+                                story: nil,
                                 parentMessage: item.message,
                                 constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
                                 animationCache: item.controllerInteraction.presentationContext.animationCache,

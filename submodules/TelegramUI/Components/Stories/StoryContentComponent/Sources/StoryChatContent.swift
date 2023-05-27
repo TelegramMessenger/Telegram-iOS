@@ -8,12 +8,12 @@ import TelegramCore
 import Postbox
 import StoryContainerScreen
 
+private struct StoryKey: Hashable {
+    var peerId: EnginePeer.Id
+    var id: Int32
+}
+
 public final class StoryContentContextImpl: StoryContentContext {
-    private struct StoryKey: Hashable {
-        var peerId: EnginePeer.Id
-        var id: Int32
-    }
-    
     private final class PeerContext {
         private let context: AccountContext
         private let peerId: EnginePeer.Id
@@ -533,3 +533,136 @@ public final class StoryContentContextImpl: StoryContentContext {
         }
     }
 }
+
+public final class SingleStoryContentContextImpl: StoryContentContext {
+    private let context: AccountContext
+    
+    public private(set) var stateValue: StoryContentContextState?
+    public var state: Signal<StoryContentContextState, NoError> {
+        return self.statePromise.get()
+    }
+    private let statePromise = Promise<StoryContentContextState>()
+    
+    private let updatedPromise = Promise<Void>()
+    public var updated: Signal<Void, NoError> {
+        return self.updatedPromise.get()
+    }
+    
+    private var storyDisposable: Disposable?
+    
+    private var requestedStoryKeys = Set<StoryKey>()
+    private var requestStoryDisposables = DisposableSet()
+    
+    public init(
+        context: AccountContext,
+        storyId: StoryId
+    ) {
+        self.context = context
+        
+        self.storyDisposable = (combineLatest(queue: .mainQueue(),
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId)),
+            context.account.postbox.transaction { transaction -> Stories.StoredItem? in
+                return transaction.getStory(id: storyId)?.get(Stories.StoredItem.self)
+            }
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] peer, item in
+            guard let self else {
+                return
+            }
+            if let item, case let .item(itemValue) = item, let media = itemValue.media, let peer {
+                let mappedItem = EngineStoryItem(
+                    id: itemValue.id,
+                    timestamp: itemValue.timestamp,
+                    media: EngineMedia(media),
+                    text: itemValue.text,
+                    entities: itemValue.entities,
+                    views: itemValue.views.flatMap { views in
+                        return EngineStoryItem.Views(
+                            seenCount: views.seenCount,
+                            seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                return nil
+                            }
+                        )
+                    },
+                    privacy: nil
+                )
+                
+                let stateValue = StoryContentContextState(
+                    slice: StoryContentContextState.FocusedSlice(
+                        peer: peer,
+                        item: StoryContentItem(
+                            id: AnyHashable(item.id),
+                            position: 0,
+                            component: AnyComponent(StoryItemContentComponent(
+                                context: context,
+                                peer: peer,
+                                item: mappedItem
+                            )),
+                            centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(
+                                context: context,
+                                peer: peer,
+                                timestamp: item.timestamp
+                            )),
+                            rightInfoComponent: AnyComponent(StoryAvatarInfoComponent(
+                                context: context,
+                                peer: peer
+                            )),
+                            peerId: peer.id,
+                            storyItem: mappedItem,
+                            preload: nil,
+                            delete: { [weak context] in
+                                guard let context else {
+                                    return
+                                }
+                                let _ = context
+                            },
+                            markAsSeen: { [weak context] in
+                                guard let context else {
+                                    return
+                                }
+                                let _ = context.engine.messages.markStoryAsSeen(peerId: peer.id, id: item.id).start()
+                            },
+                            hasLike: false,
+                            isMy: peer.id == context.account.peerId
+                        ),
+                        totalCount: 1,
+                        previousItemId: nil,
+                        nextItemId: nil
+                    ),
+                    previousSlice: nil,
+                    nextSlice: nil
+                )
+                
+                if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
+                    self.stateValue = stateValue
+                    self.statePromise.set(.single(stateValue))
+                    self.updatedPromise.set(.single(Void()))
+                }
+            } else {
+                let stateValue = StoryContentContextState(
+                    slice: nil,
+                    previousSlice: nil,
+                    nextSlice: nil
+                )
+                
+                if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
+                    self.stateValue = stateValue
+                    self.statePromise.set(.single(stateValue))
+                    self.updatedPromise.set(.single(Void()))
+                }
+            }
+        })
+    }
+    
+    deinit {
+        self.storyDisposable?.dispose()
+        self.requestStoryDisposables.dispose()
+    }
+    
+    public func resetSideStates() {
+    }
+    
+    public func navigate(navigation: StoryContentContextNavigation) {
+    }
+}
+
