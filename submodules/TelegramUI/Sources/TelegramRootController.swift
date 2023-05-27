@@ -436,7 +436,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                         let _ = enqueueMessagesToMultiplePeers(
                                             account: self.context.account,
                                             peerIds: peerIds, threadIds: [:],
-                                            messages: [.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]).start()
+                                            messages: [.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]).start()
                                     }
                                 }
                             case let .video(content, _, values, duration, dimensions, caption):

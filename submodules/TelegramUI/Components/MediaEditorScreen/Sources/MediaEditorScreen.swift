@@ -39,6 +39,7 @@ final class MediaEditorScreenComponent: Component {
     let context: AccountContext
     let mediaEditor: MediaEditor?
     let privacy: MediaEditorResultPrivacy
+    let selectedEntity: DrawingEntity?
     let openDrawing: (DrawingScreenType) -> Void
     let openTools: () -> Void
     
@@ -46,12 +47,14 @@ final class MediaEditorScreenComponent: Component {
         context: AccountContext,
         mediaEditor: MediaEditor?,
         privacy: MediaEditorResultPrivacy,
+        selectedEntity: DrawingEntity?,
         openDrawing: @escaping (DrawingScreenType) -> Void,
         openTools: @escaping () -> Void
     ) {
         self.context = context
         self.mediaEditor = mediaEditor
         self.privacy = privacy
+        self.selectedEntity = selectedEntity
         self.openDrawing = openDrawing
         self.openTools = openTools
     }
@@ -61,6 +64,9 @@ final class MediaEditorScreenComponent: Component {
             return false
         }
         if lhs.privacy != rhs.privacy {
+            return false
+        }
+        if lhs.selectedEntity?.uuid != rhs.selectedEntity?.uuid {
             return false
         }
         return true
@@ -696,6 +702,8 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: 200.0)
             )
             
+            var isEditingTextEntity = false
+            var inputPanelAlpha: CGFloat = 1.0
             var inputPanelOffset: CGFloat = 0.0
             var inputPanelBottomInset: CGFloat = scrubberBottomInset
             if environment.inputHeight > 0.0 {
@@ -708,6 +716,12 @@ final class MediaEditorScreenComponent: Component {
                     self.addSubview(inputPanelView)
                 }
                 transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
+                
+                if inputPanelOffset > 0.0 && component.selectedEntity != nil {
+                    isEditingTextEntity = true
+                    inputPanelAlpha = 0.0
+                }
+                transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
             }
             
             let privacyText: String
@@ -759,8 +773,8 @@ final class MediaEditorScreenComponent: Component {
                 }
                 transition.setPosition(view: privacyButtonView, position: privacyButtonFrame.center)
                 transition.setBounds(view: privacyButtonView, bounds: CGRect(origin: .zero, size: privacyButtonFrame.size))
-                transition.setScale(view: privacyButtonView, scale: self.inputPanelExternalState.isEditing ? 0.01 : 1.0)
-                transition.setAlpha(view: privacyButtonView, alpha: self.inputPanelExternalState.isEditing ? 0.0 : 1.0)
+                transition.setScale(view: privacyButtonView, scale: self.inputPanelExternalState.isEditing || isEditingTextEntity ? 0.01 : 1.0)
+                transition.setAlpha(view: privacyButtonView, alpha: self.inputPanelExternalState.isEditing || isEditingTextEntity ? 0.0 : 1.0)
             }
             
             let saveButtonSize = self.saveButton.update(
@@ -803,8 +817,8 @@ final class MediaEditorScreenComponent: Component {
                 }
                 transition.setPosition(view: saveButtonView, position: saveButtonFrame.center)
                 transition.setBounds(view: saveButtonView, bounds: CGRect(origin: .zero, size: saveButtonFrame.size))
-                transition.setScale(view: saveButtonView, scale: self.inputPanelExternalState.isEditing ? 0.01 : 1.0)
-                transition.setAlpha(view: saveButtonView, alpha: self.inputPanelExternalState.isEditing ? 0.0 : 1.0)
+                transition.setScale(view: saveButtonView, scale: self.inputPanelExternalState.isEditing || isEditingTextEntity ? 0.01 : 1.0)
+                transition.setAlpha(view: saveButtonView, alpha: self.inputPanelExternalState.isEditing || isEditingTextEntity ? 0.0 : 1.0)
             }
              
             if let playerState = state.playerState, playerState.hasAudio {
@@ -1161,6 +1175,7 @@ public final class MediaEditorScreen: ViewController {
             self.previewContainerView.addGestureRecognizer(rotateGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
+            tapGestureRecognizer.delegate = self
             self.previewContainerView.addGestureRecognizer(tapGestureRecognizer)
             
             self.interaction = DrawingToolsInteraction(
@@ -1523,6 +1538,7 @@ public final class MediaEditorScreen: ViewController {
                         context: self.context,
                         mediaEditor: self.mediaEditor,
                         privacy: controller.state.privacy,
+                        selectedEntity: self.entitiesView.selectedEntityView?.entity,
                         openDrawing: { [weak self] mode in
                             if let self {
                                 if self.entitiesView.hasSelection {
@@ -1613,7 +1629,11 @@ public final class MediaEditorScreen: ViewController {
             
             var bottomInputOffset: CGFloat = 0.0
             if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
-                bottomInputOffset = inputHeight - topInset - 17.0
+                if self.entitiesView.selectedEntityView != nil {
+                    bottomInputOffset = inputHeight / 2.0
+                } else {
+                    bottomInputOffset = inputHeight - topInset - 17.0
+                }
             }
                         
             transition.setFrame(view: self.backgroundDimView, frame: CGRect(origin: .zero, size: layout.size))
@@ -1629,7 +1649,7 @@ public final class MediaEditorScreen: ViewController {
             transition.setFrame(view: self.entitiesContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             transition.setFrame(view: self.gradientView, frame: CGRect(origin: .zero, size: previewFrame.size))
             transition.setFrame(view: self.drawingView, frame: CGRect(origin: .zero, size: previewFrame.size))
-            
+                        
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
