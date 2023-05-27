@@ -3216,7 +3216,10 @@ public final class ChatListNode: ListView {
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })*/
     }
     
-    public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, visibleTopInset: CGFloat, originalTopInset: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat) {
+    private var previousStoriesInset: CGFloat?
+    
+    public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, visibleTopInset: CGFloat, originalTopInset: CGFloat, storiesInset: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat) {
+        //print("inset: \(updateSizeAndInsets.insets.top)")
         
         var highlightedLocation: ChatListHighlightedLocation?
         if case let .forum(peerId) = inlineNavigationLocation {
@@ -3253,6 +3256,13 @@ public final class ChatListNode: ListView {
         
         var additionalScrollDistance: CGFloat = 0.0
         
+        if let previousStoriesInset = self.previousStoriesInset {
+            additionalScrollDistance += previousStoriesInset - storiesInset
+            additionalScrollDistance = 0.0
+        }
+        self.previousStoriesInset = storiesInset
+        //print("storiesInset: \(storiesInset), additionalScrollDistance: \(additionalScrollDistance)")
+        
         var options: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency]
         if navigationLocationUpdated {
             options.insert(.ForceUpdate)
@@ -3263,7 +3273,9 @@ public final class ChatListNode: ListView {
             
             additionalScrollDistance += insetDelta
         }
+        self.ignoreStopScrolling = true
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.ignoreStopScrolling = false
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true

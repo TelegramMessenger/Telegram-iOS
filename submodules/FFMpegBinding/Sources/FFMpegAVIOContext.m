@@ -20,7 +20,7 @@
             return nil;
         }
         _impl->direct = 1;
-        _impl->seekable = 0;
+        //_impl->seekable = 0;
     }
     return self;
 }

@@ -280,7 +280,8 @@ private class AdMessagesHistoryContextImpl {
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
                 associatedMedia: [:],
-                associatedThreadInfo: nil
+                associatedThreadInfo: nil,
+                associatedStories: [:]
             )
         }
     }

@@ -769,6 +769,7 @@ public final class PendingMessageManager {
                 var hideSendersNames = false
                 var hideCaptions = false
                 var replyMessageId: Int32?
+                var replyToStoryId: StoryId?
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
                 
@@ -777,6 +778,8 @@ public final class PendingMessageManager {
                 for attribute in messages[0].0.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
+                    } else if let attribute = attribute as? ReplyStoryAttribute {
+                        replyToStoryId = attribute.storyId
                     } else if let _ = attribute as? ForwardSourceInfoAttribute {
                         isForward = true
                     } else if let attribute = attribute as? NotificationInfoMessageAttribute {
@@ -919,6 +922,11 @@ public final class PendingMessageManager {
                             replyFlags |= 1 << 0
                         }
                         replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId)
+                    } else if let replyToStoryId = replyToStoryId {
+                        if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
+                            flags |= 1 << 0
+                            replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                        }
                     }
                     
                     sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
@@ -1090,6 +1098,7 @@ public final class PendingMessageManager {
                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
                 var messageEntities: [Api.MessageEntity]?
                 var replyMessageId: Int32?
+                var replyToStoryId: StoryId?
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
                 var bubbleUpEmojiOrStickersets = false
@@ -1099,6 +1108,8 @@ public final class PendingMessageManager {
                 for attribute in message.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
+                    } else if let attribute = attribute as? ReplyStoryAttribute {
+                        replyToStoryId = attribute.storyId
                     } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                         uniqueId = outgoingInfo.uniqueId
                         bubbleUpEmojiOrStickersets = !outgoingInfo.bubbleUpEmojiOrStickersets.isEmpty
@@ -1158,6 +1169,11 @@ public final class PendingMessageManager {
                                 replyFlags |= 1 << 0
                             }
                             replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)))
+                        } else if let replyToStoryId = replyToStoryId {
+                            if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
+                                flags |= 1 << 0
+                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                            }
                         }
                     
                         sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
@@ -1175,6 +1191,11 @@ public final class PendingMessageManager {
                                 replyFlags |= 1 << 0
                             }
                             replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)))
+                        } else if let replyToStoryId = replyToStoryId {
+                            if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
+                                flags |= 1 << 0
+                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                            }
                         }
                         
                         sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
@@ -1206,15 +1227,33 @@ public final class PendingMessageManager {
                                 replyFlags |= 1 << 0
                             }
                             replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)))
+                        } else if let replyToStoryId = replyToStoryId {
+                            if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
+                                flags |= 1 << 0
+                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                            }
                         }
                     
                         sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                         |> map(NetworkRequestResult.result)
                     case .messageScreenshot:
-                        var replyTo: Api.InputReplyTo
+                        let replyTo: Api.InputReplyTo
                     
-                        let replyFlags: Int32 = 0
-                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId ?? 0, topMsgId: nil)
+                        if let replyMessageId = replyMessageId {
+                            let replyFlags: Int32 = 0
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil)
+                        } else if let replyToStoryId = replyToStoryId {
+                            if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
+                                flags |= 1 << 0
+                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                            } else {
+                                let replyFlags: Int32 = 0
+                                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil)
+                            }
+                        } else {
+                            let replyFlags: Int32 = 0
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil)
+                        }
                     
                         sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))
                         |> map(NetworkRequestResult.result)

@@ -202,7 +202,7 @@ public final class StorySubscriptionsContext {
             
             self.loadMoreDisposable.set((self.network.request(Api.functions.stories.getAllStories(flags: flags, state: state))
             |> deliverOn(self.queue)).start(next: { [weak self] result in
-                guard let self else {
+                guard let `self` = self else {
                     return
                 }
                 

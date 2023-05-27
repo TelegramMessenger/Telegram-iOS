@@ -1368,7 +1368,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         if !found {
             let controllerParams = LocationViewParams(sendLiveLocation: { location in
-                //let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                //let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil)
 //                params.enqueueMessage(outMessage)
             }, stopLiveLocation: { messageId in
                 if let messageId = messageId {
@@ -1536,6 +1536,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
         }, scrollToMessageId: { _ in
+        }, navigateToStory: { _, _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         

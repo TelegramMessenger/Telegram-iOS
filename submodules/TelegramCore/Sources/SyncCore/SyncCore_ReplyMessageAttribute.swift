@@ -37,6 +37,30 @@ public class ReplyMessageAttribute: MessageAttribute {
     }
 }
 
+public class ReplyStoryAttribute: MessageAttribute {
+    public let storyId: StoryId
+    
+    public var associatedStoryIds: [StoryId] {
+        return [self.storyId]
+    }
+    
+    public var associatedPeerIds: [PeerId] {
+        return [self.storyId.peerId]
+    }
+    
+    public init(storyId: StoryId) {
+        self.storyId = storyId
+    }
+    
+    required public init(decoder: PostboxDecoder) {
+        self.storyId = decoder.decode(StoryId.self, forKey: "i") ?? StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)), id: 1)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encode(self.storyId, forKey: "i")
+    }
+}
+
 public extension Message {
     var effectiveReplyThreadMessageId: MessageId? {
         if let threadId = self.threadId {

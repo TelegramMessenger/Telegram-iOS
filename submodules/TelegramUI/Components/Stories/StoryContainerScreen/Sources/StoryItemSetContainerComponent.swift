@@ -15,6 +15,7 @@ import LegacyInstantVideoController
 import UndoUI
 import ContextUI
 import TelegramCore
+import Postbox
 import AvatarNode
 
 public final class StoryItemSetContainerComponent: Component {
@@ -148,6 +149,16 @@ public final class StoryItemSetContainerComponent: Component {
         }
     }
     
+    final class CaptionItem {
+        let itemId: Int32
+        let externalState = StoryContentCaptionComponent.ExternalState()
+        let view = ComponentView<Empty>()
+        
+        init(itemId: Int32) {
+            self.itemId = itemId
+        }
+    }
+    
     public final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         let sendMessageContext: StoryItemSetContainerSendMessage
         
@@ -166,6 +177,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         var centerInfoItem: InfoItem?
         var rightInfoItem: InfoItem?
+        
+        var captionItem: CaptionItem?
         
         let inputPanel = ComponentView<Empty>()
         let footerPanel = ComponentView<Empty>()
@@ -375,6 +388,10 @@ public final class StoryItemSetContainerComponent: Component {
                 } else if self.displayReactions {
                     self.displayReactions = false
                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                } else if let captionItem = self.captionItem, captionItem.externalState.expandFraction > 0.0 {
+                    if let captionItemView = captionItem.view.view as? StoryContentCaptionComponent.View {
+                        captionItemView.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                    }
                 } else {
                     let point = recognizer.location(in: self)
                     
@@ -522,10 +539,24 @@ public final class StoryItemSetContainerComponent: Component {
                 )
                 footerPanelView.layer.animateAlpha(from: 0.0, to: footerPanelView.alpha, duration: 0.28)
             }
+            if let captionItemView = self.captionItem?.view.view {
+                captionItemView.layer.animatePosition(
+                    from: CGPoint(x: 0.0, y: self.bounds.height - captionItemView.frame.minY),
+                    to: CGPoint(),
+                    duration: 0.25,
+                    timingFunction: kCAMediaTimingFunctionSpring,
+                    additive: true
+                )
+                captionItemView.layer.animateAlpha(from: 0.0, to: captionItemView.alpha, duration: 0.28)
+            }
             
             if let sourceView = transitionIn.sourceView {
                 let sourceLocalFrame = sourceView.convert(transitionIn.sourceRect, to: self)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - self.contentContainerView.frame.minX, y: sourceLocalFrame.minY - self.contentContainerView.frame.minY), size: sourceLocalFrame.size)
+                
+                if let centerInfoView = self.centerInfoItem?.view.view {
+                    centerInfoView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
                 
                 if let rightInfoView = self.rightInfoItem?.view.view {
                     if transitionIn.sourceCornerRadius != 0.0 {
@@ -591,10 +622,25 @@ public final class StoryItemSetContainerComponent: Component {
                 )
                 footerPanelView.layer.animateAlpha(from: footerPanelView.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false)
             }
+            if let captionItemView = self.captionItem?.view.view {
+                captionItemView.layer.animatePosition(
+                    from: CGPoint(),
+                    to: CGPoint(x: 0.0, y: self.bounds.height - captionItemView.frame.minY),
+                    duration: 0.3,
+                    timingFunction: kCAMediaTimingFunctionSpring,
+                    removeOnCompletion: false,
+                    additive: true
+                )
+                captionItemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            }
             
             if let sourceView = transitionOut.destinationView {
                 let sourceLocalFrame = sourceView.convert(transitionOut.destinationRect, to: self)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - self.contentContainerView.frame.minX, y: sourceLocalFrame.minY - self.contentContainerView.frame.minY), size: sourceLocalFrame.size)
+                
+                if let centerInfoView = self.centerInfoItem?.view.view {
+                    centerInfoView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                }
                 
                 if let rightInfoView = self.rightInfoItem?.view.view {
                     if transitionOut.destinationIsAvatar {
@@ -619,7 +665,15 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view {
                     let innerScale = innerSourceLocalFrame.width / visibleItemView.bounds.width
-                    let innerFromFrame = CGRect(origin: CGPoint(x: innerSourceLocalFrame.minX, y: innerSourceLocalFrame.minY), size: CGSize(width: innerSourceLocalFrame.width, height: visibleItemView.bounds.height * innerScale))
+                    
+                    var adjustedInnerSourceLocalFrame = innerSourceLocalFrame
+                    if !transitionOut.destinationIsAvatar {
+                        let innerSourceSize = visibleItemView.bounds.size.aspectFilled(adjustedInnerSourceLocalFrame.size)
+                        adjustedInnerSourceLocalFrame.origin.y += (adjustedInnerSourceLocalFrame.height - innerSourceSize.height) * 0.5
+                        adjustedInnerSourceLocalFrame.size.height = innerSourceSize.height
+                    }
+                    
+                    let innerFromFrame = CGRect(origin: CGPoint(x: adjustedInnerSourceLocalFrame.minX, y: adjustedInnerSourceLocalFrame.minY), size: CGSize(width: adjustedInnerSourceLocalFrame.width, height: visibleItemView.bounds.height * innerScale))
                     
                     visibleItemView.layer.animatePosition(
                         from: visibleItemView.layer.position,
@@ -1017,9 +1071,6 @@ public final class StoryItemSetContainerComponent: Component {
                 self.centerInfoItem = nil
                 if let view = centerInfoItem.view.view {
                     view.removeFromSuperview()
-                    /*view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
-                        view?.removeFromSuperview()
-                    })*/
                 }
             }
             
@@ -1089,6 +1140,46 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
                 transition.setAlpha(view: inputPanelView, alpha: focusedItem?.isMy == true ? 0.0 : 1.0)
+            }
+            
+            if let captionItem = self.captionItem, captionItem.itemId != component.slice.item.storyItem.id {
+                self.captionItem = nil
+                if let captionItemView = captionItem.view.view {
+                    captionItemView.removeFromSuperview()
+                }
+            }
+            
+            if !component.slice.item.storyItem.text.isEmpty {
+                var captionItemTransition = transition
+                let captionItem: CaptionItem
+                if let current = self.captionItem {
+                    captionItem = current
+                } else {
+                    if !transition.animation.isImmediate {
+                        captionItemTransition = .immediate
+                    }
+                    captionItem = CaptionItem(itemId: component.slice.item.storyItem.id)
+                    self.captionItem = captionItem
+                }
+                
+                let captionSize = captionItem.view.update(
+                    transition: captionItemTransition,
+                    component: AnyComponent(StoryContentCaptionComponent(
+                        externalState: captionItem.externalState,
+                        text: component.slice.item.storyItem.text
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: contentFrame.height)
+                )
+                captionItem.view.parentState = state
+                let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.maxY - captionSize.height), size: captionSize)
+                if let captionItemView = captionItem.view.view {
+                    if captionItemView.superview == nil {
+                        self.addSubview(captionItemView)
+                    }
+                    captionItemTransition.setFrame(view: captionItemView, frame: captionFrame)
+                    captionItemTransition.setAlpha(view: captionItemView, alpha: component.hideUI ? 0.0 : 1.0)
+                }
             }
             
             let reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrame.maxX - 40.0, y: inputPanelFrame.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
@@ -1216,6 +1307,34 @@ public final class StoryItemSetContainerComponent: Component {
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                             
                             if let centerAnimation = reaction.centerAnimation {
+                                /*let file = centerAnimation
+                                
+                                var text = "."
+                                loop: for attribute in file.attributes {
+                                    switch attribute {
+                                    case let .CustomEmoji(_, _, displayText, _):
+                                        text = displayText
+                                        break loop
+                                    default:
+                                        break
+                                    }
+                                }*/
+                                
+                                let message: EnqueueMessage = .message(
+                                    text: "",
+                                    attributes: [
+                                        //TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< 1, type: .CustomEmoji(stickerPack: nil, fileId: centerAnimation.fileId.id))])
+                                    ],
+                                    inlineStickers: [:],//[centerAnimation.fileId: centerAnimation],
+                                    mediaReference: AnyMediaReference.standalone(media: reaction.activateAnimation),
+                                    replyToMessageId: nil,
+                                    replyToStoryId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
+                                    localGroupingKey: nil,
+                                    correlationId: nil,
+                                    bubbleUpEmojiOrStickersets: []
+                                )
+                                let _ = enqueueMessages(account: component.context.account, peerId: component.slice.peer.id, messages: [message]).start()
+                                
                                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                 component.presentController(UndoOverlayController(
                                     presentationData: presentationData,
@@ -1288,8 +1407,17 @@ public final class StoryItemSetContainerComponent: Component {
             //transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: inputPanelIsOverlay ? 1.0 : 0.0)
             transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: 0.0)
             
+            var normalDimAlpha: CGFloat = 0.0
+            if let captionItem = self.captionItem {
+                normalDimAlpha = captionItem.externalState.expandFraction
+            }
+            var dimAlpha: CGFloat = (inputPanelIsOverlay || self.inputPanelExternalState.isEditing) ? 1.0 : normalDimAlpha
+            if component.hideUI {
+                dimAlpha = 0.0
+            }
+            
             transition.setFrame(layer: self.contentDimLayer, frame: CGRect(origin: CGPoint(), size: contentFrame.size))
-            transition.setAlpha(layer: self.contentDimLayer, alpha: (inputPanelIsOverlay || self.inputPanelExternalState.isEditing) ? 1.0 : 0.0)
+            transition.setAlpha(layer: self.contentDimLayer, alpha: dimAlpha)
             
             self.ignoreScrolling = true
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))

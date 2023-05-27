@@ -83,11 +83,17 @@ private final class DownloadedMediaStoreContext {
                 } else {
                     let peerTypeValue: MediaAutoSaveSettings.PeerType
                     switch peer {
-                    case .user, .secretChat:
+                    case .user:
                         peerTypeValue = .users
+                    case .secretChat:
+                        return false
                     case .legacyGroup:
                         peerTypeValue = .groups
                     case let .channel(channel):
+                        if channel.flags.contains(.copyProtectionEnabled) {
+                            return false
+                        }
+                        
                         if case .broadcast = channel.info {
                             peerTypeValue = .channels
                         } else {

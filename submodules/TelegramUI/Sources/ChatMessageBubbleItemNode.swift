@@ -1462,6 +1462,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var inlineBotNameString: String?
         var replyMessage: Message?
+        var replyStory: StoryId?
         var replyMarkup: ReplyMarkupMessageAttribute?
         var authorNameColor: UIColor?
         
@@ -1477,6 +1478,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
+            } else if let attribute = attribute as? ReplyStoryAttribute {
+                replyStory = attribute.storyId
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
                 var isExtendedMedia = false
                 for media in firstMessage.media {
@@ -1703,7 +1706,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         } else if let backgroundHiding, case .always = backgroundHiding {
             initialDisplayHeader = false
         } else {
-            if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
+            if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil && replyStory == nil {
                 if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader && !ignoreNameHiding {
                     if let author = firstMessage.author as? TelegramChannel, case .group = author.info, author.id == firstMessage.id.peerId, !incoming {
                     } else {
@@ -1770,7 +1773,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if firstMessage.forwardInfo != nil {
                 displayHeader = true
             }
-            if replyMessage != nil {
+            if replyMessage != nil || replyStory != nil {
                 displayHeader = true
             }
             if !displayHeader, case .peer = item.chatLocation, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
@@ -2002,7 +2005,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 headerSize.height += forwardInfoSizeApply.0.height
             }
                         
-            var hasReply = replyMessage != nil
+            var hasReply = replyMessage != nil || replyStory != nil
             if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -2034,7 +2037,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
             
-            if !isInstantVideo, let replyMessage = replyMessage, hasReply {
+            if !isInstantVideo, hasReply, (replyMessage != nil || replyStory != nil) {
                 if headerSize.height.isZero {
                     headerSize.height += 6.0
                 } else {
@@ -2046,6 +2049,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     context: item.context,
                     type: .bubble(incoming: incoming),
                     message: replyMessage,
+                    story: replyStory,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
@@ -3650,6 +3654,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 return .optionalAction({
                                     item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
                                 })
+                            } else if let attribute = attribute as? ReplyStoryAttribute {
+                                return .optionalAction({
+                                    item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
+                                })
                             }
                         }
                     }
@@ -4501,6 +4509,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         if let mosaicStatusNode = self.mosaicStatusNode, let result = mosaicStatusNode.reactionView(value: value) {
             return result
+        }
+        return nil
+    }
+    
+    override func targetForStoryTransition(id: StoryId) -> UIView? {
+        guard let item = self.item else {
+            return nil
+        }
+        for attribute in item.message.attributes {
+            if let attribute = attribute as? ReplyStoryAttribute {
+                if attribute.storyId == id {
+                    if let replyInfoNode = self.replyInfoNode {
+                        return replyInfoNode.mediaTransitionView()
+                    }
+                }
+            }
         }
         return nil
     }

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import TelegramCore
+import Postbox
 import TextFormat
 import AsyncDisplayKit
 import Display
@@ -666,5 +667,6 @@ public enum FileMediaResourceMediaStatus: Equatable {
 
 public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
+    func targetForStoryTransition(id: StoryId) -> UIView?
     func contentFrame() -> CGRect
 }

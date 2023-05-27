@@ -142,7 +142,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(_, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _, _, _):
+        case let .message(_, _, fromId, chatPeerId, fwdHeader, viaBotId, replyTo, _, _, media, _, entities, _, _, _, _, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
@@ -188,6 +188,18 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                         default:
                             break
                     }
+                }
+            }
+        
+            if let replyTo = replyTo {
+                switch replyTo {
+                case let .messageReplyStoryHeader(userId, _):
+                    let storyPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    if !result.contains(storyPeerId) {
+                        result.append(storyPeerId)
+                    }
+                default:
+                    break
                 }
             }
             
@@ -483,8 +495,8 @@ extension StoreMessage {
                             }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
-                    case .messageReplyStoryHeader:
-                        break
+                    case let .messageReplyStoryHeader(userId, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }
                 }
             
@@ -734,8 +746,8 @@ extension StoreMessage {
                             break
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
-                    case .messageReplyStoryHeader:
-                        break
+                    case let .messageReplyStoryHeader(userId, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }
                 } else {
                     switch action {

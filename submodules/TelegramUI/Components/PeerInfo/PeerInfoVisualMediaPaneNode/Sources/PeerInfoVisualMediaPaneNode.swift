@@ -879,7 +879,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
                 associatedMedia: [:],
-                associatedThreadInfo: nil
+                associatedThreadInfo: nil,
+                associatedStories: [:]
             )
             let messageItem = ListMessageItem(
                 presentationData: self.chatPresentationData,
@@ -2284,7 +2285,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                     associatedMessages: SimpleDictionary<MessageId, Message>(),
                     associatedMessageIds: [],
                     associatedMedia: [:],
-                    associatedThreadInfo: nil
+                    associatedThreadInfo: nil,
+                    associatedStories: [:]
                 )
                 let messageItem = ListMessageItem(
                     presentationData: self.itemGridBinding.chatPresentationData,

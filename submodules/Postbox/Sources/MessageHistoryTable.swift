@@ -2507,7 +2507,7 @@ final class MessageHistoryTable: Table {
         return parsedMedia
     }
     
-    func renderMessage(_ message: IntermediateMessage, peerTable: PeerTable, threadIndexTable: MessageHistoryThreadIndexTable, addAssociatedMessages: Bool = true) -> Message {
+    func renderMessage(_ message: IntermediateMessage, peerTable: PeerTable, threadIndexTable: MessageHistoryThreadIndexTable, storyTable: StoryTable, addAssociatedMessages: Bool = true) -> Message {
         var parsedAttributes: [MessageAttribute] = []
         var parsedMedia: [Media] = []
         
@@ -2585,6 +2585,8 @@ final class MessageHistoryTable: Table {
         var associatedMessageIds: [MessageId] = []
         var associatedMessages = SimpleDictionary<MessageId, Message>()
         var associatedMedia: [MediaId: Media] = [:]
+        var associatedStories: [StoryId: CodableEntry] = [:]
+        
         for attribute in parsedAttributes {
             for peerId in attribute.associatedPeerIds {
                 if let peer = peerTable.get(peerId) {
@@ -2598,12 +2600,19 @@ final class MessageHistoryTable: Table {
                     }
                 }
             }
+            for storyId in attribute.associatedStoryIds {
+                if associatedStories[storyId] == nil {
+                    if let story = storyTable.get(id: storyId) {
+                        associatedStories[storyId] = story
+                    }
+                }
+            }
             associatedMessageIds.append(contentsOf: attribute.associatedMessageIds)
             if addAssociatedMessages {
                 for messageId in attribute.associatedMessageIds {
                     if let index = self.messageHistoryIndexTable.getIndex(messageId) {
                         if let message = self.getMessage(index) {
-                            associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, threadIndexTable: threadIndexTable, addAssociatedMessages: false)
+                            associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, threadIndexTable: threadIndexTable, storyTable: storyTable, addAssociatedMessages: false)
                         }
                     }
                 }
@@ -2615,7 +2624,7 @@ final class MessageHistoryTable: Table {
             associatedThreadInfo = self.seedConfiguration.decodeMessageThreadInfo(data.data)
         }
         
-        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds, associatedMedia: associatedMedia, associatedThreadInfo: associatedThreadInfo)
+        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages, associatedMessageIds: associatedMessageIds, associatedMedia: associatedMedia, associatedThreadInfo: associatedThreadInfo, associatedStories: associatedStories)
     }
     
     func renderMessagePeers(_ message: Message, peerTable: PeerTable) -> Message {
@@ -2658,12 +2667,12 @@ final class MessageHistoryTable: Table {
         return message.withUpdatedPeers(peers)
     }
     
-    func renderAssociatedMessages(associatedMessageIds: [MessageId], peerTable: PeerTable, threadIndexTable: MessageHistoryThreadIndexTable) -> SimpleDictionary<MessageId, Message> {
+    func renderAssociatedMessages(associatedMessageIds: [MessageId], peerTable: PeerTable, storyTable: StoryTable, threadIndexTable: MessageHistoryThreadIndexTable) -> SimpleDictionary<MessageId, Message> {
         var associatedMessages = SimpleDictionary<MessageId, Message>()
         for messageId in associatedMessageIds {
             if let index = self.messageHistoryIndexTable.getIndex(messageId) {
                 if let message = self.getMessage(index) {
-                    associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, threadIndexTable: threadIndexTable, addAssociatedMessages: false)
+                    associatedMessages[messageId] = self.renderMessage(message, peerTable: peerTable, threadIndexTable: threadIndexTable, storyTable: storyTable, addAssociatedMessages: false)
                 }
             }
         }
