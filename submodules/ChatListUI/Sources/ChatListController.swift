@@ -2523,7 +2523,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         if let peer, peer.id == self.context.account.peerId, storyContentState.slice == nil {
                             if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                                let coordinator = rootController.openStoryCamera(transitionIn: nil, transitionOut: { [weak self] finished in
+                                let coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] finished in
                                     guard let self else {
                                         return nil
                                     }
@@ -4951,7 +4951,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if let current = self.storyCameraTransitionInCoordinator {
             coordinator = current
         } else {
-            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionOut: { [weak self] finished in
+            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] finished in
                 guard let self else {
                     return nil
                 }

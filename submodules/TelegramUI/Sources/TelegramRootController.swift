@@ -199,6 +199,14 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 }
                 let coordinator = self.openStoryCamera(
                     transitionIn: nil,
+                    transitionedIn: { [weak self] in
+                        guard let self, let rootTabController = self.rootTabController else {
+                            return
+                        }
+                        if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
+                            rootTabController.selectedIndex = index
+                        }
+                    },
                     transitionOut: { [weak self] finished in
                         guard let self else {
                             return nil
@@ -275,7 +283,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     @discardableResult
-    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
+    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
         guard let controller = self.viewControllers.last as? ViewController else {
             return nil
         }
@@ -370,6 +378,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         
                         if let chatListController = self.chatListController as? ChatListControllerImpl {
+                            chatListController.scrollToTop?()
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
                                 if let imageData = compressImageToJPEG(image, quality: 0.6) {
@@ -482,6 +491,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 presentImpl?(controller)
             }
         )
+        cameraController.transitionedIn = transitionedIn
         controller.push(cameraController)
         presentImpl = { [weak cameraController] c in
             if let navigationController = cameraController?.navigationController as? NavigationController {

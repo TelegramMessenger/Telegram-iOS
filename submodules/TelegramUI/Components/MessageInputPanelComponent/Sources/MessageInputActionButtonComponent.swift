@@ -223,6 +223,20 @@ public final class MessageInputActionButtonComponent: Component {
             if self.sendIconView.image == nil || previousComponent?.mode.iconName != component.mode.iconName {
                 if let iconName = component.mode.iconName {
                     self.sendIconView.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: .white)
+                } else if case .apply = component.mode {
+                    self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), contextGenerator: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(UIColor.white.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                        
+                        if let image = UIImage(bundleImageName: "Media Editor/Apply"), let cgImage = image.cgImage {
+                            context.setBlendMode(.clear)
+                            context.clip(to: CGRect(origin: CGPoint(x: -4.0 + UIScreenPixel, y: -3.0 - UIScreenPixel), size: CGSize(width: 40.0, height: 40.0)), mask: cgImage)
+                            context.fill(CGRect(origin: .zero, size: size))
+                        }
+                    })
+                } else if case .none = component.mode {
+                    self.sendIconView.image = nil
                 } else {
                     self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))

@@ -1241,6 +1241,7 @@ public final class MediaEditorScreen: ViewController {
             if self.entitiesView.hasSelection {
                 self.entitiesView.selectEntity(nil)
             }
+            self.view.endEditing(true)
         }
         
         func animateIn() {
@@ -1485,7 +1486,6 @@ public final class MediaEditorScreen: ViewController {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             if result == self.componentHost.view {
-                self.controller?.view.endEditing(true)
                 let point = self.view.convert(point, to: self.previewContainerView)
                 return self.previewContainerView.hitTest(point, with: event)
             }

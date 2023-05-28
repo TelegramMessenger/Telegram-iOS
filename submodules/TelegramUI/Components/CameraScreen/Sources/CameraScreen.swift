@@ -1228,7 +1228,8 @@ public class CameraScreen: ViewController {
         }
     }
     fileprivate let completion: (Signal<CameraScreen.Result, NoError>, ResultTransition?) -> Void
-
+    public var transitionedIn: () -> Void = {}
+    
     private var audioSessionDisposable: Disposable?
     
     public init(
@@ -1393,6 +1394,7 @@ public class CameraScreen: ViewController {
                     if let self, let navigationController = self.navigationController as? NavigationController {
                         navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
                         self.node.requestUpdateLayout(hasAppeared: true, transition: .immediate)
+                        self.transitionedIn()
                     }
                 })
             } else {
