@@ -79,10 +79,7 @@ final class HistogramCalculationPass: DefaultRenderPass {
             )
             
             renderCommandEncoder.setFragmentTexture(input, index: 0)
-            
-            var texCoordScales = simd_float2(x: 1.0, y: 1.0)
-            renderCommandEncoder.setFragmentBytes(&texCoordScales, length: MemoryLayout<simd_float2>.stride, index: 0)
-            
+
             self.encodeDefaultCommands(using: renderCommandEncoder)
             
             renderCommandEncoder.endEncoding()

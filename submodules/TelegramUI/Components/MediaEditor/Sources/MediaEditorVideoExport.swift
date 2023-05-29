@@ -326,7 +326,7 @@ public final class MediaEditorVideoExport {
         if (videoTracks.count > 0) {
             var sourceFrameRate: Float = 0.0
             let outputSettings: [String: Any]  = [
-                kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange],
+                kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarFullRange],
                 AVVideoColorPropertiesKey: [
                     AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
                     AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,

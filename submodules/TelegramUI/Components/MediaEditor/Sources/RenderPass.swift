@@ -147,23 +147,8 @@ final class OutputRenderPass: DefaultRenderPass {
             width: Double(drawableSize.width), height: Double(drawableSize.height),
             znear: -1.0, zfar: 1.0))
         
-        do {
-            var texCoordScales = simd_float2(x: 1.0, y: 1.0)
-            var scaleFactor = drawableSize.width / CGFloat(input.width)
-            let textureFitHeight = CGFloat(input.height) * scaleFactor
-            if textureFitHeight > drawableSize.height {
-                scaleFactor = drawableSize.height / CGFloat(input.height)
-                let textureFitWidth = CGFloat(input.width) * scaleFactor
-                let texCoordsScaleX = textureFitWidth / drawableSize.width
-                texCoordScales.x = Float(texCoordsScaleX)
-            } else {
-                let texCoordsScaleY = textureFitHeight / drawableSize.height
-                texCoordScales.y = Float(texCoordsScaleY)
-            }
-            
-            renderCommandEncoder.setFragmentBytes(&texCoordScales, length: MemoryLayout<simd_float2>.stride, index: 0)
-            renderCommandEncoder.setFragmentTexture(input, index: 0)
-        }
+
+        renderCommandEncoder.setFragmentTexture(input, index: 0)
         
         self.encodeDefaultCommands(using: renderCommandEncoder)
         

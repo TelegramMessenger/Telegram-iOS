@@ -56,7 +56,6 @@ final class MediaEditorComposer {
         self.colorSpace = colorSpace
         
         self.renderer.addRenderChain(self.renderChain)
-        self.renderer.addRenderPass(ComposerRenderPass())
         
         if let gradientColors = values.gradientColors, let image = mediaEditorGenerateGradientImage(size: dimensions, colors: gradientColors) {
             self.gradientImage = CIImage(image: image, options: [.colorSpace: self.colorSpace])!.transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
@@ -106,7 +105,7 @@ final class MediaEditorComposer {
                     if var compositedImage {
                         let scale = self.outputDimensions.width / self.dimensions.width
                         compositedImage = compositedImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-                        
+ 
                         self.ciContext?.render(compositedImage, to: pixelBuffer)
                         completion(pixelBuffer)
                     } else {
@@ -567,56 +566,4 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
     CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
     
     return CIImage(cvPixelBuffer: pixelBuffer, options: [.colorSpace: colorSpace])
-}
-
-final class ComposerRenderPass: DefaultRenderPass {
-    fileprivate var cachedTexture: MTLTexture?
-    
-    override func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device)
-        
-        let width = input.width
-        let height = input.height
-        
-        if self.cachedTexture == nil || self.cachedTexture?.width != width || self.cachedTexture?.height != height {
-            let textureDescriptor = MTLTextureDescriptor()
-            textureDescriptor.textureType = .type2D
-            textureDescriptor.width = width
-            textureDescriptor.height = height
-            textureDescriptor.pixelFormat = input.pixelFormat
-            textureDescriptor.storageMode = .shared
-            textureDescriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
-            guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
-                return input
-            }
-            self.cachedTexture = texture
-            texture.label = "composerTexture"
-        }
-        
-        let renderPassDescriptor = MTLRenderPassDescriptor()
-        renderPassDescriptor.colorAttachments[0].texture = self.cachedTexture!
-        renderPassDescriptor.colorAttachments[0].loadAction = .dontCare
-        renderPassDescriptor.colorAttachments[0].storeAction = .store
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
-        guard let renderCommandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
-            return input
-        }
-        
-        renderCommandEncoder.setViewport(MTLViewport(
-            originX: 0, originY: 0,
-            width: Double(width), height: Double(height),
-            znear: -1.0, zfar: 1.0)
-        )
-        
-        renderCommandEncoder.setFragmentTexture(input, index: 0)
-        
-        var texCoordScales = simd_float2(x: 1.0, y: 1.0)
-        renderCommandEncoder.setFragmentBytes(&texCoordScales, length: MemoryLayout<simd_float2>.stride, index: 0)
-        
-        self.encodeDefaultCommands(using: renderCommandEncoder)
-        
-        renderCommandEncoder.endEncoding()
-        
-        return self.cachedTexture!
-    }
 }
