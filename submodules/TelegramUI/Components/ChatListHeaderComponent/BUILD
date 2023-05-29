@@ -21,6 +21,8 @@ swift_library(
         "//submodules/AsyncDisplayKit",
         "//submodules/AnimationUI",
         "//submodules/TelegramUI/Components/Stories/StoryPeerListComponent",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/SearchUI",
     ],
     visibility = [
         "//visibility:public",

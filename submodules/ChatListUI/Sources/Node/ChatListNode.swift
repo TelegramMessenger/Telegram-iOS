@@ -3258,7 +3258,6 @@ public final class ChatListNode: ListView {
         
         if let previousStoriesInset = self.previousStoriesInset {
             additionalScrollDistance += previousStoriesInset - storiesInset
-            additionalScrollDistance = 0.0
         }
         self.previousStoriesInset = storiesInset
         //print("storiesInset: \(storiesInset), additionalScrollDistance: \(additionalScrollDistance)")
