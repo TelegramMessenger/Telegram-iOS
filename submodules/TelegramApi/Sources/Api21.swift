@@ -1039,6 +1039,7 @@ public extension Api {
         case updateStickerSets(flags: Int32)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
         case updateStories(stories: Api.UserStories)
+        case updateStoryID(id: Int32, randomId: Int64)
         case updateTheme(theme: Api.Theme)
         case updateTranscribedAudio(flags: Int32, peer: Api.Peer, msgId: Int32, transcriptionId: Int64, text: String)
         case updateUser(userId: Int64)
@@ -1944,6 +1945,13 @@ public extension Api {
                     }
                     stories.serialize(buffer, true)
                     break
+                case .updateStoryID(let id, let randomId):
+                    if boxed {
+                        buffer.appendInt32(468923833)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    break
                 case .updateTheme(let theme):
                     if boxed {
                         buffer.appendInt32(-2112423005)
@@ -2232,6 +2240,8 @@ public extension Api {
                 return ("updateStickerSetsOrder", [("flags", flags as Any), ("order", order as Any)])
                 case .updateStories(let stories):
                 return ("updateStories", [("stories", stories as Any)])
+                case .updateStoryID(let id, let randomId):
+                return ("updateStoryID", [("id", id as Any), ("randomId", randomId as Any)])
                 case .updateTheme(let theme):
                 return ("updateTheme", [("theme", theme as Any)])
                 case .updateTranscribedAudio(let flags, let peer, let msgId, let transcriptionId, let text):
@@ -4027,6 +4037,20 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateStories(stories: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateStoryID(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateStoryID(id: _1!, randomId: _2!)
             }
             else {
                 return nil

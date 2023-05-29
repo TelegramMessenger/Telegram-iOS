@@ -603,7 +603,8 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                         media: inputMedia,
                         caption: apiCaption,
                         entities: apiEntities,
-                        privacyRules: privacyRules
+                        privacyRules: privacyRules,
+                        randomId: Int64.random(in: Int64.min ... Int64.max)
                     ))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.Updates?, NoError> in

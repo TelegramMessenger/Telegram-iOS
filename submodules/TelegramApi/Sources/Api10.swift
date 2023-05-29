@@ -1,7 +1,7 @@
 public extension Api {
     indirect enum InputReplyTo: TypeConstructorDescription {
         case inputReplyToMessage(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?)
-        case inputReplyToStory(flags: Int32, userId: Api.InputUser, storyId: Int32)
+        case inputReplyToStory(userId: Api.InputUser, storyId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13,11 +13,10 @@ public extension Api {
                     serializeInt32(replyToMsgId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     break
-                case .inputReplyToStory(let flags, let userId, let storyId):
+                case .inputReplyToStory(let userId, let storyId):
                     if boxed {
-                        buffer.appendInt32(-1139169566)
+                        buffer.appendInt32(363917955)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     userId.serialize(buffer, true)
                     serializeInt32(storyId, buffer: buffer, boxed: false)
                     break
@@ -28,8 +27,8 @@ public extension Api {
         switch self {
                 case .inputReplyToMessage(let flags, let replyToMsgId, let topMsgId):
                 return ("inputReplyToMessage", [("flags", flags as Any), ("replyToMsgId", replyToMsgId as Any), ("topMsgId", topMsgId as Any)])
-                case .inputReplyToStory(let flags, let userId, let storyId):
-                return ("inputReplyToStory", [("flags", flags as Any), ("userId", userId as Any), ("storyId", storyId as Any)])
+                case .inputReplyToStory(let userId, let storyId):
+                return ("inputReplyToStory", [("userId", userId as Any), ("storyId", storyId as Any)])
     }
     }
     
@@ -51,19 +50,16 @@ public extension Api {
             }
         }
         public static func parse_inputReplyToStory(_ reader: BufferReader) -> InputReplyTo? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.InputUser?
+            var _1: Api.InputUser?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.InputUser
+                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
             }
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputReplyTo.inputReplyToStory(flags: _1!, userId: _2!, storyId: _3!)
+            if _c1 && _c2 {
+                return Api.InputReplyTo.inputReplyToStory(userId: _1!, storyId: _2!)
             }
             else {
                 return nil

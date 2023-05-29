@@ -383,7 +383,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[195371015] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowContacts($0) }
     dict[-1877932953] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowUsers($0) }
     dict[-1672247580] = { return Api.InputReplyTo.parse_inputReplyToMessage($0) }
-    dict[-1139169566] = { return Api.InputReplyTo.parse_inputReplyToStory($0) }
+    dict[363917955] = { return Api.InputReplyTo.parse_inputReplyToStory($0) }
     dict[1399317950] = { return Api.InputSecureFile.parse_inputSecureFile($0) }
     dict[859091184] = { return Api.InputSecureFile.parse_inputSecureFileUploaded($0) }
     dict[-618540889] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
@@ -910,6 +910,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[834816008] = { return Api.Update.parse_updateStickerSets($0) }
     dict[196268545] = { return Api.Update.parse_updateStickerSetsOrder($0) }
     dict[1727715253] = { return Api.Update.parse_updateStories($0) }
+    dict[468923833] = { return Api.Update.parse_updateStoryID($0) }
     dict[-2112423005] = { return Api.Update.parse_updateTheme($0) }
     dict[8703322] = { return Api.Update.parse_updateTranscribedAudio($0) }
     dict[542282808] = { return Api.Update.parse_updateUser($0) }
@@ -1163,6 +1164,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1340440049] = { return Api.stories.Stories.parse_stories($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
     dict[-79726676] = { return Api.stories.StoryViewsList.parse_storyViewsList($0) }
+    dict[933691231] = { return Api.stories.UserStories.parse_userStories($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
     dict[-1531132162] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
@@ -2033,6 +2035,8 @@ public extension Api {
             case let _1 as Api.stories.StoryViews:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.StoryViewsList:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stories.UserStories:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.updates.ChannelDifference:
                 _1.serialize(buffer, boxed)

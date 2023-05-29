@@ -129,7 +129,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                             flags |= 1 << 0
-                            replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                            replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                         }
                     }
                 
@@ -147,7 +147,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                             flags |= 1 << 0
-                            replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                            replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                         }
                     }
                 

@@ -925,7 +925,7 @@ public final class PendingMessageManager {
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                             flags |= 1 << 0
-                            replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                            replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                         }
                     }
                     
@@ -1172,7 +1172,7 @@ public final class PendingMessageManager {
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
-                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                                replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                             }
                         }
                     
@@ -1194,7 +1194,7 @@ public final class PendingMessageManager {
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
-                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                                replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                             }
                         }
                         
@@ -1230,7 +1230,7 @@ public final class PendingMessageManager {
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
-                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                                replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                             }
                         }
                     
@@ -1245,7 +1245,7 @@ public final class PendingMessageManager {
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
-                                replyTo = .inputReplyToStory(flags: 0, userId: inputUser, storyId: replyToStoryId.id)
+                                replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                             } else {
                                 let replyFlags: Int32 = 0
                                 replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil)
