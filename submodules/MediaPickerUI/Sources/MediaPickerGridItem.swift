@@ -29,30 +29,32 @@ final class MediaPickerGridItem: GridItem {
     let theme: PresentationTheme
     let selectable: Bool
     let enableAnimations: Bool
+    let stories: Bool
     
     let section: GridSection? = nil
     
-    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
+    init(content: MediaPickerGridItemContent, interaction: MediaPickerInteraction, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.content = content
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable
         self.enableAnimations = enableAnimations
+        self.stories = stories
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         switch self.content {
         case let .asset(fetchResult, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
             return node
         case let .media(media, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
             return node
         case let .draft(draft, index):
             let node = MediaPickerGridItemNode()
-            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
             return node
         }
     }
@@ -64,11 +66,11 @@ final class MediaPickerGridItem: GridItem {
         }
         switch self.content {
         case let .asset(fetchResult, index):
-            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, fetchResult: fetchResult, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
         case let .media(media, index):
-            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, media: media, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
         case let .draft(draft, index):
-            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations)
+            node.setup(interaction: self.interaction, draft: draft, index: index, theme: self.theme, selectable: self.selectable, enableAnimations: self.enableAnimations, stories: self.stories)
         }
     }
 }
@@ -151,7 +153,11 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
 
     var identifier: String {
-        return self.selectableItem?.uniqueIdentifier ?? ""
+        if let (draft, _) = self.currentDraftState {
+            return draft.path
+        } else {
+            return self.selectableItem?.uniqueIdentifier ?? ""
+        }
     }
     
     var selectableItem: TGMediaSelectableItem? {
@@ -235,7 +241,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(interaction: MediaPickerInteraction, draft: MediaEditorDraft, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, draft: MediaEditorDraft, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable
@@ -262,7 +268,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
     
-    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable
@@ -279,7 +285,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
         
-    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool) {
+    func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable
@@ -315,7 +321,12 @@ final class MediaPickerGridItemNode: GridItemNode {
             }
             
             let scale = min(2.0, UIScreenScale)
-            let targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
+            let targetSize: CGSize
+            if stories {
+                targetSize = CGSize(width: 128.0 * UIScreenScale, height: 128.0 * UIScreenScale)
+            } else {
+                targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
+            }
             
             let assetImageSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, deliveryMode: .fastFormat, synchronous: true)
             |> then(
@@ -456,10 +467,18 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
     }
     
-    func transitionView() -> UIView {
-        let view = self.imageNode.view.snapshotContentTree(unhide: true, keepTransform: true)!
-        view.frame = self.convert(self.bounds, to: nil)
-        return view
+    func transitionView(snapshot: Bool) -> UIView {
+        if snapshot {
+            let view = self.imageNode.view.snapshotContentTree(unhide: true, keepTransform: true)!
+            view.frame = self.convert(self.bounds, to: nil)
+            return view
+        } else {
+            return self.imageNode.view
+        }
+    }
+    
+    func transitionImage() -> UIImage? {
+        return self.imageNode.image
     }
         
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {

@@ -38,7 +38,7 @@ private func generateGridImage(size: CGSize, light: Bool) -> UIImage? {
     })
 }
 
-final class EyedropperView: UIView {
+public final class EyedropperView: UIView {
     private weak var drawingView: DrawingView?
     
     private let containerView: UIView

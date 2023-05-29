@@ -26,6 +26,7 @@ import AvatarNode
 import LocalMediaResources
 import ShareWithPeersScreen
 import ImageCompression
+import TextFormat
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -196,16 +197,16 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 guard let self else {
                     return
                 }
-                var transitionIn: StoryCameraTransitionIn?
-                if let cameraItemView = self.rootTabController?.viewForCameraItem() {
-                    transitionIn = StoryCameraTransitionIn(
-                        sourceView: cameraItemView,
-                        sourceRect: cameraItemView.bounds,
-                        sourceCornerRadius: cameraItemView.bounds.height / 2.0
-                    )
-                }
-                self.openStoryCamera(
-                    transitionIn: transitionIn,
+                let coordinator = self.openStoryCamera(
+                    transitionIn: nil,
+                    transitionedIn: { [weak self] in
+                        guard let self, let rootTabController = self.rootTabController else {
+                            return
+                        }
+                        if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
+                            rootTabController.selectedIndex = index
+                        }
+                    },
                     transitionOut: { [weak self] finished in
                         guard let self else {
                             return nil
@@ -218,18 +219,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     destinationCornerRadius: transitionView.bounds.height / 2.0
                                 )
                             }
-                        } else {
-                            if let cameraItemView = self.rootTabController?.viewForCameraItem() {
-                                return StoryCameraTransitionOut(
-                                    destinationView: cameraItemView,
-                                    destinationRect: cameraItemView.bounds,
-                                    destinationCornerRadius: cameraItemView.bounds.height / 2.0
-                                )
-                            }
                         }
                         return nil
                     }
                 )
+                coordinator?.animateIn()
             }
         )
         
@@ -288,9 +282,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
     
-    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) {
+    @discardableResult
+    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
         guard let controller = self.viewControllers.last as? ViewController else {
-            return
+            return nil
         }
         controller.view.endEditing(true)
         
@@ -299,7 +294,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
         var dismissCameraImpl: (() -> Void)?
-        var hideCameraImpl: (() -> Void)?
         var showDraftTooltipImpl: (() -> Void)?
         let cameraController = CameraScreen(
             context: context,
@@ -326,7 +320,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     return nil
                 }
             },
-            completion: { result in
+            completion: { result, resultTransition in
                 let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
                 |> map { value -> MediaEditorScreen.Subject? in
                     switch value {
@@ -342,16 +336,36 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         return .draft(draft)
                     }
                 }
+                
+                var transitionIn: MediaEditorScreen.TransitionIn?
+                if let resultTransition, let sourceView = resultTransition.sourceView {
+                    transitionIn = .gallery(
+                        MediaEditorScreen.TransitionIn.GalleryTransitionIn(
+                            sourceView: sourceView,
+                            sourceRect: resultTransition.sourceRect,
+                            sourceImage: resultTransition.sourceImage
+                        )
+                    )
+                } else {
+                    transitionIn = .camera
+                }
+                
                 let controller = MediaEditorScreen(
                     context: context,
                     subject: subject,
-                    transitionIn: nil,
+                    transitionIn: transitionIn,
                     transitionOut: { finished in
-                        if finished, let transitionOut = transitionOut(true), let destinationView = transitionOut.destinationView {
+                        if finished, let transitionOut = transitionOut(finished), let destinationView = transitionOut.destinationView {
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: destinationView,
                                 destinationRect: transitionOut.destinationRect,
                                 destinationCornerRadius: transitionOut.destinationCornerRadius
+                            )
+                        } else if !finished, let resultTransition, let (destinationView, destinationRect) = resultTransition.transitionOut() {
+                            return MediaEditorScreen.TransitionOut(
+                                destinationView: destinationView,
+                                destinationRect: destinationRect,
+                                destinationCornerRadius: 0.0
                             )
                         } else {
                             return nil
@@ -364,13 +378,75 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         
                         if let chatListController = self.chatListController as? ChatListControllerImpl {
+                            chatListController.scrollToTop?()
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
                                 if let imageData = compressImageToJPEG(image, quality: 0.6) {
-                                    let _ = self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], privacy: privacy).start()
-                                    Queue.mainQueue().after(0.2, { [weak chatListController] in
-                                        chatListController?.animateStoryUploadRipple()
-                                    })
+                                    switch privacy {
+                                    case let .story(storyPrivacy, _):
+                                        let _ = self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], privacy: storyPrivacy).start()
+                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                            chatListController?.animateStoryUploadRipple()
+                                        })
+                                    case let .message(peerIds, timeout):
+                                        var randomId: Int64 = 0
+                                        arc4random_buf(&randomId, 8)
+                                        let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpg"
+                                        let _ = try? imageData.write(to: URL(fileURLWithPath: tempFilePath))
+
+                                        var representations: [TelegramMediaImageRepresentation] = []
+                                        let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
+                                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+                                        
+                                        var attributes: [MessageAttribute] = []
+                                        let imageFlags: TelegramMediaImageFlags = []
+//                                        var stickerFiles: [TelegramMediaFile] = []
+//                                        if !stickers.isEmpty {
+//                                            for fileReference in stickers {
+//                                                stickerFiles.append(fileReference.media)
+//                                            }
+//                                        }
+//                                        if !stickerFiles.isEmpty {
+//                                            attributes.append(EmbeddedMediaStickersMessageAttribute(files: stickerFiles))
+//                                            imageFlags.insert(.hasStickers)
+//                                        }
+
+                                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: imageFlags)
+                                        if let timeout, timeout > 0 && timeout <= 60 {
+                                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: timeout, countdownBeginTime: nil))
+                                        }
+                                                                                    
+                                        let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                                        let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                        if !entities.isEmpty {
+                                            attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                        }
+                                        var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                                        text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                            if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                                if let file = value.file {
+                                                    if let packId = value.interactivelySelectedFromPackId {
+                                                        bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                                    }
+                                                }
+                                            }
+                                        })
+                                        var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                                        for entity in entities {
+                                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                                if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                                    if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                                        bubbleUpEmojiOrStickersets.append(packId)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        let _ = enqueueMessagesToMultiplePeers(
+                                            account: self.context.account,
+                                            peerIds: peerIds, threadIds: [:],
+                                            messages: [.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]).start()
+                                    }
                                 }
                             case let .video(content, _, values, duration, dimensions, caption):
                                 let adjustments: VideoMediaResourceAdjustments
@@ -388,31 +464,34 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     case let .asset(localIdentifier):
                                         resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                     }
-                                    let _ = self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: privacy).start()
-                                    Queue.mainQueue().after(0.2, { [weak chatListController] in
-                                        chatListController?.animateStoryUploadRipple()
-                                    })
+                                    if case let .story(storyPrivacy, _) = privacy {
+                                        let _ = self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: storyPrivacy).start()
+                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
+                                            chatListController?.animateStoryUploadRipple()
+                                        })
+                                    } else {
+                                        
+                                    }
                                 }
                             }
                         }
                         
                         dismissCameraImpl?()
-                        commit()
+                        Queue.mainQueue().after(0.1) {
+                            commit()
+                        }
                     }
                 )
-                controller.sourceHint = .camera
                 controller.cancelled = { showDraftTooltip in
                     if showDraftTooltip {
                         showDraftTooltipImpl?()
                     }
                     returnToCameraImpl?()
                 }
-                controller.onReady = {
-                    hideCameraImpl?()
-                }
                 presentImpl?(controller)
             }
         )
+        cameraController.transitionedIn = transitionedIn
         controller.push(cameraController)
         presentImpl = { [weak cameraController] c in
             if let navigationController = cameraController?.navigationController as? NavigationController {
@@ -429,16 +508,28 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 cameraController.returnFromEditor()
             }
         }
-        hideCameraImpl = { [weak cameraController] in
-            if let cameraController {
-                cameraController.commitTransitionToEditor()
-            }
-        }
         showDraftTooltipImpl = { [weak cameraController] in
             if let cameraController {
                 cameraController.presentDraftTooltip()
             }
         }
+        return StoryCameraTransitionInCoordinator(
+            animateIn: { [weak cameraController] in
+                if let cameraController {
+                    cameraController.updateTransitionProgress(0.0, transition: .immediate)
+                    cameraController.completeWithTransitionProgress(1.0, velocity: 0.0, dismissing: false)
+                }
+            },
+            updateTransitionProgress: { [weak cameraController] transitionFraction in
+                if let cameraController {
+                    cameraController.updateTransitionProgress(transitionFraction, transition: .immediate)
+                }
+            },
+            completeWithTransitionProgressAndVelocity: { [weak cameraController] transitionFraction, velocity in
+                if let cameraController {
+                    cameraController.completeWithTransitionProgress(transitionFraction, velocity: velocity, dismissing: false)
+                }
+            })
     }
     
     public func openSettings() {

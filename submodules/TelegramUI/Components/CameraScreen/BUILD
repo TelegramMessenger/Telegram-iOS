@@ -70,6 +70,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/TooltipUI",
         "//submodules/TelegramUI/Components/MediaEditor",
     ],

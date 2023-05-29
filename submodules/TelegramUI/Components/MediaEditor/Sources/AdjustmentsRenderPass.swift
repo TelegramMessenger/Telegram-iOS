@@ -18,6 +18,45 @@ struct MediaEditorAdjustments {
     var warmth: simd_float1
     var grain: simd_float1
     var vignette: simd_float1
+    
+    var hasValues: Bool {
+        let epsilon: simd_float1 = 0.005
+        
+        if abs(self.shadows) > epsilon {
+            return true
+        }
+        if abs(self.highlights) > epsilon {
+            return true
+        }
+        if abs(self.contrast) > epsilon {
+            return true
+        }
+        if abs(self.fade) > epsilon {
+            return true
+        }
+        if abs(self.saturation) > epsilon {
+            return true
+        }
+        if abs(self.shadowsTintIntensity) > epsilon {
+            return true
+        }
+        if abs(self.highlightsTintIntensity) > epsilon {
+            return true
+        }
+        if abs(self.exposure) > epsilon {
+            return true
+        }
+        if abs(self.warmth) > epsilon {
+            return true
+        }
+        if abs(self.grain) > epsilon {
+            return true
+        }
+        if abs(self.vignette) > epsilon {
+            return true
+        }
+        return false
+    }
 }
 
 final class AdjustmentsRenderPass: DefaultRenderPass {
@@ -50,10 +89,14 @@ final class AdjustmentsRenderPass: DefaultRenderPass {
         return "adjustmentsFragmentShader"
     }
         
-    override func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device, rotation: rotation)
-        
-        let (width, height) = textureDimensionsForRotation(texture: input, rotation: rotation)
+    override func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        guard self.adjustments.hasValues else {
+            return input
+        }
+        self.setupVerticesBuffer(device: device)
+                
+        let width = input.width
+        let height = input.height
         
         if self.cachedTexture == nil || self.cachedTexture?.width != width || self.cachedTexture?.height != height {
             self.adjustments.dimensions = simd_float2(Float(width), Float(height))

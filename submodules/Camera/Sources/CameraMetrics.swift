@@ -23,6 +23,8 @@ public extension Camera {
                 self = .iPhone14ProMax
             case .unknown:
                 self = .unknown
+            default:
+                self = .unknown
             }
         }
         
@@ -70,6 +72,16 @@ enum DeviceModel: CaseIterable {
     case iPodTouch6
     case iPodTouch7
     
+    case iPhone12
+    case iPhone12Mini
+    case iPhone12Pro
+    case iPhone12ProMax
+   
+    case iPhone13
+    case iPhone13Mini
+    case iPhone13Pro
+    case iPhone13ProMax
+    
     case iPhone14
     case iPhone14Plus
     case iPhone14Pro
@@ -93,6 +105,22 @@ enum DeviceModel: CaseIterable {
             return "iPod7,1"
         case .iPodTouch7:
             return "iPod9,1"
+        case .iPhone12:
+            return "iPhone13,2"
+        case .iPhone12Mini:
+            return "iPhone13,1"
+        case .iPhone12Pro:
+            return "iPhone13,3"
+        case .iPhone12ProMax:
+            return "iPhone13,4"
+        case .iPhone13:
+            return "iPhone14,5"
+        case .iPhone13Mini:
+            return "iPhone14,4"
+        case .iPhone13Pro:
+            return "iPhone14,2"
+        case .iPhone13ProMax:
+            return "iPhone14,3"
         case .iPhone14:
             return "iPhone14,7"
         case .iPhone14Plus:
@@ -122,6 +150,22 @@ enum DeviceModel: CaseIterable {
             return "iPod touch 6G"
         case .iPodTouch7:
             return "iPod touch 7G"
+        case .iPhone12:
+            return "iPhone 12"
+        case .iPhone12Mini:
+            return "iPhone 12 mini"
+        case .iPhone12Pro:
+            return "iPhone 12 Pro"
+        case .iPhone12ProMax:
+            return "iPhone 12 Pro Max"
+        case .iPhone13:
+            return "iPhone 13"
+        case .iPhone13Mini:
+            return "iPhone 13 mini"
+        case .iPhone13Pro:
+            return "iPhone 13 Pro"
+        case .iPhone13ProMax:
+            return "iPhone 13 Pro Max"
         case .iPhone14:
             return "iPhone 14"
         case .iPhone14Plus:

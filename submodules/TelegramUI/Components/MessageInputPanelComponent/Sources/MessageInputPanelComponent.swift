@@ -239,7 +239,7 @@ public final class MessageInputPanelComponent: Component {
         }
         
         func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            var insets = UIEdgeInsets(top: 14.0, left: 7.0, bottom: 6.0, right: 7.0)
+            var insets = UIEdgeInsets(top: 14.0, left: 7.0, bottom: 6.0, right: 41.0)
             
             if let _ = component.attachmentAction {
                 insets.left = 41.0
@@ -321,8 +321,8 @@ public final class MessageInputPanelComponent: Component {
                 environment: {},
                 containerSize: availableTextFieldSize
             )
-            if self.textFieldExternalState.isEditing {
-                insets.right = 41.0
+            if !self.textFieldExternalState.isEditing && component.setMediaRecordingActive == nil {
+                insets.right = insets.left
             }
             
             let fieldFrame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: CGSize(width: availableSize.width - insets.left - insets.right, height: textFieldSize.height))
@@ -707,7 +707,7 @@ public final class MessageInputPanelComponent: Component {
                     if timeoutButtonView.superview == nil {
                         self.addSubview(timeoutButtonView)
                     }
-                    let timeoutIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - timeoutButtonSize.width, y: fieldFrame.minY + 1.0 + floor((fieldFrame.height - timeoutButtonSize.height) * 0.5)), size: timeoutButtonSize)
+                    let timeoutIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - timeoutButtonSize.width, y: fieldFrame.maxY - 3.0 - timeoutButtonSize.height), size: timeoutButtonSize)
                     transition.setPosition(view: timeoutButtonView, position: timeoutIconFrame.center)
                     transition.setBounds(view: timeoutButtonView, bounds: CGRect(origin: CGPoint(), size: timeoutIconFrame.size))
                     

@@ -201,7 +201,7 @@ private final class StickerSelectionComponent: Component {
     }
 }
 
-class StickerPickerScreen: ViewController {
+public class StickerPickerScreen: ViewController {
     final class Node: ViewControllerTracingNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         private var presentationData: PresentationData
         private weak var controller: StickerPickerScreen?
@@ -999,9 +999,9 @@ class StickerPickerScreen: ViewController {
     public var pushController: (ViewController) -> Void = { _ in }
     public var presentController: (ViewController) -> Void = { _ in }
     
-    var completion: (TelegramMediaFile?) -> Void = { _ in }
+    public var completion: (TelegramMediaFile?) -> Void = { _ in }
     
-    init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>) {
+    public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>) {
         self.context = context
         self.theme = defaultDarkColorPresentationTheme
         self.inputData = inputData
@@ -1015,14 +1015,14 @@ class StickerPickerScreen: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func loadDisplayNode() {
+    public override func loadDisplayNode() {
         self.displayNode = Node(context: self.context, controller: self, theme: self.theme)
         self.displayNodeDidLoad()
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
-    override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         if flag {
             self.node.animateOut(completion: {
@@ -1035,19 +1035,19 @@ class StickerPickerScreen: ViewController {
         }
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.node.updateIsVisible(isVisible: true)
     }
     
-    override func viewDidDisappear(_ animated: Bool) {
+    public override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
         self.node.updateIsVisible(isVisible: false)
     }
         
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.currentLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
         

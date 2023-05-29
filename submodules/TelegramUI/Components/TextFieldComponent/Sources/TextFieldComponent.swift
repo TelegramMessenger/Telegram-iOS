@@ -134,7 +134,7 @@ public final class TextFieldComponent: Component {
             self.layoutManager.ensureLayout(for: self.textContainer)
             
             let boundingRect = self.layoutManager.boundingRect(forGlyphRange: NSRange(location: 0, length: self.textStorage.length), in: self.textContainer)
-            let size = CGSize(width: availableSize.width, height: min(100.0, ceil(boundingRect.height) + self.textView.textContainerInset.top + self.textView.textContainerInset.bottom))
+            let size = CGSize(width: availableSize.width, height: min(200.0, ceil(boundingRect.height) + self.textView.textContainerInset.top + self.textView.textContainerInset.bottom))
             
             let refreshScrolling = self.textView.bounds.size != size
             self.textView.frame = CGRect(origin: CGPoint(), size: size)

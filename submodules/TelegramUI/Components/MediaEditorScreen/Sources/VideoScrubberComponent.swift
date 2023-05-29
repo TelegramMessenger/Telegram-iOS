@@ -23,10 +23,10 @@ final class VideoScrubberComponent: Component {
     let startPosition: Double
     let endPosition: Double
     let position: Double
+    let maxDuration: Double
     let frames: [UIImage]
     let framesUpdateTimestamp: Double
-    let startPositionUpdated: (Double, Bool) -> Void
-    let endPositionUpdated: (Double, Bool) -> Void
+    let trimUpdated: (Double, Double, Bool, Bool) -> Void
     let positionUpdated: (Double, Bool) -> Void
     
     init(
@@ -35,10 +35,10 @@ final class VideoScrubberComponent: Component {
         startPosition: Double,
         endPosition: Double,
         position: Double,
+        maxDuration: Double,
         frames: [UIImage],
         framesUpdateTimestamp: Double,
-        startPositionUpdated: @escaping (Double, Bool) -> Void,
-        endPositionUpdated: @escaping (Double, Bool) -> Void,
+        trimUpdated: @escaping (Double, Double, Bool, Bool) -> Void,
         positionUpdated: @escaping (Double, Bool) -> Void
     ) {
         self.context = context
@@ -46,10 +46,10 @@ final class VideoScrubberComponent: Component {
         self.startPosition = startPosition
         self.endPosition = endPosition
         self.position = position
+        self.maxDuration = maxDuration
         self.frames = frames
         self.framesUpdateTimestamp = framesUpdateTimestamp
-        self.startPositionUpdated = startPositionUpdated
-        self.endPositionUpdated = endPositionUpdated
+        self.trimUpdated = trimUpdated
         self.positionUpdated = positionUpdated
     }
     
@@ -67,6 +67,9 @@ final class VideoScrubberComponent: Component {
             return false
         }
         if lhs.position != rhs.position {
+            return false
+        }
+        if lhs.maxDuration != rhs.maxDuration {
             return false
         }
         if lhs.framesUpdateTimestamp != rhs.framesUpdateTimestamp {
@@ -165,22 +168,28 @@ final class VideoScrubberComponent: Component {
             let end = self.frame.width - handleWidth
             let length = end - start
             let fraction = (location.x - start) / length
-            var value = max(0.0, component.duration * fraction)
-            if value > component.endPosition - minumumDuration {
-                value = max(0.0, component.endPosition - minumumDuration)
+            
+            var startValue = max(0.0, component.duration * fraction)
+            if startValue > component.endPosition - minumumDuration {
+                startValue = max(0.0, component.endPosition - minumumDuration)
+            }
+            var endValue = component.endPosition
+            if endValue - startValue > component.maxDuration {
+                let delta = (endValue - startValue) - component.maxDuration
+                endValue -= delta
             }
             
             var transition: Transition = .immediate
             switch gestureRecognizer.state {
             case .began, .changed:
                 self.isPanningHandle = true
-                component.startPositionUpdated(value, false)
+                component.trimUpdated(startValue, endValue, false, false)
                 if case .began = gestureRecognizer.state {
                     transition = .easeInOut(duration: 0.25)
                 }
             case .ended, .cancelled:
                 self.isPanningHandle = false
-                component.startPositionUpdated(value, true)
+                component.trimUpdated(startValue, endValue, false, true)
                 transition = .easeInOut(duration: 0.25)
             default:
                 break
@@ -197,22 +206,28 @@ final class VideoScrubberComponent: Component {
             let end = self.frame.width - handleWidth
             let length = end - start
             let fraction = (location.x - start) / length
-            var value = min(component.duration, component.duration * fraction)
-            if value < component.startPosition + minumumDuration {
-                value = min(component.duration, component.startPosition + minumumDuration)
+           
+            var endValue = min(component.duration, component.duration * fraction)
+            if endValue < component.startPosition + minumumDuration {
+                endValue = min(component.duration, component.startPosition + minumumDuration)
+            }
+            var startValue = component.startPosition
+            if endValue - startValue > component.maxDuration {
+                let delta = (endValue - startValue) - component.maxDuration
+                startValue += delta
             }
             
             var transition: Transition = .immediate
             switch gestureRecognizer.state {
             case .began, .changed:
                 self.isPanningHandle = true
-                component.endPositionUpdated(value, false)
+                component.trimUpdated(startValue, endValue, true, false)
                 if case .began = gestureRecognizer.state {
                     transition = .easeInOut(duration: 0.25)
                 }
             case .ended, .cancelled:
                 self.isPanningHandle = false
-                component.endPositionUpdated(value, true)
+                component.trimUpdated(startValue, endValue, true, true)
                 transition = .easeInOut(duration: 0.25)
             default:
                 break

@@ -76,7 +76,15 @@ public final class MediaEditor {
     public var histogram: Signal<Data, NoError> {
         return self.histogramPromise.get()
     }
-
+    public var isHistogramEnabled: Bool {
+        get {
+            return self.histogramCalculationPass.isEnabled
+        }
+        set {
+            self.histogramCalculationPass.isEnabled = newValue
+        }
+    }
+    
     private var textureCache: CVMetalTextureCache!
     
     public var hasPortraitMask: Bool {
@@ -90,7 +98,7 @@ public final class MediaEditor {
     public var resultImage: UIImage? {
         return self.renderer.finalRenderedImage()
     }
-    
+        
     private let playerPromise = Promise<AVPlayer?>()
     private var playerPlaybackState: (Double, Double, Bool) = (0.0, 0.0, false) {
         didSet {
@@ -250,6 +258,7 @@ public final class MediaEditor {
         }
     }
     
+    private var volumeFade: SwiftSignalKit.Timer?
     private func setupSource() {
         guard let renderTarget = self.previewView else {
             return
@@ -367,14 +376,19 @@ public final class MediaEditor {
         |> deliverOnMainQueue).start(next: { [weak self] sourceAndColors in
             if let self {
                 let (source, image, player, topColor, bottomColor) = sourceAndColors
+                self.renderer.onNextRender = { [weak self] in
+                    self?.previewView?.removeTransitionImage()
+                }
                 self.renderer.textureSource = source
                 self.player = player
                 self.playerPromise.set(.single(player))
                 self.gradientColorsValue = (topColor, bottomColor)
                 self.setGradientColors([topColor, bottomColor])
                 
-                self.maybeGeneratePersonSegmentation(image)
-               
+                if player == nil {
+                    self.maybeGeneratePersonSegmentation(image)
+                }
+                
                 if let player {
                     self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self] time in
                         guard let self, let duration = player.currentItem?.duration.seconds else {
@@ -394,6 +408,7 @@ public final class MediaEditor {
                         }
                     })
                     self.player?.play()
+                    self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
                 }
             }
         })
@@ -431,14 +446,47 @@ public final class MediaEditor {
         self.values = self.values.withUpdatedVideoIsMuted(videoIsMuted)
     }
     
-    public func seek(_ position: Double, andPlay: Bool) {
-        if !andPlay {
+    private var targetTimePosition: (CMTime, Bool)?
+    private var updatingTimePosition = false
+    public func seek(_ position: Double, andPlay play: Bool) {
+        if !play {
             self.player?.pause()
         }
-        self.player?.seek(to: CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0)), toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { _ in })
-        if andPlay {
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
+        if self.targetTimePosition?.0 != targetPosition {
+            self.targetTimePosition = (targetPosition, play)
+            if !self.updatingTimePosition {
+                self.updateVideoTimePosition()
+            }
+        }
+        if play {
             self.player?.play()
         }
+    }
+    
+    public func play() {
+        self.player?.play()
+    }
+    
+    public func stop() {
+        self.player?.pause()
+    }
+    
+    private func updateVideoTimePosition() {
+        guard let (targetPosition, _) = self.targetTimePosition else {
+            return
+        }
+        self.updatingTimePosition = true
+        self.player?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
+            if let self {
+                if let (currentTargetPosition, _) = self.targetTimePosition, currentTargetPosition == targetPosition {
+                    self.updatingTimePosition = false
+                    self.targetTimePosition = nil
+                } else {
+                    self.updateVideoTimePosition()
+                }
+            }
+        })
     }
     
     public func setVideoTrimStart(_ trimStart: Double) {
@@ -452,7 +500,7 @@ public final class MediaEditor {
         let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
     }
-    
+        
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
         self.values = self.values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
     }
@@ -583,15 +631,23 @@ final class MediaEditorRenderChain {
                 }
             case .shadowsTint:
                 if let value = value as? TintValue {
-                    let (red, green, blue, _) = value.color.components
-                    self.adjustmentsPass.adjustments.shadowsTintColor = simd_float3(Float(red), Float(green), Float(blue))
-                    self.adjustmentsPass.adjustments.shadowsTintIntensity = value.intensity
+                    if value.color != .clear {
+                        let (red, green, blue, _) = value.color.components
+                        self.adjustmentsPass.adjustments.shadowsTintColor = simd_float3(Float(red), Float(green), Float(blue))
+                        self.adjustmentsPass.adjustments.shadowsTintIntensity = value.intensity
+                    } else {
+                        self.adjustmentsPass.adjustments.shadowsTintIntensity = 0.0
+                    }
                 }
             case .highlightsTint:
                 if let value = value as? TintValue {
-                    let (red, green, blue, _) = value.color.components
-                    self.adjustmentsPass.adjustments.shadowsTintColor = simd_float3(Float(red), Float(green), Float(blue))
-                    self.adjustmentsPass.adjustments.highlightsTintIntensity = value.intensity
+                    if value.color != .clear {
+                        let (red, green, blue, _) = value.color.components
+                        self.adjustmentsPass.adjustments.shadowsTintColor = simd_float3(Float(red), Float(green), Float(blue))
+                        self.adjustmentsPass.adjustments.highlightsTintIntensity = value.intensity
+                    } else {
+                        self.adjustmentsPass.adjustments.highlightsTintIntensity = 0.0
+                    }
                 }
             case .blur:
                 if let value = value as? BlurValue {
@@ -624,5 +680,13 @@ final class MediaEditorRenderChain {
                 self.adjustmentsPass.blueCurve = blueDataPoints
             }
         }
+    }
+}
+
+public func debugSaveImage(_ image: UIImage, name: String) {
+    let path = NSTemporaryDirectory() + "debug_\(name)_\(Int64.random(in: .min ... .max)).png"
+    print(path)
+    if let data = image.pngData() {
+        try? data.write(to: URL(fileURLWithPath: path))
     }
 }

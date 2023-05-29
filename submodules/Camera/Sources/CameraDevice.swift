@@ -1,15 +1,28 @@
 import Foundation
 import AVFoundation
 import SwiftSignalKit
+import TelegramCore
 
 private let defaultFPS: Double = 30.0
 
 final class CameraDevice {
     var position: Camera.Position = .back
     
+    deinit {
+        if let videoDevice = self.videoDevice {
+            self.unsubscribeFromChanges(videoDevice)
+        }
+    }
+    
     public private(set) var videoDevice: AVCaptureDevice? = nil {
         didSet {
+            if let previousVideoDevice = oldValue {
+                self.unsubscribeFromChanges(previousVideoDevice)
+            }
             self.videoDevicePromise.set(.single(self.videoDevice))
+            if let videoDevice = self.videoDevice {
+                self.subscribeForChanges(videoDevice)
+            }
         }
     }
     private var videoDevicePromise = Promise<AVCaptureDevice?>()
@@ -68,6 +81,14 @@ final class CameraDevice {
             
             if let bestFormat = candidates.last {
                 device.activeFormat = bestFormat
+                
+                Logger.shared.log("Camera", "Available formats:")
+                for format in device.formats {
+                    Logger.shared.log("Camera", format.description)
+                }
+                
+                Logger.shared.log("Camera", "Selected format:")
+                Logger.shared.log("Camera", bestFormat.description)
             }
             
             if let targetFPS = device.actualFPS(maxFramerate) {
@@ -84,12 +105,12 @@ final class CameraDevice {
         }
     }
     
-    private func subscribeForChanges() {
-        NotificationCenter.default.addObserver(self, selector: #selector(self.subjectAreaChanged), name: Notification.Name.AVCaptureDeviceSubjectAreaDidChange, object: self.videoDevice)
+    private func subscribeForChanges(_ device: AVCaptureDevice) {
+        NotificationCenter.default.addObserver(self, selector: #selector(self.subjectAreaChanged), name: Notification.Name.AVCaptureDeviceSubjectAreaDidChange, object: device)
     }
     
-    private func unsubscribeFromChanges() {
-        NotificationCenter.default.removeObserver(self, name: Notification.Name.AVCaptureDeviceSubjectAreaDidChange, object: self.videoDevice)
+    private func unsubscribeFromChanges(_ device: AVCaptureDevice) {
+        NotificationCenter.default.removeObserver(self, name: Notification.Name.AVCaptureDeviceSubjectAreaDidChange, object: device)
     }
     
     @objc private func subjectAreaChanged() {
@@ -161,6 +182,12 @@ final class CameraDevice {
             if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(focusMode) {
                 device.focusPointOfInterest = point
                 device.focusMode = focusMode
+            }
+            
+            device.isSubjectAreaChangeMonitoringEnabled = monitorSubjectAreaChange
+            
+            if abs(device.exposureTargetBias) > 0.0 {
+                device.setExposureTargetBias(0.0)
             }
         }
     }

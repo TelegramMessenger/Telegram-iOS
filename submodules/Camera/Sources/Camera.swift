@@ -40,15 +40,16 @@ private final class CameraContext {
         }
     }
     
+    private let previewSnapshotContext = CIContext()
     private var lastSnapshotTimestamp: Double = CACurrentMediaTime()
     private func savePreviewSnapshot(pixelBuffer: CVPixelBuffer) {
         Queue.concurrentDefaultQueue().async {
-            let ciContext = CIContext()
             var ciImage = CIImage(cvImageBuffer: pixelBuffer)
-            ciImage = ciImage.transformed(by: CGAffineTransform(scaleX: 0.33, y: 0.33))
-            if let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) {
+            let size = ciImage.extent.size
+            ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 40.0).cropped(to: CGRect(origin: .zero, size: size))
+            if let cgImage = self.previewSnapshotContext.createCGImage(ciImage, from: ciImage.extent) {
                 let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
-                CameraSimplePreviewView.saveLastState(uiImage)
+                CameraSimplePreviewView.saveLastStateImage(uiImage)
             }
         }
     }
@@ -66,7 +67,7 @@ private final class CameraContext {
             self.input.configure(for: self.session, device: self.device, audio: configuration.audio)
             self.output.configure(for: self.session, configuration: configuration)
             
-            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: 60)
+            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: self.preferredMaxFrameRate)
             self.output.configureVideoStabilization()
         }
         
@@ -114,6 +115,15 @@ private final class CameraContext {
         }
     }
     
+    private var preferredMaxFrameRate: Double {
+        switch DeviceModel.current {
+        case .iPhone14ProMax, .iPhone13ProMax:
+            return 60.0
+        default:
+            return 30.0
+        }
+    }
+    
     func startCapture() {
         guard !self.session.isRunning else {
             return
@@ -132,8 +142,17 @@ private final class CameraContext {
         self.session.stopRunning()
     }
     
-    func focus(at point: CGPoint) {
-        self.device.setFocusPoint(point, focusMode: .continuousAutoFocus, exposureMode: .continuousAutoExposure, monitorSubjectAreaChange: true)
+    func focus(at point: CGPoint, autoFocus: Bool) {
+        let focusMode: AVCaptureDevice.FocusMode
+        let exposureMode: AVCaptureDevice.ExposureMode
+        if autoFocus {
+            focusMode = .continuousAutoFocus
+            exposureMode = .continuousAutoExposure
+        } else {
+            focusMode = .autoFocus
+            exposureMode = .autoExpose
+        }
+        self.device.setFocusPoint(point, focusMode: focusMode, exposureMode: exposureMode, monitorSubjectAreaChange: true)
     }
     
     func setFps(_ fps: Float64) {
@@ -159,7 +178,7 @@ private final class CameraContext {
             self.changingPosition = true
             self.device.configure(for: self.session, position: targetPosition)
             self.input.configure(for: self.session, device: self.device, audio: self.initialConfiguration.audio)
-            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: 60)
+            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: self.preferredMaxFrameRate)
             self.output.configureVideoStabilization()
             self.queue.after(0.5) {
                 self.changingPosition = false
@@ -172,7 +191,7 @@ private final class CameraContext {
             self.input.invalidate(for: self.session)
             self.device.configure(for: self.session, position: position)
             self.input.configure(for: self.session, device: self.device, audio: self.initialConfiguration.audio)
-            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: 60)
+            self.device.configureDeviceFormat(maxDimensions: CMVideoDimensions(width: 1920, height: 1080), maxFramerate: self.preferredMaxFrameRate)
             self.output.configureVideoStabilization()
         }
     }
@@ -266,6 +285,9 @@ public final class Camera {
         self.metrics = Camera.Metrics(model: DeviceModel.current)
         
         let session = AVCaptureSession()
+        session.usesApplicationAudioSession = true
+        session.automaticallyConfiguresApplicationAudioSession = false
+        session.automaticallyConfiguresCaptureDeviceForWideColor = false
         if let previewView {
             previewView.session = session
         }
@@ -363,10 +385,10 @@ public final class Camera {
         }
     }
     
-    public func focus(at point: CGPoint) {
+    public func focus(at point: CGPoint, autoFocus: Bool = true) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.focus(at: point)
+                context.focus(at: point, autoFocus: autoFocus)
             }
         }
     }

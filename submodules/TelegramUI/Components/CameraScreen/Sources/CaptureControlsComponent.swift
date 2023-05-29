@@ -108,7 +108,7 @@ private final class ShutterButtonContentComponent: Component {
                         }
                         self.blobView.updatePrimaryOffset(bandedOffset, transition: transition)
                     } else {
-                        self.blobView.updatePrimaryOffset(0.0, transition: .spring(duration: 0.15))
+                        self.blobView.updatePrimaryOffset(0.0, transition: .spring(duration: 0.2))
                     }
                 }
             }
@@ -411,11 +411,11 @@ final class CaptureControlsComponent: Component {
                     if let galleryButton = self.galleryButtonView.view {
                         blobOffset = galleryButton.center.x - self.frame.width / 2.0
                     }
-                    self.shutterUpdateOffset.invoke((blobOffset, .spring(duration: 0.5)))
+                    self.shutterUpdateOffset.invoke((blobOffset, .spring(duration: 0.35)))
                 } else {
                     self.hapticFeedback.impact(.light)
                     self.component?.shutterReleased()
-                    self.shutterUpdateOffset.invoke((0.0, .spring(duration: 0.3)))
+                    self.shutterUpdateOffset.invoke((0.0, .spring(duration: 0.25)))
                 }
             default:
                 break
@@ -450,7 +450,7 @@ final class CaptureControlsComponent: Component {
                     self.component?.zoomUpdated(1.0)
                 }
                 
-                if location.x < self.frame.width / 2.0 - 20.0 {
+                if location.x < self.frame.width / 2.0 - 30.0 {
                     if location.x < self.frame.width / 2.0 - 60.0 {
                         self.component?.swipeHintUpdated(.releaseLock)
                         if location.x < 75.0 {
@@ -464,7 +464,7 @@ final class CaptureControlsComponent: Component {
                         blobOffset = rubberBandingOffset(offset: blobOffset, bandingStart: 0.0)
                         isBanding = true
                     }
-                } else if location.x > self.frame.width / 2.0 + 20.0 {
+                } else if location.x > self.frame.width / 2.0 + 30.0 {
                     self.component?.swipeHintUpdated(.flip)
                     if location.x > self.frame.width / 2.0 + 60.0 {
                         self.panBlobState = .transientToFlip
@@ -488,8 +488,8 @@ final class CaptureControlsComponent: Component {
                 }
                 var transition: Transition = .immediate
                 if let wasBanding = self.wasBanding, wasBanding != isBanding {
-                    self.hapticFeedback.impact(.light)
-                    transition = .spring(duration: 0.3)
+                    //self.hapticFeedback.impact(.light)
+                    transition = .spring(duration: 0.35)
                 }
                 self.wasBanding = isBanding
                 self.shutterUpdateOffset.invoke((blobOffset, transition))
@@ -574,11 +574,14 @@ final class CaptureControlsComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     CameraButton(
-                        content: AnyComponent(
-                            Image(
-                                image: state.cachedAssetImage?.1,
-                                size: CGSize(width: 50.0, height: 50.0),
-                                contentMode: .scaleAspectFill
+                        content: AnyComponentWithIdentity(
+                            id: "gallery",
+                            component: AnyComponent(
+                                Image(
+                                    image: state.cachedAssetImage?.1,
+                                    size: CGSize(width: 50.0, height: 50.0),
+                                    contentMode: .scaleAspectFill
+                                )
                             )
                         ),
                         tag: component.galleryButtonTag,
@@ -632,8 +635,11 @@ final class CaptureControlsComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     CameraButton(
-                        content: AnyComponent(
-                            FlipButtonContentComponent(action: flipAnimationAction)
+                        content: AnyComponentWithIdentity(
+                            id: "flip",
+                            component: AnyComponent(
+                                FlipButtonContentComponent(action: flipAnimationAction)
+                            )
                         ),
                         minSize: CGSize(width: 44.0, height: 44.0),
                         action: {

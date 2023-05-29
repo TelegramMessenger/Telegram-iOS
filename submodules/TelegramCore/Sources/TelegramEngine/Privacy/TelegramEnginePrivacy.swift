@@ -44,5 +44,9 @@ public extension TelegramEngine {
         public func updateSelectiveAccountPrivacySettings(type: UpdateSelectiveAccountPrivacySettingsType, settings: SelectivePrivacySettings) -> Signal<Void, NoError> {
             return _internal_updateSelectiveAccountPrivacySettings(account: self.account, type: type, settings: settings)
         }
+        
+        public func updateCloseFriends(peerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
+            return _internal_updateCloseFriends(account: self.account, peerIds: peerIds)
+        }
     }
 }

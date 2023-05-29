@@ -64,6 +64,9 @@ extension TelegramUser {
             if (flags & (1 << 28)) != 0 {
                 userFlags.insert(.isPremium)
             }
+            if (flags2 & (1 << 2)) != 0 {
+                userFlags.insert(.isCloseFriend)
+            }
             
             var botInfo: BotUserInfo?
             if (flags & (1 << 14)) != 0 {
@@ -96,7 +99,7 @@ extension TelegramUser {
     
     static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
         switch rhs {
-            case let .user(flags, _, _, rhsAccessHash, _, _, _, _, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, _):
+            case let .user(flags, flags2, _, rhsAccessHash, _, _, _, _, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, _):
                 let isMin = (flags & (1 << 20)) != 0
                 if !isMin {
                     return TelegramUser(user: rhs)
@@ -128,6 +131,9 @@ extension TelegramUser {
                         }
                         if (flags & (1 << 28)) != 0 {
                             userFlags.insert(.isPremium)
+                        }
+                        if (flags2 & (1 << 2)) != 0 {
+                            userFlags.insert(.isCloseFriend)
                         }
                         
                         var botInfo: BotUserInfo?
