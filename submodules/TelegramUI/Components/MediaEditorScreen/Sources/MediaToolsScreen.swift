@@ -520,6 +520,7 @@ private final class MediaToolsScreenComponent: Component {
                 })
             }
             
+            var needsHistogram = false
             let screenSize: CGSize
             let optionsSize: CGSize
             let optionsTransition: Transition = sectionChanged ? .immediate : transition
@@ -711,6 +712,7 @@ private final class MediaToolsScreenComponent: Component {
                     containerSize: CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
                 )
             case .curves:
+                needsHistogram = true
                 let internalState: CurvesInternalState
                 if let current = self.curvesState {
                     internalState = current
@@ -755,6 +757,7 @@ private final class MediaToolsScreenComponent: Component {
                     containerSize: CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
                 )
             }
+            component.mediaEditor.isHistogramEnabled = needsHistogram
            
             let optionsFrame = CGRect(origin: .zero, size: optionsSize)
             if let optionsView = self.toolOptions.view {

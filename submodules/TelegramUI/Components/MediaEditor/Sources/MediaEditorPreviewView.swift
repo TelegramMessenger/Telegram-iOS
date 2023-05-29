@@ -50,7 +50,7 @@ public final class MediaEditorPreviewView: MTKView, MTKViewDelegate, RenderTarge
     }
     
     func scheduleFrame() {
-        Queue.mainQueue().async {
+        Queue.mainQueue().justDispatch {
             self.draw()
         }
     }
@@ -66,5 +66,34 @@ public final class MediaEditorPreviewView: MTKView, MTKViewDelegate, RenderTarge
             return
         }
         self.renderer?.renderFrame()
+    }
+    
+    private var transitionView: UIImageView?
+    public func setTransitionImage(_ image: UIImage) {
+        self.transitionView?.removeFromSuperview()
+        
+        let transitionView = UIImageView(image: image)
+        transitionView.frame = self.bounds
+        self.addSubview(transitionView)
+        
+        self.transitionView = transitionView
+    }
+    
+    public func removeTransitionImage() {
+        if let transitionView = self.transitionView {
+//            transitionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak transitionView] _ in
+//
+//            })
+            transitionView.removeFromSuperview()
+            self.transitionView = nil
+        }
+    }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        if let transitionView = self.transitionView {
+            transitionView.frame = self.bounds
+        }
     }
 }

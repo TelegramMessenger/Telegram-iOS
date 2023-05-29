@@ -11,7 +11,7 @@ final class SharpenRenderPass: RenderPass {
     
     }
     
-    func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         return input
     }
 }

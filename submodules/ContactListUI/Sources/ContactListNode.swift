@@ -22,6 +22,7 @@ import TelegramPermissionsUI
 import AppBundle
 import ContextUI
 import PhoneNumberFormat
+import LocalizedPeerData
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
@@ -365,72 +366,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                 }
-        }
-    }
-}
-
-private extension EnginePeer.IndexName {
-    func isLessThan(other: EnginePeer.IndexName, ordering: PresentationPersonNameOrder) -> ComparisonResult {
-        switch self {
-        case let .title(lhsTitle, _):
-            let rhsString: String
-            switch other {
-            case let .title(title, _):
-                rhsString = title
-            case let .personName(first, last, _, _):
-                switch ordering {
-                case .firstLast:
-                    if first.isEmpty {
-                        rhsString = last
-                    } else {
-                        rhsString = first + last
-                    }
-                case .lastFirst:
-                    if last.isEmpty {
-                        rhsString = first
-                    } else {
-                        rhsString = last + first
-                    }
-                }
-            }
-            return lhsTitle.caseInsensitiveCompare(rhsString)
-        case let .personName(lhsFirst, lhsLast, _, _):
-            let lhsString: String
-            switch ordering {
-            case .firstLast:
-                if lhsFirst.isEmpty {
-                    lhsString = lhsLast
-                } else {
-                    lhsString = lhsFirst + lhsLast
-                }
-            case .lastFirst:
-                if lhsLast.isEmpty {
-                    lhsString = lhsFirst
-                } else {
-                    lhsString = lhsLast + lhsFirst
-                }
-            }
-            let rhsString: String
-            switch other {
-            case let .title(title, _):
-                rhsString = title
-            case let .personName(first, last, _, _):
-                switch ordering {
-                case .firstLast:
-                    if first.isEmpty {
-                        rhsString = last
-                    } else {
-                        rhsString = first + last
-                    }
-                case .lastFirst:
-                    if last.isEmpty {
-                        rhsString = first
-                    } else {
-                        rhsString = last + first
-                    }
-                }
-            }
-            return lhsString.caseInsensitiveCompare(rhsString)
         }
     }
 }

@@ -21,20 +21,12 @@ private final class EnhanceLightnessPass: DefaultRenderPass {
         return .r8Unorm
     }
     
-    func process(input: MTLTexture, size: TextureSize, scale: simd_float2, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device, rotation: rotation)
+    func process(input: MTLTexture, size: TextureSize, scale: simd_float2, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.setupVerticesBuffer(device: device)
         
-        let width: Int
-        let height: Int
-        switch rotation {
-        case .rotate90Degrees, .rotate270Degrees:
-            width = size.height
-            height = size.width
-        default:
-            width = size.width
-            height = size.height
-        }
-                
+        let width = size.width
+        let height = size.height
+      
         if self.cachedTexture == nil {
             let textureDescriptor = MTLTextureDescriptor()
             textureDescriptor.textureType = .type2D
@@ -130,7 +122,7 @@ private final class EnhanceLUTGeneratorPass: RenderPass {
         }
     }
     
-    func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         return nil
     }
     
@@ -204,10 +196,11 @@ private final class EnhanceLookupPass: DefaultRenderPass {
         return "enhanceColorLookupFragmentShader"
     }
     
-    func process(input: MTLTexture, lookupTexture: MTLTexture, value: simd_float1, gridSize: simd_float2, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        self.setupVerticesBuffer(device: device, rotation: rotation)
+    func process(input: MTLTexture, lookupTexture: MTLTexture, value: simd_float1, gridSize: simd_float2, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        self.setupVerticesBuffer(device: device)
         
-        let (width, height) = textureDimensionsForRotation(texture: input, rotation: rotation)
+        let width = input.width
+        let height = input.height
         
         if self.cachedTexture == nil {
             let textureDescriptor = MTLTextureDescriptor()
@@ -269,7 +262,7 @@ final class EnhanceRenderPass: RenderPass {
         self.lookupPass.setup(device: device, library: library)
     }
     
-    func process(input: MTLTexture, rotation: TextureRotation, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         guard self.value > 0.005 else {
             return input
         }
@@ -279,12 +272,12 @@ final class EnhanceRenderPass: RenderPass {
         let lightnessSize = TextureSize(width: input.width + dX, height: input.height + dY)
         let lightnessScale = simd_float2(Float(input.width + dX) / Float(input.width), Float(input.height + dY) / Float(input.height))
         
-        let lightness = self.lightnessPass.process(input: input, size: lightnessSize, scale: lightnessScale, rotation: rotation, device: device, commandBuffer: commandBuffer)
+        let lightness = self.lightnessPass.process(input: input, size: lightnessSize, scale: lightnessScale, device: device, commandBuffer: commandBuffer)
         
         let lookupTexture = self.lutGeneratorPass.process(input: lightness!, gridSize: self.tileGridSize, clipLimit: self.clipLimit, device: device, commandBuffer: commandBuffer)
         
         let gridSize = simd_float2(Float(self.tileGridSize.width), Float(self.tileGridSize.height))
-        let output = self.lookupPass.process(input: input, lookupTexture: lookupTexture!, value: self.value, gridSize: gridSize, rotation: rotation, device: device, commandBuffer: commandBuffer)
+        let output = self.lookupPass.process(input: input, lookupTexture: lookupTexture!, value: self.value, gridSize: gridSize, device: device, commandBuffer: commandBuffer)
         
         return output
     }

@@ -166,10 +166,12 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     public private(set) var modalStyleOverlayTransitionFactor: CGFloat = 0.0
     public var modalStyleOverlayTransitionFactorUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    public var customModalStyleOverlayTransitionFactorUpdated: ((ContainedViewLayoutTransition) -> Void)?
     public func updateModalStyleOverlayTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.modalStyleOverlayTransitionFactor != value {
             self.modalStyleOverlayTransitionFactor = value
             self.modalStyleOverlayTransitionFactorUpdated?(transition)
+            self.customModalStyleOverlayTransitionFactorUpdated?(transition)
         }
     }
     
@@ -450,10 +452,6 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         if let scrollToTopView = self.scrollToTopView {
             scrollToTopView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 10.0)
         }
-    }
-    
-    open func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
-        
     }
     
     open func navigationStackConfigurationUpdated(next: [ViewController]) {

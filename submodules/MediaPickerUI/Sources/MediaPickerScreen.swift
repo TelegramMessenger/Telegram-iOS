@@ -53,13 +53,14 @@ private struct MediaPickerGridEntry: Comparable, Identifiable {
     let stableId: Int
     let content: MediaPickerGridItemContent
     let selectable: Bool
+    let stories: Bool
     
     static func <(lhs: MediaPickerGridEntry, rhs: MediaPickerGridEntry) -> Bool {
         return lhs.stableId < rhs.stableId
     }
     
     func item(context: AccountContext, interaction: MediaPickerInteraction, theme: PresentationTheme) -> MediaPickerGridItem {
-        return MediaPickerGridItem(content: self.content, interaction: interaction, theme: theme, selectable: self.selectable, enableAnimations: context.sharedContext.energyUsageSettings.fullTranslucency)
+        return MediaPickerGridItem(content: self.content, interaction: interaction, theme: theme, selectable: self.selectable, enableAnimations: context.sharedContext.energyUsageSettings.fullTranslucency, stories: self.stories)
     }
 }
 
@@ -583,9 +584,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             var updateLayout = false
             
+            var stories = false
             var selectable = true
             if case let .assets(_, mode) = controller.subject, mode != .default {
                 selectable = false
+                if mode == .story {
+                    stories = true
+                }
             }
             
             switch state {
@@ -606,7 +611,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     
                     var draftIndex = 0
                     for draft in drafts {
-                        entries.append(MediaPickerGridEntry(stableId: stableId, content: .draft(draft, draftIndex), selectable: selectable))
+                        entries.append(MediaPickerGridEntry(stableId: stableId, content: .draft(draft, draftIndex), selectable: selectable, stories: stories))
                         stableId += 1
                         draftIndex += 1
                     }
@@ -618,7 +623,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         } else {
                             index = totalCount - i - 1
                         }
-                        entries.append(MediaPickerGridEntry(stableId: stableId, content: .asset(fetchResult, index), selectable: selectable))
+                        entries.append(MediaPickerGridEntry(stableId: stableId, content: .asset(fetchResult, index), selectable: selectable, stories: stories))
                         stableId += 1
                     }
                     
@@ -647,7 +652,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             case let .media(media):
                 let count = media.count
                 for i in 0 ..< count {
-                    entries.append(MediaPickerGridEntry(stableId: stableId, content: .media(media[i], i), selectable: true))
+                    entries.append(MediaPickerGridEntry(stableId: stableId, content: .media(media[i], i), selectable: true, stories: stories))
                     stableId += 1
                 }
             }
@@ -976,7 +981,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }
         
-        private func transitionView(for identifier: String, hideSource: Bool = false) -> UIView? {
+        fileprivate func transitionView(for identifier: String, snapshot: Bool = true, hideSource: Bool = false) -> UIView? {
             if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
                 return selectionNode.transitionView(for: identifier, hideSource: hideSource)
             } else {
@@ -986,12 +991,22 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         transitionNode = itemNode
                     }
                 }
-                let transitionView = transitionNode?.transitionView()
+                let transitionView = transitionNode?.transitionView(snapshot: snapshot)
                 if hideSource {
                     transitionNode?.isHidden = true
                 }
                 return transitionView
             }
+        }
+        
+        fileprivate func transitionImage(for identifier: String) -> UIImage? {
+            var transitionNode: MediaPickerGridItemNode?
+            self.gridNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? MediaPickerGridItemNode, itemNode.identifier == identifier {
+                    transitionNode = itemNode
+                }
+            }
+            return transitionNode?.transitionImage()
         }
         
         private func enqueueTransaction(_ transaction: MediaPickerGridTransaction) {
@@ -1189,7 +1204,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             var itemHeight = itemWidth
             if case let .assets(_, mode) = controller.subject, case .story = mode {
-                itemHeight = 180.0
+                itemHeight = round(itemWidth / 9.0 * 16.0)
             }
             
             self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: itemHeight * 3.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
@@ -1905,6 +1920,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
     }
     
+    fileprivate func transitionView(for identifier: String, snapshot: Bool, hideSource: Bool = false) -> UIView? {
+        return self.controllerNode.transitionView(for: identifier, snapshot: snapshot, hideSource: hideSource)
+    }
+    
+    fileprivate func transitionImage(for identifier: String) -> UIImage? {
+        return self.controllerNode.transitionImage(for: identifier)
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -2112,7 +2135,8 @@ public func wallpaperMediaPickerController(
 
 public func storyMediaPickerController(
     context: AccountContext,
-    completion: @escaping (Any) -> Void = { _ in }
+    completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping () -> (UIView, CGRect)?) -> Void = { _, _, _, _, _ in },
+    dismissed: @escaping () -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
     let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
@@ -2121,8 +2145,36 @@ public func storyMediaPickerController(
     })
     controller.requestController = { _, present in
         let mediaPickerController = MediaPickerScreen(context: context, updatedPresentationData: updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .story), mainButtonState: nil, mainButtonAction: nil)
-        mediaPickerController.customSelection = completion
+        mediaPickerController.customSelection = { [weak mediaPickerController] result in
+            guard let controller = mediaPickerController else {
+                return
+            }
+            if let result = result as? MediaEditorDraft {
+                if let transitionView = controller.transitionView(for: result.path, snapshot: false) {
+                    let transitionOut: () -> (UIView, CGRect)? = {
+                        if let transitionView = controller.transitionView(for: result.path, snapshot: false) {
+                            return (transitionView, transitionView.bounds)
+                        }
+                        return nil
+                    }
+                    completion(result, transitionView, transitionView.bounds, controller.transitionImage(for: result.path), transitionOut)
+                }
+            } else if let result = result as? PHAsset {
+                if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
+                    let transitionOut: () -> (UIView, CGRect)? = {
+                        if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
+                            return (transitionView, transitionView.bounds)
+                        }
+                        return nil
+                    }
+                    completion(result, transitionView, transitionView.bounds, controller.transitionImage(for: result.localIdentifier), transitionOut)
+                }
+            }
+        }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
+    }
+    controller.willDismiss = {
+        dismissed()
     }
     controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)

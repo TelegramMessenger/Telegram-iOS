@@ -2521,25 +2521,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         guard let self else {
                             return
                         }
-                        
                         if let peer, peer.id == self.context.account.peerId, storyContentState.slice == nil {
-                            var cameraTransitionIn: StoryCameraTransitionIn?
-                            if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
-                                if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                                    cameraTransitionIn = StoryCameraTransitionIn(
-                                        sourceView: transitionView,
-                                        sourceRect: transitionView.bounds,
-                                        sourceCornerRadius: transitionView.bounds.height * 0.5
-                                    )
-                                }
-                            }
-                            
                             if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                                rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionOut: { [weak self] _ in
+                                let coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] finished in
                                     guard let self else {
                                         return nil
                                     }
-                                    if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                                    if finished, let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
                                         if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                                             return StoryCameraTransitionOut(
                                                 destinationView: transitionView,
@@ -2550,6 +2538,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     }
                                     return nil
                                 })
+                                coordinator?.animateIn()
                             }
                             
                             return
@@ -4949,6 +4938,43 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.playedSignUpCompletedAnimation = true
         Queue.mainQueue().after(0.3) {
             self.view.addSubview(ConfettiView(frame: self.view.bounds))
+        }
+    }
+    
+    private var storyCameraTransitionInCoordinator: StoryCameraTransitionInCoordinator?
+    func storyCameraPanGestureChanged(transitionFraction: CGFloat) {
+        guard let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface else {
+            return
+        }
+            
+        let coordinator: StoryCameraTransitionInCoordinator?
+        if let current = self.storyCameraTransitionInCoordinator {
+            coordinator = current
+        } else {
+            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] finished in
+                guard let self else {
+                    return nil
+                }
+                if finished, let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                    if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                        return StoryCameraTransitionOut(
+                            destinationView: transitionView,
+                            destinationRect: transitionView.bounds,
+                            destinationCornerRadius: transitionView.bounds.height * 0.5
+                        )
+                    }
+                }
+                return nil
+            })
+            self.storyCameraTransitionInCoordinator = coordinator
+        }
+        coordinator?.updateTransitionProgress(transitionFraction)
+    }
+    
+    func storyCameraPanGestureEnded(transitionFraction: CGFloat, velocity: CGFloat) {
+        if let coordinator = self.storyCameraTransitionInCoordinator {
+            coordinator.completeWithTransitionProgressAndVelocity(transitionFraction, velocity)
+            self.storyCameraTransitionInCoordinator = nil
         }
     }
 }
