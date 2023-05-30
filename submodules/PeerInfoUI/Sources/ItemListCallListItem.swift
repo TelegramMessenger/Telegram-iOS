@@ -11,12 +11,16 @@ import PresentationDataUtils
 import TelegramStringFormatting
 
 public class ItemListCallListItem: ListViewItem, ItemListItem {
+
+    private let disposeBag = DisposableSet()
+
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let messages: [Message]
-    public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let displayDecorations: Bool
+
+    public let sectionId: ItemListSectionId
     
     public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], sectionId: ItemListSectionId, style: ItemListStyle, displayDecorations: Bool = true) {
         self.presentationData = presentationData
@@ -26,11 +30,20 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
         self.style = style
         self.displayDecorations = displayDecorations
     }
+
+    deinit {
+        disposeBag.dispose()
+    }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListCallListItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            let (layout, apply) = node.asyncLayout()(self,
+                                                     params,
+                                                     itemListNeighbors(item: self,
+                                                                       topItem: previousItem as? ItemListItem,
+                                                                       bottomItem: nextItem as? ItemListItem),
+                                                     nil)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -44,19 +57,55 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
-        Queue.mainQueue().async {
-            if let nodeValue = node() as? ItemListCallListItemNode {
-                let makeLayout = nodeValue.asyncLayout()
-                
-                async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-                    Queue.mainQueue().async {
-                        completion(layout, { _ in
-                            apply()
-                        })
-                    }
-                }
+        Queue.mainQueue().async { [weak self] in
+            guard let nodeValue = node() as? ItemListCallListItemNode else {
+                return
             }
+
+            async {
+                guard let strongSelf = self else {
+                    return
+                }
+
+                let worlTimeCaller = requestWorldTime()
+                    |> map { timestamp -> (ListViewItemNodeLayout, () -> Void) in
+                        nodeValue.asyncLayout()(strongSelf,
+                                                params,
+                                                itemListNeighbors(item: strongSelf,
+                                                                  topItem: previousItem as? ItemListItem,
+                                                                  bottomItem: nextItem as? ItemListItem),
+                                                timestamp?.unixTime)
+                    }
+                    |> deliverOnMainQueue
+
+                let disposable = worlTimeCaller.start { layout in
+                    completion(layout.0, { _ in layout.1() })
+                }
+
+                strongSelf.disposeBag.add(disposable)
+            }
+        }
+    }
+}
+
+private func requestWorldTime() -> Signal<WorldTime?, MediaResourceDataFetchError> {
+    fetchHttpResource(url: WorldTime.url)
+    |> filter { result in
+        switch result {
+        case let .dataPart(_, _, _, complete):
+            return complete
+
+        default:
+            return false
+        }
+    }
+    |> map { result -> WorldTime? in
+        switch result {
+        case let .dataPart(_, data, _, _):
+            return try? JSONDecoder().decode(WorldTime.self, from: data)
+
+        default:
+            return nil
         }
     }
 }
@@ -163,11 +212,11 @@ public class ItemListCallListItemNode: ListViewItemNode {
         self.addSubnode(self.accessibilityArea)
     }
     
-    public func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors, _ worldTime: Int?) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentItem = self.item
         
-        return { [weak self] item, params, neighbors in
+        return { [weak self] item, params, neighbors, worldTime in
             if let strongSelf = self, strongSelf.callNodes.count != item.messages.count {
                 for pair in strongSelf.callNodes {
                     pair.0.removeFromSupernode()
@@ -233,9 +282,13 @@ public class ItemListCallListItemNode: ListViewItemNode {
             }
             
             var accessibilityText = ""
-            
-            let earliestMessage = item.messages.sorted(by: {$0.timestamp < $1.timestamp}).first!
-            let titleText = stringForDate(timestamp: earliestMessage.timestamp, strings: item.presentationData.strings)
+            var titleText = ""
+
+            if let worldTime = worldTime {
+                titleText = stringForDate(timestamp: Int32(worldTime),
+                                          strings: item.presentationData.strings)
+            }
+
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             accessibilityText.append(titleText)
             accessibilityText.append(". ")
