@@ -1,6 +1,7 @@
 import AVFoundation
 import SwiftSignalKit
 import Vision
+import VideoToolbox
 
 public struct CameraCode: Equatable {
     public enum CodeType {
@@ -139,10 +140,6 @@ final class CameraOutput: NSObject {
             connection.videoOrientation = orientation
         }
         
-//        var settings = AVCapturePhotoSettings()
-//        if self.photoOutput.availablePhotoCodecTypes.contains(.hevc) {
-//            settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.hevc])
-//        }
         let settings = AVCapturePhotoSettings(format: [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)])
         settings.flashMode = flashMode
         if let previewPhotoPixelFormatType = settings.availablePreviewPhotoPixelFormatTypes.first {
@@ -169,7 +166,14 @@ final class CameraOutput: NSObject {
             return .complete()
         }
         
-        guard let videoSettings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: .h264, assetWriterOutputFileType: .mp4) else {
+        let codecType: AVVideoCodecType
+        if hasHEVCHardwareEncoder {
+            codecType = .hevc
+        } else {
+            codecType = .h264
+        }
+        
+        guard let videoSettings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: codecType, assetWriterOutputFileType: .mp4) else {
             return .complete()
         }
         guard let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) else {
@@ -272,3 +276,14 @@ extension CameraOutput: AVCaptureMetadataOutputObjectsDelegate {
         self.processCodes?(codes)
     }
 }
+
+private let hasHEVCHardwareEncoder: Bool = {
+    let spec: [CFString: Any] = [:]
+    var outID: CFString?
+    var properties: CFDictionary?
+    let result = VTCopySupportedPropertyDictionaryForEncoder(width: 1920, height: 1080, codecType: kCMVideoCodecType_HEVC, encoderSpecification: spec as CFDictionary, encoderIDOut: &outID, supportedPropertiesOut: &properties)
+    if result == kVTCouldNotFindVideoEncoderErr {
+        return false
+    }
+    return result == noErr
+}()

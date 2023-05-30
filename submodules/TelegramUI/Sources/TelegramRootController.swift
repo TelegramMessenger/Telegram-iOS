@@ -320,7 +320,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     return nil
                 }
             },
-            completion: { result, resultTransition in
+            completion: { result, resultTransition, dismissed in
                 let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
                 |> map { value -> MediaEditorScreen.Subject? in
                     switch value {
@@ -487,6 +487,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         showDraftTooltipImpl?()
                     }
                     returnToCameraImpl?()
+                }
+                controller.dismissed = {
+                    dismissed()
                 }
                 presentImpl?(controller)
             }

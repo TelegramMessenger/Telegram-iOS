@@ -920,17 +920,38 @@ extension CodableToolValue: Codable {
     }
 }
 
+private let hasHEVCHardwareEncoder: Bool = {
+    let spec: [CFString: Any] = [:]
+    var outID: CFString?
+    var properties: CFDictionary?
+    let result = VTCopySupportedPropertyDictionaryForEncoder(width: 1920, height: 1080, codecType: kCMVideoCodecType_HEVC, encoderSpecification: spec as CFDictionary, encoderIDOut: &outID, supportedPropertiesOut: &properties)
+    if result == kVTCouldNotFindVideoEncoderErr {
+        return false
+    }
+    return result == noErr
+}()
+
 public func recommendedVideoExportConfiguration(values: MediaEditorValues, frameRate: Float) -> MediaEditorVideoExport.Configuration {
-    let compressionProperties: [String: Any] = [
-        AVVideoAverageBitRateKey: 2000000,
-        AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
-        //AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-        //AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
-    ]
+    let compressionProperties: [String: Any]
+    let codecType: AVVideoCodecType
+    
+    if hasHEVCHardwareEncoder {
+        codecType = AVVideoCodecType.hevc
+        compressionProperties = [
+            AVVideoAverageBitRateKey: 2000000,
+            AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
+        ]
+    } else {
+        codecType = AVVideoCodecType.h264
+        compressionProperties = [
+            AVVideoAverageBitRateKey: 2000000,
+            AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+            AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
+        ]
+    }
     
     let videoSettings: [String: Any] = [
-        //AVVideoCodecKey: AVVideoCodecType.h264,
-        AVVideoCodecKey: AVVideoCodecType.hevc,
+        AVVideoCodecKey: codecType,
         AVVideoCompressionPropertiesKey: compressionProperties,
         AVVideoWidthKey: 720,
         AVVideoHeightKey: 1280

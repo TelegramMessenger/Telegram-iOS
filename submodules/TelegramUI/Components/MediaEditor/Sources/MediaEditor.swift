@@ -499,6 +499,8 @@ public final class MediaEditor {
         let trimStart = self.values.videoTrimRange?.lowerBound ?? 0.0
         let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
+        
+        self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimEnd, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
     }
         
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {

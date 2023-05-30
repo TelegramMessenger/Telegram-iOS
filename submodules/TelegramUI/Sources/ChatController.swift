@@ -18696,7 +18696,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             updatedPresentationData: strongSelf.updatedPresentationData,
                             peer: EnginePeer(peer),
                             animateAppearance: animateAppearance,
-                            completion: { [weak self] result in
+                            completion: { [weak self] _, result in
                                 guard let strongSelf = self, let asset = result as? PHAsset else {
                                     return
                                 }

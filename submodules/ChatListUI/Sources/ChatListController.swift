@@ -4942,6 +4942,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private var storyCameraTransitionInCoordinator: StoryCameraTransitionInCoordinator?
+    var hasStoryCameraTransition: Bool {
+        return self.storyCameraTransitionInCoordinator != nil
+    }
     func storyCameraPanGestureChanged(transitionFraction: CGFloat) {
         guard let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface else {
             return

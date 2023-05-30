@@ -1507,7 +1507,7 @@ public final class MediaEditorScreen: ViewController {
             self.validLayout = layout
 
             let previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
-            let topInset: CGFloat = floor(layout.size.height - previewSize.height) / 2.0
+            let topInset: CGFloat = floorToScreenPixels(layout.size.height - previewSize.height) / 2.0
             
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
@@ -1725,6 +1725,7 @@ public final class MediaEditorScreen: ViewController {
         
     public var cancelled: (Bool) -> Void = { _ in }
     public var completion: (MediaEditorScreen.Result, @escaping () -> Void, MediaEditorResultPrivacy) -> Void = { _, _, _ in }
+    public var dismissed: () -> Void = { }
     
     public init(
         context: AccountContext,
@@ -2008,6 +2009,7 @@ public final class MediaEditorScreen: ViewController {
         
         self.node.animateOut(finished: false, completion: { [weak self] in
             self?.dismiss()
+            self?.dismissed()
         })
     }
         
