@@ -432,11 +432,15 @@ private final class StoryContainerScreenComponent: Component {
                 var update = false
                 self.contentUpdatedDisposable = (component.content.updated
                 |> deliverOnMainQueue).start(next: { [weak self] _ in
-                    guard let self else {
+                    guard let self, let component = self.component else {
                         return
                     }
                     if update {
-                        self.state?.updated(transition: .immediate)
+                        if component.content.stateValue?.slice == nil {
+                            self.environment?.controller()?.dismiss()
+                        } else {
+                            self.state?.updated(transition: .immediate)
+                        }
                     }
                 })
                 update = true

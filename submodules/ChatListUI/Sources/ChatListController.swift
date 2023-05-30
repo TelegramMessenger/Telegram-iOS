@@ -273,9 +273,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private let isReorderingTabsValue = ValuePromise<Bool>(false)
     
-    private let navigationSecondaryContentNode: ASDisplayNode
+    let tabsNode: SparseNode
     private let tabContainerNode: ChatListFilterTabContainerNode
     private var tabContainerData: ([ChatListFilterTabEntry], Bool, Int32?)?
+    var hasTabs: Bool {
+        if let tabContainerData = self.tabContainerData {
+            let isEmpty = tabContainerData.0.count <= 1 || tabContainerData.1
+            return !isEmpty
+        } else {
+            return false
+        }
+    }
+    
+    var searchTabsNode: SparseNode?
     
     private var hasDownloads: Bool = false
     private var activeDownloadsDisposable: Disposable?
@@ -336,9 +346,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             groupCallPanelSource = .peer(peerId)
         }
         
-        self.navigationSecondaryContentNode = SparseNode()
+        self.tabsNode = SparseNode()
         self.tabContainerNode = ChatListFilterTabContainerNode()
-        self.navigationSecondaryContentNode.addSubnode(self.tabContainerNode)
+        self.tabsNode.addSubnode(self.tabContainerNode)
         
         self.storyListHeight = 0.0
                 
@@ -435,10 +445,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
-                /*if let searchContentNode = strongSelf.searchContentNode {
-                    searchContentNode.updateExpansionProgress(1.0, animated: true)
-                }*/
-                //TODO:scroll to top
+                strongSelf.chatListDisplayNode.willScrollToTop()
                 strongSelf.chatListDisplayNode.scrollToTop()
             }
         }
@@ -451,10 +458,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             } else {
                 switch strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.visibleContentOffset() {
                 case .none, .unknown:
-                    //TODO:scroll to top
-                    /*if let searchContentNode = strongSelf.searchContentNode {
-                        searchContentNode.updateExpansionProgress(1.0, animated: true)
-                    }*/
+                    strongSelf.chatListDisplayNode.willScrollToTop()
                     strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToPosition(.top)
                 case let .known(offset):
                     let isFirstFilter = strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter == strongSelf.chatListDisplayNode.mainContainerNode.availableFilters.first?.filter
@@ -472,10 +476,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         strongSelf.selectTab(id: targetTab)
                     } else {
-                        //TODO:scroll to top
-                        /*if let searchContentNode = strongSelf.searchContentNode {
-                            searchContentNode.updateExpansionProgress(1.0, animated: true)
-                        }*/
+                        strongSelf.chatListDisplayNode.willScrollToTop()
                         if let inlineStackContainerNode = strongSelf.chatListDisplayNode.inlineStackContainerNode {
                             inlineStackContainerNode.currentItemNode.scrollToPosition(.top)
                         } else {
@@ -781,19 +782,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         )))
                     ]))
                     
-                    let _ = contentComponent
-                    //TODO:download indicator
-                    /*strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
-                        content: contentComponent,
-                        action: {
-                            guard let strongSelf = self else {
-                                return
+                    if let navigationBarView = strongSelf.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                        navigationBarView.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
+                            content: contentComponent,
+                            action: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.activateSearch(filter: .downloads, query: nil)
                             }
-                            strongSelf.activateSearch(filter: .downloads, query: nil)
-                        }
-                    )))*/
+                        )))
+                    }
                 } else {
-                    //strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: nil)
+                    if let navigationBarView = strongSelf.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                        navigationBarView.searchContentNode?.placeholderNode.setAccessoryComponent(component: nil)
+                    }
                 }
             })
         }
@@ -1252,40 +1255,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             navigationController.filterController(strongSelf, animated: true)
-        }
-        
-        /*self.chatListDisplayNode.contentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let validLayout = strongSelf.validLayout {
-                var offset = offset
-                if validLayout.inVoiceOver {
-                    offset = .known(0.0)
-                }
-                
-                let offsetValue: CGFloat
-                switch offset {
-                case .none:
-                    offsetValue = 0.0
-                case let .known(value):
-                    offsetValue = value
-                case .unknown:
-                    offsetValue = 10000.0
-                }
-                
-                if let navigationBarView = strongSelf.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
-                    navigationBarView.applyScroll(offset: offsetValue, transition: .immediate)
-                }
-            }
-        }*/
-        
-        self.chatListDisplayNode.contentScrollingEnded = { [weak self] listView in
-            let _ = self
-            /*if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                return fixListNodeScrolling(listView, searchNode: searchContentNode)
-            } else {
-                return false
-            }*/
-            //TODO:fix scrolling
-            return false
         }
         
         self.chatListDisplayNode.emptyListAction = { [weak self] _ in
@@ -2426,133 +2395,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         return (primaryContent, secondaryContent)
-        
-        /*let storiesFraction: CGFloat = 0.0
-        //TODO:move to navigation bar
-        /*if let searchContentNode = self.searchContentNode, case .chatList(.root) = self.location {
-            if self.storyListHeight > 0.0 {
-                let fraction = navigationBarSearchContentHeight / searchContentNode.nominalHeight
-                
-                let fromLow: CGFloat = fraction
-                let toLow: CGFloat = 0.0
-                let fromHigh: CGFloat = 1.0
-                let toHigh: CGFloat = 1.0
-                let visibleProgress: CGFloat = toLow + (searchContentNode.expansionProgress - fromLow) * (toHigh - toLow) / (fromHigh - fromLow)
-                storiesFraction = max(0.0, min(1.0, visibleProgress))
-            }
-        }*/
-        
-        let _ = self.headerContentView.update(
-            transition: Transition(transition),
-            component: AnyComponent(ChatListHeaderComponent(
-                sideInset: layout.safeInsets.left + 16.0,
-                primaryContent: primaryContent,
-                secondaryContent: secondaryContent,
-                secondaryTransition: self.chatListDisplayNode.inlineStackContainerTransitionFraction,
-                networkStatus: nil,
-                storySubscriptions: self.storySubscriptions,
-                storiesFraction: storiesFraction,
-                context: self.context,
-                theme: self.presentationData.theme,
-                strings: self.presentationData.strings,
-                openStatusSetup: { [weak self] sourceView in
-                    guard let self else {
-                        return
-                    }
-                    self.openStatusSetup(sourceView: sourceView)
-                },
-                toggleIsLocked: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.context.sharedContext.appLockContext.lock()
-                }
-            )),
-            environment: {},
-            containerSize: CGSize(width: layout.size.width, height: 44.0)
-        )
-        if let componentView = self.headerContentView.view as? NavigationBarHeaderView {
-            if self.navigationBar?.customHeaderContentView !== componentView {
-                self.navigationBar?.customHeaderContentView = componentView
-            }
-        }
-        if case .chatList(.root) = self.location {
-            if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
-                componentView.storyPeerAction = { [weak self] peer in
-                    guard let self else {
-                        return
-                    }
-                    
-                    let storyContent = StoryContentContextImpl(context: self.context, focusedPeerId: peer?.id)
-                    let _ = (storyContent.state
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
-                        guard let self else {
-                            return
-                        }
-                        if let peer, peer.id == self.context.account.peerId, storyContentState.slice == nil {
-                            if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                                let coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] finished in
-                                    guard let self else {
-                                        return nil
-                                    }
-                                    if finished, let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
-                                        if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                                            return StoryCameraTransitionOut(
-                                                destinationView: transitionView,
-                                                destinationRect: transitionView.bounds,
-                                                destinationCornerRadius: transitionView.bounds.height * 0.5
-                                            )
-                                        }
-                                    }
-                                    return nil
-                                })
-                                coordinator?.animateIn()
-                            }
-                            
-                            return
-                        }
-                        
-                        var transitionIn: StoryContainerScreen.TransitionIn?
-                        if let peer, let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
-                            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
-                                transitionIn = StoryContainerScreen.TransitionIn(
-                                    sourceView: transitionView,
-                                    sourceRect: transitionView.bounds,
-                                    sourceCornerRadius: transitionView.bounds.height * 0.5
-                                )
-                            }
-                        }
-                        
-                        let storyContainerScreen = StoryContainerScreen(
-                            context: self.context,
-                            content: storyContent,
-                            transitionIn: transitionIn,
-                            transitionOut: { [weak self] peerId, _ in
-                                guard let self else {
-                                    return nil
-                                }
-                                
-                                if let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
-                                    if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
-                                        return StoryContainerScreen.TransitionOut(
-                                            destinationView: transitionView,
-                                            destinationRect: transitionView.bounds,
-                                            destinationCornerRadius: transitionView.bounds.height * 0.5,
-                                            destinationIsAvatar: true,
-                                            completed: {}
-                                        )
-                                    }
-                                }
-                                
-                                return nil
-                            }
-                        )
-                        self.push(storyContainerScreen)
-                    })
-                }
-            }
-        }*/
     }
     
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -2569,16 +2411,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        //TODO:move to chat list node
-        /*if case .chatList(.root) = self.location, !self.isSearchActive {
-            self.searchContentNode?.additionalHeight = (1.0 - self.chatListDisplayNode.inlineStackContainerTransitionFraction) * self.storyListHeight
-        }*/
-        
         super.containerLayoutUpdated(layout, transition: transition)
         
         let wasInVoiceOver = self.validLayout?.inVoiceOver ?? false
         
         self.validLayout = layout
+        
+        if let searchTabsNode = self.searchTabsNode {
+            searchTabsNode.bounds.origin = CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) + navigationBarSearchContentHeight + 44.0)
+        }
         
         self.updateLayout(layout: layout, transition: transition)
         
@@ -2613,7 +2454,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         
                         if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                            rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionOut: { [weak self] _ in
+                            rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: { [weak self] _ in
                                 guard let self else {
                                     return nil
                                 }
@@ -2721,12 +2562,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             tabContainerOffset += 44.0 + 20.0
         }
 
-        let navigationBarHeight: CGFloat = 100.0//self.navigationBar?.frame.maxY ?? 0.0
-        let secondaryContentHeight = self.navigationBar?.secondaryContentHeight ?? 0.0
+        let navigationBarHeight: CGFloat = 0.0//self.navigationBar?.frame.maxY ?? 0.0
+        //let secondaryContentHeight = self.navigationBar?.secondaryContentHeight ?? 0.0
         
-        transition.updateFrame(node: self.navigationSecondaryContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight - self.additionalNavigationBarHeight - secondaryContentHeight + tabContainerOffset), size: CGSize(width: layout.size.width, height: secondaryContentHeight)))
-        
-        transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: layout.size.width, height: 46.0)))
+        transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 46.0)))
         
         if !skipTabContainerUpdate {
             self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.chatListDisplayNode.mainContainerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || (self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing && !self.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing, canReorderAllChats: self.isPremium, filtersLimit: self.tabContainerData?.2, transitionFraction: self.chatListDisplayNode.effectiveContainerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
@@ -3175,11 +3014,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             let animated = strongSelf.didSetupTabs
             strongSelf.didSetupTabs = true
-
-            if strongSelf.displayNavigationBar {
-                strongSelf.navigationBar?.secondaryContentHeight = (!isEmpty ? NavigationBar.defaultSecondaryContentHeight : 0.0)
-                strongSelf.navigationBar?.setSecondaryContentNode(strongSelf.navigationSecondaryContentNode, animated: false)
-            }
             
             if let layout = strongSelf.validLayout {
                 if wasEmpty != isEmpty {
@@ -3557,9 +3391,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 } else {
                     tabsIsEmpty = true
                 }
+                let _ = tabsIsEmpty
+                //TODO:swap tabs
                 
                 let displaySearchFilters = true
-                if !tabsIsEmpty, let snapshotView = strongSelf.tabContainerNode.view.snapshotView(afterScreenUpdates: false) {
+                /*if !tabsIsEmpty, let snapshotView = strongSelf.tabContainerNode.view.snapshotView(afterScreenUpdates: false) {
                     snapshotView.frame = strongSelf.navigationSecondaryContentNode.frame
                     strongSelf.navigationSecondaryContentNode.view.superview?.addSubview(snapshotView)
                     
@@ -3567,27 +3403,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         snapshotView?.removeFromSuperview()
                     })
                     snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -strongSelf.storyListHeight), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                }
+                }*/
                                   
                 if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: strongSelf.hasDownloads, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
                     let (filterContainerNode, activate) = filterContainerNodeAndActivate
                     if displaySearchFilters {
-                        //TODO:search filters
-                        strongSelf.navigationBar?.secondaryContentHeight = NavigationBar.defaultSecondaryContentHeight
-                        strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
+                        let searchTabsNode = SparseNode()
+                        strongSelf.searchTabsNode = searchTabsNode
+                        searchTabsNode.addSubnode(filterContainerNode)
                     }
                     
                     activate(filter != .downloads)
                     
                     if let searchContentNode = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
                         searchContentNode.search(filter: filter, query: query)
-                    }
-                    
-                    let tabsOffset = 30.0 + strongSelf.storyListHeight
-                    
-                    Queue.mainQueue().justDispatch {
-                        filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: tabsOffset), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                        filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     }
                 }
                 
@@ -3617,7 +3446,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if !self.displayNavigationBar {
             var completion: (() -> Void)?
             
-            let tabsIsEmpty: Bool
+            self.searchTabsNode = nil
+            
+            /*let tabsIsEmpty: Bool
             if let (resolvedItems, displayTabsAtBottom, _) = self.tabContainerData {
                 tabsIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
             } else {
@@ -3626,11 +3457,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             
             var filterContainerNode: ASDisplayNode?
-            
-            var searchContentNode: NavigationBarSearchContentNode?
-            if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
-                searchContentNode = navigationBarView.searchContentNode
-            }
             
             if animated, let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
                 filterContainerNode = searchContentNode.filterContainerNode
@@ -3651,6 +3477,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                     }
                 }
+            }*/
+            
+            var searchContentNode: NavigationBarSearchContentNode?
+            if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                searchContentNode = navigationBarView.searchContentNode
             }
             
             if let searchContentNode {
@@ -3664,15 +3495,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
             
-            self.navigationBar?.secondaryContentHeight = (!tabsIsEmpty ? NavigationBar.defaultSecondaryContentHeight : 0.0)
-            //TODO:move layout to navigation bar
-            /*if case .chatList(.root) = self.location {
-                self.searchContentNode?.additionalHeight = self.storyListHeight
-            }*/
-            self.navigationBar?.setSecondaryContentNode(self.navigationSecondaryContentNode, animated: false)
+            //TODO:swap tabs
             
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
-            transition.updateAlpha(node: self.tabContainerNode, alpha: tabsIsEmpty ? 0.0 : 1.0)
+            //transition.updateAlpha(node: self.tabContainerNode, alpha: tabsIsEmpty ? 0.0 : 1.0)
             self.setDisplayNavigationBar(true, transition: transition)
             
             completion?()
@@ -5049,7 +4875,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let self else {
                     return nil
                 }
-                if finished, let componentView = self.headerContentView.view as? ChatListHeaderComponent.View {
+                if finished, let componentView = self.chatListHeaderView() {
                     if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                         return StoryCameraTransitionOut(
                             destinationView: transitionView,
@@ -5659,7 +5485,7 @@ private final class ChatListLocationContext {
             self.ready.set(.single(true))
         }
         
-        self.parentController?.requestLayout(transition: .immediate)
+        self.parentController?.requestLayout(transition: .animated(duration: 0.45, curve: .spring))
     }
     
     private func updateForum(
@@ -5751,7 +5577,7 @@ private final class ChatListLocationContext {
                 navigationController.replaceController(parentController, with: chatController, animated: true)
             }
         } else {
-            self.parentController?.requestLayout(transition: .immediate)
+            self.parentController?.requestLayout(transition: .animated(duration: 0.45, curve: .spring))
         }
     }
     

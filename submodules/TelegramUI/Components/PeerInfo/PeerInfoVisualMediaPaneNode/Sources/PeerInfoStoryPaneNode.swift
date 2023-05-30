@@ -738,7 +738,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     }
 }
 
-/*public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     public enum ContentType {
         case photoOrVideo
         case photo
@@ -815,7 +815,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     private var animationTimer: SwiftSignalKit.Timer?
 
     public private(set) var calendarSource: SparseMessageCalendar?
-    private var listSource: StorySubscriptionsContext
+    private var listSource: PeerStoryListContext
 
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
@@ -848,7 +848,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
             captureProtected: captureProtected
         )
 
-        //self.listSource = context.engine.messages.allStories()
+        self.listSource = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
         self.calendarSource = nil
         
         super.init()
@@ -888,6 +888,75 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                 }
                 strongSelf.chatControllerInteraction.toggleMessagesSelection([item.message.id], toggledValue)*/
             } else {
+                let listContext = PeerStoryListContentContextImpl(
+                    context: self.context,
+                    peerId: self.peerId,
+                    listContext: self.listSource,
+                    initialId: item.story.id
+                )
+                let _ = (listContext.state
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    guard let self, let navigationController = self.chatControllerInteraction.navigationController() else {
+                        return
+                    }
+                    
+                    var transitionIn: StoryContainerScreen.TransitionIn?
+                    
+                    let story = item.story
+                    var foundItemLayer: SparseItemGridLayer?
+                    self.itemGrid.forEachVisibleItem { item in
+                        guard let itemLayer = item.layer as? ItemLayer else {
+                            return
+                        }
+                        if let listItem = itemLayer.item, listItem.story.id == story.id {
+                            foundItemLayer = itemLayer
+                        }
+                    }
+                    if let foundItemLayer {
+                        let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
+                        transitionIn = StoryContainerScreen.TransitionIn(
+                            sourceView: self.view,
+                            sourceRect: self.itemGrid.view.convert(itemRect, to: self.view),
+                            sourceCornerRadius: 0.0
+                        )
+                    }
+                    
+                    let storyContainerScreen = StoryContainerScreen(
+                        context: self.context,
+                        content: listContext,
+                        transitionIn: transitionIn,
+                        transitionOut: { [weak self] _, itemId in
+                            guard let self else {
+                                return nil
+                            }
+                            
+                            var foundItemLayer: SparseItemGridLayer?
+                            self.itemGrid.forEachVisibleItem { item in
+                                guard let itemLayer = item.layer as? ItemLayer else {
+                                    return
+                                }
+                                if let listItem = itemLayer.item, AnyHashable(listItem.story.id) == itemId {
+                                    foundItemLayer = itemLayer
+                                }
+                            }
+                            if let foundItemLayer {
+                                let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
+                                return StoryContainerScreen.TransitionOut(
+                                    destinationView: self.view,
+                                    destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),
+                                    destinationCornerRadius: 0.0,
+                                    destinationIsAvatar: false,
+                                    completed: {}
+                                )
+                            }
+                            
+                            return nil
+                        }
+                    )
+                    navigationController.pushViewController(storyContainerScreen)
+                })
+                
                 /*let _ = (StoryChatContent.stories(
                     context: self.context,
                     storyList: self.listSource,
@@ -1389,7 +1458,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         let queue = Queue()
 
         self.listDisposable.set((self.listSource.state
-        |> deliverOn(queue)).start(next: { [weak self] list in
+        |> deliverOn(queue)).start(next: { [weak self] state in
             guard let self else {
                 return
             }
@@ -1399,8 +1468,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
             var mappedItems: [SparseItemGrid.Item] = []
             let mappedHoles: [SparseItemGrid.HoleAnchor] = []
             var totalCount: Int = 0
-            if let itemSet = list.itemSets.first(where: { $0.peerId == self.peerId }), let peer = itemSet.peer, let peerReference = PeerReference(peer._asPeer()) {
-                for item in itemSet.items {
+            if let peerReference = state.peerReference {
+                for item in state.items {
                     mappedItems.append(VisualMediaItem(
                         index: mappedItems.count,
                         peer: peerReference,
@@ -1408,9 +1477,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                         localMonthTimestamp: Month(localTimestamp: item.timestamp + timezoneOffset).packedValue
                     ))
                 }
-                totalCount = itemSet.totalCount ?? mappedItems.count
-                totalCount = max(mappedItems.count, totalCount)
             }
+            totalCount = state.totalCount
+            totalCount = max(mappedItems.count, totalCount)
 
             Queue.mainQueue().async { [weak self] in
                 guard let strongSelf = self else {
@@ -1933,4 +2002,3 @@ private class MediaListSelectionRecognizer: UIPanGestureRecognizer {
         }
     }
 }
-*/

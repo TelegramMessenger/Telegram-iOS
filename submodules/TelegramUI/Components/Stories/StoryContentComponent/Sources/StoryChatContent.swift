@@ -124,10 +124,13 @@ public final class StoryContentContextImpl: StoryContentContext {
                     var loadKeys: [StoryKey] = []
                     for index in (focusedIndex - 2) ... (focusedIndex + 2) {
                         if index >= 0 && index < itemsView.items.count {
-                            if let item = itemsView.items[focusedIndex].value.get(Stories.StoredItem.self), case .placeholder = item {
+                            if let item = itemsView.items[index].value.get(Stories.StoredItem.self), case .placeholder = item {
                                 loadKeys.append(StoryKey(peerId: peerId, id: item.id))
                             }
                         }
+                    }
+                    if !loadKeys.isEmpty {
+                        loadIds(loadKeys)
                     }
                     
                     if let item = itemsView.items[focusedIndex].value.get(Stories.StoredItem.self), case let .item(item) = item, let media = item.media {
@@ -145,7 +148,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                                     }
                                 )
                             },
-                            privacy: nil
+                            privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                            isPinned: item.isPinned,
+                            isExpired: item.isExpired,
+                            isPublic: item.isPublic
                         )
                         
                         self.sliceValue = StoryContentContextState.FocusedSlice(
@@ -584,7 +590,10 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                             }
                         )
                     },
-                    privacy: nil
+                    privacy: itemValue.privacy.flatMap(EngineStoryPrivacy.init),
+                    isPinned: itemValue.isPinned,
+                    isExpired: itemValue.isExpired,
+                    isPublic: itemValue.isPublic
                 )
                 
                 let stateValue = StoryContentContextState(
@@ -666,3 +675,168 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
     }
 }
 
+public final class PeerStoryListContentContextImpl: StoryContentContext {
+    private let context: AccountContext
+    
+    public private(set) var stateValue: StoryContentContextState?
+    public var state: Signal<StoryContentContextState, NoError> {
+        return self.statePromise.get()
+    }
+    private let statePromise = Promise<StoryContentContextState>()
+    
+    private let updatedPromise = Promise<Void>()
+    public var updated: Signal<Void, NoError> {
+        return self.updatedPromise.get()
+    }
+    
+    private var storyDisposable: Disposable?
+    
+    private var requestedStoryKeys = Set<StoryKey>()
+    private var requestStoryDisposables = DisposableSet()
+    
+    private var listState: PeerStoryListContext.State?
+    
+    private var focusedId: Int32?
+    private var focusedIdUpdated = Promise<Void>(Void())
+    
+    public init(context: AccountContext, peerId: EnginePeer.Id, listContext: PeerStoryListContext, initialId: Int32?) {
+        self.context = context
+        
+        self.storyDisposable = (combineLatest(queue: .mainQueue(),
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+            listContext.state,
+            self.focusedIdUpdated.get()
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] peer, state, _ in
+            guard let self else {
+                return
+            }
+            
+            self.listState = state
+            
+            let focusedIndex: Int?
+            if let current = self.focusedId {
+                if let index = state.items.firstIndex(where: { $0.id == current }) {
+                    focusedIndex = index
+                } else if let index = state.items.firstIndex(where: { $0.id >= current }) {
+                    focusedIndex = index
+                } else if !state.items.isEmpty {
+                    focusedIndex = 0
+                } else {
+                    focusedIndex = nil
+                }
+            } else if let initialId = initialId {
+                if let index = state.items.firstIndex(where: { $0.id == initialId }) {
+                    focusedIndex = index
+                } else if let index = state.items.firstIndex(where: { $0.id >= initialId }) {
+                    focusedIndex = index
+                } else {
+                    focusedIndex = nil
+                }
+            } else {
+                if !state.items.isEmpty {
+                    focusedIndex = 0
+                } else {
+                    focusedIndex = nil
+                }
+            }
+            
+            let stateValue: StoryContentContextState
+            if let focusedIndex = focusedIndex, let peer = peer {
+                let item = state.items[focusedIndex]
+                self.focusedId = item.id
+                
+                stateValue = StoryContentContextState(
+                    slice: StoryContentContextState.FocusedSlice(
+                        peer: peer,
+                        item: StoryContentItem(
+                            id: AnyHashable(item.id),
+                            position: focusedIndex,
+                            component: AnyComponent(StoryItemContentComponent(
+                                context: context,
+                                peer: peer,
+                                item: item
+                            )),
+                            centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(
+                                context: context,
+                                peer: peer,
+                                timestamp: item.timestamp
+                            )),
+                            rightInfoComponent: AnyComponent(StoryAvatarInfoComponent(
+                                context: context,
+                                peer: peer
+                            )),
+                            peerId: peer.id,
+                            storyItem: item,
+                            preload: nil,
+                            delete: {
+                            },
+                            markAsSeen: {
+                            },
+                            hasLike: false,
+                            isMy: peerId == self.context.account.peerId
+                        ),
+                        totalCount: state.totalCount,
+                        previousItemId: focusedIndex == 0 ? nil : state.items[focusedIndex - 1].id,
+                        nextItemId: (focusedIndex == state.items.count - 1) ? nil : state.items[focusedIndex + 1].id
+                    ),
+                    previousSlice: nil,
+                    nextSlice: nil
+                )
+            } else {
+                self.focusedId = nil
+                
+                stateValue = StoryContentContextState(
+                    slice: nil,
+                    previousSlice: nil,
+                    nextSlice: nil
+                )
+            }
+            
+            if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
+                self.stateValue = stateValue
+                self.statePromise.set(.single(stateValue))
+                self.updatedPromise.set(.single(Void()))
+            }
+        })
+    }
+    
+    deinit {
+        self.storyDisposable?.dispose()
+        self.requestStoryDisposables.dispose()
+    }
+    
+    public func resetSideStates() {
+    }
+    
+    public func navigate(navigation: StoryContentContextNavigation) {
+        switch navigation {
+        case .peer:
+            break
+        case let .item(direction):
+            let indexDifference: Int
+            switch direction {
+            case .next:
+                indexDifference = 1
+            case .previous:
+                indexDifference = -1
+            }
+            
+            if let listState = self.listState, let focusedId = self.focusedId {
+                if let index = listState.items.firstIndex(where: { $0.id == focusedId }) {
+                    var nextIndex = index + indexDifference
+                    if nextIndex < 0 {
+                        nextIndex = 0
+                    }
+                    if nextIndex > listState.items.count - 1 {
+                        nextIndex = listState.items.count - 1
+                    }
+                    if nextIndex != index {
+                        self.focusedId = listState.items[nextIndex].id
+                        self.focusedIdUpdated.set(.single(Void()))
+                    }
+                }
+            }
+        }
+    }
+}

@@ -3173,7 +3173,8 @@ public final class ChatListNode: ListView {
     var isNavigationInAFinalState: Bool {
         switch self.visibleContentOffset() {
         case let .known(value):
-            if value < self.scrollHeightTopInset - 1.0 {
+            let _ = value
+            /*if value < self.scrollHeightTopInset - 1.0 {
                 if abs(value - 0.0) < 1.0 {
                     return true
                 }
@@ -3181,9 +3182,9 @@ public final class ChatListNode: ListView {
                     return true
                 }
                 return false
-            } else {
+            } else {*/
                 return true
-            }
+            //}
         default:
             return true
         }
@@ -3216,6 +3217,7 @@ public final class ChatListNode: ListView {
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })*/
     }
     
+    public var ignoreStoryInsetAdjustment: Bool = false
     private var previousStoriesInset: CGFloat?
     
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, visibleTopInset: CGFloat, originalTopInset: CGFloat, storiesInset: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat) {
@@ -3257,7 +3259,11 @@ public final class ChatListNode: ListView {
         var additionalScrollDistance: CGFloat = 0.0
         
         if let previousStoriesInset = self.previousStoriesInset {
-            additionalScrollDistance += previousStoriesInset - storiesInset
+            if self.ignoreStoryInsetAdjustment {
+                //additionalScrollDistance += -20.0
+            } else {
+                additionalScrollDistance += previousStoriesInset - storiesInset
+            }
         }
         self.previousStoriesInset = storiesInset
         //print("storiesInset: \(storiesInset), additionalScrollDistance: \(additionalScrollDistance)")
