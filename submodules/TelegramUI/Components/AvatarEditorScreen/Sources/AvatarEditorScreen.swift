@@ -1410,7 +1410,7 @@ final class AvatarEditorScreenComponent: Component {
                     
                     let colors: [NSNumber] = state.selectedBackground.colors.map { Int32(bitPattern: $0) as NSNumber }
                     
-                    let entitiesData = DrawingEntitiesView.encodeEntities([entity])
+                    let entitiesData = DrawingEntitiesView.encodeEntitiesData([entity])
                     
                     let paintingData = TGPaintingData(
                         drawing: nil,

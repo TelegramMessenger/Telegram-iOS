@@ -1811,11 +1811,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             return
         }
         
+        self.requestAttachmentMenuExpansion()
+        
         var embedded = true
         if case .story = mode {
             embedded = false
-        } else {
-            self.requestAttachmentMenuExpansion()
         }
         
         var updateNavigationStackImpl: ((AttachmentContainable) -> Void)?

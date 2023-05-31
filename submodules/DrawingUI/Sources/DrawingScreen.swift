@@ -2392,6 +2392,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         }
         
         func animateIn() {
+            self.entitiesView.selectEntity(nil)
+            
             if let view = self.componentHost.findTaggedView(tag: topGradientTag) {
                 view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
@@ -2797,15 +2799,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     }
         
     public func animateOut(_ completion: @escaping (() -> Void)) {
-        self.selectionContainerView.alpha = 0.0
+        self.entitiesView.selectEntity(nil)
         
         self.node.animateOut(completion: {
             completion()
         })
-//
-//        Queue.mainQueue().after(0.4) {
-//            self.node.isHidden = true
-//        }
     }
             
     private var orientation: UIInterfaceOrientation?
@@ -2932,7 +2930,7 @@ public final class DrawingToolsInteraction {
         self.activate()
     }
     
-    func activate() {
+    public func activate() {
         self.isActive = true
         
         self.entitiesView.selectionContainerView = self.selectionContainerView

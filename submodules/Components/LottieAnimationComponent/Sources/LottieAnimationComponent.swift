@@ -21,11 +21,13 @@ public final class LottieAnimationComponent: Component {
         public var name: String
         public var mode: Mode
         public var range: (CGFloat, CGFloat)?
+        public var waitForCompletion: Bool
         
-        public init(name: String, mode: Mode, range: (CGFloat, CGFloat)? = nil) {
+        public init(name: String, mode: Mode, range: (CGFloat, CGFloat)? = nil, waitForCompletion: Bool = true) {
             self.name = name
             self.mode = mode
             self.range = range
+            self.waitForCompletion = waitForCompletion
         }
         
         public static func == (lhs: LottieAnimationComponent.AnimationItem, rhs: LottieAnimationComponent.AnimationItem) -> Bool {
@@ -157,7 +159,7 @@ public final class LottieAnimationComponent: Component {
                     }
                 }
                 
-                if let animationView = self.animationView, animationView.isAnimationPlaying {
+                if let animationView = self.animationView, animationView.isAnimationPlaying && component.animation.waitForCompletion {
                     updateComponent = false
                     self.currentCompletion = { [weak self] in
                         guard let strongSelf = self else {

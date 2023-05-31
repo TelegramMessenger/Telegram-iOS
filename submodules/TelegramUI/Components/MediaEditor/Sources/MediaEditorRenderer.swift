@@ -183,7 +183,7 @@ final class MediaEditorRenderer: TextureConsumer {
             }
         }
         if self.renderTarget != nil {
-            let _ = self.outputRenderPass.process(input: texture, device: device, commandBuffer: commandBuffer)
+            self.outputRenderPass.process(input: texture, device: device, commandBuffer: commandBuffer)
         }
         self.finalTexture = texture
         
@@ -191,7 +191,22 @@ final class MediaEditorRenderer: TextureConsumer {
             if let self {
                 self.semaphore.signal()
                 
+#if targetEnvironment(simulator)
                 if let onNextRender = self.onNextRender {
+                    self.onNextRender = nil
+                    Queue.mainQueue().async {
+                        onNextRender()
+                    }
+                }
+#endif
+            }
+        }
+        
+#if targetEnvironment(simulator)
+#else
+        if let renderTarget = self.renderTarget, let drawable = renderTarget.drawable {
+            drawable.addPresentedHandler { [weak self] _ in
+                if let self, let onNextRender = self.onNextRender {
                     self.onNextRender = nil
                     Queue.mainQueue().async {
                         onNextRender()
@@ -199,6 +214,7 @@ final class MediaEditorRenderer: TextureConsumer {
                 }
             }
         }
+#endif
         
         if let _ = self.renderTarget {
             commandBuffer.commit()

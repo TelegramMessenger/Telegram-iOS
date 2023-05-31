@@ -144,6 +144,8 @@ private final class CameraScreenComponent: CombinedComponent {
         var cameraState = CameraState(mode: .photo, flashMode: .off, flashModeDidChange: false, recording: .none, duration: 0.0)
         var swipeHint: CaptureControlsComponent.SwipeHint = .none
         
+        private let hapticFeedback = HapticFeedback()
+        
         init(context: AccountContext, camera: Camera, present: @escaping (ViewController) -> Void, completion: ActionSlot<Signal<CameraScreen.Result, NoError>>) {
             self.context = context
             self.camera = camera
@@ -191,6 +193,22 @@ private final class CameraScreenComponent: CombinedComponent {
         func updateCameraMode(_ mode: CameraMode) {
             self.cameraState = self.cameraState.updatedMode(mode)
             self.updated(transition: .spring(duration: 0.3))
+        }
+        
+        func toggleFlashMode() {
+            if self.cameraState.flashMode == .off {
+                self.camera.setFlashMode(.on)
+            } else if self.cameraState.flashMode == .on {
+                self.camera.setFlashMode(.auto)
+            } else {
+                self.camera.setFlashMode(.off)
+            }
+            self.hapticFeedback.impact(.veryLight)
+        }
+        
+        func togglePosition() {
+            self.camera.togglePosition()
+            self.hapticFeedback.impact(.veryLight)
         }
         
         func updateSwipeHint(_ hint: CaptureControlsComponent.SwipeHint) {
@@ -330,7 +348,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                 animation: LottieAnimationComponent.AnimationItem(
                                     name: flashIconName,
                                     mode: !state.cameraState.flashModeDidChange ? .still(position: .end) : .animating(loop: false),
-                                    range: nil
+                                    range: nil,
+                                    waitForCompletion: false
                                 ),
                                 colors: [:],
                                 size: CGSize(width: 40.0, height: 40.0)
@@ -356,13 +375,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             guard let state else {
                                 return
                             }
-                            if state.cameraState.flashMode == .off {
-                                state.camera.setFlashMode(.on)
-                            } else if state.cameraState.flashMode == .on {
-                                state.camera.setFlashMode(.auto)
-                            } else {
-                                state.camera.setFlashMode(.off)
-                            }
+                            state.toggleFlashMode()
                         }
                     ).tagged(flashButtonTag),
                     availableSize: CGSize(width: 40.0, height: 40.0),
@@ -453,7 +466,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         guard let state else {
                             return
                         }
-                        state.camera.togglePosition()
+                        state.togglePosition()
                     },
                     galleryTapped: {
                         guard let controller = environment.controller() as? CameraScreen else {
@@ -882,7 +895,7 @@ public class CameraScreen: ViewController {
                         let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                         controller.updateTransitionProgress(transitionFraction, transition: .immediate)
                     } else if translation.y < -10.0 {
-                        controller.presentGallery()
+                        controller.presentGallery(fromGesture: true)
                         gestureRecognizer.isEnabled = false
                         gestureRecognizer.isEnabled = true
                     }
@@ -1239,6 +1252,8 @@ public class CameraScreen: ViewController {
     
     private var audioSessionDisposable: Disposable?
     
+    private let hapticFeedback = HapticFeedback()
+    
     public init(
         context: AccountContext,
         mode: Mode,
@@ -1289,7 +1304,11 @@ public class CameraScreen: ViewController {
         self.node.animateInFromEditor(toGallery: self.galleryController != nil)
     }
     
-    func presentGallery() {
+    func presentGallery(fromGesture: Bool = false) {
+        if !fromGesture {
+            self.hapticFeedback.impact(.veryLight)
+        }
+        
         var didStopCameraCapture = false
         let stopCameraCapture = { [weak self] in
             guard !didStopCameraCapture, let self else {
@@ -1344,9 +1363,15 @@ public class CameraScreen: ViewController {
         guard !self.isDismissed else {
             return
         }
+        
+        if !interactive {
+            self.hapticFeedback.impact(.veryLight)
+        }
+        
         self.node.camera.stopCapture(invalidate: true)
         self.isDismissed = true
         if animated {
+            self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
             if !interactive {
                 if let navigationController = self.navigationController as? NavigationController {
                     navigationController.updateRootContainerTransitionOffset(self.node.frame.width, transition: .immediate)
@@ -1360,9 +1385,7 @@ public class CameraScreen: ViewController {
         }
     }
     
-    private var isTransitioning = false
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
-        self.isTransitioning = true
         let offsetX = floorToScreenPixels((1.0 - transitionFraction) * self.node.frame.width * -1.0)
         transition.updateTransform(layer: self.node.backgroundView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
         transition.updateTransform(layer: self.node.containerView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
@@ -1382,7 +1405,6 @@ public class CameraScreen: ViewController {
     }
     
     public func completeWithTransitionProgress(_ transitionFraction: CGFloat, velocity: CGFloat, dismissing: Bool) {
-        self.isTransitioning = false
         if dismissing {
             if transitionFraction < 0.7 || velocity < -1000.0 {
                 self.statusBar.updateStatusBarStyle(.Ignore, animated: true)

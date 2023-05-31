@@ -149,10 +149,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
     }
     
-    public static func encodeEntities(_ entities: [DrawingEntity], entitiesView: DrawingEntitiesView? = nil) -> Data? {
+    public static func encodeEntities(_ entities: [DrawingEntity], entitiesView: DrawingEntitiesView? = nil) -> [CodableDrawingEntity] {
         let entities = entities
         guard !entities.isEmpty else {
-            return nil
+            return []
         }
         if let entitiesView {
             for entity in entities {
@@ -161,7 +161,11 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 }
             }
         }
-        let codableEntities = entities.compactMap({ CodableDrawingEntity(entity: $0) })
+        return entities.compactMap({ CodableDrawingEntity(entity: $0) })
+    }
+    
+    public static func encodeEntitiesData(_ entities: [DrawingEntity], entitiesView: DrawingEntitiesView? = nil) -> Data? {
+        let codableEntities = encodeEntities(entities, entitiesView: entitiesView)
         if let data = try? JSONEncoder().encode(codableEntities) {
             return data
         } else {
@@ -170,7 +174,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     var entitiesData: Data? {
-        return DrawingEntitiesView.encodeEntities(self.entities, entitiesView: self)
+        return DrawingEntitiesView.encodeEntitiesData(self.entities, entitiesView: self)
     }
     
     var hasChanges: Bool {
