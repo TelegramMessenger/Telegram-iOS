@@ -18,7 +18,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     public var placeholderHeight: CGFloat?
     private var disabledOverlay: ASDisplayNode?
     
-    public private(set) var expansionProgress: CGFloat = 1.0
+    public var expansionProgress: CGFloat = 1.0
     
     public var additionalHeight: CGFloat = 0.0
 
@@ -103,7 +103,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     
     private func updatePlaceholder(_ progress: CGFloat, size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let padding: CGFloat = 10.0
-        let baseWidth = self.bounds.width - padding * 2.0 - leftInset - rightInset
+        let baseWidth = size.width - padding * 2.0 - leftInset - rightInset
         
         let fieldHeight: CGFloat = 36.0
         let fraction = fieldHeight / self.nominalHeight

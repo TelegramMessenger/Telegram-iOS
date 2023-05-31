@@ -135,7 +135,7 @@ public final class StoryContentContextState {
             if lhs.peer != rhs.peer {
                 return false
             }
-            if lhs.item.id != rhs.item.id {
+            if lhs.item.storyItem != rhs.item.storyItem {
                 return false
             }
             if lhs.totalCount != rhs.totalCount {

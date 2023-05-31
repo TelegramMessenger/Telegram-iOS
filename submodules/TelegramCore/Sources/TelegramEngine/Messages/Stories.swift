@@ -9,19 +9,23 @@ public enum EngineStoryInputMedia {
 }
 
 public struct EngineStoryPrivacy: Equatable {
-    public enum Base {
-        case everyone
-        case contacts
-        case closeFriends
-        case nobody
-    }
+    public typealias Base = Stories.Item.Privacy.Base
     
     public var base: Base
     public var additionallyIncludePeers: [EnginePeer.Id]
     
-    public init(base: Base, additionallyIncludePeers: [EnginePeer.Id]) {
+    public init(base: Stories.Item.Privacy.Base, additionallyIncludePeers: [EnginePeer.Id]) {
         self.base = base
         self.additionallyIncludePeers = additionallyIncludePeers
+    }
+}
+
+public extension EngineStoryPrivacy {
+    init(_ privacy: Stories.Item.Privacy) {
+        self.init(
+            base: privacy.base,
+            additionallyIncludePeers: privacy.additionallyIncludePeers
+        )
     }
 }
 
@@ -100,6 +104,9 @@ public enum Stories {
             case entities
             case views
             case privacy
+            case isPinned
+            case isExpired
+            case isPublic
         }
         
         public let id: Int32
@@ -109,6 +116,9 @@ public enum Stories {
         public let entities: [MessageTextEntity]
         public let views: Views?
         public let privacy: Privacy?
+        public let isPinned: Bool
+        public let isExpired: Bool
+        public let isPublic: Bool
         
         public init(
             id: Int32,
@@ -117,7 +127,10 @@ public enum Stories {
             text: String,
             entities: [MessageTextEntity],
             views: Views?,
-            privacy: Privacy?
+            privacy: Privacy?,
+            isPinned: Bool,
+            isExpired: Bool,
+            isPublic: Bool
         ) {
             self.id = id
             self.timestamp = timestamp
@@ -126,6 +139,9 @@ public enum Stories {
             self.entities = entities
             self.views = views
             self.privacy = privacy
+            self.isPinned = isPinned
+            self.isExpired = isExpired
+            self.isPublic = isPublic
         }
         
         public init(from decoder: Decoder) throws {
@@ -144,6 +160,9 @@ public enum Stories {
             self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
             self.views = try container.decodeIfPresent(Views.self, forKey: .views)
             self.privacy = try container.decodeIfPresent(Privacy.self, forKey: .privacy)
+            self.isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+            self.isExpired = try container.decodeIfPresent(Bool.self, forKey: .isExpired) ?? false
+            self.isPublic = try container.decodeIfPresent(Bool.self, forKey: .isPublic) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -163,6 +182,9 @@ public enum Stories {
             try container.encode(self.entities, forKey: .entities)
             try container.encodeIfPresent(self.views, forKey: .views)
             try container.encodeIfPresent(self.privacy, forKey: .privacy)
+            try container.encode(self.isPinned, forKey: .isPinned)
+            try container.encode(self.isExpired, forKey: .isExpired)
+            try container.encode(self.isPublic, forKey: .isPublic)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -193,6 +215,15 @@ public enum Stories {
                 return false
             }
             if lhs.privacy != rhs.privacy {
+                return false
+            }
+            if lhs.isPinned != rhs.isPinned {
+                return false
+            }
+            if lhs.isExpired != rhs.isExpired {
+                return false
+            }
+            if lhs.isPublic != rhs.isPublic {
                 return false
             }
             
@@ -698,6 +729,41 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32) -> S
     }
 }
 
+func _internal_updateStoryIsPinned(account: Account, id: Int32, isPinned: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        var items = transaction.getStoryItems(peerId: account.peerId)
+        if let index = items.firstIndex(where: { $0.id == id }), case let .item(item) = items[index].value.get(Stories.StoredItem.self) {
+            let updatedItem = Stories.Item(
+                id: item.id,
+                timestamp: item.timestamp,
+                media: item.media,
+                text: item.text,
+                entities: item.entities,
+                views: item.views,
+                privacy: item.privacy,
+                isPinned: isPinned,
+                isExpired: item.isExpired,
+                isPublic: item.isPublic
+            )
+            if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
+                items[index] = StoryItemsTableEntry(value: entry, id: item.id)
+                transaction.setStoryItems(peerId: account.peerId, items: items)
+            }
+            
+            DispatchQueue.main.async {
+                account.stateManager.injectStoryUpdates(updates: [.added(peerId: account.peerId, item: Stories.StoredItem.item(updatedItem))])
+            }
+        }
+    }
+    |> mapToSignal { _ -> Signal<Never, NoError> in
+        return account.network.request(Api.functions.stories.togglePinned(id: [id], pinned: isPinned ? .boolTrue : .boolFalse))
+        |> `catch` { _ -> Signal<[Int32], NoError> in
+            return .single([])
+        }
+        |> ignoreValues
+    }
+}
+
 extension Api.StoryItem {
     var id: Int32 {
         switch self {
@@ -762,6 +828,10 @@ extension Stories.StoredItem {
                     parsedPrivacy = Stories.Item.Privacy(base: base, additionallyIncludePeers: additionalPeerIds)
                 }
                 
+                let isPinned = (flags & (1 << 5)) != 0
+                let isExpired = (flags & (1 << 6)) != 0
+                let isPublic = (flags & (1 << 7)) != 0
+                
                 let item = Stories.Item(
                     id: id,
                     timestamp: date,
@@ -769,7 +839,10 @@ extension Stories.StoredItem {
                     text: caption ?? "",
                     entities: entities.flatMap { entities in return messageTextEntitiesFromApiEntities(entities) } ?? [],
                     views: views.flatMap(Stories.Item.Views.init(apiViews:)),
-                    privacy: parsedPrivacy
+                    privacy: parsedPrivacy,
+                    isPinned: isPinned,
+                    isExpired: isExpired,
+                    isPublic: isPublic
                 )
                 self = .item(item)
             } else {

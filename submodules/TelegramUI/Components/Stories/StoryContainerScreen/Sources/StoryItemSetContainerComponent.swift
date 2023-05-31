@@ -932,11 +932,39 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         
-                        let _ = controller
+                        var items: [ContextMenuItem] = []
                         
-                        /*var items: [ContextMenuItem] = []
+                        let additionalCount = component.slice.item.storyItem.privacy?.additionallyIncludePeers.count ?? 0
                         
-                        items.append(.action(ContextMenuActionItem(text: "Who can see", textLayout: .secondLineWithValue("Everyone"), icon: { theme in
+                        let privacyText: String
+                        switch component.slice.item.storyItem.privacy?.base {
+                        case .closeFriends:
+                            if additionalCount != 0 {
+                                privacyText = "Close Friends (+\(additionalCount)"
+                            } else {
+                                privacyText = "Close Friends"
+                            }
+                        case .contacts:
+                            if additionalCount != 0 {
+                                privacyText = "Contacts (+\(additionalCount)"
+                            } else {
+                                privacyText = "Contacts"
+                            }
+                        case .nobody:
+                            if additionalCount != 0 {
+                                if additionalCount == 1 {
+                                    privacyText = "\(additionalCount) Person"
+                                } else {
+                                    privacyText = "\(additionalCount) People"
+                                }
+                            } else {
+                                privacyText = "Only Me"
+                            }
+                        default:
+                            privacyText = "Everyone"
+                        }
+                        
+                        items.append(.action(ContextMenuActionItem(text: "Who can see", textLayout: .secondLineWithValue(privacyText), icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in
                             a(.default)
@@ -949,38 +977,62 @@ public final class StoryItemSetContainerComponent: Component {
                         
                         items.append(.separator)
                         
-                        items.append(.action(ContextMenuActionItem(text: "Save to profile", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                        component.controller()?.forEachController { c in
+                            if let c = c as? UndoOverlayController {
+                                c.dismiss()
+                            }
+                            return true
+                        }
+                        
+                        items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from profile" : "Save to profile", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Chat/Context Menu/Check" : "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in
                             a(.default)
                             
                             guard let self, let component = self.component else {
                                 return
                             }
-                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                            self.component?.presentController(UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .info(title: "Story saved to your profile", text: "Saved stories can be viewed by others on your profile until you remove them.", timeout: nil),
-                                elevatedLayout: false,
-                                animateInAsReplacement: false,
-                                action: { _ in return false }
-                            ))
+                            
+                            let _ = component.context.engine.messages.updateStoryIsPinned(id: component.slice.item.storyItem.id, isPinned: !component.slice.item.storyItem.isPinned).start()
+                            
+                            if component.slice.item.storyItem.isPinned {
+                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                self.component?.presentController(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .info(title: nil, text: "Story removed from your profile", timeout: nil),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { _ in return false }
+                                ))
+                            } else {
+                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                self.component?.presentController(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .info(title: "Story saved to your profile", text: "Saved stories can be viewed by others on your profile until you remove them.", timeout: nil),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { _ in return false }
+                                ))
+                            }
                         })))
                         items.append(.action(ContextMenuActionItem(text: "Save image", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
                         }, action: { _, a in
                             a(.default)
                         })))
-                        items.append(.action(ContextMenuActionItem(text: "Copy link", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-                        }, action: { _, a in
-                            a(.default)
-                        })))
-                        items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-                        }, action: { _, a in
-                            a(.default)
-                        })))
+                        
+                        if component.slice.item.storyItem.isPublic {
+                            items.append(.action(ContextMenuActionItem(text: "Copy link", icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                            }, action: { _, a in
+                                a(.default)
+                            })))
+                            items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
+                            }, action: { _, a in
+                                a(.default)
+                            })))
+                        }
 
                         let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                         let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
@@ -993,7 +1045,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.contextController = contextController
                         self.updateIsProgressPaused()
-                        controller.present(contextController, in: .window(.root))*/
+                        controller.present(contextController, in: .window(.root))
                     }
                 )),
                 environment: {},
@@ -1479,7 +1531,7 @@ public final class StoryItemSetContainerComponent: Component {
                 )
                 if let inlineActionsView = self.inlineActions.view {
                     if inlineActionsView.superview == nil {
-                        self.contentContainerView.addSubview(inlineActionsView)
+                        //self.contentContainerView.addSubview(inlineActionsView)
                     }
                     transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.width - 10.0 - inlineActionsSize.width, y: contentFrame.height - 20.0 - inlineActionsSize.height), size: inlineActionsSize))
                     

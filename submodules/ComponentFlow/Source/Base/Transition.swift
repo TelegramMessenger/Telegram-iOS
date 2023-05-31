@@ -84,6 +84,10 @@ public struct Transition {
                     return bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), offset)
                 }
             }
+            
+            public static var slide: Curve {
+                return .custom(0.33, 0.52, 0.25, 0.99)
+            }
         }
 
         case none

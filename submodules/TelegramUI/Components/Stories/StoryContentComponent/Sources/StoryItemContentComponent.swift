@@ -363,11 +363,18 @@ final class StoryItemContentComponent: Component {
                 case let .file(file):
                     self.contentLoaded = true
                     
-                    signal = chatMessageVideo(
+                    signal = mediaGridMessageVideo(
                         postbox: component.context.account.postbox,
                         userLocation: .other,
                         videoReference: .story(peer: peerReference, id: component.item.id, media: file),
-                        synchronousLoad: true
+                        onlyFullSize: false,
+                        useLargeThumbnail: true,
+                        synchronousLoad: true,
+                        autoFetchFullSizeThumbnail: true,
+                        overlayColor: nil,
+                        nilForEmptyResult: false,
+                        useMiniThumbnailIfAvailable: false,
+                        blurred: false
                     )
                     fetchSignal = fetchedMediaResource(
                         mediaBox: component.context.account.postbox.mediaBox,
@@ -396,6 +403,10 @@ final class StoryItemContentComponent: Component {
                     }, attemptSynchronously: true)
                     wasSynchronous = false
                 }
+                
+                #if DEBUG
+                self.performActionAfterImageContentLoaded(update: false)
+                #endif
                 
                 self.fetchDisposable?.dispose()
                 self.fetchDisposable = nil

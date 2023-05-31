@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import MtProtoKit
 
 enum InternalStoryUpdate {
     case deleted(peerId: PeerId, id: Int32)
@@ -37,8 +38,11 @@ public final class EngineStoryItem: Equatable {
     public let entities: [MessageTextEntity]
     public let views: Views?
     public let privacy: EngineStoryPrivacy?
+    public let isPinned: Bool
+    public let isExpired: Bool
+    public let isPublic: Bool
     
-    public init(id: Int32, timestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?) {
+    public init(id: Int32, timestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool) {
         self.id = id
         self.timestamp = timestamp
         self.media = media
@@ -46,6 +50,9 @@ public final class EngineStoryItem: Equatable {
         self.entities = entities
         self.views = views
         self.privacy = privacy
+        self.isPinned = isPinned
+        self.isExpired = isExpired
+        self.isPublic = isPublic
     }
     
     public static func ==(lhs: EngineStoryItem, rhs: EngineStoryItem) -> Bool {
@@ -68,6 +75,15 @@ public final class EngineStoryItem: Equatable {
             return false
         }
         if lhs.privacy != rhs.privacy {
+            return false
+        }
+        if lhs.isPinned != rhs.isPinned {
+            return false
+        }
+        if lhs.isExpired != rhs.isExpired {
+            return false
+        }
+        if lhs.isPublic != rhs.isPublic {
             return false
         }
         return true
@@ -255,6 +271,15 @@ public final class StorySubscriptionsContext {
                                 var updatedPeerEntries: [StoryItemsTableEntry] = []
                                 for story in stories {
                                     if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
+                                        /*#if DEBUG
+                                        if "".isEmpty {
+                                            if let codedEntry = CodableEntry(Stories.StoredItem.placeholder(Stories.Placeholder(id: storedItem.id, timestamp: storedItem.timestamp))) {
+                                                updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                                            }
+                                            continue
+                                        }
+                                        #endif*/
+                                        
                                         if case .placeholder = storedItem, let previousEntry = previousPeerEntries.first(where: { $0.id == storedItem.id }) {
                                             updatedPeerEntries.append(previousEntry)
                                         } else {
@@ -329,5 +354,277 @@ public final class StorySubscriptionsContext {
         self.impl.with { impl in
             impl.loadMore()
         }
+    }
+}
+
+public final class PeerStoryListContext {
+    public struct State: Equatable {
+        public var peerReference: PeerReference?
+        public var items: [EngineStoryItem]
+        public var totalCount: Int
+        public var loadMoreToken: Int?
+        
+        init(
+            peerReference: PeerReference?,
+            items: [EngineStoryItem],
+            totalCount: Int,
+            loadMoreToken: Int?
+        ) {
+            self.peerReference = peerReference
+            self.items = items
+            self.totalCount = totalCount
+            self.loadMoreToken = loadMoreToken
+        }
+    }
+    
+    private let account: Account
+    private let peerId: EnginePeer.Id
+    private let isArchived: Bool
+    
+    private let statePromise = Promise<State>()
+    private var stateValue: State {
+        didSet {
+            self.statePromise.set(.single(self.stateValue))
+        }
+    }
+    public var state: Signal<State, NoError> {
+        return self.statePromise.get()
+    }
+    
+    private var isLoadingMore: Bool = false
+    private var requestDisposable: Disposable?
+    
+    private var updatesDisposable: Disposable?
+    
+    public init(account: Account, peerId: EnginePeer.Id, isArchived: Bool) {
+        self.account = account
+        self.peerId = peerId
+        self.isArchived = isArchived
+        
+        self.stateValue = State(peerReference: nil, items: [], totalCount: 0, loadMoreToken: 0)
+        self.statePromise.set(.single(self.stateValue))
+        
+        self.loadMore()
+    }
+    
+    deinit {
+        self.requestDisposable?.dispose()
+    }
+    
+    public func loadMore() {
+        if self.isLoadingMore {
+            return
+        }
+        guard let loadMoreToken = self.stateValue.loadMoreToken else {
+            return
+        }
+        
+        self.isLoadingMore = true
+        
+        let peerId = self.peerId
+        let account = self.account
+        let isArchived = self.isArchived
+        self.requestDisposable = (self.account.postbox.transaction { transaction -> Api.InputUser? in
+            return transaction.getPeer(peerId).flatMap(apiInputUser)
+        }
+        |> mapToSignal { inputUser -> Signal<([EngineStoryItem], Int, PeerReference?), NoError> in
+            guard let inputUser = inputUser else {
+                return .single(([], 0, nil))
+            }
+            
+            let signal: Signal<Api.stories.Stories, MTRpcError>
+            if isArchived {
+                signal = account.network.request(Api.functions.stories.getExpiredStories(offsetId: Int32(loadMoreToken), limit: 100))
+            } else {
+                signal = account.network.request(Api.functions.stories.getPinnedStories(userId: inputUser, offsetId: Int32(loadMoreToken), limit: 100))
+            }
+            return signal
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<([EngineStoryItem], Int, PeerReference?), NoError> in
+                guard let result = result else {
+                    return .single(([], 0, nil))
+                }
+                
+                return account.postbox.transaction { transaction -> ([EngineStoryItem], Int, PeerReference?) in
+                    var storyItems: [EngineStoryItem] = []
+                    var totalCount: Int = 0
+                    
+                    switch result {
+                    case let .stories(count, stories, users):
+                        totalCount = Int(count)
+                        
+                        var peers: [Peer] = []
+                        var peerPresences: [PeerId: Api.User] = [:]
+                        
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                            peerPresences[telegramUser.id] = user
+                        }
+                        
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                        
+                        for story in stories {
+                            if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
+                                if case let .item(item) = storedItem, let media = item.media {
+                                    let mappedItem = EngineStoryItem(
+                                        id: item.id,
+                                        timestamp: item.timestamp,
+                                        media: EngineMedia(media),
+                                        text: item.text,
+                                        entities: item.entities,
+                                        views: item.views.flatMap { views in
+                                            return EngineStoryItem.Views(
+                                                seenCount: views.seenCount,
+                                                seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                    return transaction.getPeer(id).flatMap(EnginePeer.init)
+                                                }
+                                            )
+                                        },
+                                        privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                        isPinned: item.isPinned,
+                                        isExpired: item.isExpired,
+                                        isPublic: item.isPublic
+                                    )
+                                    storyItems.append(mappedItem)
+                                }
+                            }
+                        }
+                    }
+                    
+                    return (storyItems, totalCount, transaction.getPeer(peerId).flatMap(PeerReference.init))
+                }
+            }
+        }).start(next: { [weak self] storyItems, totalCount, peerReference in
+            guard let `self` = self else {
+                return
+            }
+            
+            self.isLoadingMore = false
+            
+            var updatedState = self.stateValue
+            
+            var existingIds = Set(updatedState.items.map { $0.id })
+            for item in storyItems {
+                if existingIds.contains(item.id) {
+                    continue
+                }
+                existingIds.insert(item.id)
+                
+                updatedState.items.append(item)
+            }
+            
+            if updatedState.peerReference == nil {
+                updatedState.peerReference = peerReference
+            }
+            
+            updatedState.loadMoreToken = (storyItems.last?.id).flatMap(Int.init)
+            if updatedState.loadMoreToken != nil {
+                updatedState.totalCount = max(totalCount, updatedState.items.count)
+            } else {
+                updatedState.totalCount = updatedState.items.count
+            }
+            self.stateValue = updatedState
+            
+            if self.updatesDisposable == nil {
+                self.updatesDisposable = (self.account.stateManager.storyUpdates
+                |> deliverOnMainQueue).start(next: { [weak self] updates in
+                    guard let `self` = self else {
+                        return
+                    }
+                    let selfPeerId = self.peerId
+                    let _ = (self.account.postbox.transaction { transaction -> [PeerId: Peer] in
+                        var peers: [PeerId: Peer] = [:]
+                        
+                        for update in updates {
+                            switch update {
+                            case let .added(peerId, item):
+                                if selfPeerId == peerId {
+                                    if case let .item(item) = item {
+                                        if let views = item.views {
+                                            for id in views.seenPeerIds {
+                                                if let peer = transaction.getPeer(id) {
+                                                    peers[peer.id] = peer
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        
+                        return peers
+                    }
+                    |> deliverOnMainQueue).start(next: { [weak self] peers in
+                        guard let `self` = self else {
+                            return
+                        }
+                        
+                        for update in updates {
+                            switch update {
+                            case let .deleted(peerId, id):
+                                if self.peerId == peerId {
+                                    if let index = self.stateValue.items.firstIndex(where: { $0.id == id }) {
+                                        var updatedState = self.stateValue
+                                        updatedState.items.remove(at: index)
+                                        updatedState.totalCount = max(0, updatedState.totalCount - 1)
+                                        self.stateValue = updatedState
+                                    }
+                                }
+                            case let .added(peerId, item):
+                                if self.peerId == peerId {
+                                    if let index = self.stateValue.items.firstIndex(where: { $0.id == item.id }) {
+                                        if !self.isArchived {
+                                            if case let .item(item) = item {
+                                                if item.isPinned {
+                                                    if let media = item.media {
+                                                        var updatedState = self.stateValue
+                                                        updatedState.items[index] = EngineStoryItem(
+                                                            id: item.id,
+                                                            timestamp: item.timestamp,
+                                                            media: EngineMedia(media),
+                                                            text: item.text,
+                                                            entities: item.entities,
+                                                            views: item.views.flatMap { views in
+                                                                return EngineStoryItem.Views(
+                                                                    seenCount: views.seenCount,
+                                                                    seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                                        return peers[id].flatMap(EnginePeer.init)
+                                                                    }
+                                                                )
+                                                            },
+                                                            privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                                            isPinned: item.isPinned,
+                                                            isExpired: item.isExpired,
+                                                            isPublic: item.isPublic
+                                                        )
+                                                        self.stateValue = updatedState
+                                                    }
+                                                } else {
+                                                    var updatedState = self.stateValue
+                                                    updatedState.items.remove(at: index)
+                                                    updatedState.totalCount = max(0, updatedState.totalCount - 1)
+                                                    self.stateValue = updatedState
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            case .read:
+                                break
+                            }
+                        }
+                    })
+                })
+            }
+        })
     }
 }

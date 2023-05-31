@@ -1012,7 +1012,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func animateIn(from node: SearchBarPlaceholderNode, duration: Double, timingFunction: String) {
-        let initialTextBackgroundFrame = node.convert(node.backgroundNode.frame, to: self)
+        let initialTextBackgroundFrame = node.view.convert(node.backgroundNode.frame, to: self.view)
         
         let initialBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.size.width, height: max(0.0, initialTextBackgroundFrame.maxY + 8.0)))
         if let fromBackgroundColor = node.backgroundColor, let toBackgroundColor = self.backgroundNode.backgroundColor {
@@ -1060,7 +1060,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func transitionOut(to node: SearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        let targetTextBackgroundFrame = node.convert(node.backgroundNode.frame, to: self)
+        let targetTextBackgroundFrame = node.view.convert(node.backgroundNode.frame, to: self.view)
         
         let duration: Double = transition.isAnimated ? 0.5 : 0.0
         let timingFunction = kCAMediaTimingFunctionSpring
