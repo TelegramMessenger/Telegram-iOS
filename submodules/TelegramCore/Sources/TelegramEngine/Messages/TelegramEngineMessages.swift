@@ -796,7 +796,7 @@ public extension TelegramEngine {
                         
                         let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
                         if let peerState = peerState {
-                            if let item = itemsView.items.first(where: { $0.id >= peerState.maxReadId }) {
+                            if let item = itemsView.items.first(where: { $0.id > peerState.maxReadId }) {
                                 nextItem = item.value.get(Stories.StoredItem.self)
                             }
                         }

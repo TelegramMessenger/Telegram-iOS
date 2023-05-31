@@ -3543,6 +3543,22 @@ public extension Api.functions.contacts {
                 }
 }
 public extension Api.functions.contacts {
+                static func toggleStoriesHidden(id: Api.InputUser, hidden: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1967110245)
+                    id.serialize(buffer, true)
+                    hidden.serialize(buffer, true)
+                    return (FunctionDescription(name: "contacts.toggleStoriesHidden", parameters: [("id", String(describing: id)), ("hidden", String(describing: hidden))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.contacts {
                 static func toggleTopPeers(enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-2062238246)

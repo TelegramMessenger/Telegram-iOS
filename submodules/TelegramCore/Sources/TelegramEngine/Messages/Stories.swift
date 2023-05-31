@@ -644,20 +644,15 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                     |> mapToSignal { updates -> Signal<Never, NoError> in
                         if let updates = updates {
                             for update in updates.allUpdates {
-                                if case let .updateStories(stories) = update {
-                                    switch stories {
-                                    case let .userStories(_, userId, _, apiStories):
-                                        if PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)) == account.peerId, apiStories.count == 1 {
-                                            switch apiStories[0] {
-                                            case let .storyItem(_, _, _, _, _, media, _, _):
-                                                let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
-                                                if let parsedMedia = parsedMedia {
-                                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
-                                                }
-                                            default:
-                                                break
-                                            }
+                                if case let .updateStory(_, story) = update {
+                                    switch story {
+                                    case let .storyItem(_, _, _, _, _, media, _, _):
+                                        let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
+                                        if let parsedMedia = parsedMedia {
+                                            applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
                                         }
+                                    default:
+                                        break
                                     }
                                 }
                             }

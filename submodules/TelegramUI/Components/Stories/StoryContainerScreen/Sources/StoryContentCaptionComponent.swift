@@ -155,8 +155,7 @@ final class StoryContentCaptionComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(string: component.text, font: Font.regular(16.0), textColor: .white)),
-                    maximumNumberOfLines: 0,
-                    textShadowColor: UIColor(white: 0.0, alpha: 0.3)
+                    maximumNumberOfLines: 0
                 )),
                 environment: {},
                 containerSize: textContainerSize

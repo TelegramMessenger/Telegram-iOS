@@ -1038,7 +1038,7 @@ public extension Api {
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
         case updateStickerSets(flags: Int32)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
-        case updateStories(stories: Api.UserStories)
+        case updateStory(userId: Int64, story: Api.StoryItem)
         case updateStoryID(id: Int32, randomId: Int64)
         case updateTheme(theme: Api.Theme)
         case updateTranscribedAudio(flags: Int32, peer: Api.Peer, msgId: Int32, transcriptionId: Int64, text: String)
@@ -1939,11 +1939,12 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     break
-                case .updateStories(let stories):
+                case .updateStory(let userId, let story):
                     if boxed {
-                        buffer.appendInt32(1727715253)
+                        buffer.appendInt32(542785843)
                     }
-                    stories.serialize(buffer, true)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    story.serialize(buffer, true)
                     break
                 case .updateStoryID(let id, let randomId):
                     if boxed {
@@ -2238,8 +2239,8 @@ public extension Api {
                 return ("updateStickerSets", [("flags", flags as Any)])
                 case .updateStickerSetsOrder(let flags, let order):
                 return ("updateStickerSetsOrder", [("flags", flags as Any), ("order", order as Any)])
-                case .updateStories(let stories):
-                return ("updateStories", [("stories", stories as Any)])
+                case .updateStory(let userId, let story):
+                return ("updateStory", [("userId", userId as Any), ("story", story as Any)])
                 case .updateStoryID(let id, let randomId):
                 return ("updateStoryID", [("id", id as Any), ("randomId", randomId as Any)])
                 case .updateTheme(let theme):
@@ -4029,14 +4030,17 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_updateStories(_ reader: BufferReader) -> Update? {
-            var _1: Api.UserStories?
+        public static func parse_updateStory(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.StoryItem?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.UserStories
+                _2 = Api.parse(reader, signature: signature) as? Api.StoryItem
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Update.updateStories(stories: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateStory(userId: _1!, story: _2!)
             }
             else {
                 return nil
