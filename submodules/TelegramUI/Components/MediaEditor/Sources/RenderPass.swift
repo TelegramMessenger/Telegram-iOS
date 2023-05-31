@@ -131,6 +131,7 @@ class DefaultRenderPass: RenderPass {
 final class OutputRenderPass: DefaultRenderPass {
     weak var renderTarget: RenderTarget?
     
+    @discardableResult
     override func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
         guard let renderTarget = self.renderTarget, let renderPassDescriptor = renderTarget.renderPassDescriptor else {
             return nil
@@ -154,10 +155,9 @@ final class OutputRenderPass: DefaultRenderPass {
         
         renderCommandEncoder.endEncoding()
         
-        if let drawable = renderTarget.drawable {
+        if let drawable = renderTarget.drawable {            
             commandBuffer.present(drawable)
         }
-        
         return nil
     }
 }

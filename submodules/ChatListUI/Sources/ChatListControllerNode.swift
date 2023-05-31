@@ -1186,13 +1186,19 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     let coefficient: CGFloat = 0.4
                     return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
                 }
-                
+                     
+                let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
                 if selectedIndex <= 0 && translation.x > 0.0 {
-                    //let overscroll = translation.x
-                    //transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
                     transitionFraction = 0.0
 
                     self.controller?.storyCameraPanGestureChanged(transitionFraction: translation.x / layout.size.width)
+                } else if translation.x <= 0.0 && cameraIsAlreadyOpened {
+                    self.controller?.storyCameraPanGestureChanged(transitionFraction: 0.0)
+                }
+                
+                if cameraIsAlreadyOpened {
+                    transitionFraction = 0.0
+                    return
                 }
                 
                 if selectedIndex >= maxFilterIndex && translation.x < 0.0 {

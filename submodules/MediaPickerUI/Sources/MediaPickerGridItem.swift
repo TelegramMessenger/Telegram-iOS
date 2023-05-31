@@ -75,11 +75,11 @@ final class MediaPickerGridItem: GridItem {
     }
 }
 
-private let maskImage = generateImage(CGSize(width: 1.0, height: 24.0), opaque: false, rotatedContext: { size, context in
+private let maskImage = generateImage(CGSize(width: 1.0, height: 36.0), opaque: false, rotatedContext: { size, context in
     let bounds = CGRect(origin: CGPoint(), size: size)
     context.clear(bounds)
     
-    let gradientColors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.6).cgColor] as CFArray
+    let gradientColors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.45).cgColor] as CFArray
     
     var locations: [CGFloat] = [0.0, 1.0]
     let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -93,8 +93,10 @@ final class MediaPickerGridItemNode: GridItemNode {
     var currentState: (PHFetchResult<PHAsset>, Int)?
     var currentDraftState: (MediaEditorDraft, Int)?
     var enableAnimations: Bool = true
+    var stories: Bool = false
     private var selectable: Bool = false
     
+    private let backgroundNode: ASImageNode
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
     private let gradientNode: ASImageNode
@@ -115,6 +117,9 @@ final class MediaPickerGridItemNode: GridItemNode {
     var selected: (() -> Void)?
         
     override init() {
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.contentMode = .scaleToFill
+        
         self.imageNode = ImageNode()
         self.imageNode.clipsToBounds = true
         self.imageNode.contentMode = .scaleAspectFill
@@ -273,8 +278,15 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.theme = theme
         self.selectable = selectable
         self.enableAnimations = enableAnimations
+        self.stories = stories
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
+        
+        if stories {
+            if self.backgroundNode.supernode == nil {
+                self.insertSubnode(self.backgroundNode, at: 0)
+            }
+        }
                 
         if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentMediaState!.1 != index {
             self.currentMediaState = (media.asset, index)
@@ -290,8 +302,15 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.theme = theme
         self.selectable = selectable
         self.enableAnimations = enableAnimations
+        self.stories = stories
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
+        
+        if stories {
+            if self.backgroundNode.supernode == nil {
+                self.insertSubnode(self.backgroundNode, at: 0)
+            }
+        }
         
         if self.currentState == nil || self.currentState!.0 !== fetchResult || self.currentState!.1 != index {
             let editingContext = interaction.editingState
@@ -334,6 +353,27 @@ final class MediaPickerGridItemNode: GridItemNode {
                 |> delay(0.03, queue: Queue.concurrentDefaultQueue())
             )
 
+            if stories {
+                self.imageNode.contentUpdated = { [weak self] image in
+                    if let self {
+                        if self.backgroundNode.image == nil {
+                            if let image, image.size.width > image.size.height {
+                                self.imageNode.contentMode = .scaleAspectFit
+                                Queue.concurrentDefaultQueue().async {
+                                    let colors = mediaEditorGetGradientColors(from: image)
+                                    let gradientImage = mediaEditorGenerateGradientImage(size: CGSize(width: 3.0, height: 128.0), colors: [colors.0, colors.1])
+                                    Queue.mainQueue().async {
+                                        self.backgroundNode.image = gradientImage
+                                    }
+                                }
+                            } else {
+                                self.imageNode.contentMode = .scaleAspectFill
+                            }
+                        }
+                    }
+                }
+            }
+            
             let originalSignal = assetImageSignal //assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false, synchronous: true)
             let imageSignal: Signal<UIImage?, NoError> = editedSignal
             |> mapToSignal { result in
@@ -344,7 +384,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                 }
             }
             self.imageNode.setSignal(imageSignal)
-            
+
             let spoilerSignal = Signal<Bool, NoError> { subscriber in
                 if let signal = editingContext.spoilerSignal(forIdentifier: asset.localIdentifier) {
                     let disposable = signal.start(next: { next in
@@ -443,8 +483,9 @@ final class MediaPickerGridItemNode: GridItemNode {
     override func layout() {
         super.layout()
         
+        self.backgroundNode.frame = self.bounds
         self.imageNode.frame = self.bounds.insetBy(dx: -1.0 + UIScreenPixel, dy: -1.0 + UIScreenPixel)
-        self.gradientNode.frame = CGRect(x: 0.0, y: self.bounds.height - 24.0, width: self.bounds.width, height: 24.0)
+        self.gradientNode.frame = CGRect(x: 0.0, y: self.bounds.height - 36.0, width: self.bounds.width, height: 36.0)
         self.typeIconNode.frame = CGRect(x: 0.0, y: self.bounds.height - 20.0, width: 19.0, height: 19.0)
         self.activateAreaNode.frame = self.bounds
         
@@ -478,7 +519,20 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
     
     func transitionImage() -> UIImage? {
-        return self.imageNode.image
+        if let backgroundImage = self.backgroundNode.image {
+            return generateImage(self.bounds.size, contextGenerator: { size, context in
+                if let cgImage = backgroundImage.cgImage {
+                    context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                    if let image = self.imageNode.image, let cgImage = image.cgImage {
+                        let fittedSize = image.size.fitted(size)
+                        let fittedFrame = CGRect(origin: CGPoint(x: (size.width - fittedSize.width) / 2.0, y: (size.height - fittedSize.height) / 2.0), size: fittedSize)
+                        context.draw(cgImage, in: fittedFrame)
+                    }
+                }
+            })
+        } else {
+            return self.imageNode.image
+        }
     }
         
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {

@@ -51,6 +51,7 @@ public final class MediaEditorValues: Codable {
         
         case videoTrimRange
         case videoIsMuted
+        case videoIsFullHd
         
         case drawing
         case entities
@@ -68,6 +69,7 @@ public final class MediaEditorValues: Codable {
     
     public let videoTrimRange: Range<Double>?
     public let videoIsMuted: Bool
+    public let videoIsFullHd: Bool
     
     public let drawing: UIImage?
     public let entities: [CodableDrawingEntity]
@@ -83,6 +85,7 @@ public final class MediaEditorValues: Codable {
         gradientColors: [UIColor]?,
         videoTrimRange: Range<Double>?,
         videoIsMuted: Bool,
+        videoIsFullHd: Bool,
         drawing: UIImage?,
         entities: [CodableDrawingEntity],
         toolValues: [EditorToolKey: Any]
@@ -96,6 +99,7 @@ public final class MediaEditorValues: Codable {
         self.gradientColors = gradientColors
         self.videoTrimRange = videoTrimRange
         self.videoIsMuted = videoIsMuted
+        self.videoIsFullHd = videoIsFullHd
         self.drawing = drawing
         self.entities = entities
         self.toolValues = toolValues
@@ -122,6 +126,7 @@ public final class MediaEditorValues: Codable {
         
         self.videoTrimRange = try container.decodeIfPresent(Range<Double>.self, forKey: .videoTrimRange)
         self.videoIsMuted = try container.decode(Bool.self, forKey: .videoIsMuted)
+        self.videoIsFullHd = try container.decode(Bool.self, forKey: .videoIsFullHd)
         
         if let drawingData = try container.decodeIfPresent(Data.self, forKey: .drawing), let image = UIImage(data: drawingData) {
             self.drawing = image
@@ -175,31 +180,35 @@ public final class MediaEditorValues: Codable {
     }
     
     public func makeCopy() -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedGradientColors(gradientColors: [UIColor]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedVideoIsMuted(_ videoIsMuted: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+    }
+    
+    func withUpdatedVideoIsFullHd(_ videoIsFullHd: Bool) -> MediaEditorValues {
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedVideoTrimRange(_ videoTrimRange: Range<Double>) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues)
     }
     
     func withUpdatedDrawingAndEntities(drawing: UIImage?, entities: [CodableDrawingEntity]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: drawing, entities: entities, toolValues: self.toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: drawing, entities: entities, toolValues: self.toolValues)
     }
     
     func withUpdatedToolValues(_ toolValues: [EditorToolKey: Any]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, drawing: self.drawing, entities: self.entities, toolValues: toolValues)
+        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: toolValues)
     }
 }
 
@@ -920,20 +929,51 @@ extension CodableToolValue: Codable {
     }
 }
 
-public func recommendedVideoExportConfiguration(values: MediaEditorValues, frameRate: Float) -> MediaEditorVideoExport.Configuration {
-    let compressionProperties: [String: Any] = [
-        AVVideoAverageBitRateKey: 2000000,
-        AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
-        //AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-        //AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
-    ]
+private let hasHEVCHardwareEncoder: Bool = {
+    let spec: [CFString: Any] = [:]
+    var outID: CFString?
+    var properties: CFDictionary?
+    let result = VTCopySupportedPropertyDictionaryForEncoder(width: 1920, height: 1080, codecType: kCMVideoCodecType_HEVC, encoderSpecification: spec as CFDictionary, encoderIDOut: &outID, supportedPropertiesOut: &properties)
+    if result == kVTCouldNotFindVideoEncoderErr {
+        return false
+    }
+    return result == noErr
+}()
+
+public func recommendedVideoExportConfiguration(values: MediaEditorValues, forceFullHd: Bool = false, frameRate: Float) -> MediaEditorVideoExport.Configuration {
+    let compressionProperties: [String: Any]
+    let codecType: AVVideoCodecType
+    
+    if hasHEVCHardwareEncoder {
+        codecType = AVVideoCodecType.hevc
+        compressionProperties = [
+            AVVideoAverageBitRateKey: 3800000,
+            AVVideoProfileLevelKey: kVTProfileLevel_HEVC_Main_AutoLevel
+        ]
+    } else {
+        codecType = AVVideoCodecType.h264
+        compressionProperties = [
+            AVVideoAverageBitRateKey: 3800000,
+            AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+            AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
+        ]
+    }
+
+    let width: Int
+    let height: Int
+    if values.videoIsFullHd {
+        width = 1080
+        height = 1920
+    } else {
+        width = 720
+        height = 1280
+    }
     
     let videoSettings: [String: Any] = [
-        //AVVideoCodecKey: AVVideoCodecType.h264,
-        AVVideoCodecKey: AVVideoCodecType.hevc,
+        AVVideoCodecKey: codecType,
         AVVideoCompressionPropertiesKey: compressionProperties,
-        AVVideoWidthKey: 720,
-        AVVideoHeightKey: 1280
+        AVVideoWidthKey: width,
+        AVVideoHeightKey: height
     ]
     
     let audioSettings: [String: Any] = [

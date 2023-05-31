@@ -2410,6 +2410,38 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return nil
     }
     
+    fileprivate func openStoryCamera() {
+        var cameraTransitionIn: StoryCameraTransitionIn?
+        if let componentView = self.chatListHeaderView() {
+            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                cameraTransitionIn = StoryCameraTransitionIn(
+                    sourceView: transitionView,
+                    sourceRect: transitionView.bounds,
+                    sourceCornerRadius: transitionView.bounds.height * 0.5
+                )
+            }
+        }
+        
+        if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+            let coordinator = rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: { [weak self] _ in
+                guard let self else {
+                    return nil
+                }
+                if let componentView = self.chatListHeaderView() {
+                    if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                        return StoryCameraTransitionOut(
+                            destinationView: transitionView,
+                            destinationRect: transitionView.bounds,
+                            destinationCornerRadius: transitionView.bounds.height * 0.5
+                        )
+                    }
+                }
+                return nil
+            })
+            coordinator?.animateIn()
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -2442,35 +2474,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     
                     if let peer, peer.id == self.context.account.peerId, storyContentState.slice == nil {
-                        var cameraTransitionIn: StoryCameraTransitionIn?
-                        if let componentView = self.chatListHeaderView() {
-                            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                                cameraTransitionIn = StoryCameraTransitionIn(
-                                    sourceView: transitionView,
-                                    sourceRect: transitionView.bounds,
-                                    sourceCornerRadius: transitionView.bounds.height * 0.5
-                                )
-                            }
-                        }
-                        
-                        if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                            rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: { [weak self] _ in
-                                guard let self else {
-                                    return nil
-                                }
-                                if let componentView = self.chatListHeaderView() {
-                                    if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
-                                        return StoryCameraTransitionOut(
-                                            destinationView: transitionView,
-                                            destinationRect: transitionView.bounds,
-                                            destinationCornerRadius: transitionView.bounds.height * 0.5
-                                        )
-                                    }
-                                }
-                                return nil
-                            })
-                        }
-                        
+                        self.openStoryCamera()
                         return
                     }
                     
@@ -4862,6 +4866,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private var storyCameraTransitionInCoordinator: StoryCameraTransitionInCoordinator?
+    var hasStoryCameraTransition: Bool {
+        return self.storyCameraTransitionInCoordinator != nil
+    }
     func storyCameraPanGestureChanged(transitionFraction: CGFloat) {
         guard let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface else {
             return
@@ -4990,11 +4997,15 @@ private final class ChatListLocationContext {
     var leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
     var rightButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
     var proxyButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
+    var storyButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
     
     var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] {
         var result: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
         if let rightButton = self.rightButton {
             result.append(rightButton)
+        }
+        if let storyButton = self.storyButton {
+            result.append(storyButton)
         }
         if let proxyButton = self.proxyButton {
             result.append(proxyButton)
@@ -5451,6 +5462,16 @@ private final class ChatListLocationContext {
             } else {
                 self.proxyButton = nil
             }
+            
+            self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
+                content: .icon(imageName: "Chat List/AddStoryIcon"),
+                pressed: { [weak self] _ in
+                    guard let self, let parentController = self.parentController else {
+                        return
+                    }
+                    parentController.openStoryCamera()
+                }
+            )))
             
             self.chatListTitle = titleContent
             

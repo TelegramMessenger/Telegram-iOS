@@ -15,6 +15,20 @@ private let borderHeight: CGFloat = 1.0 + UIScreenPixel
 private let frameWidth: CGFloat = 24.0
 private let minumumDuration: CGFloat = 1.0
 
+private class VideoFrameLayer: SimpleShapeLayer {
+    private let stripeLayer = SimpleShapeLayer()
+    
+    override func layoutSublayers() {
+        super.layoutSublayers()
+        
+        if self.stripeLayer.superlayer == nil {
+            self.stripeLayer.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3).cgColor
+            self.addSublayer(self.stripeLayer)
+        }
+        self.stripeLayer.frame = CGRect(x: self.bounds.width - UIScreenPixel, y: 0.0, width: UIScreenPixel, height: self.bounds.height)
+    }
+}
+
 final class VideoScrubberComponent: Component {
     typealias EnvironmentType = Empty
     
@@ -87,8 +101,8 @@ final class VideoScrubberComponent: Component {
         private let transparentFramesContainer = UIView()
         private let opaqueFramesContainer = UIView()
         
-        private var transparentFrameLayers: [CALayer] = []
-        private var opaqueFrameLayers: [CALayer] = []
+        private var transparentFrameLayers: [VideoFrameLayer] = []
+        private var opaqueFrameLayers: [VideoFrameLayer] = []
         
         private var component: VideoScrubberComponent?
         private weak var state: EmptyComponentState?
@@ -118,6 +132,15 @@ final class VideoScrubberComponent: Component {
                 context.fillPath()
             })?.withRenderingMode(.alwaysTemplate)
             
+            let positionImage = generateImage(CGSize(width: 2.0, height: 42.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+                context.setFillColor(UIColor.white.cgColor)
+                
+                let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: 2.0, height: 42.0)), cornerRadius: 1.0)
+                context.addPath(path.cgPath)
+                context.fillPath()
+            })
+            
             self.leftHandleView.image = handleImage
             self.leftHandleView.isUserInteractionEnabled = true
             self.leftHandleView.tintColor = .white
@@ -126,6 +149,9 @@ final class VideoScrubberComponent: Component {
             self.rightHandleView.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
             self.rightHandleView.isUserInteractionEnabled = true
             self.rightHandleView.tintColor = .white
+            
+            self.cursorView.image = positionImage
+            self.cursorView.isUserInteractionEnabled = true
             
             self.borderView.image = generateImage(CGSize(width: 1.0, height: scrubberHeight), rotatedContext: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))
@@ -151,7 +177,7 @@ final class VideoScrubberComponent: Component {
             
             self.leftHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleLeftHandlePan(_:))))
             self.rightHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleRightHandlePan(_:))))
-            //self.rightHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePositionHandlePan(_:))))
+            self.cursorView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePositionHandlePan(_:))))
         }
         
         required init?(coder: NSCoder) {
@@ -234,6 +260,13 @@ final class VideoScrubberComponent: Component {
             }
             self.state?.updated(transition: transition)
         }
+        
+        @objc private func handlePositionHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            guard let _ = self.component else {
+                return
+            }
+            //let location = gestureRecognizer.location(in: self)
+        }
                 
         func update(component: VideoScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             let previousFramesUpdateTimestamp = self.component?.framesUpdateTimestamp
@@ -245,15 +278,15 @@ final class VideoScrubberComponent: Component {
             
             if component.framesUpdateTimestamp != previousFramesUpdateTimestamp {
                 for i in 0 ..< component.frames.count {
-                    let transparentFrameLayer: CALayer
-                    let opaqueFrameLayer: CALayer
+                    let transparentFrameLayer: VideoFrameLayer
+                    let opaqueFrameLayer: VideoFrameLayer
                     if i >= self.transparentFrameLayers.count {
-                        transparentFrameLayer = SimpleLayer()
+                        transparentFrameLayer = VideoFrameLayer()
                         transparentFrameLayer.masksToBounds = true
                         transparentFrameLayer.contentsGravity = .resizeAspectFill
                         self.transparentFramesContainer.layer.addSublayer(transparentFrameLayer)
                         self.transparentFrameLayers.append(transparentFrameLayer)
-                        opaqueFrameLayer = SimpleLayer()
+                        opaqueFrameLayer = VideoFrameLayer()
                         opaqueFrameLayer.masksToBounds = true
                         opaqueFrameLayer.contentsGravity = .resizeAspectFill
                         self.opaqueFramesContainer.layer.addSublayer(opaqueFrameLayer)

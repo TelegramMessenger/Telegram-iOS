@@ -12,7 +12,7 @@ import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
 
-func mediaEditorGenerateGradientImage(size: CGSize, colors: [UIColor]) -> UIImage? {
+public func mediaEditorGenerateGradientImage(size: CGSize, colors: [UIColor]) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
     if let context = UIGraphicsGetCurrentContext() {
         let gradientColors = colors.map { $0.cgColor } as CFArray
@@ -27,6 +27,16 @@ func mediaEditorGenerateGradientImage(size: CGSize, colors: [UIColor]) -> UIImag
     UIGraphicsEndImageContext()
     
     return image
+}
+
+public func mediaEditorGetGradientColors(from image: UIImage) -> (UIColor, UIColor) {
+    let context = DrawingContext(size: CGSize(width: 5.0, height: 5.0), scale: 1.0, clear: false)!
+    context.withFlippedContext({ context in
+        if let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 5.0, height: 5.0))
+        }
+    })
+    return (context.colorAt(CGPoint(x: 2.0, y: 0.0)), context.colorAt(CGPoint(x: 2.0, y: 4.0)))
 }
 
 final class MediaEditorComposer {
@@ -201,7 +211,7 @@ private func makeEditorImageFrameComposition(inputImage: CIImage, gradientImage:
     
     var initialScale: CGFloat
     if mediaImage.extent.height > mediaImage.extent.width {
-        initialScale = dimensions.height / mediaImage.extent.height
+        initialScale = max(dimensions.width / mediaImage.extent.width, dimensions.height / mediaImage.extent.height)
     } else {
         initialScale = dimensions.width / mediaImage.extent.width
     }

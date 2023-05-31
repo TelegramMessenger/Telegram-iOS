@@ -137,20 +137,20 @@ private final class CameraScreenComponent: CombinedComponent {
         private var cameraStateDisposable: Disposable?
         private var resultDisposable = MetaDisposable()
         
-        private var mediaAssetsContext: MediaAssetsContext
+        private var mediaAssetsContext: MediaAssetsContext?
         fileprivate var lastGalleryAsset: PHAsset?
         private var lastGalleryAssetsDisposable: Disposable?
         
         var cameraState = CameraState(mode: .photo, flashMode: .off, flashModeDidChange: false, recording: .none, duration: 0.0)
         var swipeHint: CaptureControlsComponent.SwipeHint = .none
         
+        private let hapticFeedback = HapticFeedback()
+        
         init(context: AccountContext, camera: Camera, present: @escaping (ViewController) -> Void, completion: ActionSlot<Signal<CameraScreen.Result, NoError>>) {
             self.context = context
             self.camera = camera
             self.present = present
             self.completion = completion
-            
-            self.mediaAssetsContext = MediaAssetsContext()
             
             super.init()
             
@@ -163,7 +163,21 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.updated(transition: .easeInOut(duration: 0.2))
             })
             
-            self.lastGalleryAssetsDisposable = (self.mediaAssetsContext.recentAssets()
+            Queue.mainQueue().async {
+                self.setupRecentAssetSubscription()
+            }
+        }
+        
+        deinit {
+            self.cameraStateDisposable?.dispose()
+            self.lastGalleryAssetsDisposable?.dispose()
+            self.resultDisposable.dispose()
+        }
+        
+        func setupRecentAssetSubscription() {
+            let mediaAssetsContext = MediaAssetsContext()
+            self.mediaAssetsContext = mediaAssetsContext
+            self.lastGalleryAssetsDisposable = (mediaAssetsContext.recentAssets()
             |> map { fetchResult in
                 return fetchResult?.lastObject
             }
@@ -176,15 +190,25 @@ private final class CameraScreenComponent: CombinedComponent {
             })
         }
         
-        deinit {
-            self.cameraStateDisposable?.dispose()
-            self.lastGalleryAssetsDisposable?.dispose()
-            self.resultDisposable.dispose()
-        }
-        
         func updateCameraMode(_ mode: CameraMode) {
             self.cameraState = self.cameraState.updatedMode(mode)
             self.updated(transition: .spring(duration: 0.3))
+        }
+        
+        func toggleFlashMode() {
+            if self.cameraState.flashMode == .off {
+                self.camera.setFlashMode(.on)
+            } else if self.cameraState.flashMode == .on {
+                self.camera.setFlashMode(.auto)
+            } else {
+                self.camera.setFlashMode(.off)
+            }
+            self.hapticFeedback.impact(.veryLight)
+        }
+        
+        func togglePosition() {
+            self.camera.togglePosition()
+            self.hapticFeedback.impact(.veryLight)
         }
         
         func updateSwipeHint(_ hint: CaptureControlsComponent.SwipeHint) {
@@ -324,7 +348,8 @@ private final class CameraScreenComponent: CombinedComponent {
                                 animation: LottieAnimationComponent.AnimationItem(
                                     name: flashIconName,
                                     mode: !state.cameraState.flashModeDidChange ? .still(position: .end) : .animating(loop: false),
-                                    range: nil
+                                    range: nil,
+                                    waitForCompletion: false
                                 ),
                                 colors: [:],
                                 size: CGSize(width: 40.0, height: 40.0)
@@ -350,13 +375,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             guard let state else {
                                 return
                             }
-                            if state.cameraState.flashMode == .off {
-                                state.camera.setFlashMode(.on)
-                            } else if state.cameraState.flashMode == .on {
-                                state.camera.setFlashMode(.auto)
-                            } else {
-                                state.camera.setFlashMode(.off)
-                            }
+                            state.toggleFlashMode()
                         }
                     ).tagged(flashButtonTag),
                     availableSize: CGSize(width: 40.0, height: 40.0),
@@ -447,7 +466,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         guard let state else {
                             return
                         }
-                        state.camera.togglePosition()
+                        state.togglePosition()
                     },
                     galleryTapped: {
                         guard let controller = environment.controller() as? CameraScreen else {
@@ -818,7 +837,8 @@ public class CameraScreen: ViewController {
                                 }
                             }
                         },
-                        nil
+                        nil,
+                        {}
                     )
                 }
             }
@@ -875,7 +895,7 @@ public class CameraScreen: ViewController {
                         let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                         controller.updateTransitionProgress(transitionFraction, transition: .immediate)
                     } else if translation.y < -10.0 {
-                        controller.presentGallery()
+                        controller.presentGallery(fromGesture: true)
                         gestureRecognizer.isEnabled = false
                         gestureRecognizer.isEnabled = true
                     }
@@ -1102,7 +1122,7 @@ public class CameraScreen: ViewController {
             self.validLayout = layout
             
             let previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
-            let topInset: CGFloat = floor(layout.size.height - previewSize.height) / 2.0
+            let topInset: CGFloat = floorToScreenPixels(layout.size.height - previewSize.height) / 2.0
             
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
@@ -1227,10 +1247,12 @@ public class CameraScreen: ViewController {
             self.transitionOut = transitionOut
         }
     }
-    fileprivate let completion: (Signal<CameraScreen.Result, NoError>, ResultTransition?) -> Void
+    fileprivate let completion: (Signal<CameraScreen.Result, NoError>, ResultTransition?, @escaping () -> Void) -> Void
     public var transitionedIn: () -> Void = {}
     
     private var audioSessionDisposable: Disposable?
+    
+    private let hapticFeedback = HapticFeedback()
     
     public init(
         context: AccountContext,
@@ -1238,7 +1260,7 @@ public class CameraScreen: ViewController {
         holder: CameraHolder? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool) -> TransitionOut?,
-        completion: @escaping (Signal<CameraScreen.Result, NoError>, ResultTransition?) -> Void
+        completion: @escaping (Signal<CameraScreen.Result, NoError>, ResultTransition?, @escaping () -> Void) -> Void
     ) {
         self.context = context
         self.mode = mode
@@ -1282,7 +1304,11 @@ public class CameraScreen: ViewController {
         self.node.animateInFromEditor(toGallery: self.galleryController != nil)
     }
     
-    func presentGallery() {
+    func presentGallery(fromGesture: Bool = false) {
+        if !fromGesture {
+            self.hapticFeedback.impact(.veryLight)
+        }
+        
         var didStopCameraCapture = false
         let stopCameraCapture = { [weak self] in
             guard !didStopCameraCapture, let self else {
@@ -1293,7 +1319,7 @@ public class CameraScreen: ViewController {
             self.node.pauseCameraCapture()
         }
         
-        let controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut in
+        let controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
             if let self {
                 stopCameraCapture()
                 
@@ -1304,9 +1330,9 @@ public class CameraScreen: ViewController {
                     transitionOut: transitionOut
                 )
                 if let asset = result as? PHAsset {
-                    self.completion(.single(.asset(asset)), resultTransition)
+                    self.completion(.single(.asset(asset)), resultTransition, dismissed)
                 } else if let draft = result as? MediaEditorDraft {
-                    self.completion(.single(.draft(draft)), resultTransition)
+                    self.completion(.single(.draft(draft)), resultTransition, dismissed)
                 }
             }
         }, dismissed: { [weak self] in
@@ -1337,9 +1363,15 @@ public class CameraScreen: ViewController {
         guard !self.isDismissed else {
             return
         }
+        
+        if !interactive {
+            self.hapticFeedback.impact(.veryLight)
+        }
+        
         self.node.camera.stopCapture(invalidate: true)
         self.isDismissed = true
         if animated {
+            self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
             if !interactive {
                 if let navigationController = self.navigationController as? NavigationController {
                     navigationController.updateRootContainerTransitionOffset(self.node.frame.width, transition: .immediate)
@@ -1353,13 +1385,11 @@ public class CameraScreen: ViewController {
         }
     }
     
-    private var isTransitioning = false
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
-        self.isTransitioning = true
         let offsetX = floorToScreenPixels((1.0 - transitionFraction) * self.node.frame.width * -1.0)
         transition.updateTransform(layer: self.node.backgroundView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
         transition.updateTransform(layer: self.node.containerView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
-        let scale = max(0.8, min(1.0, 0.8 + 0.2 * transitionFraction))
+        let scale: CGFloat = max(0.8, min(1.0, 0.8 + 0.2 * transitionFraction))
         transition.updateSublayerTransformScaleAndOffset(layer: self.node.containerView.layer, scale: scale, offset: CGPoint(x: -offsetX * 1.0 / scale * 0.5, y: 0.0), completion: { _ in
             completion()
         })
@@ -1367,8 +1397,6 @@ public class CameraScreen: ViewController {
         let dimAlpha = 0.6 * (1.0 - transitionFraction)
         transition.updateAlpha(layer: self.node.transitionDimView.layer, alpha: dimAlpha)
         transition.updateTransform(layer: self.node.transitionCornersView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
-        
-        self.statusBar.updateStatusBarStyle(transitionFraction > 0.45 ? .White : .Ignore, animated: true)
                 
         if let navigationController = self.navigationController as? NavigationController {
             let offsetX = floorToScreenPixels(transitionFraction * self.node.frame.width)
@@ -1377,11 +1405,12 @@ public class CameraScreen: ViewController {
     }
     
     public func completeWithTransitionProgress(_ transitionFraction: CGFloat, velocity: CGFloat, dismissing: Bool) {
-        self.isTransitioning = false
         if dismissing {
             if transitionFraction < 0.7 || velocity < -1000.0 {
+                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
                 self.requestDismiss(animated: true, interactive: true)
             } else {
+                self.statusBar.updateStatusBarStyle(.White, animated: true)
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
                     if let self, let navigationController = self.navigationController as? NavigationController {
                         navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
@@ -1390,6 +1419,7 @@ public class CameraScreen: ViewController {
             }
         } else {
             if transitionFraction > 0.33 || velocity > 1000.0 {
+                self.statusBar.updateStatusBarStyle(.White, animated: true)
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
                     if let self, let navigationController = self.navigationController as? NavigationController {
                         navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
@@ -1398,6 +1428,7 @@ public class CameraScreen: ViewController {
                     }
                 })
             } else {
+                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
                 self.requestDismiss(animated: true, interactive: true)
             }
         }

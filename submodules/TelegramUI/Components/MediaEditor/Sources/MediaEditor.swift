@@ -107,6 +107,8 @@ public final class MediaEditor {
     }
     private let playerPlaybackStatePromise = Promise<(Double, Double, Bool)>((0.0, 0.0, false))
     
+    public var onFirstDisplay: () -> Void = {}
+    
     public func playerState(framesCount: Int) -> Signal<MediaEditorPlayerState?, NoError> {
         return self.playerPromise.get()
         |> mapToSignal { [weak self] player in
@@ -228,6 +230,7 @@ public final class MediaEditor {
                 gradientColors: nil,
                 videoTrimRange: nil,
                 videoIsMuted: false,
+                videoIsFullHd: false,
                 drawing: nil,
                 entities: [],
                 toolValues: [:]
@@ -267,21 +270,11 @@ public final class MediaEditor {
         if let device = renderTarget.mtlDevice, CVMetalTextureCacheCreate(nil, nil, device, nil, &self.textureCache) != kCVReturnSuccess {
             print("error")
         }
-        
-        func gradientColors(from image: UIImage) -> (UIColor, UIColor) {
-            let context = DrawingContext(size: CGSize(width: 1.0, height: 4.0), scale: 1.0, clear: false)!
-            context.withFlippedContext({ context in
-                if let cgImage = image.cgImage {
-                    context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 4.0))
-                }
-            })
-            return (context.colorAt(CGPoint(x: 0.0, y: 0.0)), context.colorAt(CGPoint(x: 0.0, y: 3.0)))
-        }
-        
+                
         let textureSource: Signal<(TextureSource, UIImage?, AVPlayer?, UIColor, UIColor), NoError>
         switch subject {
         case let .image(image, _):
-            let colors = gradientColors(from: image)
+            let colors = mediaEditorGetGradientColors(from: image)
             textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
         case let .draft(draft):
             guard let image = UIImage(contentsOfFile: draft.path) else {
@@ -291,7 +284,7 @@ public final class MediaEditor {
             if let gradientColors = draft.values.gradientColors {
                 colors = (gradientColors.first!, gradientColors.last!)
             } else {
-                colors = gradientColors(from: image)
+                colors = mediaEditorGetGradientColors(from: image)
             }
             textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
         case let .video(path, _):
@@ -304,7 +297,7 @@ public final class MediaEditor {
                     let playerItem = AVPlayerItem(asset: asset)
                     let player = AVPlayer(playerItem: playerItem)
                     if let image {
-                        let colors = gradientColors(from: UIImage(cgImage: image))
+                        let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
                         subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
                     } else {
                         subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, .black, .black))
@@ -329,7 +322,7 @@ public final class MediaEditor {
                                 }
                             }
                             if !degraded {
-                                let colors = gradientColors(from: image)
+                                let colors = mediaEditorGetGradientColors(from: image)
                                 PHImageManager.default().requestAVAsset(forVideo: asset, options: nil, resultHandler: { asset, _, _ in
                                     if let asset {
                                         let playerItem = AVPlayerItem(asset: asset)
@@ -359,7 +352,7 @@ public final class MediaEditor {
                                 }
                             }
                             if !degraded {
-                                let colors = gradientColors(from: image)
+                                let colors = mediaEditorGetGradientColors(from: image)
                                 subscriber.putNext((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
                                 subscriber.putCompletion()
                             }
@@ -377,7 +370,7 @@ public final class MediaEditor {
             if let self {
                 let (source, image, player, topColor, bottomColor) = sourceAndColors
                 self.renderer.onNextRender = { [weak self] in
-                    self?.previewView?.removeTransitionImage()
+                    self?.onFirstDisplay()
                 }
                 self.renderer.textureSource = source
                 self.player = player
@@ -446,6 +439,10 @@ public final class MediaEditor {
         self.values = self.values.withUpdatedVideoIsMuted(videoIsMuted)
     }
     
+    public func setVideoIsFullHd(_ videoIsFullHd: Bool) {
+        self.values = self.values.withUpdatedVideoIsFullHd(videoIsFullHd)
+    }
+    
     private var targetTimePosition: (CMTime, Bool)?
     private var updatingTimePosition = false
     public func seek(_ position: Double, andPlay play: Bool) {
@@ -499,6 +496,8 @@ public final class MediaEditor {
         let trimStart = self.values.videoTrimRange?.lowerBound ?? 0.0
         let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
+        
+        self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimEnd, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
     }
         
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
