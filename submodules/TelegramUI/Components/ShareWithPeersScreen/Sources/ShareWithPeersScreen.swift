@@ -916,72 +916,69 @@ final class ShareWithPeersScreenComponent: Component {
             let navigationSideInset: CGFloat = 16.0
             var navigationButtonsWidth: CGFloat = 0.0
             
-            if case .stories = component.stateContext.subject {
-            } else {
-                let navigationLeftButtonSize = self.navigationLeftButton.update(
-                    transition: transition,
-                    component: AnyComponent(Button(
-                        content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
-                        action: { [weak self] in
-                            guard let self, let environment = self.environment, let controller = environment.controller() else {
-                                return
-                            }
-                            controller.dismiss()
-                        }
-                    ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: navigationHeight)
-                )
-                let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
-                if let navigationLeftButtonView = self.navigationLeftButton.view {
-                    if navigationLeftButtonView.superview == nil {
-                        self.navigationContainerView.addSubview(navigationLeftButtonView)
-                    }
-                    transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
-                }
-                navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
-            }
-            
-            let navigationRightButtonSize = self.navigationRightButton.update(
+            let navigationLeftButtonSize = self.navigationLeftButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: "Done", font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
+                    content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
                     action: { [weak self] in
-                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                        guard let self, let environment = self.environment, let controller = environment.controller() else {
                             return
                         }
-                        
-                        let base: EngineStoryPrivacy.Base
-                        if self.selectedCategories.contains(.everyone) {
-                            base = .everyone
-                        } else if self.selectedCategories.contains(.closeFriends) {
-                            base = .closeFriends
-                        } else if self.selectedCategories.contains(.contacts) {
-                            base = .contacts
-                        } else if self.selectedCategories.contains(.selectedContacts) {
-                            base = .nobody
-                        } else {
-                            base = .nobody
-                        }
-                        
-                        component.completion(EngineStoryPrivacy(
-                            base: base,
-                            additionallyIncludePeers: self.selectedPeers
-                        ))
                         controller.dismiss()
                     }
                 ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: navigationHeight)
             )
-            let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - navigationSideInset - navigationRightButtonSize.width, y: floor((navigationHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
-            if let navigationRightButtonView = self.navigationRightButton.view {
-                if navigationRightButtonView.superview == nil {
-                    self.navigationContainerView.addSubview(navigationRightButtonView)
+            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
+            if let navigationLeftButtonView = self.navigationLeftButton.view {
+                if navigationLeftButtonView.superview == nil {
+                    self.navigationContainerView.addSubview(navigationLeftButtonView)
                 }
-                transition.setFrame(view: navigationRightButtonView, frame: navigationRightButtonFrame)
+                transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
             }
-            navigationButtonsWidth += navigationRightButtonSize.width + navigationSideInset
+            navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
+            
+//            let navigationRightButtonSize = self.navigationRightButton.update(
+//                transition: transition,
+//                component: AnyComponent(Button(
+//                    content: AnyComponent(Text(text: "Done", font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
+//                    action: { [weak self] in
+//                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
+//                            return
+//                        }
+//                        
+//                        let base: EngineStoryPrivacy.Base
+//                        if self.selectedCategories.contains(.everyone) {
+//                            base = .everyone
+//                        } else if self.selectedCategories.contains(.closeFriends) {
+//                            base = .closeFriends
+//                        } else if self.selectedCategories.contains(.contacts) {
+//                            base = .contacts
+//                        } else if self.selectedCategories.contains(.selectedContacts) {
+//                            base = .nobody
+//                        } else {
+//                            base = .nobody
+//                        }
+//                        
+//                        component.completion(EngineStoryPrivacy(
+//                            base: base,
+//                            additionallyIncludePeers: self.selectedPeers
+//                        ))
+//                        controller.dismiss()
+//                    }
+//                ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
+//                environment: {},
+//                containerSize: CGSize(width: availableSize.width, height: navigationHeight)
+//            )
+//            let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - navigationSideInset - navigationRightButtonSize.width, y: floor((navigationHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
+//            if let navigationRightButtonView = self.navigationRightButton.view {
+//                if navigationRightButtonView.superview == nil {
+//                    self.navigationContainerView.addSubview(navigationRightButtonView)
+//                }
+//                transition.setFrame(view: navigationRightButtonView, frame: navigationRightButtonFrame)
+//            }
+//            navigationButtonsWidth += navigationRightButtonSize.width + navigationSideInset
             
             let title: String
             switch component.stateContext.subject {
@@ -1034,7 +1031,7 @@ final class ShareWithPeersScreenComponent: Component {
                 topInset = 0.0
             } else {
                 if case .stories = component.stateContext.subject {
-                    topInset = max(0.0, availableSize.height - containerInset - 410.0)
+                    topInset = max(0.0, availableSize.height - containerInset - 427.0)
                 } else {
                     topInset = max(0.0, availableSize.height - containerInset - 600.0)
                 }
@@ -1045,48 +1042,76 @@ final class ShareWithPeersScreenComponent: Component {
             
             transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             
-            var bottomPanelHeight: CGFloat = 0.0
-            if case .stories = component.stateContext.subject {
-                let actionButtonSize = self.actionButton.update(
-                    transition: transition,
-                    component: AnyComponent(Button(
-                        content: AnyComponent(Text(
-                            text: "Send as a Message",
-                            font: Font.regular(17.0),
-                            color: environment.theme.list.itemAccentColor
-                        )),
-                        action: { [weak self] in
-                            guard let self, let component = self.component, let controller = self.environment?.controller() else {
-                                return
-                            }
-                            
-                            component.secondaryAction()
-                            controller.dismiss()
+            let actionButtonTitle: String = "Save Settings"
+            let actionButtonSize = self.actionButton.update(
+                transition: transition,
+                component: AnyComponent(ButtonComponent(
+                    background: ButtonComponent.Background(
+                        color: environment.theme.list.itemCheckColors.fillColor,
+                        foreground: environment.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                    ),
+                    content: AnyComponentWithIdentity(
+                        id: actionButtonTitle,
+                        component: AnyComponent(ButtonTextContentComponent(
+                            text: actionButtonTitle,
+                            badge: 0,
+                            textColor: environment.theme.list.itemCheckColors.foregroundColor,
+                            badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
+                            badgeForeground: environment.theme.list.itemCheckColors.fillColor
+                        ))
+                    ),
+                    isEnabled: true,
+                    displaysProgress: false,
+                    action: { [weak self] in
+                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                            return
                         }
-                    ).minSize(CGSize(width: 200.0, height: 44.0))),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - navigationSideInset * 2.0, height: 44.0)
-                )
-                
-                if environment.inputHeight != 0.0 {
-                    bottomPanelHeight += environment.inputHeight + 8.0 + actionButtonSize.height
-                } else {
-                    bottomPanelHeight += environment.safeInsets.bottom + actionButtonSize.height
-                }
-                let actionButtonFrame = CGRect(origin: CGPoint(x: (availableSize.width - actionButtonSize.width) / 2.0, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
-                if let actionButtonView = self.actionButton.view {
-                    if actionButtonView.superview == nil {
-                        self.addSubview(actionButtonView)
+                                                
+                        let base: EngineStoryPrivacy.Base
+                        if self.selectedCategories.contains(.everyone) {
+                            base = .everyone
+                        } else if self.selectedCategories.contains(.closeFriends) {
+                            base = .closeFriends
+                        } else if self.selectedCategories.contains(.contacts) {
+                            base = .contacts
+                        } else if self.selectedCategories.contains(.selectedContacts) {
+                            base = .nobody
+                        } else {
+                            base = .nobody
+                        }
+                        
+                        component.completion(EngineStoryPrivacy(
+                            base: base,
+                            additionallyIncludePeers: self.selectedPeers
+                        ))
+
+                        controller.dismiss()
                     }
-                    transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - navigationSideInset * 2.0, height: 50.0)
+            )
+            
+            var bottomPanelHeight: CGFloat = 0.0
+            if environment.inputHeight != 0.0 {
+                bottomPanelHeight += environment.inputHeight + 8.0 + actionButtonSize.height
+            } else {
+                bottomPanelHeight += 10.0 + environment.safeInsets.bottom + actionButtonSize.height
+            }
+            let actionButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
+            if let actionButtonView = self.actionButton.view {
+                if actionButtonView.superview == nil {
+                    self.addSubview(actionButtonView)
                 }
-                
-                transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: availableSize.width, height: bottomPanelHeight + 8.0)))
-                self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
-                transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+                transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
             }
             
-            let itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: bottomPanelHeight + environment.safeInsets.bottom, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
+            transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: availableSize.width, height: bottomPanelHeight + 8.0)))
+            self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
+            transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+                        
+            let itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: bottomPanelHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
             let previousItemLayout = self.itemLayout
             self.itemLayout = itemLayout
             

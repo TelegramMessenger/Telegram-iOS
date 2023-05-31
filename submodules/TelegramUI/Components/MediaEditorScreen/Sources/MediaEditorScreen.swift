@@ -917,7 +917,7 @@ final class MediaEditorScreenComponent: Component {
                         settingsButtonView.layer.shadowRadius = 4.0
                         settingsButtonView.layer.shadowColor = UIColor.black.cgColor
                         settingsButtonView.layer.shadowOpacity = 0.2
-                        self.addSubview(settingsButtonView)
+                        //self.addSubview(settingsButtonView)
                     }
                     transition.setPosition(view: settingsButtonView, position: settingsButtonFrame.center)
                     transition.setBounds(view: settingsButtonView, bounds: CGRect(origin: .zero, size: settingsButtonFrame.size))

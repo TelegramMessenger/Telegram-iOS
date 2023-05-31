@@ -191,42 +191,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         accountSettingsController.parentController = self
         controllers.append(accountSettingsController)
                 
-//        tabBarController.cameraItemAndAction = (
-//            UITabBarItem(title: "Camera", image: UIImage(bundleImageName: "Chat List/Tabs/IconCamera"), tag: 2),
-//            { [weak self] in
-//                guard let self else {
-//                    return
-//                }
-//                let coordinator = self.openStoryCamera(
-//                    transitionIn: nil,
-//                    transitionedIn: { [weak self] in
-//                        guard let self, let rootTabController = self.rootTabController else {
-//                            return
-//                        }
-//                        if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
-//                            rootTabController.selectedIndex = index
-//                        }
-//                    },
-//                    transitionOut: { [weak self] finished in
-//                        guard let self else {
-//                            return nil
-//                        }
-//                        if finished {
-//                            if let chatListController = self.chatListController as? ChatListControllerImpl, let transitionView = chatListController.transitionViewForOwnStoryItem() {
-//                                return StoryCameraTransitionOut(
-//                                    destinationView: transitionView,
-//                                    destinationRect: transitionView.bounds,
-//                                    destinationCornerRadius: transitionView.bounds.height / 2.0
-//                                )
-//                            }
-//                        }
-//                        return nil
-//                    }
-//                )
-//                coordinator?.animateIn()
-//            }
-//        )
-        
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
         self.contactsController = contactsController
