@@ -88,6 +88,15 @@ public enum MediaPlayerStreaming {
                 return (0.25, 0.5, 1.0)
         }
     }
+    
+    public var isSeekable: Bool {
+        switch self {
+        case .none, .conservative, .earlierStart:
+            return true
+        case .story:
+            return false
+        }
+    }
 }
 
 private final class MediaPlayerAudioRendererContext {
@@ -311,7 +320,7 @@ private final class MediaPlayerContext {
             let _ = self.playerStatusValue.swap(status)
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, userLocation: self.userLocation, userContentType: self.userContentType, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, streamable: self.streamable.enabled, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2, storeAfterDownload: self.storeAfterDownload)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, userLocation: self.userLocation, userContentType: self.userContentType, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, streamable: self.streamable.enabled, isSeekable: self.streamable.isSeekable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2, storeAfterDownload: self.storeAfterDownload)
         let disposable = MetaDisposable()
         let updatedSeekState: MediaPlayerSeekState?
         if let loadedDuration = loadedDuration {

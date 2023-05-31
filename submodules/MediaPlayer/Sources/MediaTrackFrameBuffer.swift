@@ -41,6 +41,7 @@ public final class MediaTrackFrameBuffer {
     private var frameSourceSinkIndex: Int?
     
     private var frames: [MediaTrackDecodableFrame] = []
+    private var maxFrameTime: Double?
     private var endOfStream = false
     private var bufferedUntilTime: CMTime?
     private var isWaitingForLowWaterDuration: Bool = false
@@ -94,6 +95,13 @@ public final class MediaTrackFrameBuffer {
         }
         
         if let maxUntilTime = maxUntilTime {
+            if let maxFrameTime = self.maxFrameTime {
+                if maxFrameTime < CMTimeGetSeconds(maxUntilTime) {
+                    self.maxFrameTime = CMTimeGetSeconds(maxUntilTime)
+                }
+            } else {
+                self.maxFrameTime = CMTimeGetSeconds(maxUntilTime)
+            }
             if traceEvents {
                 print("\(self.type) added \(frames.count) frames until \(CMTimeGetSeconds(maxUntilTime)), \(self.frames.count) total")
             }
@@ -111,13 +119,21 @@ public final class MediaTrackFrameBuffer {
     public func status(at timestamp: Double) -> MediaTrackFrameBufferStatus {
         var bufferedDuration = 0.0
         if let bufferedUntilTime = self.bufferedUntilTime {
-            if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+            if CMTimeGetSeconds(self.duration) > 0.0 {
+                if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+                    return .finished(at: CMTimeGetSeconds(bufferedUntilTime))
+                }
+            } else if self.endOfStream {
                 return .finished(at: CMTimeGetSeconds(bufferedUntilTime))
             }
             
             bufferedDuration = CMTimeGetSeconds(bufferedUntilTime) - timestamp
         } else if self.endOfStream {
-            return .finished(at: CMTimeGetSeconds(self.duration))
+            if let maxFrameTime = self.maxFrameTime {
+                return .finished(at: maxFrameTime)
+            } else {
+                return .finished(at: CMTimeGetSeconds(self.duration))
+            }
         }
         
         let minTimestamp = timestamp - 1.0
@@ -134,7 +150,7 @@ public final class MediaTrackFrameBuffer {
             let delayIncrement = 0.3
             var generateUntil = timestamp + delayIncrement
             while generateUntil < timestamp + self.highWaterDuration {
-                self.frameSource.generateFrames(until: min(timestamp + self.highWaterDuration, generateUntil))
+                self.frameSource.generateFrames(until: min(timestamp + self.highWaterDuration, generateUntil), types: [self.type])
                 generateUntil += delayIncrement
             }
             

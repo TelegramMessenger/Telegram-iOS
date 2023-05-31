@@ -89,7 +89,7 @@ public final class SoftwareVideoSource {
         }
         let ioBufferSize = 64 * 1024
         
-        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback)
+        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: true)
         self.avIoContext = avIoContext
         
         avFormatContext.setIO(self.avIoContext!)
@@ -322,7 +322,7 @@ public final class SoftwareAudioSource {
         
         let ioBufferSize = 64 * 1024
         
-        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback)
+        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: true)
         self.avIoContext = avIoContext
         
         avFormatContext.setIO(self.avIoContext!)

@@ -96,7 +96,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             fetchedData = Data()
         } else {
             #if DEBUG
-            print("requestRange: \(requestRange)")
+            //print("requestRange: \(requestRange)")
             #endif
             if let tempFilePath = context.tempFilePath, let fileData = (try? Data(contentsOf: URL(fileURLWithPath: tempFilePath), options: .mappedRead))?.subdata(in: Int(requestRange.lowerBound) ..< Int(requestRange.upperBound)) {
                 fetchedData = fileData
@@ -327,7 +327,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.autosaveDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, userLocation: MediaResourceUserLocation, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?, storeAfterDownload: (() -> Void)?) {
+    func initializeState(postbox: Postbox, userLocation: MediaResourceUserLocation, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, isSeekable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?, storeAfterDownload: (() -> Void)?) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -382,7 +382,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         let avFormatContext = FFMpegAVFormatContext()
         
-        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(self.ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback) else {
+        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(self.ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: isSeekable) else {
             self.readingError = true
             return
         }
@@ -505,7 +505,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         }
     }
     
-    func takeFrames(until: Double) -> (frames: [MediaTrackDecodableFrame], endOfStream: Bool) {
+    func takeFrames(until: Double, types: [MediaTrackFrameType]) -> (frames: [MediaTrackDecodableFrame], endOfStream: Bool) {
         if self.readingError {
             return ([], true)
         }
@@ -515,12 +515,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         }
         
         var videoTimestamp: Double?
-        if initializedState.videoStream == nil {
+        if initializedState.videoStream == nil || !types.contains(.video) {
             videoTimestamp = Double.infinity
         }
         
         var audioTimestamp: Double?
-        if initializedState.audioStream == nil {
+        if initializedState.audioStream == nil || !types.contains(.audio) {
             audioTimestamp = Double.infinity
         }
         
@@ -535,6 +535,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     
                     if videoTimestamp == nil || videoTimestamp! < CMTimeGetSeconds(frame.pts) {
                         videoTimestamp = CMTimeGetSeconds(frame.pts)
+                        //print("read video at \(CMTimeGetSeconds(frame.pts))")
                     }
                 } else if let audioStream = initializedState.audioStream, Int(packet.streamIndex) == audioStream.index {
                     let packetPts = packet.pts
@@ -556,6 +557,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     
                     if audioTimestamp == nil || audioTimestamp! < CMTimeGetSeconds(pts) {
                         audioTimestamp = CMTimeGetSeconds(pts)
+                        //print("read audio at \(CMTimeGetSeconds(pts))")
                     }
                 }
             } else {
