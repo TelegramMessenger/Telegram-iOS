@@ -126,7 +126,7 @@ public final class MediaEditorValues: Codable {
         
         self.videoTrimRange = try container.decodeIfPresent(Range<Double>.self, forKey: .videoTrimRange)
         self.videoIsMuted = try container.decode(Bool.self, forKey: .videoIsMuted)
-        self.videoIsFullHd = try container.decode(Bool.self, forKey: .videoIsFullHd)
+        self.videoIsFullHd = try container.decodeIfPresent(Bool.self, forKey: .videoIsFullHd) ?? false
         
         if let drawingData = try container.decodeIfPresent(Data.self, forKey: .drawing), let image = UIImage(data: drawingData) {
             self.drawing = image
@@ -163,6 +163,7 @@ public final class MediaEditorValues: Codable {
         
         try container.encodeIfPresent(self.videoTrimRange, forKey: .videoTrimRange)
         try container.encode(self.videoIsMuted, forKey: .videoIsMuted)
+        try container.encode(self.videoIsFullHd, forKey: .videoIsFullHd)
         
         if let drawing = self.drawing, let pngDrawingData = drawing.pngData() {
             try container.encode(pngDrawingData, forKey: .drawing)
