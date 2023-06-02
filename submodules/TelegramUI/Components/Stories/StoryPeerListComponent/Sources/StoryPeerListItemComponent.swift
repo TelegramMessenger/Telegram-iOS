@@ -9,6 +9,8 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AvatarNode
+import ContextUI
+import AsyncDisplayKit
 
 private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, radius: CGFloat) -> (point1Angle: CGFloat, point2Angle: CGFloat)? {
     let distanceVector = CGPoint(x: otherCenter.x - center.x, y: otherCenter.y - center.y)
@@ -142,6 +144,7 @@ public final class StoryPeerListItemComponent: Component {
     public let leftNeighborDistance: CGFloat?
     public let rightNeighborDistance: CGFloat?
     public let action: (EnginePeer) -> Void
+    public let contextGesture: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     
     public init(
         context: AccountContext,
@@ -155,7 +158,8 @@ public final class StoryPeerListItemComponent: Component {
         collapsedWidth: CGFloat,
         leftNeighborDistance: CGFloat?,
         rightNeighborDistance: CGFloat?,
-        action: @escaping (EnginePeer) -> Void
+        action: @escaping (EnginePeer) -> Void,
+        contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -169,6 +173,7 @@ public final class StoryPeerListItemComponent: Component {
         self.leftNeighborDistance = leftNeighborDistance
         self.rightNeighborDistance = rightNeighborDistance
         self.action = action
+        self.contextGesture = contextGesture
     }
     
     public static func ==(lhs: StoryPeerListItemComponent, rhs: StoryPeerListItemComponent) -> Bool {
@@ -208,7 +213,13 @@ public final class StoryPeerListItemComponent: Component {
         return true
     }
     
-    public final class View: HighlightTrackingButton {
+    public final class View: UIView {
+        private let extractedContainerNode: ContextExtractedContentContainingNode
+        private let containerNode: ContextControllerSourceNode
+        private let extractedBackgroundView: UIImageView
+        
+        private let button: HighlightTrackingButton
+        
         private let avatarContainer: UIView
         private var avatarNode: AvatarNode?
         private var avatarAddBadgeView: UIImageView?
@@ -223,6 +234,13 @@ public final class StoryPeerListItemComponent: Component {
         private weak var componentState: EmptyComponentState?
         
         public override init(frame: CGRect) {
+            self.button = HighlightTrackingButton()
+            
+            self.extractedContainerNode = ContextExtractedContentContainingNode()
+            self.containerNode = ContextControllerSourceNode()
+            self.extractedBackgroundView = UIImageView()
+            self.extractedBackgroundView.alpha = 0.0
+            
             self.avatarContainer = UIView()
             self.avatarContainer.isUserInteractionEnabled = false
             
@@ -238,9 +256,16 @@ public final class StoryPeerListItemComponent: Component {
             
             super.init(frame: frame)
             
-            self.addSubview(self.avatarContainer)
+            self.extractedContainerNode.contentNode.view.addSubview(self.extractedBackgroundView)
             
-            self.layer.addSublayer(self.indicatorColorLayer)
+            self.containerNode.addSubnode(self.extractedContainerNode)
+            self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
+            self.addSubview(self.containerNode.view)
+            
+            self.extractedContainerNode.contentNode.view.addSubview(self.button)
+            self.button.addSubview(self.avatarContainer)
+            
+            self.button.layer.addSublayer(self.indicatorColorLayer)
             self.indicatorMaskLayer.addSublayer(self.indicatorShapeLayer)
             self.indicatorColorLayer.mask = self.indicatorMaskLayer
             
@@ -252,7 +277,7 @@ public final class StoryPeerListItemComponent: Component {
             self.indicatorShapeLayer.lineWidth = 2.0
             self.indicatorShapeLayer.lineCap = .round
             
-            self.highligthedChanged = { [weak self] highlighted in
+            self.button.highligthedChanged = { [weak self] highlighted in
                 guard let self else {
                     return
                 }
@@ -264,7 +289,36 @@ public final class StoryPeerListItemComponent: Component {
                     self.layer.animateAlpha(from: previousAlpha, to: self.alpha, duration: 0.25)
                 }
             }
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            self.containerNode.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    return
+                }
+                self.button.isEnabled = false
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.button.isEnabled = true
+                }
+                component.contextGesture(self.extractedContainerNode, gesture, component.peer)
+            }
+            
+            self.extractedContainerNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+                guard let self, let component = self.component else {
+                    return
+                }
+                
+                if isExtracted {
+                    self.extractedBackgroundView.image = generateStretchableFilledCircleImage(diameter: 24.0, color: component.theme.contextMenu.backgroundColor)
+                }
+                transition.updateAlpha(layer: self.extractedBackgroundView.layer, alpha: isExtracted ? 1.0 : 0.0, completion: { [weak self] _ in
+                    if !isExtracted {
+                        self?.extractedBackgroundView.image = nil
+                    }
+                })
+            }
         }
         
         required public init?(coder: NSCoder) {
@@ -283,9 +337,21 @@ public final class StoryPeerListItemComponent: Component {
         }
         
         func update(component: StoryPeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let size = availableSize
+            
+            transition.setFrame(view: self.button, frame: CGRect(origin: CGPoint(), size: size))
+            transition.setFrame(view: self.extractedBackgroundView, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -4.0, dy: -4.0))
+            
+            self.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: self.extractedBackgroundView.frame.minX - 2.0, y: self.extractedBackgroundView.frame.minY), size: CGSize(width: self.extractedBackgroundView.frame.width + 4.0, height: self.extractedBackgroundView.frame.height))
+            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
+            
             let hadUnseen = self.component?.hasUnseen
             let hadProgress = self.component?.progress != nil
             let themeUpdated = self.component?.theme !== component.theme
+            
+            self.containerNode.isGestureEnabled = component.peer.id != component.context.account.peerId
             
             self.component = component
             self.componentState = state
@@ -440,7 +506,7 @@ public final class StoryPeerListItemComponent: Component {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint()
                     titleView.isUserInteractionEnabled = false
-                    self.addSubview(titleView)
+                    self.button.addSubview(titleView)
                 }
                 transition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)

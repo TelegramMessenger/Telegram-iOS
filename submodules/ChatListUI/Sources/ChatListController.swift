@@ -1848,6 +1848,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if let size = info.size {
                             fetchRange = (0 ..< Int64(size), .default)
                         }
+                        #if DEBUG
+                        fetchRange = nil
+                        #endif
                         self.preloadStoryResourceDisposables[resource.resource.id] = fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource, range: fetchRange).start()
                     }
                 }
@@ -2515,6 +2518,51 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     )
                     self.push(storyContainerScreen)
                 })
+            }
+            
+            componentView.storyContextPeerAction = { [weak self] sourceNode, gesture, peer in
+                guard let self else {
+                    return
+                }
+                
+                var items: [ContextMenuItem] = []
+                
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                        guard let self else {
+                            return
+                        }
+                        
+                        let _ = (self.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)
+                        )
+                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                            guard let self else {
+                                return
+                            }
+                            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                                return
+                            }
+                            (self.navigationController as? NavigationController)?.pushViewController(controller)
+                        })
+                    })
+                })))
+                items.append(.action(ContextMenuActionItem(text: "Mute", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
+                })))
+                items.append(.action(ContextMenuActionItem(text: "Archive", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
+                })))
+                
+                let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: self, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+                self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
             }
         }
     }

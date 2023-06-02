@@ -878,5 +878,9 @@ public extension TelegramEngine {
         public func getStoryViewList(account: Account, id: Int32, offsetTimestamp: Int32?, offsetPeerId: PeerId?, limit: Int) -> Signal<StoryViewList?, NoError> {
             return _internal_getStoryViewList(account: account, id: id, offsetTimestamp: offsetTimestamp, offsetPeerId: offsetPeerId, limit: limit)
         }
+        
+        public func storyViewList(id: Int32, views: EngineStoryItem.Views) -> EngineStoryViewListContext {
+            return EngineStoryViewListContext(account: self.account, storyId: id, views: views)
+        }
     }
 }

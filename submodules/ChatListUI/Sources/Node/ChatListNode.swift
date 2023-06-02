@@ -1214,6 +1214,8 @@ public final class ChatListNode: ListView {
         
         super.init()
         
+        self.useMainQueueTransactions = true
+        
         self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.verticalScrollIndicatorFollowsOverscroll = true
         
@@ -3128,6 +3130,7 @@ public final class ChatListNode: ListView {
             }
             
             var options = transition.options
+            options.insert(.Synchronous)
             if self.view.window != nil {
                 if !options.contains(.AnimateInsertion) {
                     options.insert(.PreferSynchronousDrawing)

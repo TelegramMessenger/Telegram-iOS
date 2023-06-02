@@ -24,6 +24,7 @@ public final class StoryPeerListComponent: Component {
     public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
     public let peerAction: (EnginePeer?) -> Void
+    public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     
     public init(
         externalState: ExternalState,
@@ -32,7 +33,8 @@ public final class StoryPeerListComponent: Component {
         strings: PresentationStrings,
         storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
-        peerAction: @escaping (EnginePeer?) -> Void
+        peerAction: @escaping (EnginePeer?) -> Void,
+        contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -41,6 +43,7 @@ public final class StoryPeerListComponent: Component {
         self.storySubscriptions = storySubscriptions
         self.collapseFraction = collapseFraction
         self.peerAction = peerAction
+        self.contextPeerAction = contextPeerAction
     }
     
     public static func ==(lhs: StoryPeerListComponent, rhs: StoryPeerListComponent) -> Bool {
@@ -315,7 +318,8 @@ public final class StoryPeerListComponent: Component {
                         collapsedWidth: collapsedItemWidth,
                         leftNeighborDistance: leftNeighborDistance,
                         rightNeighborDistance: rightNeighborDistance,
-                        action: component.peerAction
+                        action: component.peerAction,
+                        contextGesture: component.contextPeerAction
                     )),
                     environment: {},
                     containerSize: itemLayout.itemSize

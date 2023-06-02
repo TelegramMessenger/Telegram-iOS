@@ -12,17 +12,20 @@ import TelegramCore
 public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext
     public let storyItem: EngineStoryItem?
+    public let expandViewStats: () -> Void
     public let deleteAction: () -> Void
     public let moreAction: (UIView, ContextGesture?) -> Void
     
     public init(
         context: AccountContext,
         storyItem: EngineStoryItem?,
+        expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.storyItem = storyItem
+        self.expandViewStats = expandViewStats
         self.deleteAction = deleteAction
         self.moreAction = moreAction
     }
@@ -38,6 +41,7 @@ public final class StoryFooterPanelComponent: Component {
     }
     
     public final class View: UIView {
+        private let viewStatsButton: HighlightableButton
         private let viewStatsText = ComponentView<Empty>()
         private let deleteButton = ComponentView<Empty>()
         private var moreButton: MoreHeaderButton?
@@ -49,16 +53,29 @@ public final class StoryFooterPanelComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
+            self.viewStatsButton = HighlightableButton()
+            
             self.avatarsContext = AnimatedAvatarSetContext()
             self.avatarsNode = AnimatedAvatarSetNode()
             
             super.init(frame: frame)
             
-            self.addSubview(self.avatarsNode.view)
+            self.avatarsNode.view.isUserInteractionEnabled = false
+            self.viewStatsButton.addSubview(self.avatarsNode.view)
+            self.addSubview(self.viewStatsButton)
+            
+            self.viewStatsButton.addTarget(self, action: #selector(self.viewStatsPressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func viewStatsPressed() {
+            guard let component = self.component else {
+                return
+            }
+            component.expandViewStats()
         }
         
         func update(component: StoryFooterPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -85,16 +102,22 @@ public final class StoryFooterPanelComponent: Component {
                 leftOffset = avatarsNodeFrame.maxX + avatarSpacing
             }
             
-            let viewsText: String
+            var viewCount = 0
             if let views = component.storyItem?.views, views.seenCount != 0 {
-                if views.seenCount == 1 {
-                    viewsText = "1 view"
-                } else {
-                    viewsText = "\(views.seenCount) views"
-                }
-            } else {
-                viewsText = "No views yet"
+                viewCount = views.seenCount
             }
+            
+            let viewsText: String
+            if viewCount == 0 {
+                viewsText = "No Views"
+            } else if viewCount == 1 {
+                viewsText = "1 view"
+            } else {
+                viewsText = "\(viewCount) views"
+            }
+            
+            self.viewStatsButton.isEnabled = viewCount != 0
+            
             let viewStatsTextSize = self.viewStatsText.update(
                 transition: .immediate,
                 component: AnyComponent(Text(text: viewsText, font: Font.regular(15.0), color: .white)),
@@ -105,11 +128,14 @@ public final class StoryFooterPanelComponent: Component {
             if let viewStatsTextView = self.viewStatsText.view {
                 if viewStatsTextView.superview == nil {
                     viewStatsTextView.layer.anchorPoint = CGPoint()
-                    self.addSubview(viewStatsTextView)
+                    viewStatsTextView.isUserInteractionEnabled = false
+                    self.viewStatsButton.addSubview(viewStatsTextView)
                 }
                 transition.setPosition(view: viewStatsTextView, position: viewStatsTextFrame.origin)
                 transition.setBounds(view: viewStatsTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsTextFrame.size))
             }
+            
+            transition.setFrame(view: self.viewStatsButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: viewStatsTextFrame.maxX, height: viewStatsTextFrame.maxY + 8.0)))
             
             var rightContentOffset: CGFloat = availableSize.width - 12.0
             

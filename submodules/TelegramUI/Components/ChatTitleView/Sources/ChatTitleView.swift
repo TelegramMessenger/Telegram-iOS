@@ -118,7 +118,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     private let button: HighlightTrackingButtonNode
     
     var manualLayout: Bool = false
-    private var validLayout: (CGSize, CGRect, CGFloat)?
+    private var validLayout: (CGSize, CGRect)?
     
     private var titleLeftIcon: ChatTitleIcon = .none
     private var titleRightIcon: ChatTitleIcon = .none
@@ -355,8 +355,8 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.button.isUserInteractionEnabled = isEnabled
                 if !self.updateStatus() {
                     if updated {
-                        if !self.manualLayout, let (size, clearBounds, sideContentWidth) = self.validLayout {
-                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, sideContentWidth: sideContentWidth, transition: .animated(duration: 0.2, curve: .easeInOut))
+                        if !self.manualLayout, let (size, clearBounds) = self.validLayout {
+                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .animated(duration: 0.2, curve: .easeInOut))
                         }
                     }
                 }
@@ -605,8 +605,8 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         }
         
         if self.activityNode.transitionToState(state, animation: .slide) {
-            if !self.manualLayout, let (size, clearBounds, sideContentWidth) = self.validLayout {
-                let _ = self.updateLayout(size: size, clearBounds: clearBounds, sideContentWidth: sideContentWidth, transition: .animated(duration: 0.3, curve: .spring))
+            if !self.manualLayout, let (size, clearBounds) = self.validLayout {
+                let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .animated(duration: 0.3, curve: .spring))
             }
             return true
         } else {
@@ -688,8 +688,8 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        if !self.manualLayout, let (size, clearBounds, sideContentWidth) = self.validLayout {
-            let _ = self.updateLayout(size: size, clearBounds: clearBounds, sideContentWidth: sideContentWidth, transition: .immediate)
+        if !self.manualLayout, let (size, clearBounds) = self.validLayout {
+            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
         }
     }
     
@@ -704,14 +704,14 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             self.titleContent = titleContent
             let _ = self.updateStatus()
             
-            if !self.manualLayout, let (size, clearBounds, sideContentWidth) = self.validLayout {
-                let _ = self.updateLayout(size: size, clearBounds: clearBounds, sideContentWidth: sideContentWidth, transition: .immediate)
+            if !self.manualLayout, let (size, clearBounds) = self.validLayout {
+                let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
             }
         }
     }
     
-    public func updateLayout(size: CGSize, clearBounds: CGRect, sideContentWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.validLayout = (size, clearBounds, sideContentWidth)
+    public func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) -> CGRect {
+        self.validLayout = (size, clearBounds)
         
         self.button.frame = clearBounds
         self.contentContainer.frame = clearBounds
@@ -851,7 +851,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         
         self.pointerInteraction = PointerInteraction(view: self, style: .rectangle(CGSize(width: titleFrame.width + 16.0, height: 40.0)))
         
-        return titleFrame.width
+        return titleFrame
     }
     
     @objc private func buttonPressed() {
@@ -1015,7 +1015,7 @@ public final class ChatTitleComponent: Component {
             }
             contentView.updateThemeAndStrings(theme: component.theme, strings: component.strings, hasEmbeddedTitleContent: false)
             
-            let _ = contentView.updateLayout(size: availableSize, clearBounds: CGRect(origin: CGPoint(), size: availableSize), sideContentWidth: 0.0, transition: transition.containedViewLayoutTransition)
+            let _ = contentView.updateLayout(size: availableSize, clearBounds: CGRect(origin: CGPoint(), size: availableSize), transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             return availableSize

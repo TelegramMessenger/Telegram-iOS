@@ -169,13 +169,19 @@ final class StoryItemContentComponent: Component {
                     self.videoNode = videoNode
                     self.addSubnode(videoNode)
                     
+                    videoNode.playbackCompleted = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.presentationProgressUpdated(1.0)
+                    }
                     videoNode.ownsContentNodeUpdated = { [weak self] value in
                         guard let self else {
                             return
                         }
                         if value {
                             self.videoNode?.seek(0.0)
-                            self.videoNode?.playOnceWithSound(playAndRecord: false)
+                            self.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
                         }
                     }
                     videoNode.canAttachContent = true
@@ -404,9 +410,7 @@ final class StoryItemContentComponent: Component {
                     wasSynchronous = false
                 }
                 
-                #if DEBUG
                 self.performActionAfterImageContentLoaded(update: false)
-                #endif
                 
                 self.fetchDisposable?.dispose()
                 self.fetchDisposable = nil

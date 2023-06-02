@@ -1036,3 +1036,224 @@ func _internal_getStoryViews(account: Account, ids: [Int32]) -> Signal<[Int32: S
         }
     }
 }
+
+public final class EngineStoryViewListContext {
+    public struct LoadMoreToken: Equatable {
+        var id: Int64
+        var timestamp: Int32
+    }
+    
+    public final class Item: Equatable {
+        public let peer: EnginePeer
+        public let timestamp: Int32
+        
+        public init(
+            peer: EnginePeer,
+            timestamp: Int32
+        ) {
+            self.peer = peer
+            self.timestamp = timestamp
+        }
+        
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.timestamp != rhs.timestamp {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public struct State: Equatable {
+        public var totalCount: Int
+        public var items: [Item]
+        public var loadMoreToken: LoadMoreToken?
+        
+        public init(
+            totalCount: Int,
+            items: [Item],
+            loadMoreToken: LoadMoreToken?
+        ) {
+            self.totalCount = totalCount
+            self.items = items
+            self.loadMoreToken = loadMoreToken
+        }
+    }
+    
+    private final class Impl {
+        struct NextOffset: Equatable {
+            var id: Int64
+            var timestamp: Int32
+        }
+        
+        struct InternalState: Equatable {
+            var totalCount: Int
+            var items: [Item]
+            var canLoadMore: Bool
+            var nextOffset: NextOffset?
+        }
+        
+        let queue: Queue
+        
+        let account: Account
+        let storyId: Int32
+        
+        let disposable = MetaDisposable()
+        
+        var state: InternalState
+        let statePromise = Promise<InternalState>()
+        
+        var isLoadingMore: Bool = false
+        
+        init(queue: Queue, account: Account, storyId: Int32, views: EngineStoryItem.Views) {
+            self.queue = queue
+            self.account = account
+            self.storyId = storyId
+            
+            let initialState = State(totalCount: views.seenCount, items: [], loadMoreToken: LoadMoreToken(id: 0, timestamp: 0))
+            self.state = InternalState(totalCount: initialState.totalCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
+            self.statePromise.set(.single(self.state))
+            
+            if initialState.loadMoreToken != nil {
+                self.loadMore()
+            }
+        }
+        
+        deinit {
+            assert(self.queue.isCurrent())
+            
+            self.disposable.dispose()
+        }
+        
+        func loadMore() {
+            if self.isLoadingMore {
+                return
+            }
+            self.isLoadingMore = true
+            
+            let account = self.account
+            let storyId = self.storyId
+            let currentOffset = self.state.nextOffset
+            let limit = self.state.items.isEmpty ? 50 : 100
+            let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Void in
+            }
+            |> mapToSignal { _ -> Signal<InternalState, NoError> in
+                return account.network.request(Api.functions.stories.getStoryViewsList(id: storyId, offsetDate: currentOffset?.timestamp ?? 0, offsetId: currentOffset?.id ?? 0, limit: Int32(limit)))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<InternalState, NoError> in
+                    return account.postbox.transaction { transaction -> InternalState in
+                        switch result {
+                        case let .storyViewsList(count, views, users):
+                            var peers: [Peer] = []
+                            var peerPresences: [PeerId: Api.User] = [:]
+                            
+                            for user in users {
+                                let telegramUser = TelegramUser(user: user)
+                                peers.append(telegramUser)
+                                peerPresences[telegramUser.id] = user
+                            }
+                            
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                return updated
+                            })
+                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            
+                            var items: [Item] = []
+                            var nextOffset: NextOffset?
+                            for view in views {
+                                switch view {
+                                case let .storyView(userId, date):
+                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) {
+                                        items.append(Item(peer: EnginePeer(peer), timestamp: date))
+                                        
+                                        nextOffset = NextOffset(id: userId, timestamp: date)
+                                    }
+                                }
+                            }
+                            
+                            return InternalState(totalCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset)
+                        case .none:
+                            return InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                        }
+                    }
+                }
+            }
+            self.disposable.set((signal
+            |> deliverOn(self.queue)).start(next: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                struct ItemHash: Hashable {
+                    var peerId: EnginePeer.Id
+                }
+                
+                var existingItems = Set<ItemHash>()
+                for item in strongSelf.state.items {
+                    existingItems.insert(ItemHash(peerId: item.peer.id))
+                }
+                
+                for item in state.items {
+                    let itemHash = ItemHash(peerId: item.peer.id)
+                    if existingItems.contains(itemHash) {
+                        continue
+                    }
+                    existingItems.insert(itemHash)
+                    strongSelf.state.items.append(item)
+                }
+                if state.canLoadMore {
+                    strongSelf.state.totalCount = max(state.totalCount, strongSelf.state.items.count)
+                } else {
+                    strongSelf.state.totalCount = strongSelf.state.items.count
+                }
+                strongSelf.state.canLoadMore = state.canLoadMore
+                strongSelf.state.nextOffset = state.nextOffset
+                
+                strongSelf.isLoadingMore = false
+                strongSelf.statePromise.set(.single(strongSelf.state))
+            }))
+        }
+    }
+    
+    private let queue: Queue
+    private let impl: QueueLocalObject<Impl>
+    
+    public var state: Signal<State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.statePromise.get().start(next: { state in
+                    var loadMoreToken: LoadMoreToken?
+                    if let nextOffset = state.nextOffset {
+                        loadMoreToken = LoadMoreToken(id: nextOffset.id, timestamp: nextOffset.timestamp)
+                    }
+                    subscriber.putNext(State(
+                        totalCount: state.totalCount,
+                        items: state.items,
+                        loadMoreToken: loadMoreToken
+                    ))
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    init(account: Account, storyId: Int32, views: EngineStoryItem.Views) {
+        let queue = Queue()
+        self.queue = queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue, account: account, storyId: storyId, views: views)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+}

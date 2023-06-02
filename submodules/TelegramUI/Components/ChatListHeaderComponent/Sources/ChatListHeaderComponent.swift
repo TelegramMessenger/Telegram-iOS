@@ -293,6 +293,7 @@ public final class ChatListHeaderComponent: Component {
         
         var contentOffsetFraction: CGFloat = 0.0
         private(set) var centerContentWidth: CGFloat = 0.0
+        private(set) var centerContentOffsetX: CGFloat = 0.0
         
         init(
             backPressed: @escaping () -> Void,
@@ -440,7 +441,7 @@ public final class ChatListHeaderComponent: Component {
             }
         }
         
-        func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: Content, backTitle: String?, sideInset: CGFloat, sideContentWidth: CGFloat, size: CGSize, transition: Transition) {
+        func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: Content, backTitle: String?, sideInset: CGFloat, sideContentWidth: CGFloat, sideContentFraction: CGFloat, size: CGSize, transition: Transition) {
             transition.setPosition(view: self.titleOffsetContainer, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
             transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: self.titleOffsetContainer.bounds.origin, size: size))
             
@@ -616,6 +617,8 @@ public final class ChatListHeaderComponent: Component {
                 }
             }
             
+            var centerContentWidth: CGFloat = 0.0
+            var centerContentOffsetX: CGFloat = 0.0
             if let chatListTitle = content.chatListTitle {
                 var chatListTitleTransition = transition
                 let chatListTitleView: ChatListTitleView
@@ -633,8 +636,13 @@ public final class ChatListHeaderComponent: Component {
                 chatListTitleView.theme = theme
                 chatListTitleView.strings = strings
                 chatListTitleView.setTitle(chatListTitle, animated: false)
-                let centerContentWidth = chatListTitleView.updateLayout(size: chatListTitleContentSize, clearBounds: CGRect(origin: CGPoint(), size: chatListTitleContentSize), sideContentWidth: sideContentWidth, transition: transition.containedViewLayoutTransition)
-                self.centerContentWidth = centerContentWidth
+                let titleContentRect = chatListTitleView.updateLayout(size: chatListTitleContentSize, clearBounds: CGRect(origin: CGPoint(), size: chatListTitleContentSize), transition: transition.containedViewLayoutTransition)
+                centerContentWidth = floor((chatListTitleContentSize.width * 0.5 - titleContentRect.minX) * 2.0)
+                
+                //sideWidth + centerWidth + centerOffset = size.width
+                //let centerOffset = -(size.width - (sideContentWidth + centerContentWidth)) * 0.5 + size.width * 0.5
+                let centerOffset = sideContentWidth
+                centerContentOffsetX = -max(0.0, centerOffset + titleContentRect.maxX - 2.0 - rightOffset)
                 
                 chatListTitleView.openStatusSetup = { [weak self] sourceView in
                     guard let self else {
@@ -649,7 +657,14 @@ public final class ChatListHeaderComponent: Component {
                     self.toggleIsLocked()
                 }
                 
-                chatListTitleTransition.setFrame(view: chatListTitleView, frame: CGRect(origin: CGPoint(x: floor((size.width - chatListTitleContentSize.width) / 2.0), y: floor((size.height - chatListTitleContentSize.height) / 2.0)), size: chatListTitleContentSize))
+                let chatListTitleOffset: CGFloat
+                if chatListTitle.activity {
+                    chatListTitleOffset = 0.0
+                } else {
+                    chatListTitleOffset = (centerOffset + centerContentOffsetX) * sideContentFraction
+                }
+                
+                chatListTitleTransition.setFrame(view: chatListTitleView, frame: CGRect(origin: CGPoint(x: chatListTitleOffset + floor((size.width - chatListTitleContentSize.width) / 2.0), y: floor((size.height - chatListTitleContentSize.height) / 2.0)), size: chatListTitleContentSize))
             } else {
                 if let chatListTitleView = self.chatListTitleView {
                     self.chatListTitleView = nil
@@ -658,6 +673,8 @@ public final class ChatListHeaderComponent: Component {
             }
             
             self.titleTextView.isHidden = self.chatListTitleView != nil || self.titleContentView != nil
+            self.centerContentWidth = centerContentWidth
+            self.centerContentOffsetX = centerContentOffsetX
         }
     }
     
@@ -672,6 +689,7 @@ public final class ChatListHeaderComponent: Component {
         private let storyPeerListExternalState = StoryPeerListComponent.ExternalState()
         private var storyPeerList: ComponentView<Empty>?
         public var storyPeerAction: ((EnginePeer?) -> Void)?
+        public var storyContextPeerAction: ((ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void)?
         
         private var effectiveContentView: ContentView? {
             return self.secondaryContentView ?? self.primaryContentView
@@ -803,10 +821,16 @@ public final class ChatListHeaderComponent: Component {
                                 return
                             }
                             self.storyPeerAction?(peer)
+                        },
+                        contextPeerAction: { [weak self] sourceNode, gesture, peer in
+                            guard let self else {
+                                return
+                            }
+                            self.storyContextPeerAction?(sourceNode, gesture, peer)
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: self.bounds.width, height: 94.0)
+                    containerSize: CGSize(width: availableSize.width, height: 94.0)
                 )
             }
             
@@ -851,7 +875,7 @@ public final class ChatListHeaderComponent: Component {
                     }
                 }
                 
-                primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, backTitle: primaryContent.backTitle, sideInset: component.sideInset, sideContentWidth: sideContentWidth * (1.0 - component.storiesFraction), size: availableSize, transition: primaryContentTransition)
+                primaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: primaryContent, backTitle: primaryContent.backTitle, sideInset: component.sideInset, sideContentWidth: sideContentWidth, sideContentFraction: (1.0 - component.storiesFraction), size: availableSize, transition: primaryContentTransition)
                 primaryContentTransition.setFrame(view: primaryContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 primaryContentView.updateContentOffsetFraction(contentOffsetFraction: 1.0 - self.storyOffsetFraction, transition: primaryContentTransition)
@@ -890,7 +914,7 @@ public final class ChatListHeaderComponent: Component {
                     self.secondaryContentView = secondaryContentView
                     self.addSubview(secondaryContentView)
                 }
-                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, backTitle: component.primaryContent?.navigationBackTitle ?? component.primaryContent?.title, sideInset: component.sideInset, sideContentWidth: 0.0, size: availableSize, transition: secondaryContentTransition)
+                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, backTitle: component.primaryContent?.navigationBackTitle ?? component.primaryContent?.title, sideInset: component.sideInset, sideContentWidth: 0.0, sideContentFraction: 0.0, size: availableSize, transition: secondaryContentTransition)
                 secondaryContentTransition.setFrame(view: secondaryContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 secondaryContentView.updateContentOffsetFraction(contentOffsetFraction: 1.0 - self.storyOffsetFraction, transition: secondaryContentTransition)
@@ -946,7 +970,7 @@ public final class ChatListHeaderComponent: Component {
                 
                 var defaultStoryListX: CGFloat = 0.0
                 if let primaryContentView = self.primaryContentView {
-                    defaultStoryListX = floor((self.storyPeerListExternalState.collapsedWidth - primaryContentView.centerContentWidth) * 0.5)
+                    defaultStoryListX = floor((self.storyPeerListExternalState.collapsedWidth - primaryContentView.centerContentWidth) * 0.5) + primaryContentView.centerContentOffsetX
                 }
                 
                 storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: -1.0 * availableSize.width * component.secondaryTransition + (1.0 - component.storiesFraction) * defaultStoryListX, y: storyPeerListPosition), size: CGSize(width: availableSize.width, height: 94.0)))

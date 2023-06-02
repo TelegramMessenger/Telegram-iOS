@@ -914,34 +914,30 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             if itemNode.listNode.isTracking {
                 if case let .known(value) = offset {
                     if !self.storiesUnlocked {
-                        if value < -1.0 {
+                        if value < -50.0 {
                             self.storiesUnlocked = true
                             DispatchQueue.main.async { [weak self] in
                                 guard let self else {
                                     return
                                 }
+                                
+                                HapticFeedback().impact()
+                                
                                 self.currentItemNode.ignoreStoryInsetAdjustment = true
+                                self.currentItemNode.allowInsetFixWhileTracking = true
                                 self.onStoriesLockedUpdated?(true)
                                 self.currentItemNode.ignoreStoryInsetAdjustment = false
+                                self.currentItemNode.allowInsetFixWhileTracking = false
                             }
                         }
                     }
                 }
-            } else {
+            } else if self.storiesUnlocked {
                 switch offset {
                 case let .known(value):
                     if value >= 94.0 {
-                        if self.storiesUnlocked {
-                            self.storiesUnlocked = false
-                            self.currentItemNode.stopScrolling()
-                            
-                            DispatchQueue.main.async { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.onStoriesLockedUpdated?(false)
-                            }
-                        }
+                        self.storiesUnlocked = false
+                        self.onStoriesLockedUpdated?(false)
                     }
                 default:
                     break
@@ -957,7 +953,6 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 if value > 94.0 {
                     if self.storiesUnlocked {
                         self.storiesUnlocked = false
-                        self.currentItemNode.stopScrolling()
                         
                         DispatchQueue.main.async { [weak self] in
                             guard let self else {
@@ -1720,7 +1715,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             guard let self else {
                 return
             }
-            self.controller?.requestLayout(transition: .immediate)
+            //self.controller?.requestLayout(transition: .immediate)
+            self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
         }
         
         let inlineContentPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.inlineContentPanGesture(_:)), allowedDirections: { [weak self] _ in

@@ -19,6 +19,7 @@ public final class StoryContentContextImpl: StoryContentContext {
         private let peerId: EnginePeer.Id
         
         private(set) var sliceValue: StoryContentContextState.FocusedSlice?
+        fileprivate var nextItems: [EngineStoryItem] = []
         
         let updated = Promise<Void>()
         
@@ -154,6 +155,25 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isPublic: item.isPublic
                         )
                         
+                        var nextItems: [EngineStoryItem] = []
+                        for i in (focusedIndex + 1) ..< min(focusedIndex + 4, itemsView.items.count) {
+                            if let item = itemsView.items[i].value.get(Stories.StoredItem.self), case let .item(item) = item, let media = item.media {
+                                nextItems.append(EngineStoryItem(
+                                    id: item.id,
+                                    timestamp: item.timestamp,
+                                    media: EngineMedia(media),
+                                    text: item.text,
+                                    entities: item.entities,
+                                    views: nil,
+                                    privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                    isPinned: item.isPinned,
+                                    isExpired: item.isExpired,
+                                    isPublic: item.isPublic
+                                ))
+                            }
+                        }
+                        
+                        self.nextItems = nextItems
                         self.sliceValue = StoryContentContextState.FocusedSlice(
                             peer: peer,
                             item: StoryContentItem(
@@ -314,6 +334,8 @@ public final class StoryContentContextImpl: StoryContentContext {
     private var requestedStoryKeys = Set<StoryKey>()
     private var requestStoryDisposables = DisposableSet()
     
+    private var preloadStoryResourceDisposables: [MediaResourceId: Disposable] = [:]
+    
     public init(
         context: AccountContext,
         focusedPeerId: EnginePeer.Id?
@@ -336,6 +358,9 @@ public final class StoryContentContextImpl: StoryContentContext {
     deinit {
         self.storySubscriptionsDisposable?.dispose()
         self.requestStoryDisposables.dispose()
+        for (_, disposable) in self.preloadStoryResourceDisposables {
+            disposable.dispose()
+        }
     }
     
     private func updatePeerContexts() {
@@ -486,6 +511,82 @@ public final class StoryContentContextImpl: StoryContentContext {
         self.statePromise.set(.single(stateValue))
         
         self.updatedPromise.set(.single(Void()))
+        
+        var possibleItems: [(EnginePeer, EngineStoryItem)] = []
+        if let slice = currentState.centralPeerContext.sliceValue {
+            for item in currentState.centralPeerContext.nextItems {
+                possibleItems.append((slice.peer, item))
+            }
+        }
+        if let nextPeerContext = currentState.nextPeerContext, let slice = nextPeerContext.sliceValue {
+            possibleItems.append((slice.peer, slice.item.storyItem))
+            for item in nextPeerContext.nextItems {
+                possibleItems.append((slice.peer, item))
+            }
+        }
+        
+        var nextPriority = 0
+        var resultResources: [EngineMediaResource.Id: StoryPreloadInfo] = [:]
+        for i in 0 ..< min(possibleItems.count, 3) {
+            let peer = possibleItems[i].0
+            let item = possibleItems[i].1
+            if let peerReference = PeerReference(peer._asPeer()) {
+                if let image = item.media._asMedia() as? TelegramMediaImage, let resource = image.representations.last?.resource {
+                    let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: image), resource: resource)
+                    resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                        resource: resource,
+                        size: nil,
+                        priority: .top(position: nextPriority)
+                    )
+                    nextPriority += 1
+                } else if let file = item.media._asMedia() as? TelegramMediaFile {
+                    if let preview = file.previewRepresentations.last {
+                        let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: file), resource: preview.resource)
+                        resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                            resource: resource,
+                            size: nil,
+                            priority: .top(position: nextPriority)
+                        )
+                        nextPriority += 1
+                    }
+                    
+                    let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: file), resource: file.resource)
+                    resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                        resource: resource,
+                        size: file.preloadSize,
+                        priority: .top(position: nextPriority)
+                    )
+                    nextPriority += 1
+                }
+            }
+        }
+        
+        var validIds: [MediaResourceId] = []
+        for (_, info) in resultResources.sorted(by: { $0.value.priority < $1.value.priority }) {
+            let resource = info.resource
+            validIds.append(resource.resource.id)
+            if self.preloadStoryResourceDisposables[resource.resource.id] == nil {
+                var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
+                if let size = info.size {
+                    fetchRange = (0 ..< Int64(size), .default)
+                }
+                #if DEBUG
+                fetchRange = nil
+                #endif
+                self.preloadStoryResourceDisposables[resource.resource.id] = fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource, range: fetchRange).start()
+            }
+        }
+        
+        var removeIds: [MediaResourceId] = []
+        for (id, disposable) in self.preloadStoryResourceDisposables {
+            if !validIds.contains(id) {
+                removeIds.append(id)
+                disposable.dispose()
+            }
+        }
+        for id in removeIds {
+            self.preloadStoryResourceDisposables.removeValue(forKey: id)
+        }
     }
     
     public func resetSideStates() {
