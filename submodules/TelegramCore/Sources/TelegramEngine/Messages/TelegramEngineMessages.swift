@@ -859,8 +859,8 @@ public extension TelegramEngine {
             }
         }
         
-        public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
-            return _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, privacy: privacy)
+        public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy) -> Signal<StoryUploadResult, NoError> {
+            return _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, pin: pin, privacy: privacy)
         }
         
         public func deleteStory(id: Int32) -> Signal<Never, NoError> {

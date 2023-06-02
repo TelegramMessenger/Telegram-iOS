@@ -77,7 +77,7 @@ private final class CameraContext {
             }
             
             let timestamp = CACurrentMediaTime()
-            if timestamp > self.lastSnapshotTimestamp + 5.0 {
+            if timestamp > self.lastSnapshotTimestamp + 2.5 {
                 self.savePreviewSnapshot(pixelBuffer: pixelBuffer)
                 self.lastSnapshotTimestamp = timestamp
             }
@@ -306,19 +306,25 @@ public final class Camera {
     }
     
     public func startCapture() {
+#if targetEnvironment(simulator)
+#else
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.startCapture()
             }
         }
+#endif
     }
     
     public func stopCapture(invalidate: Bool = false) {
+#if targetEnvironment(simulator)
+#else
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.stopCapture(invalidate: invalidate)
             }
         }
+#endif
     }
     
     public func togglePosition() {

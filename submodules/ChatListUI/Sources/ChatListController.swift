@@ -2542,7 +2542,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.fullScreenEffectView = nil
             fullScreenEffectView.removeFromSuperview()
         }
-        
+
         if let value = RippleEffectView(centerLocation: centerLocation, completion: { [weak self] in
             guard let self else {
                 return
@@ -2557,6 +2557,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.view.addSubview(value)
             value.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
         }
+    }
+    
+    private(set) var storyUploadProgress: Float?
+    public func updateStoryUploadProgress(_ progress: Float?) {
+        self.storyUploadProgress = progress.flatMap { max(0.027, min(0.99, $0)) }
+        self.chatListDisplayNode.requestNavigationBarLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
+    }
+    
+    public func scrollToStories() {
+        
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -5463,15 +5473,17 @@ private final class ChatListLocationContext {
                 self.proxyButton = nil
             }
             
-            self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
-                content: .icon(imageName: "Chat List/AddStoryIcon"),
-                pressed: { [weak self] _ in
-                    guard let self, let parentController = self.parentController else {
-                        return
+            if case .chatList(.root) = self.location {
+                self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
+                    content: .icon(imageName: "Chat List/AddStoryIcon"),
+                    pressed: { [weak self] _ in
+                        guard let self, let parentController = self.parentController else {
+                            return
+                        }
+                        parentController.openStoryCamera()
                     }
-                    parentController.openStoryCamera()
-                }
-            )))
+                )))
+            }
             
             self.chatListTitle = titleContent
             

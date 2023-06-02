@@ -203,12 +203,12 @@ private final class CameraScreenComponent: CombinedComponent {
             } else {
                 self.camera.setFlashMode(.off)
             }
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         func togglePosition() {
             self.camera.togglePosition()
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         func updateSwipeHint(_ hint: CaptureControlsComponent.SwipeHint) {
@@ -787,6 +787,10 @@ public class CameraScreen: ViewController {
             ).start(next: { [weak self] changingPosition, forceBlur in
                 if let self {
                     if changingPosition {
+                        if let snapshot = self.simplePreviewView?.snapshotView(afterScreenUpdates: false) {
+                            self.simplePreviewView?.addSubview(snapshot)
+                            self.previewSnapshotView = snapshot
+                        }
                         UIView.transition(with: self.previewContainerView, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
                             self.previewBlurView.effect = UIBlurEffect(style: .dark)
                         })
@@ -879,6 +883,7 @@ public class CameraScreen: ViewController {
             }
         }
         
+        private var isDismissing = false
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let controller = self.controller else {
                 return
@@ -891,7 +896,8 @@ public class CameraScreen: ViewController {
                 if !"".isEmpty {
                     
                 } else {
-                    if translation.x < -10.0 {
+                    if translation.x < -10.0 || self.isDismissing {
+                        self.isDismissing = true
                         let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                         controller.updateTransitionProgress(transitionFraction, transition: .immediate)
                     } else if translation.y < -10.0 {
@@ -904,6 +910,8 @@ public class CameraScreen: ViewController {
                 let velocity = gestureRecognizer.velocity(in: self.view)
                 let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                 controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
+                
+                self.isDismissing = false
             default:
                 break
             }
@@ -1306,7 +1314,7 @@ public class CameraScreen: ViewController {
     
     func presentGallery(fromGesture: Bool = false) {
         if !fromGesture {
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         var didStopCameraCapture = false
@@ -1364,8 +1372,10 @@ public class CameraScreen: ViewController {
             return
         }
         
+        self.dismissAllTooltips()
+        
         if !interactive {
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         self.node.camera.stopCapture(invalidate: true)
@@ -1383,6 +1393,20 @@ public class CameraScreen: ViewController {
         } else {
             self.dismiss(animated: false)
         }
+    }
+    
+    private func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            return true
+        })
     }
     
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {

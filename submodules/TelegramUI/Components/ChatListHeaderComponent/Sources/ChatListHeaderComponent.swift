@@ -134,6 +134,7 @@ public final class ChatListHeaderComponent: Component {
     public let networkStatus: HeaderNetworkStatusComponent.Content?
     public let storySubscriptions: EngineStorySubscriptions?
     public let storiesFraction: CGFloat
+    public let uploadProgress: Float?
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -149,6 +150,7 @@ public final class ChatListHeaderComponent: Component {
         networkStatus: HeaderNetworkStatusComponent.Content?,
         storySubscriptions: EngineStorySubscriptions?,
         storiesFraction: CGFloat,
+        uploadProgress: Float?,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -163,6 +165,7 @@ public final class ChatListHeaderComponent: Component {
         self.networkStatus = networkStatus
         self.storySubscriptions = storySubscriptions
         self.storiesFraction = storiesFraction
+        self.uploadProgress = uploadProgress
         self.theme = theme
         self.strings = strings
         self.openStatusSetup = openStatusSetup
@@ -189,6 +192,9 @@ public final class ChatListHeaderComponent: Component {
             return false
         }
         if lhs.storiesFraction != rhs.storiesFraction {
+            return false
+        }
+        if lhs.uploadProgress != rhs.uploadProgress {
             return false
         }
         if lhs.context !== rhs.context {
@@ -789,6 +795,9 @@ public final class ChatListHeaderComponent: Component {
                     self.storyPeerList = storyPeerList
                 }
                 
+                if let uploadProgress = component.uploadProgress {
+                    print("out \(uploadProgress)")
+                }
                 let _ = storyPeerList.update(
                     transition: storyListTransition,
                     component: AnyComponent(StoryPeerListComponent(
@@ -798,6 +807,7 @@ public final class ChatListHeaderComponent: Component {
                         strings: component.strings,
                         storySubscriptions: storySubscriptions,
                         collapseFraction: 1.0 - component.storiesFraction,
+                        uploadProgress: component.uploadProgress,
                         peerAction: { [weak self] peer in
                             guard let self else {
                                 return

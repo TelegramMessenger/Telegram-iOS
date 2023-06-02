@@ -192,6 +192,7 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
                 for layer in sublayers {
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
@@ -245,8 +246,8 @@ final class DrawingVectorEntititySelectionView: DrawingEntitySelectionView, UIGe
             entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
-        case .ended:
-            break
+        case .ended, .cancelled:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }

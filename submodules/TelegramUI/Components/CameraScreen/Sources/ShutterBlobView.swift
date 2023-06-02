@@ -214,7 +214,7 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
 
         self.colorPixelFormat = .bgra8Unorm
         self.framebufferOnly = true
-        //self.presentsWithTransaction = true
+        
         self.isPaused = true
         self.delegate = self
         

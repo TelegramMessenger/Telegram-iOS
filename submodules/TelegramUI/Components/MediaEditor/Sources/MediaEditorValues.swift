@@ -5,7 +5,7 @@ import TelegramCore
 import AVFoundation
 import VideoToolbox
 
-public enum EditorToolKey: Int32 {
+public enum EditorToolKey: Int32, CaseIterable {
     case enhance
     case brightness
     case contrast
@@ -37,7 +37,50 @@ private let adjustmentToolsKeys: [EditorToolKey] = [
     .sharpen
 ]
 
-public final class MediaEditorValues: Codable {
+public final class MediaEditorValues: Codable, Equatable {
+    public static func == (lhs: MediaEditorValues, rhs: MediaEditorValues) -> Bool {
+        if lhs.originalDimensions != rhs.originalDimensions {
+            return false
+        }
+        if lhs.cropOffset != rhs.cropOffset {
+            return false
+        }
+        if lhs.cropSize != rhs.cropSize {
+            return false
+        }
+        if lhs.cropScale != rhs.cropScale {
+            return false
+        }
+        if lhs.cropRotation != rhs.cropRotation {
+            return false
+        }
+        if lhs.cropMirroring != rhs.cropMirroring {
+            return false
+        }
+        if lhs.gradientColors != rhs.gradientColors {
+            return false
+        }
+        if lhs.videoTrimRange != rhs.videoTrimRange {
+            return false
+        }
+        if lhs.videoIsMuted != rhs.videoIsMuted {
+            return false
+        }
+        if lhs.videoIsFullHd != rhs.videoIsFullHd {
+            return false
+        }
+        if lhs.drawing !== rhs.drawing {
+            return false
+        }
+        if lhs.entities != rhs.entities {
+            return false
+        }
+//        if lhs.toolValues != rhs.toolValues {
+//            return false
+//        }
+        return true
+    }
+    
     private enum CodingKeys: String, CodingKey {
         case originalWidth
         case originalHeight
@@ -210,6 +253,39 @@ public final class MediaEditorValues: Codable {
     
     func withUpdatedToolValues(_ toolValues: [EditorToolKey: Any]) -> MediaEditorValues {
         return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, drawing: self.drawing, entities: self.entities, toolValues: toolValues)
+    }
+    
+    public var resultDimensions: PixelDimensions {
+        if self.videoIsFullHd {
+            return PixelDimensions(width: 1080, height: 1920)
+        } else {
+            return PixelDimensions(width: 720, height: 1280)
+        }
+    }
+    
+    public var hasChanges: Bool {
+        if self.cropOffset != .zero {
+            return true
+        }
+        if self.cropScale != 1.0 {
+            return true
+        }
+        if self.cropRotation != 0.0 {
+            return true
+        }
+        if self.cropMirroring {
+            return true
+        }
+        if self.videoTrimRange != nil {
+            return true
+        }
+        if !self.entities.isEmpty {
+            return true
+        }
+        if !self.toolValues.isEmpty {
+            return true
+        }
+        return false
     }
 }
 
@@ -621,7 +697,7 @@ public extension MediaEditorValues {
     }
     
     var requiresComposing: Bool {
-        if self.originalDimensions.width > self.originalDimensions.height {
+        if self.originalDimensions.width > 0 && abs((Double(self.originalDimensions.height) / Double(self.originalDimensions.width)) - 1.7777778) > 0.001 {
             return true
         }
         if abs(1.0 - self.cropScale) > 0.0 {

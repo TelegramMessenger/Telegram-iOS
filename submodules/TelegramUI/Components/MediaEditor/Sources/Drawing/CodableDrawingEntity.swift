@@ -1,6 +1,10 @@
 import Foundation
 
-public enum CodableDrawingEntity {
+public enum CodableDrawingEntity: Equatable {
+    public static func == (lhs: CodableDrawingEntity, rhs: CodableDrawingEntity) -> Bool {
+        return lhs.entity.isEqual(to: rhs.entity)
+    }
+    
     case sticker(DrawingStickerEntity)
     case text(DrawingTextEntity)
     case simpleShape(DrawingSimpleShapeEntity)

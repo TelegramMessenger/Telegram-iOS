@@ -599,7 +599,7 @@ public final class MessageInputPanelComponent: Component {
                 transition.setFrame(view: inputActionButtonView, frame: CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floorToScreenPixels((baseFieldHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize))
             }
         
-            var fieldIconNextX = fieldBackgroundFrame.maxX - 2.0
+            var fieldIconNextX = fieldBackgroundFrame.maxX - 4.0
             if case .story = component.style {
                 let stickerButtonSize = self.stickerButton.update(
                     transition: transition,
@@ -707,7 +707,7 @@ public final class MessageInputPanelComponent: Component {
                     if timeoutButtonView.superview == nil {
                         self.addSubview(timeoutButtonView)
                     }
-                    let timeoutIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - timeoutButtonSize.width, y: fieldFrame.maxY - 3.0 - timeoutButtonSize.height), size: timeoutButtonSize)
+                    let timeoutIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - timeoutButtonSize.width, y: fieldFrame.maxY - 4.0 - timeoutButtonSize.height), size: timeoutButtonSize)
                     transition.setPosition(view: timeoutButtonView, position: timeoutIconFrame.center)
                     transition.setBounds(view: timeoutButtonView, bounds: CGRect(origin: CGPoint(), size: timeoutIconFrame.size))
                     

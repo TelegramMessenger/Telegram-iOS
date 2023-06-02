@@ -21,6 +21,7 @@ public final class ChatListNavigationBar: Component {
     public let secondaryContent: ChatListHeaderComponent.Content?
     public let secondaryTransition: CGFloat
     public let storySubscriptions: EngineStorySubscriptions?
+    public let uploadProgress: Float?
     public let tabsNode: ASDisplayNode?
     public let activateSearch: (NavigationBarSearchContentNode) -> Void
     public let openStatusSetup: (UIView) -> Void
@@ -37,6 +38,7 @@ public final class ChatListNavigationBar: Component {
         secondaryContent: ChatListHeaderComponent.Content?,
         secondaryTransition: CGFloat,
         storySubscriptions: EngineStorySubscriptions?,
+        uploadProgress: Float?,
         tabsNode: ASDisplayNode?,
         activateSearch: @escaping (NavigationBarSearchContentNode) -> Void,
         openStatusSetup: @escaping (UIView) -> Void
@@ -52,6 +54,7 @@ public final class ChatListNavigationBar: Component {
         self.secondaryContent = secondaryContent
         self.secondaryTransition = secondaryTransition
         self.storySubscriptions = storySubscriptions
+        self.uploadProgress = uploadProgress
         self.tabsNode = tabsNode
         self.activateSearch = activateSearch
         self.openStatusSetup = openStatusSetup
@@ -89,6 +92,9 @@ public final class ChatListNavigationBar: Component {
             return false
         }
         if lhs.storySubscriptions != rhs.storySubscriptions {
+            return false
+        }
+        if lhs.uploadProgress != rhs.uploadProgress {
             return false
         }
         if lhs.tabsNode != rhs.tabsNode {
@@ -166,7 +172,7 @@ public final class ChatListNavigationBar: Component {
             }
         }
         
-        public func applyScroll(offset: CGFloat, transition: Transition) {
+        public func applyScroll(offset: CGFloat, forceUpdate: Bool = false, transition: Transition) {
             var transition = transition
             if self.applyScrollFractionAnimator != nil {
                 transition = .immediate
@@ -174,7 +180,7 @@ public final class ChatListNavigationBar: Component {
             
             self.rawScrollOffset = offset
             
-            if self.deferScrollApplication {
+            if self.deferScrollApplication && !forceUpdate {
                 self.hasDeferredScrollOffset = true
                 return
             }
@@ -201,7 +207,7 @@ public final class ChatListNavigationBar: Component {
             }
             
             let clippedScrollOffset = min(minContentOffset, offset)
-            if self.clippedScrollOffset == clippedScrollOffset && !self.hasDeferredScrollOffset {
+            if self.clippedScrollOffset == clippedScrollOffset && !self.hasDeferredScrollOffset && !forceUpdate {
                 return
             }
             self.hasDeferredScrollOffset = false
@@ -286,6 +292,7 @@ public final class ChatListNavigationBar: Component {
                     networkStatus: nil,
                     storySubscriptions: component.storySubscriptions,
                     storiesFraction: 1.0 - storiesOffsetFraction,
+                    uploadProgress: component.uploadProgress,
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,
@@ -367,8 +374,14 @@ public final class ChatListNavigationBar: Component {
             let themeUpdated = self.component?.theme !== component.theme
             
             var storiesUnlockedUpdated = false
-            if let previousComponent = self.component, previousComponent.storiesUnlocked != component.storiesUnlocked {
-                storiesUnlockedUpdated = true
+            var uploadProgressUpdated = false
+            if let previousComponent = self.component {
+                if previousComponent.storiesUnlocked != component.storiesUnlocked {
+                    storiesUnlockedUpdated = true
+                }
+                if previousComponent.uploadProgress != component.uploadProgress {
+                    uploadProgressUpdated = true
+                }
             }
             
             self.component = component
@@ -411,6 +424,12 @@ public final class ChatListNavigationBar: Component {
             self.currentLayout = CurrentLayout(size: size)
             
             self.hasDeferredScrollOffset = true
+            
+            if uploadProgressUpdated {
+                if let rawScrollOffset = self.rawScrollOffset {
+                    self.applyScroll(offset: rawScrollOffset, forceUpdate: true, transition: transition)
+                }
+            }
             
             if storiesUnlockedUpdated {
                 self.applyScrollFraction = 0.0

@@ -110,4 +110,38 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         newEntity.rotation = self.rotation
         return newEntity
     }
+    
+    public func isEqual(to other: DrawingEntity) -> Bool {
+        guard let other = other as? DrawingSimpleShapeEntity else {
+            return false
+        }
+        if self.uuid != other.uuid {
+            return false
+        }
+        if self.shapeType != other.shapeType {
+            return false
+        }
+        if self.drawType != other.drawType {
+            return false
+        }
+        if self.color != other.color {
+            return false
+        }
+        if self.lineWidth != other.lineWidth {
+            return false
+        }
+        if self.referenceDrawingSize != other.referenceDrawingSize {
+            return false
+        }
+        if self.position != other.position {
+            return false
+        }
+        if self.size != other.size {
+            return false
+        }
+        if self.rotation != other.rotation {
+            return false
+        }
+        return true
+    }
 }

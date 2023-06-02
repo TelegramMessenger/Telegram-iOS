@@ -101,8 +101,7 @@ final class MediaEditorComposer {
         }
         let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         
-        self.renderer.consumeVideoPixelBuffer(imageBuffer, rotation: textureRotation)
-        self.renderer.renderFrame()
+        self.renderer.consumeVideoPixelBuffer(imageBuffer, rotation: textureRotation, render: true)
         
         if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
             ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
@@ -136,8 +135,7 @@ final class MediaEditorComposer {
         }
         if self.filteredImage == nil, let device = self.device {
             if let texture = loadTexture(image: inputImage, device: device) {
-                self.renderer.consumeTexture(texture)
-                self.renderer.renderFrame()
+                self.renderer.consumeTexture(texture, render: true)
                 
                 if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
                     ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))

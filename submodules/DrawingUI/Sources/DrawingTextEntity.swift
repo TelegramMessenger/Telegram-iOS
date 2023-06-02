@@ -20,7 +20,7 @@ extension DrawingTextEntity.Alignment {
     }
 }
 
-final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
+public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     private var textEntity: DrawingTextEntity {
         return self.entity as! DrawingTextEntity
     }
@@ -77,7 +77,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     
     private var isSuspended = false
     private var _isEditing = false
-    var isEditing: Bool {
+    public var isEditing: Bool {
         return self._isEditing || self.isSuspended
     }
     
@@ -265,7 +265,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         }
     }
     
-    func textViewDidChange(_ textView: UITextView) {
+    public func textViewDidChange(_ textView: UITextView) {
         guard let updatedText = self.textView.attributedText.mutableCopy() as? NSMutableAttributedString else {
             return
         }
@@ -301,7 +301,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         self.textView.selectedRange = NSMakeRange(previousSelectedRange.location + previousSelectedRange.length + text.length, 0)
     }
     
-    override func sizeThatFits(_ size: CGSize) -> CGSize {
+    public override func sizeThatFits(_ size: CGSize) -> CGSize {
         self.textView.setNeedsLayersUpdate()
         var result = self.textView.sizeThatFits(CGSize(width: self.textEntity.width, height: .greatestFiniteMagnitude))
         result.width = max(224.0, ceil(result.width) + 20.0)
@@ -309,7 +309,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         return result;
     }
     
-    override func sizeToFit() {
+    public override func sizeToFit() {
         let center = self.center
         let transform = self.transform
         self.transform = .identity
@@ -320,7 +320,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         //entity changed
     }
     
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
         
         self.textView.frame = self.bounds
@@ -506,7 +506,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         }
     }
     
-    override func update(animated: Bool = false) {
+    public override func update(animated: Bool = false) {
         self.update(animated: animated, afterAppendingEmoji: false)
     }
     
@@ -695,21 +695,9 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         self.addGestureRecognizer(panGestureRecognizer)
         self.panGestureRecognizer = panGestureRecognizer
         
-        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToYAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToAngle(snappedAngle)
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self, let entityView = self.entityView {
+                entityView.onSnapUpdated(type, snapped)
             }
         }
     }
@@ -753,11 +741,13 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
                         self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
             }
             self.currentHandle = self.layer
+            entityView.onInteractionUpdated(true)
         case .changed:
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let parentLocation = gestureRecognizer.location(in: self.superview)
@@ -788,7 +778,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
                 
-                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition, size: entityView.frame.size)
             }
             
             entity.scale = updatedScale
@@ -802,6 +792,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             if self.currentHandle != nil {
                 self.snapTool.rotationReset()
             }
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -816,11 +807,16 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         
         switch gestureRecognizer.state {
         case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                entityView.onInteractionUpdated(true)
+            }
             let scale = gestureRecognizer.scale
             entity.scale = max(0.1, entity.scale * scale)
             entityView.update()
 
             gestureRecognizer.scale = 1.0
+        case .ended, .cancelled:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -838,6 +834,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+            entityView.onInteractionUpdated(true)
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
@@ -845,6 +842,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
             self.snapTool.rotationReset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }

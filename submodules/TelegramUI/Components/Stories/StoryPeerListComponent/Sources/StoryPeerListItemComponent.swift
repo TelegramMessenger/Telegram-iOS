@@ -76,6 +76,7 @@ private final class StoryProgressLayer: SimpleShapeLayer {
     private struct Params: Equatable {
         var size: CGSize
         var lineWidth: CGFloat
+        var progress: Float
     }
     
     private var currentParams: Params?
@@ -100,10 +101,16 @@ private final class StoryProgressLayer: SimpleShapeLayer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, lineWidth: CGFloat) {
+    func reset() {
+        self.currentParams = nil
+        self.path = nil
+    }
+    
+    func update(size: CGSize, lineWidth: CGFloat, progress: Float, transition: Transition) {
         let params = Params(
             size: size,
-            lineWidth: lineWidth
+            lineWidth: lineWidth,
+            progress: progress
         )
         if self.currentParams == params {
             return
@@ -112,10 +119,13 @@ private final class StoryProgressLayer: SimpleShapeLayer {
         
         let lineWidth: CGFloat = 2.0
         
-        let path = CGMutablePath()
-        path.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: size.width * 0.5 - lineWidth * 0.5, startAngle: 0.0, endAngle: CGFloat.pi * 0.25, clockwise: false)
+        if self.path == nil {
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(origin: CGPoint(x: lineWidth * 0.5, y: lineWidth * 0.5), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
+            self.path = path
+        }
         
-        self.path = path
+        transition.setShapeLayerStrokeEnd(layer: self, strokeEnd: CGFloat(progress))
         
         if self.animation(forKey: "rotation") == nil {
             let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
@@ -136,7 +146,7 @@ public final class StoryPeerListItemComponent: Component {
     public let peer: EnginePeer
     public let hasUnseen: Bool
     public let hasItems: Bool
-    public let progress: CGFloat?
+    public let progress: Float?
     public let collapseFraction: CGFloat
     public let collapsedWidth: CGFloat
     public let leftNeighborDistance: CGFloat?
@@ -150,7 +160,7 @@ public final class StoryPeerListItemComponent: Component {
         peer: EnginePeer,
         hasUnseen: Bool,
         hasItems: Bool,
-        progress: CGFloat?,
+        progress: Float?,
         collapseFraction: CGFloat,
         collapsedWidth: CGFloat,
         leftNeighborDistance: CGFloat?,
@@ -287,6 +297,7 @@ public final class StoryPeerListItemComponent: Component {
             let hadProgress = self.component?.progress != nil
             let themeUpdated = self.component?.theme !== component.theme
             
+            let previousComponent = self.component
             self.component = component
             self.componentState = state
             
@@ -429,6 +440,19 @@ public final class StoryPeerListItemComponent: Component {
             } else {
                 titleString = component.peer.compactDisplayTitle
             }
+            
+            var titleTransition = transition
+            if previousComponent?.progress != nil && component.progress == nil {
+                if let titleView = self.title.view, let snapshotView = titleView.snapshotContentTree() {
+                    titleView.superview?.addSubview(snapshotView)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    titleView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+                titleTransition = .immediate
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(Text(text: titleString, font: Font.regular(11.0), color: component.theme.list.itemPrimaryTextColor)),
@@ -442,13 +466,13 @@ public final class StoryPeerListItemComponent: Component {
                     titleView.isUserInteractionEnabled = false
                     self.addSubview(titleView)
                 }
-                transition.setPosition(view: titleView, position: titleFrame.origin)
+                titleTransition.setPosition(view: titleView, position: titleFrame.origin)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                 transition.setScale(view: titleView, scale: effectiveScale)
                 transition.setAlpha(view: titleView, alpha: 1.0 - component.collapseFraction)
             }
             
-            if component.progress != nil {
+            if let progress = component.progress {
                 var progressTransition = transition
                 let progressLayer: StoryProgressLayer
                 if let current = self.progressLayer {
@@ -461,7 +485,7 @@ public final class StoryPeerListItemComponent: Component {
                 }
                 let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size)
                 progressTransition.setFrame(layer: progressLayer, frame: progressFrame)
-                progressLayer.update(size: progressFrame.size, lineWidth: 4.0)
+                progressLayer.update(size: progressFrame.size, lineWidth: 4.0, progress: progress, transition: transition)
                 
                 self.indicatorShapeLayer.opacity = 0.0
             } else {
@@ -470,9 +494,11 @@ public final class StoryPeerListItemComponent: Component {
                 if let progressLayer = self.progressLayer {
                     self.progressLayer = nil
                     if transition.animation.isImmediate {
+                        progressLayer.reset()
                         progressLayer.removeFromSuperlayer()
                     } else {
                         progressLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak progressLayer] _ in
+                            progressLayer?.reset()
                             progressLayer?.removeFromSuperlayer()
                         })
                     }

@@ -56,6 +56,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private var tapGestureRecognizer: UITapGestureRecognizer!
     public private(set) var selectedEntityView: DrawingEntityView?
     
+    public var getEntityEdgePositions: () -> UIEdgeInsets? = { return nil }
     public var getEntityCenterPosition: () -> CGPoint = { return .zero }
     public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
     public var getEntityAdditionalScale: () -> CGFloat = { return 1.0 }
@@ -66,10 +67,18 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     var entityAdded: (DrawingEntity) -> Void = { _ in }
     var entityRemoved: (DrawingEntity) -> Void = { _ in }
-    
+        
+    private let topEdgeView = UIView()
+    private let leftEdgeView = UIView()
+    private let rightEdgeView = UIView()
+    private let bottomEdgeView = UIView()
     private let xAxisView = UIView()
     private let yAxisView = UIView()
     private let angleLayer = SimpleShapeLayer()
+    
+    public var onInteractionUpdated: (Bool) -> Void = { _ in }
+    public var edgePreviewUpdated: (Bool) -> Void = { _ in }
+    
     private let hapticFeedback = HapticFeedback()
     
     public init(context: AccountContext, size: CGSize) {
@@ -81,6 +90,22 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
         self.addGestureRecognizer(tapGestureRecognizer)
         self.tapGestureRecognizer = tapGestureRecognizer
+        
+        self.topEdgeView.alpha = 0.0
+        self.topEdgeView.backgroundColor = UIColor(rgb: 0x5fc1f0)
+        self.topEdgeView.isUserInteractionEnabled = false
+        
+        self.leftEdgeView.alpha = 0.0
+        self.leftEdgeView.backgroundColor = UIColor(rgb: 0x5fc1f0)
+        self.leftEdgeView.isUserInteractionEnabled = false
+        
+        self.rightEdgeView.alpha = 0.0
+        self.rightEdgeView.backgroundColor = UIColor(rgb: 0x5fc1f0)
+        self.rightEdgeView.isUserInteractionEnabled = false
+        
+        self.bottomEdgeView.alpha = 0.0
+        self.bottomEdgeView.backgroundColor = UIColor(rgb: 0x5fc1f0)
+        self.bottomEdgeView.isUserInteractionEnabled = false
         
         self.xAxisView.alpha = 0.0
         self.xAxisView.backgroundColor = UIColor(rgb: 0x5fc1f0)
@@ -94,6 +119,11 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         self.angleLayer.opacity = 0.0
         self.angleLayer.lineDashPattern = [12, 12] as [NSNumber]
         
+        self.addSubview(self.topEdgeView)
+        self.addSubview(self.leftEdgeView)
+        self.addSubview(self.rightEdgeView)
+        self.addSubview(self.bottomEdgeView)
+        
         self.addSubview(self.xAxisView)
         self.addSubview(self.yAxisView)
         self.layer.addSublayer(self.angleLayer)
@@ -103,28 +133,41 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    deinit {
-        print()
-    }
-    
     public override func layoutSubviews() {
         super.layoutSubviews()
     
+        let referenceSize = self.convert(CGRect(origin: .zero, size: CGSize(width: 1.0 + UIScreenPixel, height: 1.0)), from: nil)
+        let width = ceil(referenceSize.width)
+        
+        if let edges = self.getEntityEdgePositions() {
+            self.topEdgeView.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: width))
+            self.topEdgeView.center = CGPoint(x: self.bounds.width / 2.0, y: edges.top)
+            
+            self.bottomEdgeView.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: width))
+            self.bottomEdgeView.center = CGPoint(x: self.bounds.width / 2.0, y: edges.bottom)
+            
+            self.leftEdgeView.bounds = CGRect(origin: .zero, size: CGSize(width: width, height: 3000.0))
+            self.leftEdgeView.center = CGPoint(x: edges.left, y: self.bounds.height / 2.0)
+            
+            self.rightEdgeView.bounds = CGRect(origin: .zero, size: CGSize(width: width, height: 3000.0))
+            self.rightEdgeView.center = CGPoint(x: edges.right, y: self.bounds.height / 2.0)
+        }
+        
         let point = self.getEntityCenterPosition()
-        self.xAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 6.0, height: 3000.0))
+        self.xAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: width, height: 3000.0))
         self.xAxisView.center = point
         self.xAxisView.transform = CGAffineTransform(rotationAngle: self.getEntityInitialRotation())
         
-        self.yAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: 6.0))
+        self.yAxisView.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: width))
         self.yAxisView.center = point
         self.yAxisView.transform = CGAffineTransform(rotationAngle: self.getEntityInitialRotation())
         
         let anglePath = CGMutablePath()
-        anglePath.move(to: CGPoint(x: 0.0, y: 3.0))
-        anglePath.addLine(to: CGPoint(x: 3000.0, y: 3.0))
+        anglePath.move(to: CGPoint(x: 0.0, y: width / 2.0))
+        anglePath.addLine(to: CGPoint(x: 3000.0, y: width / 2.0))
         self.angleLayer.path = anglePath
-        self.angleLayer.lineWidth = 6.0
-        self.angleLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: 6.0))
+        self.angleLayer.lineWidth = width
+        self.angleLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: width))
     }
     
     public var entities: [DrawingEntity] {
@@ -286,57 +329,63 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
         view.containerView = self
         
-        view.onSnapToXAxis = { [weak self, weak view] snappedToX in
-            guard let strongSelf = self, let strongView = view else {
-                return
-            }
+        func processSnap(snapped: Bool, snapView: UIView) {
             let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-            if snappedToX {
-                strongSelf.insertSubview(strongSelf.xAxisView, belowSubview: strongView)
-                if strongSelf.xAxisView.alpha < 1.0 {
-                    strongSelf.hapticFeedback.impact(.light)
+            if snapped {
+                self.insertSubview(snapView, belowSubview: view)
+                if snapView.alpha < 1.0 {
+                    self.hapticFeedback.impact(.light)
                 }
-                transition.updateAlpha(layer: strongSelf.xAxisView.layer, alpha: 1.0)
+                transition.updateAlpha(layer: snapView.layer, alpha: 1.0)
             } else {
-                transition.updateAlpha(layer: strongSelf.xAxisView.layer, alpha: 0.0)
+                transition.updateAlpha(layer: snapView.layer, alpha: 0.0)
             }
         }
-        view.onSnapToYAxis = { [weak self, weak view] snappedToY in
-            guard let strongSelf = self, let strongView = view else {
+        
+        view.onSnapUpdated = { [weak self, weak view] type, snapped in
+            guard let self else {
                 return
             }
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-            if snappedToY {
-                strongSelf.insertSubview(strongSelf.yAxisView, belowSubview: strongView)
-                if strongSelf.yAxisView.alpha < 1.0 {
-                    strongSelf.hapticFeedback.impact(.light)
+            switch type {
+            case .centerX:
+                processSnap(snapped: snapped, snapView: self.xAxisView)
+            case .centerY:
+                processSnap(snapped: snapped, snapView: self.yAxisView)
+            case .top:
+                processSnap(snapped: snapped, snapView: self.topEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case .left:
+                processSnap(snapped: snapped, snapView: self.leftEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case .right:
+                processSnap(snapped: snapped, snapView: self.rightEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case .bottom:
+                processSnap(snapped: snapped, snapView: self.bottomEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case let .rotation(angle):
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                if let angle, let view {
+                    self.layer.insertSublayer(self.angleLayer, below: view.layer)
+                    self.angleLayer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
+                    if self.angleLayer.opacity < 1.0 {
+                        self.hapticFeedback.impact(.light)
+                    }
+                    transition.updateAlpha(layer: self.angleLayer, alpha: 1.0)
+                } else {
+                    transition.updateAlpha(layer: self.angleLayer, alpha: 0.0)
                 }
-                transition.updateAlpha(layer: strongSelf.yAxisView.layer, alpha: 1.0)
-            } else {
-                transition.updateAlpha(layer: strongSelf.yAxisView.layer, alpha: 0.0)
-            }
-        }
-        view.onSnapToAngle = { [weak self, weak view] snappedToAngle in
-            guard let strongSelf = self, let strongView = view else {
-                return
-            }
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-            if let snappedToAngle {
-                strongSelf.layer.insertSublayer(strongSelf.angleLayer, below: strongView.layer)
-                strongSelf.angleLayer.transform = CATransform3DMakeRotation(snappedToAngle, 0.0, 0.0, 1.0)
-                if strongSelf.angleLayer.opacity < 1.0 {
-                    strongSelf.hapticFeedback.impact(.light)
-                }
-                transition.updateAlpha(layer: strongSelf.angleLayer, alpha: 1.0)
-            } else {
-                transition.updateAlpha(layer: strongSelf.angleLayer, alpha: 0.0)
             }
         }
         view.onPositionUpdated = { [weak self] position in
-            guard let strongSelf = self else {
-                return
+            if let self {
+                self.angleLayer.position = position
             }
-            strongSelf.angleLayer.position = position
+        }
+        view.onInteractionUpdated = { [weak self] interacting in
+            if let self {
+                self.onInteractionUpdated(interacting)
+            }
         }
         
         view.update()
@@ -603,10 +652,9 @@ public class DrawingEntityView: UIView {
     public weak var selectionView: DrawingEntitySelectionView?
     weak var containerView: DrawingEntitiesView?
     
-    var onSnapToXAxis: (Bool) -> Void = { _ in }
-    var onSnapToYAxis: (Bool) -> Void = { _ in }
-    var onSnapToAngle: (CGFloat?) -> Void = { _ in }
+    var onSnapUpdated: (DrawingEntitySnapTool.SnapType, Bool) -> Void = { _, _ in }
     var onPositionUpdated: (CGPoint) -> Void = { _ in }
+    var onInteractionUpdated: (Bool) -> Void = { _ in }
     
     init(context: AccountContext, entity: DrawingEntity) {
         self.context = context

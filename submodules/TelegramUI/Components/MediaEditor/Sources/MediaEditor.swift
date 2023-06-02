@@ -189,7 +189,7 @@ public final class MediaEditor {
             let duration = asset.duration.seconds
             let interval = duration / Double(count)
             for i in 0 ..< count {
-                timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(60.0))))
+                timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(NSEC_PER_SEC))))
             }
             
             var updatedFrames: [UIImage] = []
@@ -396,7 +396,7 @@ public final class MediaEditor {
                     self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil, using: { [weak self] notification in
                         if let self {
                             let start = self.values.videoTrimRange?.lowerBound ?? 0.0
-                            self.player?.seek(to: CMTime(seconds: start, preferredTimescale: 60))
+                            self.player?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
                             self.player?.play()
                         }
                     })
@@ -449,7 +449,7 @@ public final class MediaEditor {
         if !play {
             self.player?.pause()
         }
-        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         if self.targetTimePosition?.0 != targetPosition {
             self.targetTimePosition = (targetPosition, play)
             if !self.updatingTimePosition {
@@ -487,17 +487,21 @@ public final class MediaEditor {
     }
     
     public func setVideoTrimStart(_ trimStart: Double) {
+        self.skipRendering = true
         let trimEnd = self.values.videoTrimRange?.upperBound ?? self.playerPlaybackState.0
         let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
+        self.skipRendering = false
     }
     
     public func setVideoTrimEnd(_ trimEnd: Double) {
+        self.skipRendering = true
         let trimStart = self.values.videoTrimRange?.lowerBound ?? 0.0
         let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
         
         self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimEnd, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        self.skipRendering = false
     }
         
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
@@ -508,11 +512,30 @@ public final class MediaEditor {
         self.values = self.values.withUpdatedGradientColors(gradientColors: gradientColors)
     }
     
+    private var previousUpdateTime = CACurrentMediaTime()
+    private var scheduledUpdate = false
     private func updateRenderChain() {
         self.renderChain.update(values: self.values)
         if let player = self.player, player.rate > 0.0 {
         } else {
-            self.previewView?.scheduleFrame()
+            let currentTime = CACurrentMediaTime()
+            if !self.scheduledUpdate {
+                let delay = 0.03333
+                let delta = currentTime - self.previousUpdateTime
+                if delta < delay {
+                    self.scheduledUpdate = true
+                    Queue.mainQueue().after(delay - delta) {
+                        self.scheduledUpdate = false
+                        self.previousUpdateTime = CACurrentMediaTime()
+                        self.renderer.willRenderFrame()
+                        self.renderer.renderFrame()
+                    }
+                } else {
+                    self.previousUpdateTime = currentTime
+                    self.renderer.willRenderFrame()
+                    self.renderer.renderFrame()
+                }
+            }
         }
     }
     
@@ -564,7 +587,8 @@ final class MediaEditorRenderChain {
     }
     
     func update(values: MediaEditorValues) {
-        for (key, value) in values.toolValues {
+        for key in EditorToolKey.allCases {
+            let value = values.toolValues[key]
             switch key {
             case .enhance:
                 if let value = value as? Float {

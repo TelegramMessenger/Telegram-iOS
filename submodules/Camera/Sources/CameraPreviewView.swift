@@ -63,7 +63,7 @@ public class CameraSimplePreviewView: UIView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         
-        self.placeholderView.frame = self.bounds
+        self.placeholderView.frame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
     }
     
     var videoPreviewLayer: AVCaptureVideoPreviewLayer {

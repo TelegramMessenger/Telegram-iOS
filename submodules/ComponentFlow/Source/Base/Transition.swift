@@ -825,6 +825,52 @@ public struct Transition {
         }
     }
     
+    public func setShapeLayerStrokeStart(layer: CAShapeLayer, strokeStart: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            layer.strokeStart = strokeStart
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousStrokeStart = layer.strokeStart
+            layer.strokeStart = strokeStart
+            
+            layer.animate(
+                from: previousStrokeStart as NSNumber,
+                to: strokeStart as NSNumber,
+                keyPath: "strokeStart",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setShapeLayerStrokeEnd(layer: CAShapeLayer, strokeEnd: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            layer.strokeEnd = strokeEnd
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousStrokeEnd = layer.strokeEnd
+            layer.strokeEnd = strokeEnd
+            
+            layer.animate(
+                from: previousStrokeEnd as NSNumber,
+                to: strokeEnd as NSNumber,
+                keyPath: "strokeEnd",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
     public func setShapeLayerFillColor(layer: CAShapeLayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
         if let current = layer.layerTintColor, current == color.cgColor {
             completion?(true)

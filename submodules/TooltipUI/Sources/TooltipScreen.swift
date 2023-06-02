@@ -143,7 +143,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(account: Account, sharedContext: SharedAccountContext, text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon? = nil, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, inset: CGFloat = 13.0, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?) {
+    init(account: Account, sharedContext: SharedAccountContext, text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon? = nil, customContentNode: TooltipCustomContentNode? = nil, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, inset: CGFloat = 13.0, cornerRadius: CGFloat? = nil, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?) {
         self.tooltipStyle = style
         self.icon = icon
         self.customContentNode = customContentNode
@@ -286,7 +286,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             if case let .point(_, arrowPosition) = location, case .right = arrowPosition {
                 self.backgroundClipNode.cornerRadius = 8.5
             } else {
-                self.backgroundClipNode.cornerRadius = 12.5
+                self.backgroundClipNode.cornerRadius = cornerRadius ?? 12.5
             }
             if #available(iOS 13.0, *) {
                 self.backgroundClipNode.layer.cornerCurve = .continuous
@@ -736,6 +736,7 @@ public final class TooltipScreen: ViewController {
     }
     private let displayDuration: DisplayDuration
     private let inset: CGFloat
+    private let cornerRadius: CGFloat?
     private let shouldDismissOnTouch: (CGPoint) -> TooltipScreen.DismissOnTouch
     private let openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?
     
@@ -764,6 +765,7 @@ public final class TooltipScreen: ViewController {
         location: TooltipScreen.Location,
         displayDuration: DisplayDuration = .default,
         inset: CGFloat = 13.0,
+        cornerRadius: CGFloat? = nil,
         shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch,
         openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)? = nil
     ) {
@@ -777,6 +779,7 @@ public final class TooltipScreen: ViewController {
         self.location = location
         self.displayDuration = displayDuration
         self.inset = inset
+        self.cornerRadius = cornerRadius
         self.shouldDismissOnTouch = shouldDismissOnTouch
         self.openActiveTextItem = openActiveTextItem
         
@@ -836,7 +839,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(account: self.account, sharedContext: self.sharedContext, text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, customContentNode: self.customContentNode, location: self.location, displayDuration: self.displayDuration, inset: self.inset, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(account: self.account, sharedContext: self.sharedContext, text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, customContentNode: self.customContentNode, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

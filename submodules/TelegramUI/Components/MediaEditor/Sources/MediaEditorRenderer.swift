@@ -6,8 +6,8 @@ import Photos
 import SwiftSignalKit
 
 protocol TextureConsumer: AnyObject {
-    func consumeTexture(_ texture: MTLTexture)
-    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation)
+    func consumeTexture(_ texture: MTLTexture, render: Bool)
+    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation, render: Bool)
 }
 
 final class RenderingContext {
@@ -40,7 +40,7 @@ protocol RenderTarget: AnyObject {
     var drawable: MTLDrawable? { get }
     var renderPassDescriptor: MTLRenderPassDescriptor? { get }
     
-    func scheduleFrame()
+    func redraw()
 }
 
 final class MediaEditorRenderer: TextureConsumer {
@@ -161,10 +161,12 @@ final class MediaEditorRenderer: TextureConsumer {
         guard let device = device,
               let commandQueue = self.commandQueue,
               let textureCache = self.textureCache else {
+            self.semaphore.signal()
             return
         }
 
         guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+            self.semaphore.signal()
             return
         }
         
@@ -174,6 +176,7 @@ final class MediaEditorRenderer: TextureConsumer {
         } else if let (currentPixelBuffer, textureRotation) = self.currentPixelBuffer, let videoTexture = self.videoInputPass.processPixelBuffer(currentPixelBuffer, rotation: textureRotation, textureCache: textureCache, device: device, commandBuffer: commandBuffer) {
             texture = videoTexture
         } else {
+            self.semaphore.signal()
             return
         }
         
@@ -182,61 +185,75 @@ final class MediaEditorRenderer: TextureConsumer {
                 texture = nextTexture
             }
         }
-        if self.renderTarget != nil {
-            self.outputRenderPass.process(input: texture, device: device, commandBuffer: commandBuffer)
-        }
         self.finalTexture = texture
+        
+        commandBuffer.addCompletedHandler { [weak self] _ in
+            if let self {
+                if self.renderTarget == nil {
+                    self.semaphore.signal()
+                }
+            }
+        }
+        commandBuffer.commit()
+        
+        if let renderTarget = self.renderTarget {
+            renderTarget.redraw()
+        } else {
+            commandBuffer.waitUntilCompleted()
+        }
+    }
+    
+    func displayFrame() {
+        guard let renderTarget = self.renderTarget,
+              let device = renderTarget.mtlDevice,
+              let commandQueue = self.commandQueue,
+              let commandBuffer = commandQueue.makeCommandBuffer(),
+              let texture = self.finalTexture
+        else {
+            self.semaphore.signal()
+            return
+        }
         
         commandBuffer.addCompletedHandler { [weak self] _ in
             if let self {
                 self.semaphore.signal()
                 
-#if targetEnvironment(simulator)
                 if let onNextRender = self.onNextRender {
                     self.onNextRender = nil
                     Queue.mainQueue().async {
                         onNextRender()
                     }
                 }
-#endif
             }
         }
         
-#if targetEnvironment(simulator)
-#else
-        if let renderTarget = self.renderTarget, let drawable = renderTarget.drawable {
-            drawable.addPresentedHandler { [weak self] _ in
-                if let self, let onNextRender = self.onNextRender {
-                    self.onNextRender = nil
-                    Queue.mainQueue().async {
-                        onNextRender()
-                    }
-                }
-            }
-        }
-#endif
+        self.outputRenderPass.process(input: texture, device: device, commandBuffer: commandBuffer)
         
-        if let _ = self.renderTarget {
-            commandBuffer.commit()
-            commandBuffer.waitUntilScheduled()
-        } else {
-            commandBuffer.commit()
-            commandBuffer.waitUntilCompleted()
-        }
+        commandBuffer.commit()
     }
     
-    func consumeTexture(_ texture: MTLTexture) {
-        self.semaphore.wait()
+    func willRenderFrame() {
+        let _ = self.semaphore.wait(timeout: .distantFuture)
+    }
+    
+    func consumeTexture(_ texture: MTLTexture, render: Bool) {
+        if render {
+            let _ = self.semaphore.wait(timeout: .distantFuture)
+        }
         
         self.currentTexture = texture
-        self.renderTarget?.scheduleFrame()
+        if render {
+            self.renderFrame()
+        }
     }
     
-    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation) {
-        self.semaphore.wait()
+    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation, render: Bool) {
+        let _ = self.semaphore.wait(timeout: .distantFuture)
         
         self.currentPixelBuffer = (pixelBuffer, rotation)
-        self.renderTarget?.scheduleFrame()
+        if render {
+            self.renderFrame()
+        }
     }
     
     func renderTargetDidChange(_ target: RenderTarget?) {
@@ -245,7 +262,7 @@ final class MediaEditorRenderer: TextureConsumer {
     }
     
     func renderTargetDrawableSizeDidChange(_ size: CGSize) {
-        self.renderTarget?.scheduleFrame()
+        self.renderTarget?.redraw()
     }
     
     func finalRenderedImage() -> UIImage? {

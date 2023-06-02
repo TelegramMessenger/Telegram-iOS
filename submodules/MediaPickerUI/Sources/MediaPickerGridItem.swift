@@ -259,14 +259,14 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.imageNode.setSignal(imageSignal)
             
             self.currentDraftState = (draft, index)
-            self.setNeedsLayout()
             
-            if self.typeIconNode.supernode == nil {
+            if self.draftNode.supernode == nil {
                 self.draftNode.attributedText = NSAttributedString(string: "Draft", font: Font.semibold(12.0), textColor: .white)
                 
                 self.addSubnode(self.draftNode)
-                self.setNeedsLayout()
             }
+            
+            self.setNeedsLayout()
         }
         
         self.updateSelectionState()
@@ -290,6 +290,11 @@ final class MediaPickerGridItemNode: GridItemNode {
                 
         if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentMediaState!.1 != index {
             self.currentMediaState = (media.asset, index)
+            
+            if self.draftNode.supernode != nil {
+                self.draftNode.removeFromSupernode()
+            }
+            
             self.setNeedsLayout()
         }
         
@@ -313,6 +318,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
         
         if self.currentState == nil || self.currentState!.0 !== fetchResult || self.currentState!.1 != index {
+            self.backgroundNode.image = nil
             let editingContext = interaction.editingState
             let asset = fetchResult.object(at: index)
             

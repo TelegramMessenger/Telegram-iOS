@@ -23,6 +23,7 @@ public final class StoryPeerListComponent: Component {
     public let strings: PresentationStrings
     public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
+    public let uploadProgress: Float?
     public let peerAction: (EnginePeer?) -> Void
     
     public init(
@@ -32,6 +33,7 @@ public final class StoryPeerListComponent: Component {
         strings: PresentationStrings,
         storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
+        uploadProgress: Float?,
         peerAction: @escaping (EnginePeer?) -> Void
     ) {
         self.externalState = externalState
@@ -40,6 +42,7 @@ public final class StoryPeerListComponent: Component {
         self.strings = strings
         self.storySubscriptions = storySubscriptions
         self.collapseFraction = collapseFraction
+        self.uploadProgress = uploadProgress
         self.peerAction = peerAction
     }
     
@@ -57,6 +60,9 @@ public final class StoryPeerListComponent: Component {
             return false
         }
         if lhs.collapseFraction != rhs.collapseFraction {
+            return false
+        }
+        if lhs.uploadProgress != rhs.uploadProgress {
             return false
         }
         return true
@@ -255,16 +261,14 @@ public final class StoryPeerListComponent: Component {
                 hasUnseen = itemSet.hasUnseen
                 
                 var hasItems = true
-                var itemProgress: CGFloat?
+                var itemProgress: Float?
                 if peer.id == component.context.account.peerId {
-                    itemProgress = nil
                     if let storySubscriptions = component.storySubscriptions, let accountItem = storySubscriptions.accountItem {
                         hasItems = accountItem.storyCount != 0
                     } else {
                         hasItems = false
                     }
-                    //itemProgress = component.state?.uploadProgress
-                    //itemProgress = 0.0
+                    itemProgress = component.uploadProgress
                 }
                 
                 let collapsedItemFrame = CGRect(origin: CGPoint(x: collapsedContentOrigin + CGFloat(i - collapseStartIndex) * collapsedItemDistance, y: regularItemFrame.minY + collapsedItemOffsetY), size: CGSize(width: collapsedItemWidth, height: regularItemFrame.height))
