@@ -460,7 +460,6 @@ public final class MediaEditor {
         let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
         if self.targetTimePosition?.0 != targetPosition {
             self.targetTimePosition = (targetPosition, play)
-            print("targetchange")
             if !self.updatingTimePosition {
                 self.updateVideoTimePosition()
             }
@@ -483,10 +482,8 @@ public final class MediaEditor {
             return
         }
         self.updatingTimePosition = true
-        print("seekupdate")
-        self.player?.currentItem?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
+        self.player?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
             if let self {
-                print("done")
                 if let (currentTargetPosition, _) = self.targetTimePosition, currentTargetPosition == targetPosition {
                     self.updatingTimePosition = false
                     self.targetTimePosition = nil

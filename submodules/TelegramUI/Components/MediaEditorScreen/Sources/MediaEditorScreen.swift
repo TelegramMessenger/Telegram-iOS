@@ -612,9 +612,10 @@ final class MediaEditorScreenComponent: Component {
                         framesUpdateTimestamp: playerState.framesUpdateTimestamp,
                         trimUpdated: { [weak mediaEditor] start, end, updatedEnd, done in
                             if let mediaEditor {
-                                mediaEditor.setVideoTrimRange(start..<end)
                                 if done {
                                     mediaEditor.seek(start, andPlay: true)
+                                    
+                                    mediaEditor.setVideoTrimRange(start..<end)
                                 } else {
                                     mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
                                 }
