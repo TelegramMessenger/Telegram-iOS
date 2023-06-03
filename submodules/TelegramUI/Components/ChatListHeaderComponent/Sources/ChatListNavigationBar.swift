@@ -143,7 +143,9 @@ public final class ChatListNavigationBar: Component {
         
         override public init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
+            self.backgroundView.layer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
             self.separatorLayer = SimpleLayer()
+            self.separatorLayer.anchorPoint = CGPoint()
             
             super.init(frame: frame)
             
@@ -173,10 +175,7 @@ public final class ChatListNavigationBar: Component {
         }
         
         public func applyScroll(offset: CGFloat, forceUpdate: Bool = false, transition: Transition) {
-            var transition = transition
-            if self.applyScrollFractionAnimator != nil {
-                transition = .immediate
-            }
+            let transition = transition
             
             self.rawScrollOffset = offset
             
@@ -217,9 +216,13 @@ public final class ChatListNavigationBar: Component {
             
             let previousHeight = self.backgroundView.bounds.height
             
-            self.backgroundView.update(size: visibleSize, transition: transition.containedViewLayoutTransition)
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: visibleSize))
-            transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height), size: CGSize(width: visibleSize.width, height: UIScreenPixel)))
+            self.backgroundView.update(size: CGSize(width: visibleSize.width, height: 1000.0), transition: transition.containedViewLayoutTransition)
+            
+            transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: CGPoint(), size: CGSize(width: visibleSize.width, height: 1000.0)))
+            transition.animatePosition(view: self.backgroundView, from: CGPoint(x: 0.0, y: -visibleSize.height + self.backgroundView.layer.position.y), to: CGPoint(), additive: true)
+            self.backgroundView.layer.position = CGPoint(x: 0.0, y: visibleSize.height)
+            
+            transition.setFrameWithAdditivePosition(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height), size: CGSize(width: visibleSize.width, height: UIScreenPixel)))
             
             let searchContentNode: NavigationBarSearchContentNode
             if let current = self.searchContentNode {
@@ -253,6 +256,7 @@ public final class ChatListNavigationBar: Component {
                         component.activateSearch(searchContentNode)
                     }
                 )
+                searchContentNode.view.layer.anchorPoint = CGPoint()
                 self.searchContentNode = searchContentNode
                 self.addSubview(searchContentNode.view)
             }
@@ -279,11 +283,17 @@ public final class ChatListNavigationBar: Component {
             let searchOffsetFraction = clippedSearchOffset / searchOffsetDistance
             searchContentNode.expansionProgress = 1.0 - searchOffsetFraction
             
-            transition.setFrame(view: searchContentNode.view, frame: searchFrame)
+            transition.setFrameWithAdditivePosition(view: searchContentNode.view, frame: searchFrame)
+            
             searchContentNode.updateLayout(size: searchSize, leftInset: component.sideInset, rightInset: component.sideInset, transition: transition.containedViewLayoutTransition)
             
+            var headerTransition = transition
+            if self.applyScrollFractionAnimator != nil {
+                headerTransition = .immediate
+            }
+            
             let headerContentSize = self.headerContent.update(
-                transition: transition,
+                transition: headerTransition,
                 component: AnyComponent(ChatListHeaderComponent(
                     sideInset: component.sideInset + 16.0,
                     primaryContent: component.primaryContent,
@@ -325,9 +335,10 @@ public final class ChatListNavigationBar: Component {
             let headerContentFrame = CGRect(origin: CGPoint(x: 0.0, y: headerContentY), size: headerContentSize)
             if let headerContentView = self.headerContent.view {
                 if headerContentView.superview == nil {
+                    headerContentView.layer.anchorPoint = CGPoint()
                     self.addSubview(headerContentView)
                 }
-                transition.setFrame(view: headerContentView, frame: headerContentFrame)
+                transition.setFrameWithAdditivePosition(view: headerContentView, frame: headerContentFrame)
             }
             
             if component.tabsNode !== self.tabsNode {
@@ -349,7 +360,8 @@ public final class ChatListNavigationBar: Component {
             let tabsFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height - 46.0), size: CGSize(width: visibleSize.width, height: 46.0))
             
             if let disappearingTabsView = self.disappearingTabsView {
-                transition.setFrame(view: disappearingTabsView, frame: tabsFrame)
+                disappearingTabsView.layer.anchorPoint = CGPoint()
+                transition.setFrameWithAdditivePosition(view: disappearingTabsView, frame: tabsFrame)
             }
             
             if let tabsNode = component.tabsNode {
@@ -357,6 +369,7 @@ public final class ChatListNavigationBar: Component {
                 
                 var tabsNodeTransition = transition
                 if tabsNode.view.superview !== self {
+                    tabsNode.view.layer.anchorPoint = CGPoint()
                     tabsNodeTransition = .immediate
                     self.addSubview(tabsNode.view)
                     if !transition.animation.isImmediate {
@@ -366,7 +379,7 @@ public final class ChatListNavigationBar: Component {
                     }
                 }
                 
-                tabsNodeTransition.setFrame(view: tabsNode.view, frame: tabsFrame)
+                tabsNodeTransition.setFrameWithAdditivePosition(view: tabsNode.view, frame: tabsFrame)
             }
         }
         

@@ -212,6 +212,62 @@ public struct Transition {
         }
     }
     
+    public func setFrameWithAdditivePosition(view: UIView, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
+        assert(view.layer.anchorPoint == CGPoint())
+        
+        if view.frame == frame {
+            completion?(true)
+            return
+        }
+        
+        var completedBounds: Bool?
+        var completedPosition: Bool?
+        let processCompletion: () -> Void = {
+            guard let completedBounds, let completedPosition else {
+                return
+            }
+            completion?(completedBounds && completedPosition)
+        }
+        
+        self.setBounds(view: view, bounds: CGRect(origin: view.bounds.origin, size: frame.size), completion: { value in
+            completedBounds = value
+            processCompletion()
+        })
+        self.animatePosition(view: view, from: CGPoint(x: -frame.minX + view.layer.position.x, y: -frame.minY + view.layer.position.y), to: CGPoint(), additive: true, completion: { value in
+            completedPosition = value
+            processCompletion()
+        })
+        view.layer.position = frame.origin
+    }
+    
+    public func setFrameWithAdditivePosition(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
+        assert(layer.anchorPoint == CGPoint())
+        
+        if layer.frame == frame {
+            completion?(true)
+            return
+        }
+        
+        var completedBounds: Bool?
+        var completedPosition: Bool?
+        let processCompletion: () -> Void = {
+            guard let completedBounds, let completedPosition else {
+                return
+            }
+            completion?(completedBounds && completedPosition)
+        }
+        
+        self.setBounds(layer: layer, bounds: CGRect(origin: layer.bounds.origin, size: frame.size), completion: { value in
+            completedBounds = value
+            processCompletion()
+        })
+        self.animatePosition(layer: layer, from: CGPoint(x: -frame.minX + layer.position.x, y: -frame.minY + layer.position.y), to: CGPoint(), additive: true, completion: { value in
+            completedPosition = value
+            processCompletion()
+        })
+        layer.position = frame.origin
+    }
+    
     public func setBounds(view: UIView, bounds: CGRect, completion: ((Bool) -> Void)? = nil) {
         if view.bounds == bounds {
             completion?(true)

@@ -252,9 +252,9 @@ private final class CameraScreenComponent: CombinedComponent {
         func stopVideoRecording() {
             self.cameraState = self.cameraState.updatedRecording(.none).updatedDuration(0.0)
             self.resultDisposable.set((self.camera.stopRecording()
-            |> deliverOnMainQueue).start(next: { [weak self] path in
-                if let self, let path {
-                    self.completion.invoke(.single(.video(path, PixelDimensions(width: 1080, height: 1920))))
+            |> deliverOnMainQueue).start(next: { [weak self] pathAndTransitionImage in
+                if let self, let (path, transitionImage) = pathAndTransitionImage {
+                    self.completion.invoke(.single(.video(path, transitionImage, PixelDimensions(width: 1080, height: 1920))))
                 }
             }))
             self.updated(transition: .spring(duration: 0.4))
@@ -641,7 +641,7 @@ public class CameraScreen: ViewController {
     public enum Result {
         case pendingImage
         case image(UIImage)
-        case video(String, PixelDimensions)
+        case video(String, UIImage?, PixelDimensions)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
     }

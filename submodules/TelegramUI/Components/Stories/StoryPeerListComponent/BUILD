@@ -19,6 +19,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramPresentationData",
         "//submodules/AvatarNode",
+        "//submodules/ContextUI",
     ],
     visibility = [
         "//visibility:public",

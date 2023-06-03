@@ -23,13 +23,13 @@ public struct MediaEditorPlayerState {
 public final class MediaEditor {
     public enum Subject {
         case image(UIImage, PixelDimensions)
-        case video(String, PixelDimensions)
+        case video(String, UIImage?, PixelDimensions)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         
         var dimensions: PixelDimensions {
             switch self {
-            case let .image(_, dimensions), let .video(_, dimensions):
+            case let .image(_, dimensions), let .video(_, _, dimensions):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
@@ -189,7 +189,7 @@ public final class MediaEditor {
             let duration = asset.duration.seconds
             let interval = duration / Double(count)
             for i in 0 ..< count {
-                timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(NSEC_PER_SEC))))
+                timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(1000))))
             }
             
             var updatedFrames: [UIImage] = []
@@ -287,51 +287,59 @@ public final class MediaEditor {
                 colors = mediaEditorGetGradientColors(from: image)
             }
             textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
-        case let .video(path, _):
+        case let .video(path, transitionImage, _):
             textureSource = Signal { subscriber in
                 let url = URL(fileURLWithPath: path)
                 let asset = AVURLAsset(url: url)
-                let imageGenerator = AVAssetImageGenerator(asset: asset)
-                imageGenerator.appliesPreferredTrackTransform = true
-                imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
-                    let playerItem = AVPlayerItem(asset: asset)
-                    let player = AVPlayer(playerItem: playerItem)
-                    if let image {
-                        let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
-                        subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
-                    } else {
-                        subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, .black, .black))
+                
+                let playerItem = AVPlayerItem(asset: asset)
+                let player = AVPlayer(playerItem: playerItem)
+                
+                if let transitionImage {
+                    let colors = mediaEditorGetGradientColors(from: transitionImage)
+                    subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                    subscriber.putCompletion()
+                    
+                    return EmptyDisposable
+                } else {
+                    let imageGenerator = AVAssetImageGenerator(asset: asset)
+                    imageGenerator.appliesPreferredTrackTransform = true
+                    imageGenerator.maximumSize = CGSize(width: 72, height: 128)
+                    imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
+                        if let image {
+                            let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
+                            subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                        } else {
+                            subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, .black, .black))
+                        }
+                        subscriber.putCompletion()
                     }
-                }
-                return ActionDisposable {
-                    imageGenerator.cancelAllCGImageGeneration()
+                    return ActionDisposable {
+                        imageGenerator.cancelAllCGImageGeneration()
+                    }
                 }
             }
         case let .asset(asset):
             textureSource = Signal { subscriber in
                 if asset.mediaType == .video {
-                    let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 128.0, height: 128.0), contentMode: .aspectFit, options: nil, resultHandler: { image, info in
+                    let options = PHImageRequestOptions()
+                    options.deliveryMode = .fastFormat
+                    let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 128.0, height: 128.0), contentMode: .aspectFit, options: options, resultHandler: { image, info in
                         if let image {
-                            var degraded = false
                             if let info {
                                 if let cancelled = info[PHImageCancelledKey] as? Bool, cancelled {
                                     return
                                 }
-                                if let degradedValue = info[PHImageResultIsDegradedKey] as? Bool, degradedValue {
-                                    degraded = true
+                            }
+                            let colors = mediaEditorGetGradientColors(from: image)
+                            PHImageManager.default().requestAVAsset(forVideo: asset, options: nil, resultHandler: { asset, _, _ in
+                                if let asset {
+                                    let playerItem = AVPlayerItem(asset: asset)
+                                    let player = AVPlayer(playerItem: playerItem)
+                                    subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
+                                    subscriber.putCompletion()
                                 }
-                            }
-                            if !degraded {
-                                let colors = mediaEditorGetGradientColors(from: image)
-                                PHImageManager.default().requestAVAsset(forVideo: asset, options: nil, resultHandler: { asset, _, _ in
-                                    if let asset {
-                                        let playerItem = AVPlayerItem(asset: asset)
-                                        let player = AVPlayer(playerItem: playerItem)
-                                        subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
-                                        subscriber.putCompletion()
-                                    }
-                                })
-                            }
+                            })
                         }
                     })
                     return ActionDisposable {
@@ -396,7 +404,7 @@ public final class MediaEditor {
                     self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil, using: { [weak self] notification in
                         if let self {
                             let start = self.values.videoTrimRange?.lowerBound ?? 0.0
-                            self.player?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+                            self.player?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
                             self.player?.play()
                         }
                     })
@@ -449,9 +457,10 @@ public final class MediaEditor {
         if !play {
             self.player?.pause()
         }
-        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
         if self.targetTimePosition?.0 != targetPosition {
             self.targetTimePosition = (targetPosition, play)
+            print("targetchange")
             if !self.updatingTimePosition {
                 self.updateVideoTimePosition()
             }
@@ -474,8 +483,10 @@ public final class MediaEditor {
             return
         }
         self.updatingTimePosition = true
-        self.player?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
+        print("seekupdate")
+        self.player?.currentItem?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
             if let self {
+                print("done")
                 if let (currentTargetPosition, _) = self.targetTimePosition, currentTargetPosition == targetPosition {
                     self.updatingTimePosition = false
                     self.targetTimePosition = nil
@@ -486,24 +497,14 @@ public final class MediaEditor {
         })
     }
     
-    public func setVideoTrimStart(_ trimStart: Double) {
+    public func setVideoTrimRange(_ trimRange: Range<Double>) {
         self.skipRendering = true
-        let trimEnd = self.values.videoTrimRange?.upperBound ?? self.playerPlaybackState.0
-        let trimRange = trimStart ..< trimEnd
         self.values = self.values.withUpdatedVideoTrimRange(trimRange)
         self.skipRendering = false
+        
+        self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
     }
     
-    public func setVideoTrimEnd(_ trimEnd: Double) {
-        self.skipRendering = true
-        let trimStart = self.values.videoTrimRange?.lowerBound ?? 0.0
-        let trimRange = trimStart ..< trimEnd
-        self.values = self.values.withUpdatedVideoTrimRange(trimRange)
-        
-        self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimEnd, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        self.skipRendering = false
-    }
-        
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
         self.values = self.values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
     }

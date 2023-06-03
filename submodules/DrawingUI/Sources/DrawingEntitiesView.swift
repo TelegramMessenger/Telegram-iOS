@@ -329,7 +329,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
         view.containerView = self
         
-        func processSnap(snapped: Bool, snapView: UIView) {
+        let processSnap: (Bool, UIView) -> Void = { [weak self] snapped, snapView in
+            guard let self else {
+                return
+            }
             let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
             if snapped {
                 self.insertSubview(snapView, belowSubview: view)
@@ -348,20 +351,20 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
             switch type {
             case .centerX:
-                processSnap(snapped: snapped, snapView: self.xAxisView)
+                processSnap(snapped, self.xAxisView)
             case .centerY:
-                processSnap(snapped: snapped, snapView: self.yAxisView)
+                processSnap(snapped, self.yAxisView)
             case .top:
-                processSnap(snapped: snapped, snapView: self.topEdgeView)
+                processSnap(snapped, self.topEdgeView)
                 self.edgePreviewUpdated(snapped)
             case .left:
-                processSnap(snapped: snapped, snapView: self.leftEdgeView)
+                processSnap(snapped, self.leftEdgeView)
                 self.edgePreviewUpdated(snapped)
             case .right:
-                processSnap(snapped: snapped, snapView: self.rightEdgeView)
+                processSnap(snapped, self.rightEdgeView)
                 self.edgePreviewUpdated(snapped)
             case .bottom:
-                processSnap(snapped: snapped, snapView: self.bottomEdgeView)
+                processSnap(snapped, self.bottomEdgeView)
                 self.edgePreviewUpdated(snapped)
             case let .rotation(angle):
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)

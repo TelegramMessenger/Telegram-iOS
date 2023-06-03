@@ -51,6 +51,8 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/AvatarNode",
         "//submodules/ChatPresentationInterfaceState",
+        "//submodules/TelegramStringFormatting",
+        "//submodules/ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

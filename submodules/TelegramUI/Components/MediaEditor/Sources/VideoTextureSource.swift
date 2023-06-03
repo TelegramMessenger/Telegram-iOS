@@ -127,7 +127,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         ]
         
         let output = AVPlayerItemVideoOutput(outputSettings: outputSettings)
-        output.suppressesPlayerRendering = true
+        //output.suppressesPlayerRendering = true
         output.setDelegate(self, queue: self.queue)
         playerItem.add(output)
         self.playerItemOutput = output
@@ -163,7 +163,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         if self.player.rate != 0 {
             self.forceUpdate = true
         }
-        self.update(forced: self.forceUpdate)
+        self.update(forced: true) //self.forceUpdate)
         self.forceUpdate = false
     }
     
@@ -186,7 +186,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         
         var presentationTime: CMTime = .zero
         if let pixelBuffer = output.copyPixelBuffer(forItemTime: requestTime, itemTimeForDisplay: &presentationTime) {
-            self.output?.consumeVideoPixelBuffer(pixelBuffer, rotation: self.textureRotation, render: true)
+            self.output?.consumeVideoPixelBuffer(pixelBuffer, rotation: self.textureRotation, timestamp: presentationTime, render: true)
         }
     }
         

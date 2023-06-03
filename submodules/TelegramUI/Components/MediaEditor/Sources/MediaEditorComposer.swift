@@ -101,7 +101,7 @@ final class MediaEditorComposer {
         }
         let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         
-        self.renderer.consumeVideoPixelBuffer(imageBuffer, rotation: textureRotation, render: true)
+        self.renderer.consumeVideoPixelBuffer(imageBuffer, rotation: textureRotation, timestamp: time, render: true)
         
         if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
             ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))

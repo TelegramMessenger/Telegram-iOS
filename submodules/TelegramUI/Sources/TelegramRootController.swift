@@ -292,8 +292,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         return nil
                     case let .image(image):
                         return .image(image, PixelDimensions(image.size))
-                    case let .video(path, dimensions):
-                        return .video(path, dimensions)
+                    case let .video(path, transitionImage, dimensions):
+                        return .video(path, transitionImage, dimensions)
                     case let .asset(asset):
                         return .asset(asset)
                     case let .draft(draft):
@@ -342,7 +342,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         
                         if let chatListController = self.chatListController as? ChatListControllerImpl {
-                            chatListController.scrollToTop?()
+                            chatListController.scrollToStories()
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
                                 if let imageData = compressImageToJPEG(image, quality: 0.6) {

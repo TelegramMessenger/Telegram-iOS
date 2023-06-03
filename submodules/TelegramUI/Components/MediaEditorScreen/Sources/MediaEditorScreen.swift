@@ -612,8 +612,7 @@ final class MediaEditorScreenComponent: Component {
                         framesUpdateTimestamp: playerState.framesUpdateTimestamp,
                         trimUpdated: { [weak mediaEditor] start, end, updatedEnd, done in
                             if let mediaEditor {
-                                mediaEditor.setVideoTrimStart(start)
-                                mediaEditor.setVideoTrimEnd(end)
+                                mediaEditor.setVideoTrimRange(start..<end)
                                 if done {
                                     mediaEditor.seek(start, andPlay: true)
                                 } else {
@@ -1440,7 +1439,7 @@ public final class MediaEditorScreen: ViewController {
                     }
                 } else if abs(translation.x) > 10.0 && !self.isDismissing {
                     self.isEnhacing = true
-                    controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
+                    controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                 }
                 
                 if self.isDismissing {
@@ -1467,7 +1466,7 @@ public final class MediaEditorScreen: ViewController {
                     }
                 } else {
                     self.isEnhacing = false
-                    controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
+                    controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                 }
             default:
                 break
@@ -1500,6 +1499,29 @@ public final class MediaEditorScreen: ViewController {
             }
         }
         
+        private func setupTransitionImage(_ image: UIImage) {
+            self.previewContainerView.alpha = 1.0
+            
+            let transitionInView = UIImageView(image: image)
+            var initialScale: CGFloat
+            if image.size.height > image.size.width {
+                initialScale = max(self.previewContainerView.bounds.width / image.size.width, self.previewContainerView.bounds.height / image.size.height)
+            } else {
+                initialScale = self.previewContainerView.bounds.width / image.size.width
+            }
+            transitionInView.center = CGPoint(x: self.previewContainerView.bounds.width / 2.0, y: self.previewContainerView.bounds.height / 2.0)
+            transitionInView.transform = CGAffineTransformMakeScale(initialScale, initialScale)
+            self.previewContainerView.addSubview(transitionInView)
+            self.transitionInView = transitionInView
+            
+            self.mediaEditor?.onFirstDisplay = { [weak self] in
+                if let self, let transitionInView = self.transitionInView  {
+                    transitionInView.removeFromSuperview()
+                    self.transitionInView = nil
+                }
+            }
+        }
+        
         func animateIn() {
             if let transitionIn = self.controller?.transitionIn {
                 switch transitionIn {
@@ -1507,28 +1529,12 @@ public final class MediaEditorScreen: ViewController {
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateIn(from: .camera)
                     }
+                    if let subject = self.subject, case let .video(_, transitionImage, _) = subject, let transitionImage {
+                        self.setupTransitionImage(transitionImage)
+                    }
                 case let .gallery(transitionIn):
                     if let sourceImage = transitionIn.sourceImage {
-                        self.previewContainerView.alpha = 1.0
-
-                        let transitionInView = UIImageView(image: sourceImage)
-                        var initialScale: CGFloat
-                        if sourceImage.size.height > sourceImage.size.width {
-                            initialScale = max(self.previewContainerView.bounds.width / sourceImage.size.width, self.previewContainerView.bounds.height / sourceImage.size.height)
-                        } else {
-                            initialScale = self.previewContainerView.bounds.width / sourceImage.size.width
-                        }
-                        transitionInView.center = CGPoint(x: self.previewContainerView.bounds.width / 2.0, y: self.previewContainerView.bounds.height / 2.0)
-                        transitionInView.transform = CGAffineTransformMakeScale(initialScale, initialScale)
-                        self.previewContainerView.addSubview(transitionInView)
-                        self.transitionInView = transitionInView
-                        
-                        self.mediaEditor?.onFirstDisplay = { [weak self] in
-                            if let self, let transitionInView = self.transitionInView  {
-                                transitionInView.removeFromSuperview()
-                                self.transitionInView = nil
-                            }
-                        }
+                        self.setupTransitionImage(sourceImage)
                     }
                     if let sourceView = transitionIn.sourceView {
                         if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
@@ -1714,34 +1720,62 @@ public final class MediaEditorScreen: ViewController {
             self.controller?.present(tooltipController, in: .current)
         }
         
-        private var saveTooltip: TooltipScreen?
+        private weak var saveTooltip: SaveProgressScreen?
         func presentSaveTooltip() {
-            guard let controller = self.controller, let sourceView = self.componentHost.findTaggedView(tag: saveButtonTag) else {
+            guard let controller = self.controller else {
                 return
             }
             
             if let saveTooltip = self.saveTooltip {
-                saveTooltip.dismiss(animated: true)
-                self.saveTooltip = nil
+                if case .completion = saveTooltip.content {
+                    saveTooltip.dismiss()
+                    self.saveTooltip = nil
+                }
             }
-            
-            let parentFrame = self.view.convert(self.bounds, to: nil)
-            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
             let text: String
             let isVideo = self.mediaEditor?.resultIsVideo ?? false
             if isVideo {
-                text = "Video saved to Photos"
+                text = "Video saved to Photos."
             } else {
-                text = "Image saved to Photos"
+                text = "Image saved to Photos."
             }
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: text, location: .point(location, .top), displayDuration: .default, inset: 16.0, cornerRadius: 10.0, shouldDismissOnTouch: { _ in
-                return .ignore
-            })
-            self.saveTooltip = tooltipController
-            controller.present(tooltipController, in: .current)
+            if let tooltipController = self.saveTooltip {
+                tooltipController.content = .completion(text)
+            } else {
+                let tooltipController = SaveProgressScreen(context: self.context, content: .completion(text))
+                controller.present(tooltipController, in: .current)
+                self.saveTooltip = tooltipController
+            }
+        }
+        
+        func updateVideoExportProgress(_ progress: Float) {
+            guard let controller = self.controller else {
+                return
+            }
+            
+            if let saveTooltip = self.saveTooltip {
+                if case .completion = saveTooltip.content {
+                    saveTooltip.dismiss()
+                    self.saveTooltip = nil
+                }
+            }
+            
+            let text = "Preparing video..."
+            
+            if let tooltipController = self.saveTooltip {
+                tooltipController.content = .progress(text, progress)
+            } else {
+                let tooltipController = SaveProgressScreen(context: self.context, content: .progress(text, 0.0))
+                tooltipController.cancelled = { [weak self] in
+                    if let self, let controller = self.controller {
+                        controller.cancelVideoExport()
+                    }
+                }
+                controller.present(tooltipController, in: .current)
+                self.saveTooltip = tooltipController
+            }
         }
         
         private weak var storyArchiveTooltip: ViewController?
@@ -2009,13 +2043,13 @@ public final class MediaEditorScreen: ViewController {
     
     public enum Subject {
         case image(UIImage, PixelDimensions)
-        case video(String, PixelDimensions)
+        case video(String, UIImage?, PixelDimensions)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         
         var dimensions: PixelDimensions {
             switch self {
-            case let .image(_, dimensions), let .video(_, dimensions):
+            case let .image(_, dimensions), let .video(_, _, dimensions):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
@@ -2028,8 +2062,8 @@ public final class MediaEditorScreen: ViewController {
             switch self {
             case let .image(image, dimensions):
                 return .image(image, dimensions)
-            case let .video(videoPath, dimensions):
-                return .video(videoPath, dimensions)
+            case let .video(videoPath, transitionImage, dimensions):
+                return .video(videoPath, transitionImage, dimensions)
             case let .asset(asset):
                 return .asset(asset)
             case let .draft(draft):
@@ -2041,7 +2075,7 @@ public final class MediaEditorScreen: ViewController {
             switch self {
             case let .image(image, dimensions):
                 return .image(image, dimensions)
-            case let .video(videoPath, dimensions):
+            case let .video(videoPath, _, dimensions):
                 return .video(videoPath, dimensions)
             case let .asset(asset):
                 return .asset(asset)
@@ -2094,6 +2128,10 @@ public final class MediaEditorScreen: ViewController {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.exportDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -2273,6 +2311,10 @@ public final class MediaEditorScreen: ViewController {
     }
     
     func maybePresentDiscardAlert() {
+        if "".isEmpty {
+            self.requestDismiss(saveDraft: false, animated: true)
+            return
+        }
         if let subject = self.node.subject, case .asset = subject, self.node.mediaEditor?.values.hasChanges == false {
             self.requestDismiss(saveDraft: false, animated: true)
             return
@@ -2397,7 +2439,7 @@ public final class MediaEditorScreen: ViewController {
                 }
                 videoResult = .imageFile(path: tempImagePath)
                 duration = 5.0
-            case let .video(path, _):
+            case let .video(path, _, _):
                 videoResult = .videoFile(path: path)
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
@@ -2430,8 +2472,10 @@ public final class MediaEditorScreen: ViewController {
             }
             self.completion(.video(video: videoResult, coverImage: nil, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions, caption: caption), self.state.privacy, { [weak self] finished in
                 self?.node.animateOut(finished: true, completion: { [weak self] in
-                    finished()
                     self?.dismiss()
+                    Queue.mainQueue().justDispatch {
+                        finished()
+                    }
                 })
             })
             
@@ -2444,8 +2488,10 @@ public final class MediaEditorScreen: ViewController {
                     if let resultImage {
                         self.completion(.image(image: resultImage, dimensions: PixelDimensions(resultImage.size), caption: caption), self.state.privacy, { [weak self] finished in
                             self?.node.animateOut(finished: true, completion: { [weak self] in
-                                finished()
                                 self?.dismiss()
+                                Queue.mainQueue().justDispatch {
+                                    finished()
+                                }
                             })
                         })
                         if case let .draft(draft) = subject {
@@ -2458,7 +2504,7 @@ public final class MediaEditorScreen: ViewController {
     }
     
     private var videoExport: MediaEditorVideoExport?
-    private var exportDisposable: Disposable?
+    private var exportDisposable = MetaDisposable()
     
     private var previousSavedValues: MediaEditorValues?
     func requestSave() {
@@ -2497,9 +2543,12 @@ public final class MediaEditorScreen: ViewController {
         }
         
         if mediaEditor.resultIsVideo {
+            mediaEditor.stop()
+            self.node.entitiesView.pause()
+            
             let exportSubject: Signal<MediaEditorVideoExport.Subject, NoError>
             switch subject {
-            case let .video(path, _):
+            case let .video(path, _, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .single(.video(asset))
             case let .image(image, _):
@@ -2547,28 +2596,46 @@ public final class MediaEditorScreen: ViewController {
                 let videoExport = MediaEditorVideoExport(account: self.context.account, subject: exportSubject, configuration: configuration, outputPath: outputPath)
                 self.videoExport = videoExport
                 
-                videoExport.startExport()
+                videoExport.start()
                 
-                self.exportDisposable = (videoExport.status
+                self.exportDisposable.set((videoExport.status
                 |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let self {
-                        if case .completed = status {
+                        switch status {
+                        case .completed:
                             self.videoExport = nil
                             saveToPhotos(outputPath, true)
                             self.node.presentSaveTooltip()
+                            
+                            self.node.mediaEditor?.play()
+                            self.node.entitiesView.play()
+                        case let .progress(progress):
+                            if self.videoExport != nil {
+                                self.node.updateVideoExportProgress(progress)
+                            }
+                        case .failed:
+                            self.videoExport = nil
+                            self.node.mediaEditor?.play()
+                            self.node.entitiesView.play()
+                        case .unknown:
+                            break
                         }
                     }
-                })
+                }))
             })
         } else {
             if let image = mediaEditor.resultImage {
-                makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
-                    if let data = resultImage?.jpegData(compressionQuality: 0.8) {
-                        let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
-                        try? data.write(to: URL(fileURLWithPath: outputPath))
-                        saveToPhotos(outputPath, false)
-                    }
-                })
+                Queue.concurrentDefaultQueue().async {
+                    makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { resultImage in
+                        if let data = resultImage?.jpegData(compressionQuality: 0.8) {
+                            let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).jpg"
+                            try? data.write(to: URL(fileURLWithPath: outputPath))
+                            Queue.mainQueue().async {
+                                saveToPhotos(outputPath, false)
+                            }
+                        }
+                    })
+                }
                 self.node.presentSaveTooltip()
             }
         }
@@ -2576,6 +2643,19 @@ public final class MediaEditorScreen: ViewController {
     
     func requestSettings() {
         
+    }
+    
+    fileprivate func cancelVideoExport() {
+        if let videoExport = self.videoExport {
+            self.previousSavedValues = nil
+            
+            videoExport.cancel()
+            self.videoExport = nil
+            self.exportDisposable.set(nil)
+            
+            self.node.mediaEditor?.play()
+            self.node.entitiesView.play()
+        }
     }
     
     private func dismissAllTooltips() {
@@ -2586,6 +2666,9 @@ public final class MediaEditorScreen: ViewController {
         })
         self.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            if let controller = controller as? SaveProgressScreen {
                 controller.dismiss()
             }
             return true

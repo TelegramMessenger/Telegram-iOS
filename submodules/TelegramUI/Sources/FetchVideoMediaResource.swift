@@ -260,7 +260,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                 if let mediaEditorValues {
                     let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
                     let videoExport = MediaEditorVideoExport(account: account, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
-                    videoExport.startExport()
+                    videoExport.start()
                     
                     let statusDisposable = videoExport.status.start(next: { status in
                         switch status {
@@ -293,6 +293,8 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                             EngineTempBox.shared.dispose(tempFile)
                         case .failed:
                             subscriber.putError(.generic)
+                        case let .progress(progress):
+                            subscriber.putNext(.progressUpdated(progress))
                         default:
                             break
                         }
@@ -414,7 +416,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
             }
             
             let videoExport = MediaEditorVideoExport(account: account, subject: subject, configuration: configuration, outputPath: tempFile.path)
-            videoExport.startExport()
+            videoExport.start()
             
             let statusDisposable = videoExport.status.start(next: { status in
                 switch status {
@@ -447,6 +449,8 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                     EngineTempBox.shared.dispose(tempFile)
                 case .failed:
                     subscriber.putError(.generic)
+                case let .progress(progress):
+                    subscriber.putNext(.progressUpdated(progress))
                 default:
                     break
                 }

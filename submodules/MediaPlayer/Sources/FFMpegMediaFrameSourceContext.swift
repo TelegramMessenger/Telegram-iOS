@@ -413,7 +413,10 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
             let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
             
-            let duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
+            var duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
+            if !isSeekable {
+                duration = CMTimeMake(value: Int64.min, timescale: duration.timescale)
+            }
             
             let metrics = avFormatContext.metricsForStream(at: streamIndex)
             
@@ -465,7 +468,10 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                         let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
                         let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
                         
-                        let duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
+                        var duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
+                        if !isSeekable {
+                            duration = CMTimeMake(value: Int64.min, timescale: duration.timescale)
+                        }
                         
                         audioStream = StreamContext(index: Int(streamIndex), codecContext: codecContext, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegAudioFrameDecoder(codecContext: codecContext), rotationAngle: 0.0, aspect: 1.0)
                         break

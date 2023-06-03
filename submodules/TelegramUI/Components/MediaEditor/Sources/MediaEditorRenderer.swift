@@ -7,7 +7,7 @@ import SwiftSignalKit
 
 protocol TextureConsumer: AnyObject {
     func consumeTexture(_ texture: MTLTexture, render: Bool)
-    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation, render: Bool)
+    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation, timestamp: CMTime, render: Bool)
 }
 
 final class RenderingContext {
@@ -247,13 +247,19 @@ final class MediaEditorRenderer: TextureConsumer {
         }
     }
     
-    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation, render: Bool) {
+    var previousPresentationTimestamp: CMTime?
+    func consumeVideoPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: TextureRotation, timestamp: CMTime, render: Bool) {
         let _ = self.semaphore.wait(timeout: .distantFuture)
         
         self.currentPixelBuffer = (pixelBuffer, rotation)
         if render {
-            self.renderFrame()
+            if self.previousPresentationTimestamp == timestamp {
+                self.semaphore.signal()
+            } else {
+                self.renderFrame()
+            }
         }
+        self.previousPresentationTimestamp = timestamp
     }
     
     func renderTargetDidChange(_ target: RenderTarget?) {
