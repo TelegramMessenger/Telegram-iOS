@@ -223,6 +223,10 @@ private final class CameraContext {
         self.device.setZoomLevel(zoomLevel)
     }
     
+    func setZoomDelta(_ zoomDelta: CGFloat) {
+        self.device.setZoomDelta(zoomDelta)
+    }
+    
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
         return self.output.takePhoto(orientation: self.videoOrientation ?? .portrait, flashMode: self._flashMode)
     }
@@ -410,6 +414,15 @@ public final class Camera {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.setZoomLevel(zoomLevel)
+            }
+        }
+    }
+    
+    
+    public func setZoomDelta(_ zoomDelta: CGFloat) {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.setZoomDelta(zoomDelta)
             }
         }
     }

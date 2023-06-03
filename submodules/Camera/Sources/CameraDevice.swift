@@ -220,4 +220,13 @@ final class CameraDevice {
             device.videoZoomFactor = max(1.0, min(10.0, zoomLevel))
         }
     }
+    
+    func setZoomDelta(_ zoomDelta: CGFloat) {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            device.videoZoomFactor = max(1.0, min(10.0, device.videoZoomFactor * zoomDelta))
+        }
+    }
 }

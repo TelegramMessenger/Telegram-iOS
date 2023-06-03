@@ -873,11 +873,10 @@ public class CameraScreen: ViewController {
         
         @objc private func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
             switch gestureRecognizer.state {
-            case .began:
-                gestureRecognizer.scale = 1.0
             case .changed:
                 let scale = gestureRecognizer.scale
-                self.camera.setZoomLevel(scale)
+                self.camera.setZoomDelta(scale)
+                gestureRecognizer.scale = 1.0
             default:
                 break
             }

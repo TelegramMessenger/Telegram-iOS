@@ -387,6 +387,7 @@ public final class MediaEditor {
                 self.setGradientColors([topColor, bottomColor])
                 
                 if player == nil {
+                    self.updateRenderChain()
                     self.maybeGeneratePersonSegmentation(image)
                 }
                 
@@ -425,10 +426,20 @@ public final class MediaEditor {
     }
     
     private var skipRendering = false
+    private func updateValues(skipRendering: Bool = false, _ f: (MediaEditorValues) -> MediaEditorValues) {
+        if skipRendering {
+            self.skipRendering = true
+        }
+        self.values = f(self.values)
+        if skipRendering {
+            self.skipRendering = false
+        }
+    }
+    
     public func setCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) {
-        self.skipRendering = true
-        self.values = self.values.withUpdatedCrop(offset: offset, scale: scale, rotation: rotation, mirroring: mirroring)
-        self.skipRendering = false
+        self.updateValues(skipRendering: true) { values in
+            return values.withUpdatedCrop(offset: offset, scale: scale, rotation: rotation, mirroring: mirroring)
+        }
     }
     
     public func getToolValue(_ key: EditorToolKey) -> Any? {
@@ -436,19 +447,24 @@ public final class MediaEditor {
     }
     
     public func setToolValue(_ key: EditorToolKey, value: Any) {
-        var updatedToolValues = self.values.toolValues
-        updatedToolValues[key] = value
-        self.values = self.values.withUpdatedToolValues(updatedToolValues)
-        self.updateRenderChain()
+        self.updateValues { values in
+            var updatedToolValues = values.toolValues
+            updatedToolValues[key] = value
+            return values.withUpdatedToolValues(updatedToolValues)
+        }
     }
     
     public func setVideoIsMuted(_ videoIsMuted: Bool) {
         self.player?.isMuted = videoIsMuted
-        self.values = self.values.withUpdatedVideoIsMuted(videoIsMuted)
+        self.updateValues(skipRendering: true) { values in
+            return values.withUpdatedVideoIsMuted(videoIsMuted)
+        }
     }
     
     public func setVideoIsFullHd(_ videoIsFullHd: Bool) {
-        self.values = self.values.withUpdatedVideoIsFullHd(videoIsFullHd)
+        self.updateValues(skipRendering: true) { values in
+            return values.withUpdatedVideoIsFullHd(videoIsFullHd)
+        }
     }
     
     private var targetTimePosition: (CMTime, Bool)?
@@ -494,23 +510,29 @@ public final class MediaEditor {
         })
     }
     
-    public func setVideoTrimRange(_ trimRange: Range<Double>) {
-        self.skipRendering = true
-        self.values = self.values.withUpdatedVideoTrimRange(trimRange)
-        self.skipRendering = false
+    public func setVideoTrimRange(_ trimRange: Range<Double>, apply: Bool) {
+        self.updateValues(skipRendering: true) { values in
+            return values.withUpdatedVideoTrimRange(trimRange)
+        }
         
-        self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+        if apply {
+            self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+        }
     }
     
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
-        self.values = self.values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
+        self.updateValues(skipRendering: true) { values in
+            return values.withUpdatedDrawingAndEntities(drawing: image, entities: entities)
+        }
     }
     
     public func setGradientColors(_ gradientColors: [UIColor]) {
-        self.values = self.values.withUpdatedGradientColors(gradientColors: gradientColors)
+        self.updateValues(skipRendering: true) { values in
+            return values.withUpdatedGradientColors(gradientColors: gradientColors)
+        }
     }
     
-    private var previousUpdateTime = CACurrentMediaTime()
+    private var previousUpdateTime: Double?
     private var scheduledUpdate = false
     private func updateRenderChain() {
         self.renderChain.update(values: self.values)
@@ -519,10 +541,9 @@ public final class MediaEditor {
             let currentTime = CACurrentMediaTime()
             if !self.scheduledUpdate {
                 let delay = 0.03333
-                let delta = currentTime - self.previousUpdateTime
-                if delta < delay {
+                if let previousUpdateTime = self.previousUpdateTime, currentTime - previousUpdateTime < delay {
                     self.scheduledUpdate = true
-                    Queue.mainQueue().after(delay - delta) {
+                    Queue.mainQueue().after(delay - (currentTime - previousUpdateTime)) {
                         self.scheduledUpdate = false
                         self.previousUpdateTime = CACurrentMediaTime()
                         self.renderer.willRenderFrame()

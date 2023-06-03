@@ -200,6 +200,8 @@ final class MediaEditorScreenComponent: Component {
         private let textDoneButton = ComponentView<Empty>()
         private let textSize =  ComponentView<Empty>()
         
+        private var isDismissed = false
+        
         private var component: MediaEditorScreenComponent?
         private weak var state: State?
         private var environment: ViewControllerComponentContainer.Environment?
@@ -274,6 +276,7 @@ final class MediaEditorScreenComponent: Component {
         }
         
         func animateOut(to source: TransitionAnimationSource) {
+            self.isDismissed = true
             let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.cancelButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
@@ -398,6 +401,9 @@ final class MediaEditorScreenComponent: Component {
         }
         
         func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+            guard !self.isDismissed else {
+                return availableSize
+            }
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
             
@@ -612,10 +618,9 @@ final class MediaEditorScreenComponent: Component {
                         framesUpdateTimestamp: playerState.framesUpdateTimestamp,
                         trimUpdated: { [weak mediaEditor] start, end, updatedEnd, done in
                             if let mediaEditor {
+                                mediaEditor.setVideoTrimRange(start..<end, apply: done)
                                 if done {
                                     mediaEditor.seek(start, andPlay: true)
-                                    
-                                    mediaEditor.setVideoTrimRange(start..<end)
                                 } else {
                                     mediaEditor.seek(updatedEnd ? end : start, andPlay: false)
                                 }
@@ -1106,9 +1111,10 @@ public final class MediaEditorScreen: ViewController {
         
         private var isDisplayingTool = false
         private var isInteractingWithEntities = false
+        private var isEnhacing = false
         private var isDismissing = false
         private var dismissOffset: CGFloat = 0.0
-        private var isEnhacing = false
+        private var isDismissed = false
         
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
@@ -1259,22 +1265,6 @@ public final class MediaEditorScreen: ViewController {
                 return
             }
             
-            var hasSwipeToDismiss = false
-            if let subject = self.subject {
-                if case .asset = subject {
-                    hasSwipeToDismiss = true
-                } else if case .draft = subject {
-                    hasSwipeToDismiss = true
-                }
-            }
-            if hasSwipeToDismiss {
-                let dismissPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handleDismissPan(_:)))
-                dismissPanGestureRecognizer.delegate = self
-                dismissPanGestureRecognizer.maximumNumberOfTouches = 1
-                self.previewContainerView.addGestureRecognizer(dismissPanGestureRecognizer)
-                self.dismissPanGestureRecognizer = dismissPanGestureRecognizer
-            }
-            
             let mediaDimensions = subject.dimensions
             let maxSide: CGFloat = 1920.0 / UIScreen.main.scale
             let fittedSize = mediaDimensions.cgSize.fitted(CGSize(width: maxSide, height: maxSide))
@@ -1345,6 +1335,12 @@ public final class MediaEditorScreen: ViewController {
             
             self.view.disablesInteractiveModalDismiss = true
             self.view.disablesInteractiveKeyboardGestureRecognizer = true
+            
+            let dismissPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handleDismissPan(_:)))
+            dismissPanGestureRecognizer.delegate = self
+            dismissPanGestureRecognizer.maximumNumberOfTouches = 1
+            self.previewContainerView.addGestureRecognizer(dismissPanGestureRecognizer)
+            self.dismissPanGestureRecognizer = dismissPanGestureRecognizer
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             panGestureRecognizer.delegate = self
@@ -1429,11 +1425,20 @@ public final class MediaEditorScreen: ViewController {
                 return
             }
             
+            var hasSwipeToDismiss = false
+            if let subject = self.subject {
+                if case .asset = subject {
+                    hasSwipeToDismiss = true
+                } else if case .draft = subject {
+                    hasSwipeToDismiss = true
+                }
+            }
+            
             let translation = gestureRecognizer.translation(in: self.view)
             let velocity = gestureRecognizer.velocity(in: self.view)
             switch gestureRecognizer.state {
             case .changed:
-                if abs(translation.y) > 10.0 && !self.isEnhacing {
+                if abs(translation.y) > 10.0 && !self.isEnhacing && hasSwipeToDismiss {
                     if !self.isDismissing {
                         self.isDismissing = true
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
@@ -1449,7 +1454,7 @@ public final class MediaEditorScreen: ViewController {
                 } else if self.isEnhacing {
                     if let mediaEditor = self.mediaEditor {
                         let value = mediaEditor.getToolValue(.enhance) as? Float ?? 0.0
-                        let delta = Float((translation.x / self.frame.width) * 2.0)
+                        let delta = Float((translation.x / self.frame.width) * 1.5)
                         let updatedValue = max(0.0, min(1.0, value + delta))
                         mediaEditor.setToolValue(.enhance, value: updatedValue)
                     }
@@ -1573,6 +1578,7 @@ public final class MediaEditorScreen: ViewController {
             guard let controller = self.controller else {
                 return
             }
+            self.isDismissed = true
             controller.statusBar.statusBarStyle = .Ignore
             
             let previousDimAlpha = self.backgroundDimView.alpha
@@ -1825,7 +1831,7 @@ public final class MediaEditorScreen: ViewController {
         
         private var drawingScreen: DrawingScreen?
         func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, animateOut: Bool = false, transition: Transition) {
-            guard let controller = self.controller else {
+            guard let controller = self.controller, !self.isDismissed else {
                 return
             }
             let isFirstTime = self.validLayout == nil
@@ -2800,6 +2806,8 @@ private final class ToolValueComponent: Component {
         private let title = ComponentView<Empty>()
         private let value = ComponentView<Empty>()
         
+        private let hapticFeedback = HapticFeedback()
+        
         private var component: ToolValueComponent?
         private weak var state: EmptyComponentState?
         
@@ -2814,6 +2822,8 @@ private final class ToolValueComponent: Component {
         }
         
         func update(component: ToolValueComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            
+            let previousValue = self.component?.value
             self.component = component
             self.state = state
             
@@ -2859,6 +2869,10 @@ private final class ToolValueComponent: Component {
                 }
                 transition.setPosition(view: valueView, position: valueFrame.center)
                 transition.setBounds(view: valueView, bounds: CGRect(origin: .zero, size: valueFrame.size))
+            }
+            
+            if let previousValue, component.value != previousValue, self.alpha > 0.0 {
+                self.hapticFeedback.impact(.click05)
             }
            
             return availableSize
