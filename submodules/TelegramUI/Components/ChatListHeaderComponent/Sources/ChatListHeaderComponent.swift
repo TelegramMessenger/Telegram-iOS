@@ -300,6 +300,7 @@ public final class ChatListHeaderComponent: Component {
         var contentOffsetFraction: CGFloat = 0.0
         private(set) var centerContentWidth: CGFloat = 0.0
         private(set) var centerContentOffsetX: CGFloat = 0.0
+        private(set) var centerContentOrigin: CGFloat = 0.0
         
         init(
             backPressed: @escaping () -> Void,
@@ -625,6 +626,7 @@ public final class ChatListHeaderComponent: Component {
             
             var centerContentWidth: CGFloat = 0.0
             var centerContentOffsetX: CGFloat = 0.0
+            var centerContentOrigin: CGFloat = 0.0
             if let chatListTitle = content.chatListTitle {
                 var chatListTitleTransition = transition
                 let chatListTitleView: ChatListTitleView
@@ -647,7 +649,7 @@ public final class ChatListHeaderComponent: Component {
                 
                 //sideWidth + centerWidth + centerOffset = size.width
                 //let centerOffset = -(size.width - (sideContentWidth + centerContentWidth)) * 0.5 + size.width * 0.5
-                let centerOffset = sideContentWidth
+                let centerOffset = sideContentWidth * 0.5
                 centerContentOffsetX = -max(0.0, centerOffset + titleContentRect.maxX - 2.0 - rightOffset)
                 
                 chatListTitleView.openStatusSetup = { [weak self] sourceView in
@@ -670,6 +672,8 @@ public final class ChatListHeaderComponent: Component {
                     chatListTitleOffset = (centerOffset + centerContentOffsetX) * sideContentFraction
                 }
                 
+                centerContentOrigin = chatListTitleOffset + size.width * 0.5 - centerContentWidth * 0.5
+                
                 chatListTitleTransition.setFrame(view: chatListTitleView, frame: CGRect(origin: CGPoint(x: chatListTitleOffset + floor((size.width - chatListTitleContentSize.width) / 2.0), y: floor((size.height - chatListTitleContentSize.height) / 2.0)), size: chatListTitleContentSize))
             } else {
                 if let chatListTitleView = self.chatListTitleView {
@@ -681,6 +685,7 @@ public final class ChatListHeaderComponent: Component {
             self.titleTextView.isHidden = self.chatListTitleView != nil || self.titleContentView != nil
             self.centerContentWidth = centerContentWidth
             self.centerContentOffsetX = centerContentOffsetX
+            self.centerContentOrigin = centerContentOrigin
         }
     }
     
@@ -977,7 +982,7 @@ public final class ChatListHeaderComponent: Component {
                 
                 var defaultStoryListX: CGFloat = 0.0
                 if let primaryContentView = self.primaryContentView {
-                    defaultStoryListX = floor((self.storyPeerListExternalState.collapsedWidth - primaryContentView.centerContentWidth) * 0.5) + primaryContentView.centerContentOffsetX
+                    defaultStoryListX = primaryContentView.centerContentOrigin - (self.storyPeerListExternalState.collapsedWidth * 0.5 + 8.0) - availableSize.width * 0.5
                 }
                 
                 storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: -1.0 * availableSize.width * component.secondaryTransition + (1.0 - component.storiesFraction) * defaultStoryListX, y: storyPeerListPosition), size: CGSize(width: availableSize.width, height: 94.0)))
