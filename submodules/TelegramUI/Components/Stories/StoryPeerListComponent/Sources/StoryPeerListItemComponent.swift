@@ -362,8 +362,6 @@ public final class StoryPeerListItemComponent: Component {
             let themeUpdated = self.component?.theme !== component.theme
             
             let previousComponent = self.component
-
-            self.containerNode.isGestureEnabled = component.peer.id != component.context.account.peerId
             
             self.component = component
             self.componentState = state
