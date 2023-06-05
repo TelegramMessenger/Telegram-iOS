@@ -185,21 +185,9 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         self.addGestureRecognizer(panGestureRecognizer)
         self.panGestureRecognizer = panGestureRecognizer
         
-        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToYAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToAngle(snappedAngle)
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self, let entityView = self.entityView {
+                entityView.onSnapUpdated(type, snapped)
             }
         }
     }
@@ -240,11 +228,13 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
                 for layer in sublayers {
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
             }
             self.currentHandle = self.layer
+            entityView.onInteractionUpdated(true)
         case .changed:
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let velocity = gestureRecognizer.velocity(in: entityView.superview)
@@ -337,7 +327,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
                 
-                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition, size: entityView.frame.size)
             }
             
             entity.size = updatedSize
@@ -345,10 +335,9 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
-        case .ended:
+        case .ended, .cancelled:
             self.snapTool.reset()
-        case .cancelled:
-            self.snapTool.reset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -363,11 +352,16 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         
         switch gestureRecognizer.state {
         case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                entityView.onInteractionUpdated(true)
+            }
             let scale = gestureRecognizer.scale
             entity.size = CGSize(width: entity.size.width * scale, height: entity.size.height * scale)
             entityView.update()
             
             gestureRecognizer.scale = 1.0
+        case .ended, .cancelled:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -385,6 +379,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+            entityView.onInteractionUpdated(true)
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
@@ -392,6 +387,7 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
             self.snapTool.rotationReset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }

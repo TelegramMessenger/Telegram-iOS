@@ -145,20 +145,26 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         }
     }
     
+    private var beganRotating = false
     @objc func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
         var updatedRotation = self.mediaEntity.rotation
         var rotation: CGFloat = 0.0
         
         switch gestureRecognizer.state {
         case .began:
-            break
+            self.beganRotating = false
         case .changed:
             rotation = gestureRecognizer.rotation
-            updatedRotation += rotation
-            
-            gestureRecognizer.rotation = 0.0
+            if self.beganRotating || abs(rotation) >= 0.08 * .pi || abs(self.mediaEntity.rotation) >= 0.03 {
+                if !self.beganRotating {
+                    self.beganRotating = true
+                } else {
+                    updatedRotation += rotation
+                }
+                gestureRecognizer.rotation = 0.0
+            }
         case .ended, .cancelled:
-            break
+            self.beganRotating = false
         default:
             break
         }

@@ -4,6 +4,7 @@ import Lottie
 import AppBundle
 import HierarchyTrackingLayer
 import Display
+import GZip
 
 public final class LottieAnimationComponent: Component {
     public struct AnimationItem: Equatable {
@@ -176,7 +177,14 @@ public final class LottieAnimationComponent: Component {
                     self.didPlayToCompletion = false
                     self.currentCompletion = nil
                     
-                    if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "json"), let animation = Animation.filepath(url.path) {
+                    var animation: Animation?
+                    if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "json"), let maybeAnimation = Animation.filepath(url.path) {
+                        animation = maybeAnimation
+                    } else if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "tgs"), let data = try? Data(contentsOf: URL(fileURLWithPath: url.path)), let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                        animation = try? Animation.from(data: unpackedData, strategy: .codable)
+                    }
+                    
+                    if let animation {
                         let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                         switch component.animation.mode {
                         case .still, .animateTransitionFromPrevious:

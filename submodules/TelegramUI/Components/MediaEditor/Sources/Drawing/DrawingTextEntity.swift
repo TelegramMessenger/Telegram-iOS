@@ -56,26 +56,26 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         case renderAnimationFrames
     }
     
-    public enum Style: Codable {
+    public enum Style: Codable, Equatable {
         case regular
         case filled
         case semi
         case stroke
     }
     
-    public enum Animation: Codable {
+    public enum Animation: Codable, Equatable {
         case none
         case typing
         case wiggle
         case zoomIn
     }
     
-    public enum Font: Codable {
+    public enum Font: Codable, Equatable {
         case sanFrancisco
         case other(String, String)
     }
     
-    public enum Alignment: Codable {
+    public enum Alignment: Codable, Equatable {
         case left
         case center
         case right
@@ -255,6 +255,52 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         newEntity.scale = self.scale
         newEntity.rotation = self.rotation
         return newEntity
+    }
+    
+    public func isEqual(to other: DrawingEntity) -> Bool {
+        guard let other = other as? DrawingTextEntity else {
+            return false
+        }
+        if self.uuid != other.uuid {
+            return false
+        }
+        if self.text != other.text {
+            return false
+        }
+        if self.style != other.style {
+            return false
+        }
+        if self.animation != other.animation {
+            return false
+        }
+        if self.font != other.font {
+            return false
+        }
+        if self.alignment != other.alignment {
+            return false
+        }
+        if self.fontSize != other.fontSize {
+            return false
+        }
+        if self.color != other.color {
+            return false
+        }
+        if self.referenceDrawingSize != other.referenceDrawingSize {
+            return false
+        }
+        if self.position != other.position {
+            return false
+        }
+        if self.width != other.width {
+            return false
+        }
+        if self.scale != other.scale {
+            return false
+        }
+        if self.rotation != other.rotation {
+            return false
+        }
+        return true
     }
     
 //    public weak var currentEntityView: DrawingEntityView?

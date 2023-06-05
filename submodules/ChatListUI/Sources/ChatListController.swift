@@ -2387,40 +2387,54 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 var items: [ContextMenuItem] = []
-                
+                                
                 //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak self] c, _ in
-                    c.dismiss(completion: {
-                        guard let self else {
-                            return
-                        }
-                        
-                        let _ = (self.context.engine.data.get(
-                            TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)
-                        )
-                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if peer.id == self.context.account.peerId {
+                    items.append(.action(ContextMenuActionItem(text: "Add Story", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] c, _ in
+                        c.dismiss(completion: {
                             guard let self else {
                                 return
                             }
-                            guard let peer = peer, let controller = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                            
+                            self.openStoryCamera()
+                        })
+                    })))
+                } else {
+                    items.append(.action(ContextMenuActionItem(text: "View Profile", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] c, _ in
+                        c.dismiss(completion: {
+                            guard let self else {
                                 return
                             }
-                            (self.navigationController as? NavigationController)?.pushViewController(controller)
+                            
+                            let _ = (self.context.engine.data.get(
+                                TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)
+                            )
+                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                guard let self else {
+                                    return
+                                }
+                                guard let peer = peer, let controller = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                                    return
+                                }
+                                (self.navigationController as? NavigationController)?.pushViewController(controller)
+                            })
                         })
-                    })
-                })))
-                items.append(.action(ContextMenuActionItem(text: "Mute", icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
-                }, action: { _, f in
-                    f(.default)
-                })))
-                items.append(.action(ContextMenuActionItem(text: "Archive", icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
-                }, action: { _, f in
-                    f(.default)
-                })))
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: "Mute", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, f in
+                        f(.default)
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: "Archive", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
+                    }, action: { _, f in
+                        f(.default)
+                    })))
+                }
                 
                 let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: self, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
                 self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
@@ -2451,7 +2465,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.fullScreenEffectView = nil
             fullScreenEffectView.removeFromSuperview()
         }
-        
+
         if let value = RippleEffectView(centerLocation: centerLocation, completion: { [weak self] in
             guard let self else {
                 return
@@ -2466,6 +2480,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.view.addSubview(value)
             value.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
         }
+    }
+    
+    private(set) var storyUploadProgress: Float?
+    public func updateStoryUploadProgress(_ progress: Float?) {
+        self.storyUploadProgress = progress.flatMap { max(0.027, min(0.99, $0)) }
+        self.chatListDisplayNode.requestNavigationBarLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
+    }
+    
+    public func scrollToStories() {
+        
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -5194,6 +5218,7 @@ private final class ChatListLocationContext {
         if stateAndFilterId.state.editing {
             if case .chatList(.root) = self.location {
                 self.rightButton = nil
+                self.storyButton = nil
             }
             let title = !stateAndFilterId.state.selectedPeerIds.isEmpty ? presentationData.strings.ChatList_SelectedChats(Int32(stateAndFilterId.state.selectedPeerIds.count)) : defaultTitle
             
@@ -5208,6 +5233,7 @@ private final class ChatListLocationContext {
         } else if isReorderingTabs {
             if case .chatList(.root) = self.location {
                 self.rightButton = nil
+                self.storyButton = nil
             }
             self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
                 content: .text(title: presentationData.strings.Common_Done, isBold: true),
@@ -5278,6 +5304,16 @@ private final class ChatListLocationContext {
                         )))
                     }
                 }
+                
+                self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
+                    content: .icon(imageName: "Chat List/AddStoryIcon"),
+                    pressed: { [weak self] _ in
+                        guard let self, let parentController = self.parentController else {
+                            return
+                        }
+                        parentController.openStoryCamera()
+                    }
+                )))
             } else {
                 self.rightButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
                     content: .text(title: presentationData.strings.Common_Edit, isBold: false),
@@ -5331,16 +5367,6 @@ private final class ChatListLocationContext {
             } else {
                 self.proxyButton = nil
             }
-            
-            self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
-                content: .icon(imageName: "Chat List/AddStoryIcon"),
-                pressed: { [weak self] _ in
-                    guard let self, let parentController = self.parentController else {
-                        return
-                    }
-                    parentController.openStoryCamera()
-                }
-            )))
             
             self.chatListTitle = titleContent
             

@@ -1,5 +1,7 @@
 import Foundation
 import AVFoundation
+import UIKit
+import CoreImage
 import SwiftSignalKit
 import TelegramCore
 
@@ -32,6 +34,10 @@ private final class VideoRecorderImpl {
     private var videoInput: AVAssetWriterInput?
     private var audioInput: AVAssetWriterInput?
     
+    private let imageContext: CIContext
+    private var transitionImage: UIImage?
+    private var savedTransitionImage = false
+    
     private var pendingAudioSampleBuffers: [CMSampleBuffer] = []
     
     private var _duration: CMTime = .zero
@@ -46,7 +52,7 @@ private final class VideoRecorderImpl {
     private let configuration: VideoRecorder.Configuration
     private let videoTransform: CGAffineTransform
     private let url: URL
-    fileprivate var completion: (Bool) -> Void = { _ in }
+    fileprivate var completion: (Bool, UIImage?) -> Void = { _, _ in }
     
     private let error = Atomic<Error?>(value: nil)
     
@@ -58,6 +64,7 @@ private final class VideoRecorderImpl {
         self.configuration = configuration
         self.videoTransform = videoTransform
         self.url = fileUrl
+        self.imageContext = CIContext()
         
         try? FileManager.default.removeItem(at: url)
         guard let assetWriter = try? AVAssetWriter(url: url, fileType: .mp4) else {
@@ -76,7 +83,7 @@ private final class VideoRecorderImpl {
             self.recordingStartSampleTime = CMTime(seconds: CACurrentMediaTime(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         }
     }
-    
+        
     public func appendVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
         if let _ = self.hasError() {
             return
@@ -91,7 +98,6 @@ private final class VideoRecorderImpl {
             guard !self.stopped && self.error.with({ $0 }) == nil else {
                 return
             }
-            
             var failed = false
             if self.videoInput == nil {
                 let videoSettings = self.configuration.videoSettings
@@ -139,6 +145,17 @@ private final class VideoRecorderImpl {
                 }
                 
                 if let videoInput = self.videoInput, videoInput.isReadyForMoreMediaData {
+                    if !self.savedTransitionImage, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                        self.savedTransitionImage = true
+                        
+                        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+                        if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
+                            self.transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+                        } else {
+                            self.savedTransitionImage = false
+                        }
+                    }
+                    
                     if videoInput.append(sampleBuffer) {
                         self.lastVideoSampleTime = presentationTime
                         let startTime = self.recordingStartSampleTime
@@ -274,21 +291,21 @@ private final class VideoRecorderImpl {
             let completion = self.completion
             if self.recordingStopSampleTime == .invalid {
                 DispatchQueue.main.async {
-                    completion(false)
+                    completion(false, nil)
                 }
                 return
             }
                         
             if let _ = self.error.with({ $0 }) {
                 DispatchQueue.main.async {
-                    completion(false)
+                    completion(false, nil)
                 }
                 return
             }
             
             if !self.tryAppendingPendingAudioBuffers() {
                 DispatchQueue.main.async {
-                    completion(false)
+                    completion(false, nil)
                 }
                 return
             }
@@ -297,21 +314,21 @@ private final class VideoRecorderImpl {
                 self.assetWriter.finishWriting {
                     if let _ = self.assetWriter.error {
                         DispatchQueue.main.async {
-                            completion(false)
+                            completion(false, nil)
                         }
                     } else {
                         DispatchQueue.main.async {
-                            completion(true)
+                            completion(true, self.transitionImage)
                         }
                     }
                 }
             } else if let _ = self.assetWriter.error {
                 DispatchQueue.main.async {
-                    completion(true)
+                    completion(false, nil)
                 }
             } else {
                 DispatchQueue.main.async {
-                    completion(true)
+                    completion(false, nil)
                 }
             }
         }
@@ -390,7 +407,7 @@ public final class VideoRecorder {
             case generic
         }
         
-        case success
+        case success(UIImage?)
         case initError(Error)
         case writeError(Error)
         case finishError(Error)
@@ -431,10 +448,10 @@ public final class VideoRecorder {
             return nil
         }
         self.impl = impl
-        impl.completion = { [weak self] success in
+        impl.completion = { [weak self] result, transitionImage in
             if let self {
-                if success {
-                    self.completion(.success)
+                if result {
+                    self.completion(.success(transitionImage))
                 } else {
                     self.completion(.finishError(.generic))
                 }

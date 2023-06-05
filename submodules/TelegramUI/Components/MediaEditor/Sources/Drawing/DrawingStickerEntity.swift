@@ -5,9 +5,26 @@ import AccountContext
 import TelegramCore
 
 public final class DrawingStickerEntity: DrawingEntity, Codable {
-    public enum Content {
+    public enum Content: Equatable {
         case file(TelegramMediaFile)
         case image(UIImage)
+        
+        public static func == (lhs: Content, rhs: Content) -> Bool {
+            switch lhs {
+            case let .file(lhsFile):
+                if case let .file(rhsFile) = rhs {
+                    return lhsFile.fileId == rhsFile.fileId
+                } else {
+                    return false
+                }
+            case let .image(lhsImage):
+                if case let .image(rhsImage) = rhs {
+                    return lhsImage === rhsImage
+                } else {
+                    return false
+                }
+            }
+        }
     }
     private enum CodingKeys: String, CodingKey {
         case uuid
@@ -109,5 +126,33 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         newEntity.rotation = self.rotation
         newEntity.mirrored = self.mirrored
         return newEntity
+    }
+    
+    public func isEqual(to other: DrawingEntity) -> Bool {
+        guard let other = other as? DrawingStickerEntity else {
+            return false
+        }
+        if self.uuid != other.uuid {
+            return false
+        }
+        if self.content != other.content {
+            return false
+        }
+        if self.referenceDrawingSize != other.referenceDrawingSize {
+            return false
+        }
+        if self.position != other.position {
+            return false
+        }
+        if self.scale != other.scale {
+            return false
+        }
+        if self.rotation != other.rotation {
+            return false
+        }
+        if self.mirrored != other.mirrored {
+            return false
+        }
+        return true
     }
 }

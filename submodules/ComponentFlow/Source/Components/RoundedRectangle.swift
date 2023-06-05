@@ -58,7 +58,7 @@ public final class RoundedRectangle: Component {
                     }
                     self.image = UIGraphicsGetImageFromCurrentImageContext()?.stretchableImage(withLeftCapWidth: Int(component.cornerRadius), topCapHeight: Int(component.cornerRadius))
                     UIGraphicsEndImageContext()
-                } else if component.colors.count > 1{
+                } else if component.colors.count > 1 {
                     let imageSize = availableSize
                     UIGraphicsBeginImageContextWithOptions(imageSize, false, 0.0)
                     if let context = UIGraphicsGetCurrentContext() {

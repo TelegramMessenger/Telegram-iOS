@@ -550,7 +550,7 @@ final class StoryItemSetContainerSendMessage {
                     guard let attachmentButtonView = inputPanelView.getAttachmentButtonView() else {
                         return nil
                     }
-                    return attachmentButtonView.convert(attachmentButtonView.bounds, to: view)
+                    return attachmentButtonView.convert(attachmentButtonView.bounds, to: nil)
                 }
                 attachmentController.requestController = { [weak self, weak view, weak attachmentController] type, completion in
                     guard let self, let view, let component = view.component else {

@@ -487,7 +487,12 @@ public final class EngineStorySubscriptions: Equatable {
     }
 }
 
-func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
+public enum StoryUploadResult {
+    case progress(Float)
+    case completed
+}
+
+func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy) -> Signal<StoryUploadResult, NoError> {
     let originalMedia: Media
     let contentToUpload: MessageContentToUpload
     
@@ -516,6 +521,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
             revalidationContext: account.mediaReferenceRevalidationContext,
             forceReupload: true,
             isGrouped: false,
+            passFetchProgress: false,
             peerId: account.peerId,
             messageId: nil,
             attributes: [],
@@ -548,6 +554,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
             revalidationContext: account.mediaReferenceRevalidationContext,
             forceReupload: true,
             isGrouped: false,
+            passFetchProgress: true,
             peerId: account.peerId,
             messageId: nil,
             attributes: [],
@@ -569,46 +576,52 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
     |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
         return .single(nil)
     }
-    |> mapToSignal { result -> Signal<Never, NoError> in
-        return account.postbox.transaction { transaction -> Signal<Never, NoError> in
-            var privacyRules: [Api.InputPrivacyRule]
-            switch privacy.base {
-            case .everyone:
-                privacyRules = [.inputPrivacyValueAllowAll]
-            case .contacts:
-                privacyRules = [.inputPrivacyValueAllowContacts]
-            case .closeFriends:
-                privacyRules = [.inputPrivacyValueAllowCloseFriends]
-            case .nobody:
-                privacyRules = [.inputPrivacyValueDisallowAll]
-            }
-            var privacyUsers: [Api.InputUser] = []
-            var privacyChats: [Int64] = []
-            for peerId in privacy.additionallyIncludePeers {
-                if let peer = transaction.getPeer(peerId) {
-                    if let _ = peer as? TelegramUser {
-                        if let inputUser = apiInputUser(peer) {
-                            privacyUsers.append(inputUser)
+    |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
+        return account.postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+            switch result {
+            case let .progress(progress):
+                return .single(.progress(progress))
+            case let .content(content):
+                var privacyRules: [Api.InputPrivacyRule]
+                switch privacy.base {
+                case .everyone:
+                    privacyRules = [.inputPrivacyValueAllowAll]
+                case .contacts:
+                    privacyRules = [.inputPrivacyValueAllowContacts]
+                case .closeFriends:
+                    privacyRules = [.inputPrivacyValueAllowCloseFriends]
+                case .nobody:
+                    privacyRules = [.inputPrivacyValueDisallowAll]
+                }
+                var privacyUsers: [Api.InputUser] = []
+                var privacyChats: [Int64] = []
+                for peerId in privacy.additionallyIncludePeers {
+                    if let peer = transaction.getPeer(peerId) {
+                        if let _ = peer as? TelegramUser {
+                            if let inputUser = apiInputUser(peer) {
+                                privacyUsers.append(inputUser)
+                            }
+                        } else if peer is TelegramGroup || peer is TelegramChannel {
+                            privacyChats.append(peer.id.id._internalGetInt64Value())
                         }
-                    } else if peer is TelegramGroup || peer is TelegramChannel {
-                        privacyChats.append(peer.id.id._internalGetInt64Value())
                     }
                 }
-            }
-            if !privacyUsers.isEmpty {
-                privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
-            }
-            if !privacyChats.isEmpty {
-                privacyRules.append(.inputPrivacyValueAllowChatParticipants(chats: privacyChats))
-            }
-            
-            switch result {
-            case let .content(content):
+                if !privacyUsers.isEmpty {
+                    privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
+                }
+                if !privacyChats.isEmpty {
+                    privacyRules.append(.inputPrivacyValueAllowChatParticipants(chats: privacyChats))
+                }
+                
                 switch content.content {
                 case let .media(inputMedia, _):
                     var flags: Int32 = 0
                     var apiCaption: String?
                     var apiEntities: [Api.MessageEntity]?
+                    
+                    if pin {
+                        flags |= 1 << 2
+                    }
                     
                     if !text.isEmpty {
                         flags |= 1 << 0
@@ -641,7 +654,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                     |> `catch` { _ -> Signal<Api.Updates?, NoError> in
                         return .single(nil)
                     }
-                    |> mapToSignal { updates -> Signal<Never, NoError> in
+                    |> mapToSignal { updates -> Signal<StoryUploadResult, NoError> in
                         if let updates = updates {
                             for update in updates.allUpdates {
                                 if case let .updateStory(_, story) = update {
@@ -660,7 +673,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                             account.stateManager.addUpdates(updates)
                         }
                         
-                        return .complete()
+                        return .single(.completed)
                     }
                 default:
                     return .complete()

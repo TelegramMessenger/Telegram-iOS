@@ -310,21 +310,9 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         self.addGestureRecognizer(panGestureRecognizer)
         self.panGestureRecognizer = panGestureRecognizer
         
-        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToYAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToAngle(snappedAngle)
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self, let entityView = self.entityView {
+                entityView.onSnapUpdated(type, snapped)
             }
         }
     }
@@ -365,11 +353,13 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
                         self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
             }
             self.currentHandle = self.layer
+            entityView.onInteractionUpdated(true)
         case .changed:
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let parentLocation = gestureRecognizer.location(in: self.superview)
@@ -399,7 +389,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
                 
-                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition, size: entityView.frame.size)
             }
             
             entity.position = updatedPosition
@@ -413,6 +403,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             if self.currentHandle != nil {
                 self.snapTool.rotationReset()
             }
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -427,11 +418,16 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
 
         switch gestureRecognizer.state {
         case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                entityView.onInteractionUpdated(true)
+            }
             let scale = gestureRecognizer.scale
             entity.scale = entity.scale * scale
             entityView.update()
 
             gestureRecognizer.scale = 1.0
+        case .cancelled, .ended:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -449,6 +445,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+            entityView.onInteractionUpdated(true)
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
@@ -456,6 +453,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
             self.snapTool.rotationReset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -509,32 +507,77 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
 private let snapTimeout = 1.0
 
 class DrawingEntitySnapTool {
-    private var xState: (skipped: CGFloat, waitForLeave: Bool)?
-    private var yState: (skipped: CGFloat, waitForLeave: Bool)?
+    enum SnapType {
+        case centerX
+        case centerY
+        case top
+        case left
+        case right
+        case bottom
+        case rotation(CGFloat?)
+        
+        static var allPositionTypes: [SnapType] {
+            return [
+                .centerX,
+                .centerY,
+                .top,
+                .left,
+                .right,
+                .bottom
+            ]
+        }
+    }
+    
+    struct SnapState {
+        let skipped: CGFloat
+        let waitForLeave: Bool
+    }
+    
+    private var topEdgeState: SnapState?
+    private var leftEdgeState: SnapState?
+    private var rightEdgeState: SnapState?
+    private var bottomEdgeState: SnapState?
+    
+    private var xState: SnapState?
+    private var yState: SnapState?
+    
     private var rotationState: (angle: CGFloat, skipped: CGFloat, waitForLeave: Bool)?
     
-    var onSnapXUpdated: (Bool) -> Void = { _ in }
-    var onSnapYUpdated: (Bool) -> Void = { _ in }
-    var onSnapRotationUpdated: (CGFloat?) -> Void = { _ in }
+    var onSnapUpdated: (SnapType, Bool) -> Void = { _, _ in }
+    
+    var previousTopEdgeSnapTimestamp: Double?
+    var previousLeftEdgeSnapTimestamp: Double?
+    var previousRightEdgeSnapTimestamp: Double?
+    var previousBottomEdgeSnapTimestamp: Double?
     
     var previousXSnapTimestamp: Double?
     var previousYSnapTimestamp: Double?
     var previousRotationSnapTimestamp: Double?
     
     func reset() {
+        self.topEdgeState = nil
+        self.leftEdgeState = nil
+        self.rightEdgeState = nil
+        self.bottomEdgeState = nil
         self.xState = nil
         self.yState = nil
     
-        self.onSnapXUpdated(false)
-        self.onSnapYUpdated(false)
+        for type in SnapType.allPositionTypes {
+            self.onSnapUpdated(type, false)
+        }
     }
     
     func rotationReset() {
         self.rotationState = nil
-        self.onSnapRotationUpdated(nil)
+        self.onSnapUpdated(.rotation(nil), false)
     }
     
     func maybeSkipFromStart(entityView: DrawingEntityView, position: CGPoint) {
+        self.topEdgeState = nil
+        self.leftEdgeState = nil
+        self.rightEdgeState = nil
+        self.bottomEdgeState = nil
+        
         self.xState = nil
         self.yState = nil
         
@@ -543,94 +586,222 @@ class DrawingEntitySnapTool {
         
         if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
             if position.x > snapLocation.x - snapXDelta && position.x < snapLocation.x + snapXDelta {
-                self.xState = (0.0, true)
+                self.xState = SnapState(skipped: 0.0, waitForLeave: true)
             }
             
             if position.y > snapLocation.y - snapYDelta && position.y < snapLocation.y + snapYDelta {
-                self.yState = (0.0, true)
+                self.yState = SnapState(skipped: 0.0, waitForLeave: true)
             }
         }
     }
         
-    func update(entityView: DrawingEntityView, velocity: CGPoint, delta: CGPoint, updatedPosition: CGPoint) -> CGPoint {
+    func update(entityView: DrawingEntityView, velocity: CGPoint, delta: CGPoint, updatedPosition: CGPoint, size: CGSize) -> CGPoint {
         var updatedPosition = updatedPosition
+        
+        guard let snapCenterLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() else {
+            return updatedPosition
+        }
+        let snapEdgeLocations = (entityView.superview as? DrawingEntitiesView)?.getEntityEdgePositions()
         
         let currentTimestamp = CACurrentMediaTime()
         
-        let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapXVelocity: CGFloat = snapXDelta * 12.0
-        let snapXSkipTranslation: CGFloat = snapXDelta * 2.0
+        let snapDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
+        let snapVelocity: CGFloat = snapDelta * 12.0
+        let snapSkipTranslation: CGFloat = snapDelta * 2.0
         
-        if abs(velocity.x) < snapXVelocity || self.xState?.waitForLeave == true {
-            if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
-                if let (skipped, waitForLeave) = self.xState {
-                    if waitForLeave {
-                        if updatedPosition.x > snapLocation.x - snapXDelta * 2.0 && updatedPosition.x < snapLocation.x + snapXDelta * 2.0  {
-                            
+        let topPoint = updatedPosition.y - size.height / 2.0
+        let leftPoint = updatedPosition.x - size.width / 2.0
+        let rightPoint = updatedPosition.x + size.width / 2.0
+        let bottomPoint = updatedPosition.y + size.height / 2.0
+        
+        func process(
+            state: SnapState?,
+            velocity: CGFloat,
+            delta: CGFloat,
+            value: CGFloat,
+            snapVelocity: CGFloat,
+            snapToValue: CGFloat?,
+            snapDelta: CGFloat,
+            snapSkipTranslation: CGFloat,
+            previousSnapTimestamp: Double?,
+            onSnapUpdated: (Bool) -> Void
+        ) -> (
+            value: CGFloat,
+            state: SnapState?,
+            snapTimestamp: Double?
+        ) {
+            var updatedValue = value
+            var updatedState = state
+            var updatedPreviousSnapTimestamp = previousSnapTimestamp
+            if abs(velocity) < snapVelocity || state?.waitForLeave == true {
+                if let snapToValue {
+                    if let state {
+                        let skipped = state.skipped
+                        let waitForLeave = state.waitForLeave
+                        if waitForLeave {
+                            if value > snapToValue - snapDelta * 2.0 && value < snapToValue + snapDelta * 2.0  {
+                                
+                            } else {
+                                updatedState = nil
+                            }
+                        } else if abs(skipped) < snapSkipTranslation {
+                            updatedState = SnapState(skipped: skipped + delta, waitForLeave: false)
+                            updatedValue = snapToValue
                         } else {
-                            self.xState = nil
+                            updatedState = SnapState(skipped: snapSkipTranslation, waitForLeave: true)
+                            onSnapUpdated(false)
                         }
-                    } else if abs(skipped) < snapXSkipTranslation {
-                        self.xState = (skipped + delta.x, false)
-                        updatedPosition.x = snapLocation.x
                     } else {
-                        self.xState = (snapXSkipTranslation, true)
-                        self.onSnapXUpdated(false)
-                    }
-                } else {
-                    if updatedPosition.x > snapLocation.x - snapXDelta && updatedPosition.x < snapLocation.x + snapXDelta {
-                        if let previousXSnapTimestamp, currentTimestamp - previousXSnapTimestamp < snapTimeout {
-                            
-                        } else {
-                            self.previousXSnapTimestamp = currentTimestamp
-                            self.xState = (0.0, false)
-                            updatedPosition.x = snapLocation.x
-                            self.onSnapXUpdated(true)
+                        if value > snapToValue - snapDelta && value < snapToValue + snapDelta {
+                            if let previousSnapTimestamp, currentTimestamp - previousSnapTimestamp < snapTimeout {
+                                
+                            } else {
+                                updatedPreviousSnapTimestamp = currentTimestamp
+                                updatedState = SnapState(skipped: 0.0, waitForLeave: false)
+                                updatedValue = snapToValue
+                                onSnapUpdated(true)
+                            }
                         }
                     }
                 }
+            } else {
+                updatedState = nil
+                onSnapUpdated(false)
             }
-        } else {
-            self.xState = nil
-            self.onSnapXUpdated(false)
+            return (updatedValue, updatedState, updatedPreviousSnapTimestamp)
         }
         
-        let snapYDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapYVelocity: CGFloat = snapYDelta * 12.0
-        let snapYSkipTranslation: CGFloat = snapYDelta * 2.0
+        let (updatedXValue, updatedXState, updatedXPreviousTimestamp) = process(
+            state: self.xState,
+            velocity: velocity.x,
+            delta: delta.x,
+            value: updatedPosition.x,
+            snapVelocity: snapVelocity,
+            snapToValue: snapCenterLocation.x,
+            snapDelta: snapDelta,
+            snapSkipTranslation: snapSkipTranslation,
+            previousSnapTimestamp: self.previousXSnapTimestamp,
+            onSnapUpdated: { [weak self] snapped in
+                self?.onSnapUpdated(.centerX, snapped)
+            }
+        )
+        self.xState = updatedXState
+        self.previousXSnapTimestamp = updatedXPreviousTimestamp
         
-        if abs(velocity.y) < snapYVelocity || self.yState?.waitForLeave == true {
-            if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
-                if let (skipped, waitForLeave) = self.yState {
-                    if waitForLeave {
-                        if updatedPosition.y > snapLocation.y - snapYDelta * 2.0 && updatedPosition.y < snapLocation.y + snapYDelta * 2.0 {
-                            
-                        } else {
-                            self.yState = nil
-                        }
-                    } else if abs(skipped) < snapYSkipTranslation {
-                        self.yState = (skipped + delta.y, false)
-                        updatedPosition.y = snapLocation.y
-                    } else {
-                        self.yState = (snapYSkipTranslation, true)
-                        self.onSnapYUpdated(false)
+        let (updatedYValue, updatedYState, updatedYPreviousTimestamp) = process(
+            state: self.yState,
+            velocity: velocity.y,
+            delta: delta.y,
+            value: updatedPosition.y,
+            snapVelocity: snapVelocity,
+            snapToValue: snapCenterLocation.y,
+            snapDelta: snapDelta,
+            snapSkipTranslation: snapSkipTranslation,
+            previousSnapTimestamp: self.previousYSnapTimestamp,
+            onSnapUpdated: { [weak self] snapped in
+                self?.onSnapUpdated(.centerY, snapped)
+            }
+        )
+        self.yState = updatedYState
+        self.previousYSnapTimestamp = updatedYPreviousTimestamp
+        
+        if let snapEdgeLocations {
+            if updatedXState == nil {
+                let (updatedXLeftEdgeValue, updatedLeftEdgeState, updatedLeftEdgePreviousTimestamp) = process(
+                    state: self.leftEdgeState,
+                    velocity: velocity.x,
+                    delta: delta.x,
+                    value: leftPoint,
+                    snapVelocity: snapVelocity,
+                    snapToValue: snapEdgeLocations.left,
+                    snapDelta: snapDelta,
+                    snapSkipTranslation: snapSkipTranslation,
+                    previousSnapTimestamp: self.previousLeftEdgeSnapTimestamp,
+                    onSnapUpdated: { [weak self] snapped in
+                        self?.onSnapUpdated(.left, snapped)
                     }
+                )
+                self.leftEdgeState = updatedLeftEdgeState
+                self.previousLeftEdgeSnapTimestamp = updatedLeftEdgePreviousTimestamp
+                
+                if updatedLeftEdgeState != nil {
+                    updatedPosition.x = updatedXLeftEdgeValue + size.width / 2.0
+                    
+                    self.rightEdgeState = nil
+                    self.previousRightEdgeSnapTimestamp = nil
                 } else {
-                    if updatedPosition.y > snapLocation.y - snapYDelta && updatedPosition.y < snapLocation.y + snapYDelta {
-                        if let previousYSnapTimestamp, currentTimestamp - previousYSnapTimestamp < snapTimeout {
-                            
-                        } else {
-                            self.previousYSnapTimestamp = currentTimestamp
-                            self.yState = (0.0, false)
-                            updatedPosition.y = snapLocation.y
-                            self.onSnapYUpdated(true)
+                    let (updatedXRightEdgeValue, updatedRightEdgeState, updatedRightEdgePreviousTimestamp) = process(
+                        state: self.rightEdgeState,
+                        velocity: velocity.x,
+                        delta: delta.x,
+                        value: rightPoint,
+                        snapVelocity: snapVelocity,
+                        snapToValue: snapEdgeLocations.right,
+                        snapDelta: snapDelta,
+                        snapSkipTranslation: snapSkipTranslation,
+                        previousSnapTimestamp: self.previousRightEdgeSnapTimestamp,
+                        onSnapUpdated: { [weak self] snapped in
+                            self?.onSnapUpdated(.right, snapped)
                         }
-                    }
+                    )
+                    self.rightEdgeState = updatedRightEdgeState
+                    self.previousRightEdgeSnapTimestamp = updatedRightEdgePreviousTimestamp
+                    
+                    updatedPosition.x = updatedXRightEdgeValue - size.width / 2.0
                 }
+            } else {
+                updatedPosition.x = updatedXValue
+            }
+            
+            if updatedYState == nil {
+                let (updatedYTopEdgeValue, updatedTopEdgeState, updatedTopEdgePreviousTimestamp) = process(
+                    state: self.topEdgeState,
+                    velocity: velocity.y,
+                    delta: delta.y,
+                    value: topPoint,
+                    snapVelocity: snapVelocity,
+                    snapToValue: snapEdgeLocations.top,
+                    snapDelta: snapDelta,
+                    snapSkipTranslation: snapSkipTranslation,
+                    previousSnapTimestamp: self.previousTopEdgeSnapTimestamp,
+                    onSnapUpdated: { [weak self] snapped in
+                        self?.onSnapUpdated(.top, snapped)
+                    }
+                )
+                self.topEdgeState = updatedTopEdgeState
+                self.previousTopEdgeSnapTimestamp = updatedTopEdgePreviousTimestamp
+                
+                if updatedTopEdgeState != nil {
+                    updatedPosition.y = updatedYTopEdgeValue + size.height / 2.0
+                    
+                    self.bottomEdgeState = nil
+                    self.previousBottomEdgeSnapTimestamp = nil
+                } else {
+                    let (updatedYBottomEdgeValue, updatedBottomEdgeState, updatedBottomEdgePreviousTimestamp) = process(
+                        state: self.bottomEdgeState,
+                        velocity: velocity.y,
+                        delta: delta.y,
+                        value: bottomPoint,
+                        snapVelocity: snapVelocity,
+                        snapToValue: snapEdgeLocations.bottom,
+                        snapDelta: snapDelta,
+                        snapSkipTranslation: snapSkipTranslation,
+                        previousSnapTimestamp: self.previousBottomEdgeSnapTimestamp,
+                        onSnapUpdated: { [weak self] snapped in
+                            self?.onSnapUpdated(.bottom, snapped)
+                        }
+                    )
+                    self.bottomEdgeState = updatedBottomEdgeState
+                    self.previousBottomEdgeSnapTimestamp = updatedBottomEdgePreviousTimestamp
+                    
+                    updatedPosition.y = updatedYBottomEdgeValue - size.height / 2.0
+                }
+            } else {
+                updatedPosition.y = updatedYValue
             }
         } else {
-            self.yState = nil
-            self.onSnapYUpdated(false)
+            updatedPosition.x = updatedXValue
+            updatedPosition.y = updatedYValue
         }
         
         return updatedPosition
@@ -679,7 +850,7 @@ class DrawingEntitySnapTool {
                     updatedRotation = snapRotation
                 } else {
                     self.rotationState = (snapRotation, snapSkipRotation, true)
-                    self.onSnapRotationUpdated(nil)
+                    self.onSnapUpdated(.rotation(nil), false)
                 }
             } else {
                 for snapRotation in self.snapRotations {
@@ -691,7 +862,7 @@ class DrawingEntitySnapTool {
                             self.previousRotationSnapTimestamp = currentTimestamp
                             self.rotationState = (snapRotation, 0.0, false)
                             updatedRotation = snapRotation
-                            self.onSnapRotationUpdated(snapRotation)
+                            self.onSnapUpdated(.rotation(snapRotation), true)
                         }
                         break
                     }
@@ -699,7 +870,7 @@ class DrawingEntitySnapTool {
             }
         } else {
             self.rotationState = nil
-            self.onSnapRotationUpdated(nil)
+            self.onSnapUpdated(.rotation(nil), false)
         }
         
         return updatedRotation

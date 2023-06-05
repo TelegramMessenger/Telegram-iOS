@@ -1137,10 +1137,18 @@ private final class DrawingScreenComponent: CombinedComponent {
                     presentColorPicker(state.currentColor)
                 }
             }
+            
+            var controlsVisible = true
+            if state.drawingViewState.isDrawing {
+                controlsVisible = false
+            }
                  
+            let previewSize = CGSize(width: context.availableSize.width, height: floorToScreenPixels(context.availableSize.width * 1.77778))
+            let previewTopInset: CGFloat = floorToScreenPixels(context.availableSize.height - previewSize.height) / 2.0
+            
             var topInset = environment.safeInsets.top + 31.0
             if component.sourceHint == .storyEditor {
-                topInset += 75.0
+                topInset = previewTopInset + 31.0
             }
             let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
             
@@ -1178,6 +1186,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             )
             context.add(bottomGradient
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomGradient.size.height / 2.0))
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             
             if let textEntity = state.selectedEntity as? DrawingTextEntity {
@@ -1318,6 +1327,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             offsetX += delta
         
@@ -1345,6 +1355,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1372,6 +1383,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1399,6 +1411,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1426,6 +1439,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             delay += 0.025
@@ -1454,6 +1468,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1481,6 +1496,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1508,13 +1524,14 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
          
             if state.selectedEntity is DrawingStickerEntity || state.selectedEntity is DrawingTextEntity {
             } else {
                 let tools = tools.update(
                     component: ToolsComponent(
-                        state: component.isVideo ? state.drawingState.forVideo() : state.drawingState,
+                        state: component.isVideo || component.sourceHint == .storyEditor ? state.drawingState.forVideo() : state.drawingState,
                         isFocused: false,
                         tag: toolsTag,
                         toolPressed: { [weak state] tool in
@@ -1551,6 +1568,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             completion()
                         }
                     }))
+                    .opacity(controlsVisible ? 1.0 : 0.0)
                 )
             }
             
@@ -1725,7 +1743,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             )
             context.add(textSize
                 .position(CGPoint(x: textSize.size.width / 2.0, y: topInset + (context.availableSize.height - topInset - bottomInset) / 2.0))
-                .opacity(sizeSliderVisible ? 1.0 : 0.0)
+                .opacity(sizeSliderVisible && controlsVisible ? 1.0 : 0.0)
             )
             
             let undoButton = undoButton.update(
@@ -1745,7 +1763,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             context.add(undoButton
                 .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: topInset))
                 .scale(isEditingText ? 0.01 : 1.0)
-                .opacity(isEditingText ? 0.0 : 1.0)
+                .opacity(isEditingText || !controlsVisible ? 0.0 : 1.0)
             )
             
             
@@ -1765,7 +1783,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             context.add(redoButton
                 .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: topInset))
                 .scale(state.drawingViewState.canRedo && !isEditingText ? 1.0 : 0.01)
-                .opacity(state.drawingViewState.canRedo && !isEditingText ? 1.0 : 0.0)
+                .opacity(state.drawingViewState.canRedo && !isEditingText && controlsVisible ? 1.0 : 0.0)
             )
             
             let clearAllButton = clearAllButton.update(
@@ -1785,8 +1803,15 @@ private final class DrawingScreenComponent: CombinedComponent {
             context.add(clearAllButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: topInset))
                 .scale(isEditingText ? 0.01 : 1.0)
-                .opacity(isEditingText ? 0.0 : 1.0)
+                .opacity(isEditingText || !controlsVisible ? 0.0 : 1.0)
             )
+            
+            let textButtonTopInset: CGFloat
+            if let sourceHint = component.sourceHint, case .storyEditor = sourceHint {
+                textButtonTopInset = environment.statusBarHeight
+            } else {
+                textButtonTopInset = topInset
+            }
             
             let textCancelButton = textCancelButton.update(
                 component: Button(
@@ -1823,7 +1848,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(textDoneButton
-                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: topInset))
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: textButtonTopInset))
                 .scale(isEditingText ? 1.0 : 0.01)
                 .opacity(isEditingText ? 1.0 : 0.0)
             )
@@ -1870,6 +1895,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .position(CGPoint(x: leftEdge + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
       
             let modeRightInset: CGFloat = 57.0
@@ -1919,6 +1945,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
                 .cornerRadius(12.0)
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             
             let doneButton = doneButton.update(
@@ -1938,7 +1965,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             var doneButtonPosition = CGPoint(x: context.availableSize.width - environment.safeInsets.right - doneButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - doneButton.size.height / 2.0 - 2.0 - UIScreenPixel)
             if component.sourceHint == .storyEditor {
-                doneButtonPosition = doneButtonPosition.offsetBy(dx: -2.0, dy: 0.0)
+                doneButtonPosition.x = doneButtonPosition.x - 2.0
+                doneButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewTopInset + 3.0 + doneButton.size.height / 2.0)
             }
             context.add(doneButton
                 .position(doneButtonPosition)
@@ -1955,6 +1983,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     })
                     transition.animatePosition(view: view, from: CGPoint(), to: CGPoint(x: 12.0, y: 0.0), additive: true)
                 })
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             
             let selectedIndex: Int
@@ -2013,9 +2042,13 @@ private final class DrawingScreenComponent: CombinedComponent {
                 availableSize: CGSize(width: availableWidth - 57.0 - modeRightInset, height: context.availableSize.height),
                 transition: context.transition
             )
-            let modeAndSizePosition = CGPoint(x: context.availableSize.width / 2.0 - (modeRightInset - 57.0) / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - modeAndSize.size.height / 2.0 - 9.0)
+            var modeAndSizePosition = CGPoint(x: context.availableSize.width / 2.0 - (modeRightInset - 57.0) / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - modeAndSize.size.height / 2.0 - 9.0)
+            if component.sourceHint == .storyEditor {
+                modeAndSizePosition.y = floorToScreenPixels(context.availableSize.height - previewTopInset + 8.0 + modeAndSize.size.height / 2.0)
+            }
             context.add(modeAndSize
                 .position(modeAndSizePosition)
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             
             var animatingOut = false
@@ -2049,10 +2082,12 @@ private final class DrawingScreenComponent: CombinedComponent {
             )
             var backButtonPosition = CGPoint(x: environment.safeInsets.left + backButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - backButton.size.height / 2.0 - 2.0 - UIScreenPixel)
             if component.sourceHint == .storyEditor {
-                backButtonPosition = backButtonPosition.offsetBy(dx: 2.0, dy: 0.0)
+                backButtonPosition.x = backButtonPosition.x + 2.0
+                backButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewTopInset + 3.0 + backButton.size.height / 2.0)
             }
             context.add(backButton
                 .position(backButtonPosition)
+                .opacity(controlsVisible ? 1.0 : 0.0)
             )
             
             return context.availableSize
@@ -3016,6 +3051,23 @@ public final class DrawingToolsInteraction {
                     selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.2)
                 }
             }
+        }
+    }
+    
+    public func endTextEditing(reset: Bool) {
+        if let entityView = self.entitiesView.selectedEntityView as? DrawingTextEntityView {
+            entityView.endEditing(reset: reset)
+        }
+    }
+    
+    public func updateEntitySize(_ size: CGFloat) {
+        if let selectedEntityView = self.entitiesView.selectedEntityView {
+            if let textEntity = selectedEntityView.entity as? DrawingTextEntity {
+                textEntity.fontSize = size
+            } else {
+                selectedEntityView.entity.lineWidth = size
+            }
+            selectedEntityView.update()
         }
     }
     

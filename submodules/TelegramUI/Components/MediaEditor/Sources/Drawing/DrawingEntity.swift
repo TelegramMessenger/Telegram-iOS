@@ -17,4 +17,6 @@ public protocol DrawingEntity: AnyObject {
     
     var renderImage: UIImage? { get set }
     var renderSubEntities: [DrawingEntity]? { get set }
+    
+    func isEqual(to other: DrawingEntity) -> Bool
 }

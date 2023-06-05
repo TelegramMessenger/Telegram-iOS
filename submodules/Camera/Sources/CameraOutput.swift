@@ -1,5 +1,8 @@
+import Foundation
 import AVFoundation
+import UIKit
 import SwiftSignalKit
+import CoreImage
 import Vision
 import VideoToolbox
 
@@ -160,7 +163,7 @@ final class CameraOutput: NSObject {
         }
     }
     
-    private var recordingCompletionPipe = ValuePipe<String?>()
+    private var recordingCompletionPipe = ValuePipe<(String, UIImage?)?>()
     func startRecording() -> Signal<Double, NoError> {
         guard self.videoRecorder == nil else {
             return .complete()
@@ -184,13 +187,12 @@ final class CameraOutput: NSObject {
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
-            if case .success = result {
-                self?.recordingCompletionPipe.putNext(outputFilePath)
+            if case let .success(transitionImage) = result {
+                self?.recordingCompletionPipe.putNext((outputFilePath, transitionImage))
             } else {
                 self?.recordingCompletionPipe.putNext(nil)
             }
         })
-        
         
         videoRecorder?.start()
         self.videoRecorder = videoRecorder
@@ -207,7 +209,7 @@ final class CameraOutput: NSObject {
         }
     }
     
-    func stopRecording() -> Signal<String?, NoError> {
+    func stopRecording() -> Signal<(String, UIImage?)?, NoError> {
         self.videoRecorder?.stop()
         
         return self.recordingCompletionPipe.signal()

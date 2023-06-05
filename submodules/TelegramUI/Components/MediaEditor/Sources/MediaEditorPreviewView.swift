@@ -14,7 +14,19 @@ public final class MediaEditorPreviewView: MTKView, MTKViewDelegate, RenderTarge
     }
     
     var drawable: MTLDrawable? {
-        return self.currentDrawable
+        return self.nextDrawable
+    }
+    
+    var nextDrawable: MTLDrawable? {
+        if #available(iOS 13.0, *) {
+            if let layer = self.layer as? CAMetalLayer {
+                return layer.nextDrawable()
+            } else {
+                return self.currentDrawable
+            }
+        } else {
+            return self.currentDrawable
+        }
     }
     
     var renderPassDescriptor: MTLRenderPassDescriptor? {
@@ -46,13 +58,8 @@ public final class MediaEditorPreviewView: MTKView, MTKViewDelegate, RenderTarge
         self.colorPixelFormat = .bgra8Unorm
         
         self.isPaused = true
-        self.enableSetNeedsDisplay = false
-    }
-    
-    func scheduleFrame() {
-        Queue.mainQueue().justDispatch {
-            self.draw()
-        }
+        self.enableSetNeedsDisplay = true
+        self.framebufferOnly = true
     }
     
     public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -61,10 +68,14 @@ public final class MediaEditorPreviewView: MTKView, MTKViewDelegate, RenderTarge
         }
     }
     
+    public func redraw() {
+        self.setNeedsDisplay()
+    }
+    
     public func draw(in view: MTKView) {
         guard self.frame.width > 0.0 else {
             return
         }
-        self.renderer?.renderFrame()
+        self.renderer?.displayFrame()
     }
 }

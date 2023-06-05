@@ -53,7 +53,7 @@ final class ImageTextureSource: TextureSource {
     func connect(to consumer: TextureConsumer) {
         self.output = consumer
         if let texture = self.texture {
-            self.output?.consumeTexture(texture)
+            self.output?.consumeTexture(texture, render: false)
         }
     }
 }

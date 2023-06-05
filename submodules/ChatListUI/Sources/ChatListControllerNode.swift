@@ -1852,6 +1852,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 secondaryContent: headerContent?.secondaryContent,
                 secondaryTransition: self.inlineStackContainerTransitionFraction,
                 storySubscriptions: self.controller?.storySubscriptions,
+                uploadProgress: self.controller?.storyUploadProgress,
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
                 activateSearch: { [weak self] searchContentNode in
@@ -1931,6 +1932,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarComponentView.applyScroll(offset: offset, transition: Transition(transition))
         }
+    }
+    
+    func requestNavigationBarLayout(transition: ContainedViewLayoutTransition) {
+        guard let (layout, _, _, _, _) = self.containerLayout else {
+            return
+        }
+        let _ = self.updateNavigationBar(layout: layout, transition: transition)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {

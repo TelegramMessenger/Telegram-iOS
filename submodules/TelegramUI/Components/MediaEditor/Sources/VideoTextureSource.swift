@@ -98,16 +98,19 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
             return
         }
         
+        var frameRate: Int = 30
         var hasVideoTrack: Bool = false
         for track in playerItem.asset.tracks {
             if track.mediaType == .video {
+                if track.nominalFrameRate > 0.0 {
+                    frameRate = Int(ceil(track.nominalFrameRate))
+                }
                 hasVideoTrack = true
                 break
             }
         }
         self.textureRotation = textureRotatonForAVAsset(playerItem.asset)
         if !hasVideoTrack {
-            assertionFailure("No video track found.")
             return
         }
         
@@ -129,7 +132,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         playerItem.add(output)
         self.playerItemOutput = output
         
-        self.setupDisplayLink()
+        self.setupDisplayLink(frameRate: min(60, frameRate))
     }
     
     private class DisplayLinkTarget {
@@ -142,7 +145,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         }
     }
     
-    private func setupDisplayLink() {
+    private func setupDisplayLink(frameRate: Int) {
         self.displayLink?.invalidate()
         self.displayLink = nil
         
@@ -150,7 +153,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
             let displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
                 self?.handleUpdate()
             }), selector: #selector(DisplayLinkTarget.handleDisplayLinkUpdate(sender:)))
-            displayLink.preferredFramesPerSecond = 60
+            displayLink.preferredFramesPerSecond = frameRate
             displayLink.add(to: .main, forMode: .common)
             self.displayLink = displayLink
         }
@@ -183,7 +186,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         
         var presentationTime: CMTime = .zero
         if let pixelBuffer = output.copyPixelBuffer(forItemTime: requestTime, itemTimeForDisplay: &presentationTime) {
-            self.output?.consumeVideoPixelBuffer(pixelBuffer, rotation: self.textureRotation)
+            self.output?.consumeVideoPixelBuffer(pixelBuffer, rotation: self.textureRotation, timestamp: presentationTime, render: true)
         }
     }
         

@@ -203,12 +203,12 @@ private final class CameraScreenComponent: CombinedComponent {
             } else {
                 self.camera.setFlashMode(.off)
             }
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         func togglePosition() {
             self.camera.togglePosition()
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         func updateSwipeHint(_ hint: CaptureControlsComponent.SwipeHint) {
@@ -252,9 +252,9 @@ private final class CameraScreenComponent: CombinedComponent {
         func stopVideoRecording() {
             self.cameraState = self.cameraState.updatedRecording(.none).updatedDuration(0.0)
             self.resultDisposable.set((self.camera.stopRecording()
-            |> deliverOnMainQueue).start(next: { [weak self] path in
-                if let self, let path {
-                    self.completion.invoke(.single(.video(path, PixelDimensions(width: 1080, height: 1920))))
+            |> deliverOnMainQueue).start(next: { [weak self] pathAndTransitionImage in
+                if let self, let (path, transitionImage) = pathAndTransitionImage {
+                    self.completion.invoke(.single(.video(path, transitionImage, PixelDimensions(width: 1080, height: 1920))))
                 }
             }))
             self.updated(transition: .spring(duration: 0.4))
@@ -641,7 +641,7 @@ public class CameraScreen: ViewController {
     public enum Result {
         case pendingImage
         case image(UIImage)
-        case video(String, PixelDimensions)
+        case video(String, UIImage?, PixelDimensions)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
     }
@@ -787,6 +787,10 @@ public class CameraScreen: ViewController {
             ).start(next: { [weak self] changingPosition, forceBlur in
                 if let self {
                     if changingPosition {
+                        if let snapshot = self.simplePreviewView?.snapshotView(afterScreenUpdates: false) {
+                            self.simplePreviewView?.addSubview(snapshot)
+                            self.previewSnapshotView = snapshot
+                        }
                         UIView.transition(with: self.previewContainerView, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
                             self.previewBlurView.effect = UIBlurEffect(style: .dark)
                         })
@@ -869,16 +873,16 @@ public class CameraScreen: ViewController {
         
         @objc private func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
             switch gestureRecognizer.state {
-            case .began:
-                gestureRecognizer.scale = 1.0
             case .changed:
                 let scale = gestureRecognizer.scale
-                self.camera.setZoomLevel(scale)
+                self.camera.setZoomDelta(scale)
+                gestureRecognizer.scale = 1.0
             default:
                 break
             }
         }
         
+        private var isDismissing = false
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let controller = self.controller else {
                 return
@@ -891,7 +895,8 @@ public class CameraScreen: ViewController {
                 if !"".isEmpty {
                     
                 } else {
-                    if translation.x < -10.0 {
+                    if translation.x < -10.0 || self.isDismissing {
+                        self.isDismissing = true
                         let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                         controller.updateTransitionProgress(transitionFraction, transition: .immediate)
                     } else if translation.y < -10.0 {
@@ -904,6 +909,8 @@ public class CameraScreen: ViewController {
                 let velocity = gestureRecognizer.velocity(in: self.view)
                 let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                 controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
+                
+                self.isDismissing = false
             default:
                 break
             }
@@ -1306,7 +1313,7 @@ public class CameraScreen: ViewController {
     
     func presentGallery(fromGesture: Bool = false) {
         if !fromGesture {
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         var didStopCameraCapture = false
@@ -1364,8 +1371,10 @@ public class CameraScreen: ViewController {
             return
         }
         
+        self.dismissAllTooltips()
+        
         if !interactive {
-            self.hapticFeedback.impact(.veryLight)
+            self.hapticFeedback.impact(.light)
         }
         
         self.node.camera.stopCapture(invalidate: true)
@@ -1383,6 +1392,20 @@ public class CameraScreen: ViewController {
         } else {
             self.dismiss(animated: false)
         }
+    }
+    
+    private func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            return true
+        })
     }
     
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {

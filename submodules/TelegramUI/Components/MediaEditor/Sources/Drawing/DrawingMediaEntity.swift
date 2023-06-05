@@ -7,7 +7,7 @@ import AccountContext
 import Photos
 
 public final class DrawingMediaEntity: DrawingEntity, Codable {
-    public enum Content {
+    public enum Content: Equatable {
         case image(UIImage, PixelDimensions)
         case video(String, PixelDimensions)
         case asset(PHAsset)
@@ -18,6 +18,29 @@ public final class DrawingMediaEntity: DrawingEntity, Codable {
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
+            }
+        }
+        
+        public static func == (lhs: Content, rhs: Content) -> Bool {
+            switch lhs {
+            case let .image(lhsImage, lhsDimensions):
+                if case let .image(rhsImage, rhsDimensions) = rhs {
+                    return lhsImage === rhsImage && lhsDimensions == rhsDimensions
+                } else {
+                    return false
+                }
+            case let .video(lhsPath, lhsDimensions):
+                if case let .video(rhsPath, rhsDimensions) = rhs {
+                    return lhsPath == rhsPath && lhsDimensions == rhsDimensions
+                } else {
+                    return false
+                }
+            case let .asset(lhsAsset):
+                if case let .asset(rhsAsset) = rhs {
+                    return lhsAsset.localIdentifier == rhsAsset.localIdentifier
+                } else {
+                    return false
+                }
             }
         }
     }
@@ -142,5 +165,36 @@ public final class DrawingMediaEntity: DrawingEntity, Codable {
         newEntity.rotation = self.rotation
         newEntity.mirrored = self.mirrored
         return newEntity
+    }
+    
+    public func isEqual(to other: DrawingEntity) -> Bool {
+        guard let other = other as? DrawingMediaEntity else {
+            return false
+        }
+        if self.uuid != other.uuid {
+            return false
+        }
+        if self.content != other.content {
+            return false
+        }
+        if self.size != other.size {
+            return false
+        }
+        if self.referenceDrawingSize != other.referenceDrawingSize {
+            return false
+        }
+        if self.position != other.position {
+            return false
+        }
+        if self.scale != other.scale {
+            return false
+        }
+        if self.rotation != other.rotation {
+            return false
+        }
+        if self.mirrored != other.mirrored {
+            return false
+        }
+        return true
     }
 }

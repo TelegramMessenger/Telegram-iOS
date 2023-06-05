@@ -1,4 +1,5 @@
 import Foundation
+import QuartzCore
 import Metal
 import simd
 
@@ -133,31 +134,41 @@ final class OutputRenderPass: DefaultRenderPass {
     
     @discardableResult
     override func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        guard let renderTarget = self.renderTarget, let renderPassDescriptor = renderTarget.renderPassDescriptor else {
+        guard let renderTarget = self.renderTarget else {
             return nil
         }
         self.setupVerticesBuffer(device: device)
         
-        let drawableSize = renderTarget.drawableSize
-        
-        let renderCommandEncoder = commandBuffer.makeRenderCommandEncoder(
-            descriptor: renderPassDescriptor)!
-        
-        renderCommandEncoder.setViewport(MTLViewport(
-            originX: 0.0, originY: 0.0,
-            width: Double(drawableSize.width), height: Double(drawableSize.height),
-            znear: -1.0, zfar: 1.0))
-        
-
-        renderCommandEncoder.setFragmentTexture(input, index: 0)
-        
-        self.encodeDefaultCommands(using: renderCommandEncoder)
-        
-        renderCommandEncoder.endEncoding()
-        
-        if let drawable = renderTarget.drawable {            
+        autoreleasepool {
+            guard let drawable = renderTarget.drawable else {
+                return
+            }
+            
+            let renderPassDescriptor = MTLRenderPassDescriptor()
+            renderPassDescriptor.colorAttachments[0].texture = (drawable as? CAMetalDrawable)?.texture
+            renderPassDescriptor.colorAttachments[0].loadAction = .clear
+            renderPassDescriptor.colorAttachments[0].storeAction = .store
+            
+            let drawableSize = renderTarget.drawableSize
+            
+            let renderCommandEncoder = commandBuffer.makeRenderCommandEncoder(
+                descriptor: renderPassDescriptor)!
+            
+            renderCommandEncoder.setViewport(MTLViewport(
+                originX: 0.0, originY: 0.0,
+                width: Double(drawableSize.width), height: Double(drawableSize.height),
+                znear: -1.0, zfar: 1.0))
+            
+            
+            renderCommandEncoder.setFragmentTexture(input, index: 0)
+            
+            self.encodeDefaultCommands(using: renderCommandEncoder)
+            
+            renderCommandEncoder.endEncoding()
+            
             commandBuffer.present(drawable)
         }
+        
         return nil
     }
 }

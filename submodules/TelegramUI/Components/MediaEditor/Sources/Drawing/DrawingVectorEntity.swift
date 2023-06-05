@@ -107,4 +107,38 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         newEntity.end = self.end
         return newEntity
     }
+    
+    public func isEqual(to other: DrawingEntity) -> Bool {
+        guard let other = other as? DrawingVectorEntity else {
+            return false
+        }
+        if self.uuid != other.uuid {
+            return false
+        }
+        if self.type != other.type {
+            return false
+        }
+        if self.color != other.color {
+            return false
+        }
+        if self.lineWidth != other.lineWidth {
+            return false
+        }
+        if self.drawingSize != other.drawingSize {
+            return false
+        }
+        if self.referenceDrawingSize != other.referenceDrawingSize {
+            return false
+        }
+        if self.start != other.start {
+            return false
+        }
+        if self.mid.0 != other.mid.0 || self.mid.1 != other.mid.1 {
+            return false
+        }
+        if self.end != other.end {
+            return false
+        }
+        return true
+    }
 }

@@ -42,6 +42,7 @@ public struct Font {
     
     public enum Weight {
         case regular
+        case thin
         case light
         case medium
         case semibold
@@ -59,6 +60,8 @@ public struct Font {
         
         var weight: UIFont.Weight {
             switch self {
+                case .thin:
+                    return .thin
                 case .light:
                     return .light
                 case .medium:
@@ -78,6 +81,8 @@ public struct Font {
             switch self {
             case .regular:
                 return "regular"
+            case .thin:
+                return "thin"
             case .light:
                 return "light"
             case .medium:

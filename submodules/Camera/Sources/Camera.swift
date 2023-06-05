@@ -10,6 +10,7 @@ private final class CameraContext {
     private let device: CameraDevice
     private let input = CameraInput()
     private let output = CameraOutput()
+    private let cameraImageContext = CIContext()
     
     private let initialConfiguration: Camera.Configuration
     private var invalidated = false
@@ -40,20 +41,24 @@ private final class CameraContext {
         }
     }
     
-    private let previewSnapshotContext = CIContext()
     private var lastSnapshotTimestamp: Double = CACurrentMediaTime()
-    private func savePreviewSnapshot(pixelBuffer: CVPixelBuffer) {
+    private func savePreviewSnapshot(pixelBuffer: CVPixelBuffer, mirror: Bool) {
         Queue.concurrentDefaultQueue().async {
             var ciImage = CIImage(cvImageBuffer: pixelBuffer)
             let size = ciImage.extent.size
+            if mirror {
+                var transform = CGAffineTransformMakeScale(-1.0, 1.0)
+                transform = CGAffineTransformTranslate(transform, size.width, 0.0)
+                ciImage = ciImage.transformed(by: transform)
+            }
             ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 40.0).cropped(to: CGRect(origin: .zero, size: size))
-            if let cgImage = self.previewSnapshotContext.createCGImage(ciImage, from: ciImage.extent) {
+            if let cgImage = self.cameraImageContext.createCGImage(ciImage, from: ciImage.extent) {
                 let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
                 CameraSimplePreviewView.saveLastStateImage(uiImage)
             }
         }
     }
-    
+        
     private var videoOrientation: AVCaptureVideoOrientation?
     init(queue: Queue, session: AVCaptureSession, configuration: Camera.Configuration, metrics: Camera.Metrics, previewView: CameraSimplePreviewView?) {
         self.queue = queue
@@ -77,28 +82,14 @@ private final class CameraContext {
             }
             
             let timestamp = CACurrentMediaTime()
-            if timestamp > self.lastSnapshotTimestamp + 5.0 {
-                self.savePreviewSnapshot(pixelBuffer: pixelBuffer)
+            if timestamp > self.lastSnapshotTimestamp + 2.5 {
+                var mirror = false
+                if #available(iOS 13.0, *) {
+                    mirror = connection.inputPorts.first?.sourceDevicePosition == .front
+                }
+                self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror)
                 self.lastSnapshotTimestamp = timestamp
             }
-//            if let previewView = self.previewView, !self.changingPosition {
-//                let videoOrientation = connection.videoOrientation
-//                if #available(iOS 13.0, *) {
-//                    previewView.mirroring = connection.inputPorts.first?.sourceDevicePosition == .front
-//                }
-//                if let rotation = CameraPreviewView.Rotation(with: .portrait, videoOrientation: videoOrientation, cameraPosition: self.device.position) {
-//                    previewView.rotation = rotation
-//                }
-//                if #available(iOS 13.0, *), connection.inputPorts.first?.sourceDevicePosition == .front {
-//                    let width = CVPixelBufferGetWidth(pixelBuffer)
-//                    let height = CVPixelBufferGetHeight(pixelBuffer)
-//                    previewView.captureDeviceResolution = CGSize(width: width, height: height)
-//                }
-//                previewView.pixelBuffer = pixelBuffer
-//                Queue.mainQueue().async {
-//                    self.videoOrientation = videoOrientation
-//                }
-//            }
         }
         
         self.output.processFaceLandmarks = { [weak self] observations in
@@ -232,6 +223,10 @@ private final class CameraContext {
         self.device.setZoomLevel(zoomLevel)
     }
     
+    func setZoomDelta(_ zoomDelta: CGFloat) {
+        self.device.setZoomDelta(zoomDelta)
+    }
+    
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {
         return self.output.takePhoto(orientation: self.videoOrientation ?? .portrait, flashMode: self._flashMode)
     }
@@ -240,7 +235,7 @@ private final class CameraContext {
         return self.output.startRecording()
     }
     
-    public func stopRecording() -> Signal<String?, NoError> {
+    public func stopRecording() -> Signal<(String, UIImage?)?, NoError> {
         return self.output.stopRecording()
     }
     
@@ -306,19 +301,25 @@ public final class Camera {
     }
     
     public func startCapture() {
+#if targetEnvironment(simulator)
+#else
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.startCapture()
             }
         }
+#endif
     }
     
     public func stopCapture(invalidate: Bool = false) {
+#if targetEnvironment(simulator)
+#else
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.stopCapture(invalidate: invalidate)
             }
         }
+#endif
     }
     
     public func togglePosition() {
@@ -369,7 +370,7 @@ public final class Camera {
         }
     }
     
-    public func stopRecording() -> Signal<String?, NoError> {
+    public func stopRecording() -> Signal<(String, UIImage?)?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {
@@ -413,6 +414,15 @@ public final class Camera {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.setZoomLevel(zoomLevel)
+            }
+        }
+    }
+    
+    
+    public func setZoomDelta(_ zoomDelta: CGFloat) {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.setZoomDelta(zoomDelta)
             }
         }
     }

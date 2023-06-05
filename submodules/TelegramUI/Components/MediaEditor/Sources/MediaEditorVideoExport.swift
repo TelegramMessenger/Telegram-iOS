@@ -198,7 +198,7 @@ public final class MediaEditorVideoExport {
         
         var timeRange: CMTimeRange? {
             if let videoTrimRange = self.values.videoTrimRange {
-                return CMTimeRange(start: CMTime(seconds: videoTrimRange.lowerBound, preferredTimescale: 1), end: CMTime(seconds: videoTrimRange.upperBound, preferredTimescale: 1))
+                return CMTimeRange(start: CMTime(seconds: videoTrimRange.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: videoTrimRange.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
             } else {
                 return nil
             }
@@ -236,7 +236,7 @@ public final class MediaEditorVideoExport {
     
     public enum ExportStatus {
         case unknown
-        case progress(Double)
+        case progress(Float)
         case completed
         case failed(ExportError)
     }
@@ -259,6 +259,13 @@ public final class MediaEditorVideoExport {
     
     private var textureRotation: TextureRotation = .rotate0Degrees
     private let duration = ValuePromise<CMTime>()
+    private var durationValue: CMTime? {
+        didSet {
+            if let durationValue = self.durationValue {
+                self.duration.set(durationValue)
+            }
+        }
+    }
     
     private let pauseDispatchGroup = DispatchGroup()
     private var cancelled = false
@@ -279,14 +286,14 @@ public final class MediaEditorVideoExport {
     private func setup() {
         if case let .video(asset) = self.subject {
             if let trimmedVideoDuration = self.configuration.timeRange?.duration {
-                self.duration.set(trimmedVideoDuration)
+                self.durationValue = trimmedVideoDuration
             } else {
                 asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"]) {
-                    self.duration.set(asset.duration)
+                    self.durationValue = asset.duration
                 }
             }
         } else {
-            self.duration.set(CMTime(seconds: 5, preferredTimescale: 1))
+            self.durationValue = CMTime(seconds: 5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         }
                 
         switch self.subject {
@@ -325,20 +332,23 @@ public final class MediaEditorVideoExport {
         let videoTracks = asset.tracks(withMediaType: .video)
         if (videoTracks.count > 0) {
             var sourceFrameRate: Float = 0.0
+            let colorProperties: [String: Any] = [
+                AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+                AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+                AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
+            ]
+            
             let outputSettings: [String: Any]  = [
-                kCVPixelBufferPixelFormatTypeKey as String: [kCVPixelFormatType_420YpCbCr8BiPlanarFullRange],
-                AVVideoColorPropertiesKey: [
-                    AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-                    AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-                    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
-                ]
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+                kCVPixelBufferMetalCompatibilityKey as String: true,
+                AVVideoColorPropertiesKey: colorProperties
             ]
             if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing {
             } else {
                 self.setupComposer()
             }
             let videoOutput = AVAssetReaderTrackOutput(track: videoTracks.first!, outputSettings: outputSettings)
-            videoOutput.alwaysCopiesSampleData = false
+            videoOutput.alwaysCopiesSampleData = true
             if reader.canAdd(videoOutput) {
                 reader.add(videoOutput)
             } else {
@@ -519,8 +529,13 @@ public final class MediaEditorVideoExport {
             }
             self.pauseDispatchGroup.wait()
             if let buffer = output.copyNextSampleBuffer() {
+                let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer)
+                if let duration = self.durationValue {
+                    let startTimestamp = self.reader?.timeRange.start ?? .zero
+                    let progress = (timestamp - startTimestamp).seconds / duration.seconds
+                    self.statusValue = .progress(Float(progress))
+                }
                 if let composer = self.composer {
-                    let timestamp = CMSampleBufferGetPresentationTimeStamp(buffer)
                     composer.processSampleBuffer(buffer, pool: writer.pixelBufferPool, textureRotation: self.textureRotation, completion: { pixelBuffer in
                         if let pixelBuffer {
                             if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {
@@ -595,6 +610,12 @@ public final class MediaEditorVideoExport {
             self.resume()
         }
         self.cancelled = true
+        
+        self.queue.async {
+            if let reader = self.reader, reader.status == .reading {
+                reader.cancelReading()
+            }
+        }
     }
     
     private let statusPromise = Promise<ExportStatus>(.unknown)
@@ -606,7 +627,6 @@ public final class MediaEditorVideoExport {
     public var status: Signal<ExportStatus, NoError> {
         return self.statusPromise.get()
     }
-    
     
     private func startImageVideoExport() {
         guard self.internalStatus == .idle, let writer = self.writer else {
@@ -687,7 +707,7 @@ public final class MediaEditorVideoExport {
         }
     }
     
-    public func startExport() {
+    public func start() {
         switch self.subject {
         case .video:
             self.startVideoExport()

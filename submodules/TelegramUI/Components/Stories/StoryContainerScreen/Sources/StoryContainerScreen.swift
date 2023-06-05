@@ -116,6 +116,7 @@ private final class StoryContainerScreenComponent: Component {
         private var environment: ViewControllerComponentContainer.Environment?
         
         private let backgroundLayer: SimpleLayer
+        private let backgroundEffectView: BlurredBackgroundView
         
         private var contentUpdatedDisposable: Disposable?
         
@@ -131,6 +132,9 @@ private final class StoryContainerScreenComponent: Component {
             self.backgroundLayer = SimpleLayer()
             self.backgroundLayer.backgroundColor = UIColor.black.cgColor
             self.backgroundLayer.zPosition = -1000.0
+            
+            self.backgroundEffectView = BlurredBackgroundView(color: UIColor(rgb: 0x000000, alpha: 0.9), enableBlur: true)
+            self.backgroundEffectView.layer.zPosition = -1001.0
             
             super.init(frame: frame)
             
@@ -334,12 +338,12 @@ private final class StoryContainerScreenComponent: Component {
                 
                 if subview is ItemSetView {
                     if self.itemSetPanState == nil {
-                        if let result = subview.hitTest(point, with: event) {
+                        if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
                             return result
                         }
                     }
                 } else {
-                    if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
+                    if let result = subview.hitTest(self.convert(self.convert(point, to: subview), to: subview), with: event) {
                         return result
                     }
                 }
@@ -351,6 +355,7 @@ private final class StoryContainerScreenComponent: Component {
         func animateIn() {
             if let transitionIn = self.component?.transitionIn, transitionIn.sourceView != nil {
                 self.backgroundLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.28, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                self.backgroundEffectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.28, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                 
                 if let transitionIn = self.component?.transitionIn, let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
                     if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
@@ -372,6 +377,7 @@ private final class StoryContainerScreenComponent: Component {
             if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(slice.peer.id, slice.item.id) {
                 let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
                 transition.setAlpha(layer: self.backgroundLayer, alpha: 0.0)
+                transition.setAlpha(view: self.backgroundEffectView, alpha: 0.0)
                 
                 let transitionOutCompleted = transitionOut.completed
                 itemSetComponentView.animateOut(transitionOut: transitionOut, completion: {
@@ -450,6 +456,17 @@ private final class StoryContainerScreenComponent: Component {
             self.state = state
             
             transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setFrame(view: self.backgroundEffectView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            
+            if case .regular = environment.metrics.widthClass {
+                self.backgroundLayer.isHidden = true
+                self.backgroundEffectView.update(size: availableSize, transition: transition.containedViewLayoutTransition)
+                self.insertSubview(self.backgroundEffectView, at: 0)
+                
+            } else {
+                self.backgroundLayer.isHidden = false
+                self.backgroundEffectView.removeFromSuperview()
+            }
             
             var isProgressPaused = false
             if self.itemSetPanState != nil {
@@ -501,7 +518,19 @@ private final class StoryContainerScreenComponent: Component {
                     
                     let slice = currentSlices[i]
                     
+                    let cubeAdditionalRotationFraction: CGFloat
+                    if i == focusedIndex {
+                        cubeAdditionalRotationFraction = 0.0
+                    } else if i < focusedIndex {
+                        cubeAdditionalRotationFraction = -1.0
+                    } else {
+                        cubeAdditionalRotationFraction = 1.0
+                    }
+                    
+                    var panFraction: CGFloat = 0.0
                     if let itemSetPanState = self.itemSetPanState {
+                        panFraction = -itemSetPanState.fraction
+                        
                         if self.visibleItemSetViews[slice.peer.id] != nil {
                             isItemVisible = true
                         }
@@ -526,6 +555,18 @@ private final class StoryContainerScreenComponent: Component {
                             self.visibleItemSetViews[slice.peer.id] = itemSetView
                         }
                         
+                        var itemSetContainerSize = availableSize
+                        var itemSetContainerTopInset = environment.statusBarHeight + 12.0
+                        var itemSetContainerSafeInsets = environment.safeInsets
+                        if case .regular = environment.metrics.widthClass {
+                            let availableHeight = min(1080.0, availableSize.height - max(45.0, environment.safeInsets.bottom) * 2.0)
+                            let mediaHeight = availableHeight - 40.0
+                            let mediaWidth = floor(mediaHeight * 0.5625)
+                            itemSetContainerSize = CGSize(width: mediaWidth, height: availableHeight)
+                            itemSetContainerTopInset = 0.0
+                            itemSetContainerSafeInsets.bottom = 0.0
+                        }
+                        
                         let _ = itemSetView.view.update(
                             transition: itemSetTransition,
                             component: AnyComponent(StoryItemSetContainerComponent(
@@ -534,11 +575,13 @@ private final class StoryContainerScreenComponent: Component {
                                 slice: slice,
                                 theme: environment.theme,
                                 strings: environment.strings,
-                                containerInsets: UIEdgeInsets(top: environment.statusBarHeight + 12.0, left: 0.0, bottom: environment.inputHeight, right: 0.0),
-                                safeInsets: environment.safeInsets,
+                                containerInsets: UIEdgeInsets(top: itemSetContainerTopInset, left: 0.0, bottom: environment.inputHeight, right: 0.0),
+                                safeInsets: itemSetContainerSafeInsets,
                                 inputHeight: environment.inputHeight,
+                                metrics: environment.metrics,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
                                 hideUI: i == focusedIndex && self.itemSetPanState?.didBegin == false,
+                                visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
                                 presentController: { [weak self] c in
                                     guard let self, let environment = self.environment else {
                                         return
@@ -614,14 +657,14 @@ private final class StoryContainerScreenComponent: Component {
                                 }
                             )),
                             environment: {},
-                            containerSize: availableSize
+                            containerSize: itemSetContainerSize
                         )
                         
                         if i == focusedIndex {
                             contentDerivedBottomInset = itemSetView.externalState.derivedBottomInset
                         }
                         
-                        let itemFrame = CGRect(origin: CGPoint(), size: availableSize)
+                        let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)), size: itemSetContainerSize)
                         if let itemSetComponentView = itemSetView.view.view {
                             if itemSetView.superview == nil {
                                 self.addSubview(itemSetView)
@@ -639,13 +682,25 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             
-                            itemSetTransition.setPosition(layer: itemSetView.tintLayer, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
-                            itemSetTransition.setBounds(layer: itemSetView.tintLayer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                            let itemTintSize: CGSize
+                            if case .regular = environment.metrics.widthClass {
+                                itemTintSize = itemSetView.externalState.derivedMediaSize
+                            } else {
+                                itemTintSize = itemFrame.size
+                            }
+                            
+                            itemSetTransition.setPosition(layer: itemSetView.tintLayer, position: CGRect(origin: CGPoint(), size: itemTintSize).center)
+                            itemSetTransition.setBounds(layer: itemSetView.tintLayer, bounds: CGRect(origin: CGPoint(), size: itemTintSize))
                             
                             let perspectiveConstant: CGFloat = 500.0
                             let width = itemFrame.width
                             
-                            let sideDistance: CGFloat = 40.0
+                            let sideDistance: CGFloat
+                            if case .regular = environment.metrics.widthClass {
+                                sideDistance = 0.0
+                            } else {
+                                sideDistance = 40.0
+                            }
                             
                             let sideAngle_d: CGFloat = -pow(perspectiveConstant, 2)*pow(sideDistance, 2)
                             let sideAngle_e: CGFloat = pow(perspectiveConstant, 2)*pow(width, 2)
@@ -686,21 +741,7 @@ private final class StoryContainerScreenComponent: Component {
                                 
                                 return targetTransform
                             }
-                            
-                            let cubeAdditionalRotationFraction: CGFloat
-                            if i == focusedIndex {
-                                cubeAdditionalRotationFraction = 0.0
-                            } else if i < focusedIndex {
-                                cubeAdditionalRotationFraction = -1.0
-                            } else {
-                                cubeAdditionalRotationFraction = 1.0
-                            }
-                            
-                            var panFraction: CGFloat = 0.0
-                            if let itemSetPanState = self.itemSetPanState {
-                                panFraction = -itemSetPanState.fraction
-                            }
-                            
+                                                        
                             Transition.immediate.setTransform(view: itemSetComponentView, transform: faceTransform)
                             Transition.immediate.setTransform(layer: itemSetView.tintLayer, transform: faceTransform)
                             
@@ -741,7 +782,7 @@ private final class StoryContainerScreenComponent: Component {
                             alphaFraction *= 1.3
                             alphaFraction = max(-1.0, min(1.0, alphaFraction))
                             alphaFraction = abs(alphaFraction)
-                            
+                                                        
                             itemSetTransition.setAlpha(layer: itemSetView.tintLayer, alpha: alphaFraction)
                         }
                     }

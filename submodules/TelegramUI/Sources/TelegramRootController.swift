@@ -292,8 +292,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         return nil
                     case let .image(image):
                         return .image(image, PixelDimensions(image.size))
-                    case let .video(path, dimensions):
-                        return .video(path, dimensions)
+                    case let .video(path, transitionImage, dimensions):
+                        return .video(path, transitionImage, dimensions)
                     case let .asset(asset):
                         return .asset(asset)
                     case let .draft(draft):
@@ -334,24 +334,39 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         } else {
                             return nil
                         }
-                    }, completion: { [weak self] mediaResult, commit, privacy in
+                    }, completion: { [weak self] mediaResult, privacy, commit in
                         guard let self else {
                             dismissCameraImpl?()
-                            commit()
+                            commit({})
                             return
                         }
                         
                         if let chatListController = self.chatListController as? ChatListControllerImpl {
-                            chatListController.scrollToTop?()
+                            chatListController.scrollToStories()
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
                                 if let imageData = compressImageToJPEG(image, quality: 0.6) {
                                     switch privacy {
-                                    case let .story(storyPrivacy, _):
-                                        let _ = self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], privacy: storyPrivacy).start()
-                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                            chatListController?.animateStoryUploadRipple()
+                                    case let .story(storyPrivacy, pin):
+                                        chatListController.updateStoryUploadProgress(0.0)
+                                        let _ = (self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy)
+                                        |> deliverOnMainQueue).start(next: { [weak chatListController] result in
+                                            if let chatListController {
+                                                switch result {
+                                                case let .progress(progress):
+                                                    chatListController.updateStoryUploadProgress(progress)
+                                                case .completed:
+                                                    Queue.mainQueue().after(0.2) {
+                                                        chatListController.updateStoryUploadProgress(nil)
+                                                    }
+                                                }
+                                            }
                                         })
+                                        Queue.mainQueue().justDispatch {
+                                            commit({ [weak chatListController] in
+                                                chatListController?.animateStoryUploadRipple()
+                                            })
+                                        }
                                     case let .message(peerIds, timeout):
                                         var randomId: Int64 = 0
                                         arc4random_buf(&randomId, 8)
@@ -400,6 +415,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                             account: self.context.account,
                                             peerIds: peerIds, threadIds: [:],
                                             messages: [.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]).start()
+                                        
+                                        commit({})
                                     }
                                 }
                             case let .video(content, _, values, duration, dimensions, caption):
@@ -418,22 +435,34 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     case let .asset(localIdentifier):
                                         resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                     }
-                                    if case let .story(storyPrivacy, _) = privacy {
-                                        let _ = self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], privacy: storyPrivacy).start()
-                                        Queue.mainQueue().after(0.3, { [weak chatListController] in
-                                            chatListController?.animateStoryUploadRipple()
+                                    if case let .story(storyPrivacy, pin) = privacy {
+                                        chatListController.updateStoryUploadProgress(0.0)
+                                        let _ = (self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy)
+                                        |> deliverOnMainQueue).start(next: { [weak chatListController] result in
+                                            if let chatListController {
+                                                switch result {
+                                                case let .progress(progress):
+                                                    chatListController.updateStoryUploadProgress(progress)
+                                                case .completed:
+                                                    Queue.mainQueue().after(0.2) {
+                                                        chatListController.updateStoryUploadProgress(nil)
+                                                    }
+                                                }
+                                            }
                                         })
+                                        Queue.mainQueue().justDispatch {
+                                            commit({ [weak chatListController] in
+                                                chatListController?.animateStoryUploadRipple()
+                                            })
+                                        }
                                     } else {
-                                        
+                                        commit({})
                                     }
                                 }
                             }
                         }
                         
                         dismissCameraImpl?()
-                        Queue.mainQueue().after(0.1) {
-                            commit()
-                        }
                     }
                 )
                 controller.cancelled = { showDraftTooltip in

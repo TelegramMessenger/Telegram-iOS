@@ -1683,6 +1683,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentCredibilityIconContent: EmojiStatusComponent.Content?
             var currentSecretIconImage: UIImage?
             var currentForwardedIcon: UIImage?
+            var currentStoryIcon: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -1805,6 +1806,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32, isUnread: Bool)?
             
             var displayForwardedIcon = false
+            var displayStoryReplyIcon = false
             
             switch contentData {
                 case let .chat(itemPeer, _, _, _, text, spoilers, customEmojiRanges):
@@ -1983,6 +1985,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
                             displayForwardedIcon = true
+                        } else if let _ = message.attributes.first(where: { $0 is ReplyStoryAttribute }) {
+                            displayStoryReplyIcon = true
                         }
                 
                         var displayMediaPreviews = true
@@ -2070,8 +2074,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentForwardedIcon = PresentationResourcesChatList.forwardedIcon(item.presentationData.theme)
             }
             
+            if displayStoryReplyIcon {
+                currentStoryIcon = PresentationResourcesChatList.storyReplyIcon(item.presentationData.theme)
+            }
+            
             if let currentForwardedIcon {
                 textLeftCutout += currentForwardedIcon.size.width
+                if !contentImageSpecs.isEmpty {
+                    textLeftCutout += forwardedIconSpacing
+                } else {
+                    textLeftCutout += contentImageTrailingSpace
+                }
+            }
+            
+            if let currentStoryIcon {
+                textLeftCutout += currentStoryIcon.size.width
                 if !contentImageSpecs.isEmpty {
                     textLeftCutout += forwardedIconSpacing
                 } else {
@@ -3337,13 +3354,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: floor((measureLayout.size.height - contentImageSize.height) / 2.0))
                     
-                    if let currentForwardedIcon = currentForwardedIcon {
-                        strongSelf.forwardedIconNode.image = currentForwardedIcon
+                    var messageTypeIcon: UIImage?
+                    var messageTypeIconOffset = mediaPreviewOffset
+                    if let currentForwardedIcon {
+                        messageTypeIcon = currentForwardedIcon
+                        messageTypeIconOffset.y += 3.0
+                    } else if let currentStoryIcon {
+                        messageTypeIcon = currentStoryIcon
+                    }
+                    
+                    if let messageTypeIcon {
+                        strongSelf.forwardedIconNode.image = messageTypeIcon
                         if strongSelf.forwardedIconNode.supernode == nil {
                             strongSelf.mainContentContainerNode.addSubnode(strongSelf.forwardedIconNode)
                         }
-                        transition.updateFrame(node: strongSelf.forwardedIconNode, frame: CGRect(origin: CGPoint(x: mediaPreviewOffset.x, y: mediaPreviewOffset.y + 3.0), size: currentForwardedIcon.size))
-                        mediaPreviewOffset.x += currentForwardedIcon.size.width + forwardedIconSpacing
+                        transition.updateFrame(node: strongSelf.forwardedIconNode, frame: CGRect(origin: messageTypeIconOffset, size: messageTypeIcon.size))
+                        mediaPreviewOffset.x += messageTypeIcon.size.width + forwardedIconSpacing
                     } else if strongSelf.forwardedIconNode.supernode != nil {
                         strongSelf.forwardedIconNode.removeFromSupernode()
                     }

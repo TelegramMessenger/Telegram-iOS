@@ -8,6 +8,7 @@ import FFMpegBinding
 import LocalMediaResources
 import LegacyMediaPickerUI
 import MediaEditor
+import Photos
 
 private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
     private let url: URL
@@ -260,7 +261,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                 if let mediaEditorValues {
                     let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, frameRate: 30.0)
                     let videoExport = MediaEditorVideoExport(account: account, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
-                    videoExport.startExport()
+                    videoExport.start()
                     
                     let statusDisposable = videoExport.status.start(next: { status in
                         switch status {
@@ -268,10 +269,22 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                             var value = stat()
                             if stat(tempFile.path, &value) == 0 {
                                 let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
-                                if let size = fileSize(tempFile.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(tempFile.path, to: remuxedTempFile.path) {
+                                if !"".isEmpty, let size = fileSize(tempFile.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(tempFile.path, to: remuxedTempFile.path) {
                                     TempBox.shared.dispose(tempFile)
                                     subscriber.putNext(.moveTempFile(file: remuxedTempFile))
                                 } else {
+                                    let tempVideoPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
+                                    if let _ = try? FileManager.default.copyItem(atPath: tempFile.path, toPath: tempVideoPath) {
+                                        PHPhotoLibrary.shared().performChanges({
+                                            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: URL(fileURLWithPath: tempVideoPath))
+                                        }, completionHandler: { _, error in
+                                            if let error = error {
+                                                print("\(error)")
+                                            }
+                                            let _ = try? FileManager.default.removeItem(atPath: tempVideoPath)
+                                        })
+                                    }
+                                    
                                     TempBox.shared.dispose(remuxedTempFile)
                                     if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: [.mappedRead]) {
                                         var range: Range<Int64>?
@@ -293,6 +306,8 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                             EngineTempBox.shared.dispose(tempFile)
                         case .failed:
                             subscriber.putError(.generic)
+                        case let .progress(progress):
+                            subscriber.putNext(.progressUpdated(progress))
                         default:
                             break
                         }
@@ -414,7 +429,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
             }
             
             let videoExport = MediaEditorVideoExport(account: account, subject: subject, configuration: configuration, outputPath: tempFile.path)
-            videoExport.startExport()
+            videoExport.start()
             
             let statusDisposable = videoExport.status.start(next: { status in
                 switch status {
@@ -422,7 +437,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                     var value = stat()
                     if stat(tempFile.path, &value) == 0 {
                         let remuxedTempFile = TempBox.shared.tempFile(fileName: "video.mp4")
-                        if let size = fileSize(tempFile.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(tempFile.path, to: remuxedTempFile.path) {
+                        if !"".isEmpty, let size = fileSize(tempFile.path), size <= 32 * 1024 * 1024, FFMpegRemuxer.remux(tempFile.path, to: remuxedTempFile.path) {
                             TempBox.shared.dispose(tempFile)
                             subscriber.putNext(.moveTempFile(file: remuxedTempFile))
                         } else {
@@ -447,6 +462,8 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
                     EngineTempBox.shared.dispose(tempFile)
                 case .failed:
                     subscriber.putError(.generic)
+                case let .progress(progress):
+                    subscriber.putNext(.progressUpdated(progress))
                 default:
                     break
                 }
