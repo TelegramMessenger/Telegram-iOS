@@ -21,6 +21,7 @@ import AvatarNode
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var derivedBottomInset: CGFloat = 0.0
+        public fileprivate(set) var derivedMediaSize: CGSize = .zero
         
         public init() {
         }
@@ -39,8 +40,10 @@ public final class StoryItemSetContainerComponent: Component {
     public let containerInsets: UIEdgeInsets
     public let safeInsets: UIEdgeInsets
     public let inputHeight: CGFloat
+    public let metrics: LayoutMetrics
     public let isProgressPaused: Bool
     public let hideUI: Bool
+    public let visibilityFraction: CGFloat
     public let presentController: (ViewController) -> Void
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
@@ -56,8 +59,10 @@ public final class StoryItemSetContainerComponent: Component {
         containerInsets: UIEdgeInsets,
         safeInsets: UIEdgeInsets,
         inputHeight: CGFloat,
+        metrics: LayoutMetrics,
         isProgressPaused: Bool,
         hideUI: Bool,
+        visibilityFraction: CGFloat,
         presentController: @escaping (ViewController) -> Void,
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
@@ -72,8 +77,10 @@ public final class StoryItemSetContainerComponent: Component {
         self.containerInsets = containerInsets
         self.safeInsets = safeInsets
         self.inputHeight = inputHeight
+        self.metrics = metrics
         self.isProgressPaused = isProgressPaused
         self.hideUI = hideUI
+        self.visibilityFraction = visibilityFraction
         self.presentController = presentController
         self.close = close
         self.navigate = navigate
@@ -103,10 +110,16 @@ public final class StoryItemSetContainerComponent: Component {
         if lhs.inputHeight != rhs.inputHeight {
             return false
         }
+        if lhs.metrics != rhs.metrics {
+            return false
+        }
         if lhs.isProgressPaused != rhs.isProgressPaused {
             return false
         }
         if lhs.hideUI != rhs.hideUI {
+            return false
+        }
+        if lhs.visibilityFraction != rhs.visibilityFraction {
             return false
         }
         return true
@@ -1283,12 +1296,16 @@ public final class StoryItemSetContainerComponent: Component {
             self.itemLayout = itemLayout
             
             let inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
+            var inputPanelAlpha: CGFloat = focusedItem?.isMy == true ? 0.0 : 1.0
+            if case .regular = component.metrics.widthClass {
+                inputPanelAlpha *= component.visibilityFraction
+            }
             if let inputPanelView = self.inputPanel.view {
                 if inputPanelView.superview == nil {
                     self.addSubview(inputPanelView)
                 }
                 transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
-                transition.setAlpha(view: inputPanelView, alpha: focusedItem?.isMy == true ? 0.0 : 1.0)
+                transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
             }
             
             if let captionItem = self.captionItem, captionItem.itemId != component.slice.item.storyItem.id {
@@ -1543,6 +1560,10 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var footerPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - footerPanelSize.height), size: footerPanelSize)
+            var footerPanelAlpha: CGFloat = (focusedItem?.isMy == true && !self.displayViewList) ? 1.0 : 0.0
+            if case .regular = component.metrics.widthClass {
+                footerPanelAlpha *= component.visibilityFraction
+            }
             if self.displayViewList {
                 footerPanelFrame.origin.y += footerPanelSize.height
             }
@@ -1551,7 +1572,7 @@ public final class StoryItemSetContainerComponent: Component {
                     self.addSubview(footerPanelView)
                 }
                 transition.setFrame(view: footerPanelView, frame: footerPanelFrame)
-                transition.setAlpha(view: footerPanelView, alpha: (focusedItem?.isMy == true && !self.displayViewList) ? 1.0 : 0.0)
+                transition.setAlpha(view: footerPanelView, alpha: footerPanelAlpha)
             }
             
             let bottomGradientHeight = inputPanelSize.height + 32.0
@@ -1650,6 +1671,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            component.externalState.derivedMediaSize = contentFrame.size
             component.externalState.derivedBottomInset = availableSize.height - min(inputPanelFrame.minY, contentFrame.maxY)
             
             return contentSize
