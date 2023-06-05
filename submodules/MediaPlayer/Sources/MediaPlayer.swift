@@ -310,12 +310,28 @@ private final class MediaPlayerContext {
                 duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
             }
             loadedDuration = duration
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play, progress: 0.0, display: true), soundEnabled: self.enableSound)
+            
+            let statusTimestamp: Double
+            if duration == 0.0 {
+                statusTimestamp = max(timestamp, 0.0)
+            } else {
+                statusTimestamp = min(max(timestamp, 0.0), duration)
+            }
+            
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: statusTimestamp, baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play, progress: 0.0, display: true), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
             let _ = self.playerStatusValue.swap(status)
         } else {
             let duration = seekState?.duration ?? 0.0
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play, progress: 0.0, display: true), soundEnabled: self.enableSound)
+            
+            let statusTimestamp: Double
+            if duration == 0.0 {
+                statusTimestamp = max(timestamp, 0.0)
+            } else {
+                statusTimestamp = min(max(timestamp, 0.0), duration)
+            }
+            
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: statusTimestamp, baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play, progress: 0.0, display: true), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
             let _ = self.playerStatusValue.swap(status)
         }
@@ -974,7 +990,13 @@ private final class MediaPlayerContext {
             if case .seeking(_, timestamp, _, _, _, _) = self.state {
                 reportTimestamp = timestamp
             }
-            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: playbackStatus, soundEnabled: self.enableSound)
+            let statusTimestamp: Double
+            if duration == 0.0 {
+                statusTimestamp = max(reportTimestamp, 0.0)
+            } else {
+                statusTimestamp = min(max(reportTimestamp, 0.0), duration)
+            }
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: statusTimestamp, baseRate: self.baseRate, seekId: self.seekId, status: playbackStatus, soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
             let _ = self.playerStatusValue.swap(status)
         }
