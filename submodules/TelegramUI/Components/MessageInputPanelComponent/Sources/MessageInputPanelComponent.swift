@@ -29,6 +29,7 @@ public final class MessageInputPanelComponent: Component {
     public let strings: PresentationStrings
     public let style: Style
     public let placeholder: String
+    public let alwaysDarkWhenHasText: Bool
     public let presentController: (ViewController) -> Void
     public let sendMessageAction: () -> Void
     public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
@@ -55,6 +56,7 @@ public final class MessageInputPanelComponent: Component {
         strings: PresentationStrings,
         style: Style,
         placeholder: String,
+        alwaysDarkWhenHasText: Bool,
         presentController: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
         setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
@@ -80,6 +82,7 @@ public final class MessageInputPanelComponent: Component {
         self.strings = strings
         self.style = style
         self.placeholder = placeholder
+        self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
         self.presentController = presentController
         self.sendMessageAction = sendMessageAction
         self.setMediaRecordingActive = setMediaRecordingActive
@@ -117,6 +120,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.alwaysDarkWhenHasText != rhs.alwaysDarkWhenHasText {
             return false
         }
         if lhs.audioRecorder !== rhs.audioRecorder {
@@ -718,7 +724,13 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
-            self.fieldBackgroundView.updateColor(color: self.textFieldExternalState.isEditing || component.style == .editor ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
+            var fieldBackgroundIsDark = false
+            if self.textFieldExternalState.hasText && component.alwaysDarkWhenHasText {
+                fieldBackgroundIsDark = true
+            } else if self.textFieldExternalState.isEditing || component.style == .editor {
+                fieldBackgroundIsDark = true
+            }
+            self.fieldBackgroundView.updateColor(color: fieldBackgroundIsDark ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
             if let placeholder = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
                 placeholder.isHidden = self.textFieldExternalState.hasText
                 vibrancyPlaceholderView.isHidden = placeholder.isHidden

@@ -671,6 +671,7 @@ final class MediaEditorScreenComponent: Component {
                     strings: environment.strings,
                     style: .editor,
                     placeholder: "Add a caption...",
+                    alwaysDarkWhenHasText: false,
                     presentController: { [weak self] c in
                         guard let self, let _ = self.component else {
                             return

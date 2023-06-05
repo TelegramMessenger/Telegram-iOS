@@ -44,6 +44,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let isProgressPaused: Bool
     public let hideUI: Bool
     public let visibilityFraction: CGFloat
+    public let isPanning: Bool
     public let presentController: (ViewController) -> Void
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
@@ -63,6 +64,7 @@ public final class StoryItemSetContainerComponent: Component {
         isProgressPaused: Bool,
         hideUI: Bool,
         visibilityFraction: CGFloat,
+        isPanning: Bool,
         presentController: @escaping (ViewController) -> Void,
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
@@ -81,6 +83,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.isProgressPaused = isProgressPaused
         self.hideUI = hideUI
         self.visibilityFraction = visibilityFraction
+        self.isPanning = isPanning
         self.presentController = presentController
         self.close = close
         self.navigate = navigate
@@ -120,6 +123,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.visibilityFraction != rhs.visibilityFraction {
+            return false
+        }
+        if lhs.isPanning != rhs.isPanning {
             return false
         }
         return true
@@ -788,6 +794,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             //self.updatePreloads()
             
+            let wasPanning = self.component?.isPanning ?? false
             self.component = component
             self.state = state
             
@@ -797,10 +804,23 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 bottomContentInset = 0.0
             }
+                        
+            var inputPanelAvailableWidth = availableSize.width
+            var inputPanelTransition = transition
+            if case .regular = component.metrics.widthClass {
+                if (self.inputPanelExternalState.isEditing || self.inputPanelExternalState.hasText) {
+                    if wasPanning != component.isPanning {
+                        inputPanelTransition = .easeInOut(duration: 0.25)
+                    }
+                    if !component.isPanning {
+                        inputPanelAvailableWidth += 200.0
+                    }
+                }
+            }
             
             self.inputPanel.parentState = state
             let inputPanelSize = self.inputPanel.update(
-                transition: transition,
+                transition: inputPanelTransition,
                 component: AnyComponent(MessageInputPanelComponent(
                     externalState: self.inputPanelExternalState,
                     context: component.context,
@@ -808,6 +828,7 @@ public final class StoryItemSetContainerComponent: Component {
                     strings: component.strings,
                     style: .story,
                     placeholder: "Reply Privately...",
+                    alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
                     presentController: { [weak self] c in
                         guard let self, let component = self.component else {
                             return
@@ -881,11 +902,11 @@ public final class StoryItemSetContainerComponent: Component {
                     wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
                     timeoutValue: nil,
                     timeoutSelected: false,
-                    displayGradient: component.inputHeight != 0.0,
+                    displayGradient: component.inputHeight != 0.0 && component.metrics.widthClass != .regular,
                     bottomInset: component.inputHeight != 0.0 ? 0.0 : bottomContentInset
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 200.0)
+                containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
             )
             
             var currentItem: StoryContentItem?
@@ -1096,11 +1117,15 @@ public final class StoryItemSetContainerComponent: Component {
             let inputPanelIsOverlay: Bool
             if component.inputHeight == 0.0 {
                 inputPanelBottomInset = bottomContentInset
-                bottomContentInset += inputPanelSize.height
+                if case .regular = component.metrics.widthClass {
+                    bottomContentInset += 60.0
+                } else {
+                    bottomContentInset += inputPanelSize.height
+                }
                 inputPanelIsOverlay = false
             } else {
                 bottomContentInset += 44.0
-                inputPanelBottomInset = component.inputHeight
+                inputPanelBottomInset = component.inputHeight - component.containerInsets.bottom
                 inputPanelIsOverlay = true
             }
             
@@ -1295,7 +1320,7 @@ public final class StoryItemSetContainerComponent: Component {
             let itemLayout = ItemLayout(size: CGSize(width: contentFrame.width, height: availableSize.height - component.containerInsets.top - 44.0 - bottomContentInsetWithoutInput))
             self.itemLayout = itemLayout
             
-            let inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
+            let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
             var inputPanelAlpha: CGFloat = focusedItem?.isMy == true ? 0.0 : 1.0
             if case .regular = component.metrics.widthClass {
                 inputPanelAlpha *= component.visibilityFraction
@@ -1304,7 +1329,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if inputPanelView.superview == nil {
                     self.addSubview(inputPanelView)
                 }
-                transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
+                inputPanelTransition.setFrame(view: inputPanelView, frame: inputPanelFrame)
                 transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
             }
             

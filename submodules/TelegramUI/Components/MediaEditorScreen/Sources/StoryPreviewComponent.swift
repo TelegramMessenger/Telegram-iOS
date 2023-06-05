@@ -250,6 +250,7 @@ final class StoryPreviewComponent: Component {
                     strings: presentationData.strings,
                     style: .story,
                     placeholder: "Reply Privately...",
+                    alwaysDarkWhenHasText: false,
                     presentController: { _ in
                     },
                     sendMessageAction: {
