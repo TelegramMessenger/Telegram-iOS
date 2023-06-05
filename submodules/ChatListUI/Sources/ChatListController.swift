@@ -49,139 +49,6 @@ import StoryContainerScreen
 import StoryContentComponent
 import FullScreenEffectView
 
-private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
-    if listNode.scroller.isDragging {
-        return false
-    }
-    
-    let visibleStoriesProgress: CGFloat
-    do {
-        let fraction = navigationBarSearchContentHeight / searchNode.nominalHeight
-        
-        let fromLow: CGFloat = fraction
-        let toLow: CGFloat = 0.0
-        let fromHigh: CGFloat = 1.0
-        let toHigh: CGFloat = 1.0
-        let visibleProgress: CGFloat = toLow + (searchNode.expansionProgress - fromLow) * (toHigh - toLow) / (fromHigh - fromLow)
-        visibleStoriesProgress = max(0.0, min(1.0, visibleProgress))
-    }
-    
-    let visibleSearchProgress: CGFloat
-    do {
-        let fieldHeight: CGFloat = 36.0
-        let fraction = fieldHeight / searchNode.nominalHeight
-        let fullFraction = navigationBarSearchContentHeight / searchNode.nominalHeight
-        
-        let fromLow: CGFloat = fullFraction - fraction
-        let toLow: CGFloat = 0.0
-        let fromHigh: CGFloat = fullFraction
-        let toHigh: CGFloat = 1.0
-        let visibleProgress: CGFloat = toLow + (searchNode.expansionProgress - fromLow) * (toHigh - toLow) / (fromHigh - fromLow)
-        visibleSearchProgress = max(0.0, min(1.0, visibleProgress))
-    }
-    
-    //print("visibleStoriesProgress = \(visibleStoriesProgress)")
-    //print("visibleSearchProgress = \(visibleSearchProgress)")
-    
-    if visibleStoriesProgress > 0.0 && visibleStoriesProgress < 1.0 {
-        let offset: CGFloat
-        if visibleStoriesProgress < 0.6 {
-            offset = 94.0
-        } else {
-            offset = 0.0
-        }
-        let _ = listNode.scrollToOffsetFromTop(offset, animated: true)
-        return true
-    }
-    
-    if visibleSearchProgress > 0.0 && visibleSearchProgress < 1.0 {
-        let offset: CGFloat
-        if visibleSearchProgress < 0.6 {
-            offset = 94.0 + navigationBarSearchContentHeight
-        } else {
-            offset = 94.0
-        }
-        let _ = listNode.scrollToOffsetFromTop(offset, animated: true)
-        return true
-    }
-    
-    if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 0.2 {
-        let _ = listNode.scrollToOffsetFromTop(94.0 + navigationBarSearchContentHeight, animated: true)
-        return true
-    }
-    
-    /*let storiesFraction = 94.0 / (navigationBarSearchContentHeight + 94.0)
-    
-    var visibleStoriesProgress = max(0.0, min(1.0, searchNode.expansionProgress))
-    visibleStoriesProgress = (1.0 / storiesFraction) * visibleStoriesProgress
-    visibleStoriesProgress = max(0.0, min(1.0, visibleStoriesProgress))
-    
-    let searchFieldHeight: CGFloat = 36.0
-    let searchFraction = searchFieldHeight / searchNode.nominalHeight
-    let visibleSearchProgress = max(0.0, min(1.0, searchNode.expansionProgress) - 1.0 + searchFraction) / searchFraction
-    
-    if visibleSearchProgress > 0.0 && visibleSearchProgress < 1.0 {
-        let offset: CGFloat
-        if visibleSearchProgress < 0.6 {
-            offset = navigationBarSearchContentHeight
-        } else {
-            offset = 0.0
-        }
-        let _ = listNode.scrollToOffsetFromTop(offset, animated: true)
-        return true
-    } else if visibleStoriesProgress > 0.0 && visibleStoriesProgress < 1.0 {
-        let offset: CGFloat
-        if visibleStoriesProgress < 0.3 {
-            offset = navigationBarSearchContentHeight + 94.0
-        } else {
-            offset = navigationBarSearchContentHeight
-        }
-        let _ = listNode.scrollToOffsetFromTop(offset, animated: true)
-        return true
-    }
-    
-    if "".isEmpty {
-        return false
-    }
-    
-    if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
-        let offset: CGFloat
-        if searchNode.expansionProgress < 0.6 {
-            offset = navigationBarSearchContentHeight
-        } else {
-            offset = 0.0
-        }
-        let _ = listNode.scrollToOffsetFromTop(offset, animated: true)
-        return true
-    } else if searchNode.expansionProgress == 1.0 {
-        var sortItemNode: ListViewItemNode?
-        var nextItemNode: ListViewItemNode?
-        
-        listNode.forEachItemNode({ itemNode in
-            if sortItemNode == nil, let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item, case .groupReference = item.content {
-                sortItemNode = itemNode
-            } else if sortItemNode != nil && nextItemNode == nil {
-                nextItemNode = itemNode as? ListViewItemNode
-            }
-        })
-        
-        if false, let sortItemNode = sortItemNode {
-            let itemFrame = sortItemNode.apparentFrame
-            if itemFrame.contains(CGPoint(x: 0.0, y: listNode.insets.top)) {
-                var scrollToItem: ListViewScrollToItem?
-                if itemFrame.minY + itemFrame.height * 0.6 < listNode.insets.top {
-                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(-76.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
-                } else {
-                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
-                }
-                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                return true
-            }
-        }
-    }*/
-    return false
-}
-
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
@@ -314,8 +181,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var preloadStorySubscriptionsDisposable: Disposable?
     private var preloadStoryResourceDisposables: [MediaResourceId: Disposable] = [:]
     
-    private var storyListHeight: CGFloat
-    
     private var fullScreenEffectView: RippleEffectView?
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -349,8 +214,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.tabsNode = SparseNode()
         self.tabContainerNode = ChatListFilterTabContainerNode()
         self.tabsNode.addSubnode(self.tabContainerNode)
-        
-        self.storyListHeight = 0.0
                 
         super.init(context: context, navigationBarPresentationData: nil, mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: groupCallPanelSource)
         
@@ -1879,8 +1742,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.storySubscriptions = storySubscriptions
                 let isEmpty = storySubscriptions.items.isEmpty
                 
-                self.storyListHeight = isEmpty ? 0.0 : 94.0
-                
                 let transition: ContainedViewLayoutTransition
                 if self.didAppear {
                     transition = .animated(duration: 0.4, curve: .spring)
@@ -2647,7 +2508,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.chatListDisplayNode.mainContainerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || (self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing && !self.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing, canReorderAllChats: self.isPremium, filtersLimit: self.tabContainerData?.2, transitionFraction: self.chatListDisplayNode.effectiveContainerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         }
         
-        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, storiesInset: self.storyListHeight, transition: transition)
+        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: navigationBarHeight, storiesInset: 0.0, transition: transition)
     }
     
     override public func navigationStackConfigurationUpdated(next: [ViewController]) {
@@ -3471,15 +3332,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 //TODO:swap tabs
                 
                 let displaySearchFilters = true
-                /*if !tabsIsEmpty, let snapshotView = strongSelf.tabContainerNode.view.snapshotView(afterScreenUpdates: false) {
-                    snapshotView.frame = strongSelf.navigationSecondaryContentNode.frame
-                    strongSelf.navigationSecondaryContentNode.view.superview?.addSubview(snapshotView)
-                    
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                    snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -strongSelf.storyListHeight), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                }*/
                                   
                 if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: strongSelf.hasDownloads, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
                     let (filterContainerNode, activate) = filterContainerNodeAndActivate
@@ -3524,37 +3376,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             self.searchTabsNode = nil
             
-            /*let tabsIsEmpty: Bool
-            if let (resolvedItems, displayTabsAtBottom, _) = self.tabContainerData {
-                tabsIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
-            } else {
-                tabsIsEmpty = true
-            }
-            
-            
-            var filterContainerNode: ASDisplayNode?
-            
-            if animated, let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
-                filterContainerNode = searchContentNode.filterContainerNode
-                
-                if let filterContainerNode = filterContainerNode, let snapshotView = filterContainerNode.view.snapshotView(afterScreenUpdates: false) {
-                    snapshotView.frame = filterContainerNode.frame//.offsetBy(dx: self.navigationSecondaryContentNode.frame.minX, dy: self.navigationSecondaryContentNode.frame.minY)
-                    filterContainerNode.view.superview?.addSubview(snapshotView)
-                    snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.storyListHeight), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                    
-                    if !tabsIsEmpty {
-                        Queue.mainQueue().after(0.01) {
-                            self.tabContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                            self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -74.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                        }
-                    }
-                }
-            }*/
-            
             var searchContentNode: NavigationBarSearchContentNode?
             if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
                 searchContentNode = navigationBarView.searchContentNode
@@ -3563,7 +3384,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if let searchContentNode {
                 let previousFrame = searchContentNode.placeholderNode.frame
                 if case .chatList(.root) = self.location {
-                    searchContentNode.placeholderNode.frame = previousFrame.offsetBy(dx: 0.0, dy: 94.0)
+                    searchContentNode.placeholderNode.frame = previousFrame.offsetBy(dx: 0.0, dy: 79.0)
                 }
                 completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
                 searchContentNode.placeholderNode.frame = previousFrame

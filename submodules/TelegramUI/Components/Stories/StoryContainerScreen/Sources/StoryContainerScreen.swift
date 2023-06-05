@@ -269,9 +269,9 @@ private final class StoryContainerScreenComponent: Component {
                     self.itemSetPanState = nil
                     self.state?.updated(transition: .immediate)
                     
-                    if let component = self.component {
+                    /*if let component = self.component {
                         component.content.resetSideStates()
-                    }
+                    }*/
                 })
             }
         }

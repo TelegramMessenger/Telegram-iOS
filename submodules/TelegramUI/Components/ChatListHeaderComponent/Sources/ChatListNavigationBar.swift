@@ -23,6 +23,7 @@ public final class ChatListNavigationBar: Component {
     public let storySubscriptions: EngineStorySubscriptions?
     public let uploadProgress: Float?
     public let tabsNode: ASDisplayNode?
+    public let tabsNodeIsSearch: Bool
     public let activateSearch: (NavigationBarSearchContentNode) -> Void
     public let openStatusSetup: (UIView) -> Void
     
@@ -40,6 +41,7 @@ public final class ChatListNavigationBar: Component {
         storySubscriptions: EngineStorySubscriptions?,
         uploadProgress: Float?,
         tabsNode: ASDisplayNode?,
+        tabsNodeIsSearch: Bool,
         activateSearch: @escaping (NavigationBarSearchContentNode) -> Void,
         openStatusSetup: @escaping (UIView) -> Void
     ) {
@@ -56,6 +58,7 @@ public final class ChatListNavigationBar: Component {
         self.storySubscriptions = storySubscriptions
         self.uploadProgress = uploadProgress
         self.tabsNode = tabsNode
+        self.tabsNodeIsSearch = tabsNodeIsSearch
         self.activateSearch = activateSearch
         self.openStatusSetup = openStatusSetup
     }
@@ -97,7 +100,10 @@ public final class ChatListNavigationBar: Component {
         if lhs.uploadProgress != rhs.uploadProgress {
             return false
         }
-        if lhs.tabsNode != rhs.tabsNode {
+        if lhs.tabsNode !== rhs.tabsNode {
+            return false
+        }
+        if lhs.tabsNodeIsSearch != rhs.tabsNodeIsSearch {
             return false
         }
         return true
@@ -139,7 +145,9 @@ public final class ChatListNavigationBar: Component {
         private var applyScrollStartFraction: CGFloat = 0.0
         
         private var tabsNode: ASDisplayNode?
+        private var tabsNodeIsSearch: Bool = false
         private weak var disappearingTabsView: UIView?
+        private var disappearingTabsViewSearch: Bool = false
         
         override public init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
@@ -194,7 +202,7 @@ public final class ChatListNavigationBar: Component {
             self.scrollStrings = component.strings
             
             let searchOffsetDistance: CGFloat = navigationBarSearchContentHeight
-            let defaultStoriesOffsetDistance: CGFloat = 94.0
+            let defaultStoriesOffsetDistance: CGFloat = 79.0
             let effectiveStoriesOffsetDistance: CGFloat
             
             var minContentOffset: CGFloat = navigationBarSearchContentHeight
@@ -214,7 +222,7 @@ public final class ChatListNavigationBar: Component {
             
             let visibleSize = CGSize(width: currentLayout.size.width, height: max(0.0, currentLayout.size.height - clippedScrollOffset))
             
-            let previousHeight = self.backgroundView.bounds.height
+            let previousHeight = self.separatorLayer.position.y
             
             self.backgroundView.update(size: CGSize(width: visibleSize.width, height: 1000.0), transition: transition.containedViewLayoutTransition)
             
@@ -343,40 +351,54 @@ public final class ChatListNavigationBar: Component {
             
             if component.tabsNode !== self.tabsNode {
                 if let tabsNode = self.tabsNode {
+                    tabsNode.layer.anchorPoint = CGPoint()
+                    
                     self.tabsNode = nil
                     let disappearingTabsView = tabsNode.view
+                    self.disappearingTabsViewSearch = self.tabsNodeIsSearch
                     self.disappearingTabsView = disappearingTabsView
                     transition.setAlpha(view: tabsNode.view, alpha: 0.0, completion: { [weak self, weak disappearingTabsView] _ in
-                        guard let self, let disappearingTabsView else {
+                        guard let self, let component = self.component, let disappearingTabsView else {
                             return
                         }
-                        if self.tabsNode?.view !== disappearingTabsView {
+                        if disappearingTabsView !== component.tabsNode?.view {
                             disappearingTabsView.removeFromSuperview()
                         }
                     })
                 }
             }
             
-            let tabsFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height - 46.0), size: CGSize(width: visibleSize.width, height: 46.0))
+            var tabsFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height), size: CGSize(width: visibleSize.width, height: 46.0))
+            if component.tabsNode != nil {
+                tabsFrame.origin.y -= 46.0
+            }
             
             if let disappearingTabsView = self.disappearingTabsView {
                 disappearingTabsView.layer.anchorPoint = CGPoint()
-                transition.setFrameWithAdditivePosition(view: disappearingTabsView, frame: tabsFrame)
+                transition.setFrameWithAdditivePosition(view: disappearingTabsView, frame: tabsFrame.offsetBy(dx: 0.0, dy: self.disappearingTabsViewSearch ? -56.0 : 0.0))
             }
             
             if let tabsNode = component.tabsNode {
                 self.tabsNode = tabsNode
+                self.tabsNodeIsSearch = component.tabsNodeIsSearch
                 
                 var tabsNodeTransition = transition
                 if tabsNode.view.superview !== self {
                     tabsNode.view.layer.anchorPoint = CGPoint()
                     tabsNodeTransition = .immediate
+                    tabsNode.view.alpha = 1.0
                     self.addSubview(tabsNode.view)
                     if !transition.animation.isImmediate {
-                        tabsNode.view.alpha = 1.0
                         tabsNode.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        transition.animatePosition(view: tabsNode.view, from: CGPoint(x: 0.0, y: previousHeight - visibleSize.height), to: CGPoint(), additive: true)
+                        
+                        if component.tabsNodeIsSearch {
+                            transition.animatePosition(view: tabsNode.view, from: CGPoint(x: 0.0, y: previousHeight - visibleSize.height + 44.0), to: CGPoint(), additive: true)
+                        } else {
+                            transition.animatePosition(view: tabsNode.view, from: CGPoint(x: 0.0, y: previousHeight - visibleSize.height), to: CGPoint(), additive: true)
+                        }
                     }
+                } else {
+                    transition.setAlpha(view: tabsNode.view, alpha: 1.0)
                 }
                 
                 tabsNodeTransition.setFrameWithAdditivePosition(view: tabsNode.view, frame: tabsFrame)
@@ -419,7 +441,7 @@ public final class ChatListNavigationBar: Component {
                 self.effectiveStoriesInsetHeight = 0.0
             } else {
                 if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty, component.storiesUnlocked {
-                    let storiesHeight: CGFloat = 94.0 * (1.0 - component.secondaryTransition)
+                    let storiesHeight: CGFloat = 79.0 * (1.0 - component.secondaryTransition)
                     contentHeight += storiesHeight
                     self.effectiveStoriesInsetHeight = storiesHeight
                 } else {
@@ -444,7 +466,7 @@ public final class ChatListNavigationBar: Component {
                 }
             }
             
-            if storiesUnlockedUpdated {
+            if storiesUnlockedUpdated && component.storiesUnlocked {
                 self.applyScrollFraction = 0.0
                 self.applyScrollStartFraction = 0.0
                 self.applyScrollFractionAnimator = DisplayLinkAnimator(duration: 0.3, from: 0.0, to: 1.0, update: { [weak self] value in

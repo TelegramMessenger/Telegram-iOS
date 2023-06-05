@@ -211,6 +211,13 @@ public final class StorySubscriptionsContext {
                 
                 if !isRefresh {
                     flags |= 1 << 1
+                } else {
+                    #if DEBUG
+                    if "".isEmpty {
+                        state = nil
+                        flags &= ~(1 << 0)
+                    }
+                    #endif
                 }
             }
             

@@ -731,7 +731,24 @@ public extension TelegramEngine {
                     }
                     
                     items.sort(by: { lhs, rhs in
-                        return lhs.lastTimestamp > rhs.lastTimestamp
+                        if lhs.hasUnseen != rhs.hasUnseen {
+                            if lhs.hasUnseen {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        if lhs.peer.isPremium != rhs.peer.isPremium {
+                            if lhs.peer.isPremium {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        if lhs.lastTimestamp != rhs.lastTimestamp {
+                            return lhs.lastTimestamp > rhs.lastTimestamp
+                        }
+                        return lhs.peer.id < rhs.peer.id
                     })
                     
                     return EngineStorySubscriptions(accountItem: accountItem, items: items, hasMoreToken: hasMoreToken)

@@ -233,7 +233,8 @@ public final class StoryPeerListComponent: Component {
             
             component.externalState.collapsedWidth = collapsedContentWidth
             
-            let visibleBounds = self.scrollView.bounds
+            let effectiveVisibleBounds = self.scrollView.bounds
+            let visibleBounds = effectiveVisibleBounds.insetBy(dx: -200.0, dy: 0.0)
             
             var validIds: [EnginePeer.Id] = []
             for i in 0 ..< self.sortedItems.count {
@@ -242,11 +243,10 @@ public final class StoryPeerListComponent: Component {
                 
                 let regularItemFrame = itemLayout.frame(at: i)
                 if !visibleBounds.intersects(regularItemFrame) {
-                    /*if keepVisibleUntilCompletion && self.visibleItems[itemSet.peerId] != nil {
-                    } else {*/
-                        continue
-                    //}
+                    continue
                 }
+                
+                let isReallyVisible = effectiveVisibleBounds.intersects(regularItemFrame)
                 
                 validIds.append(itemSet.peer.id)
                 
@@ -274,16 +274,36 @@ public final class StoryPeerListComponent: Component {
                     itemProgress = component.uploadProgress
                 }
                 
-                let collapsedItemFrame = CGRect(origin: CGPoint(x: collapsedContentOrigin + CGFloat(i - collapseStartIndex) * collapsedItemDistance, y: regularItemFrame.minY + collapsedItemOffsetY), size: CGSize(width: collapsedItemWidth, height: regularItemFrame.height))
+                let collapsedItemX: CGFloat
+                let collapsedItemScaleFactor: CGFloat
+                if i < collapseStartIndex {
+                    collapsedItemX = collapsedContentOrigin
+                    collapsedItemScaleFactor = 0.1
+                } else if i > collapseEndIndex {
+                    collapsedItemX = collapsedContentOrigin + CGFloat(collapseEndIndex) * collapsedItemDistance - collapsedItemWidth * 0.5
+                    collapsedItemScaleFactor = 0.1
+                } else {
+                    collapsedItemX = collapsedContentOrigin + CGFloat(i - collapseStartIndex) * collapsedItemDistance
+                    collapsedItemScaleFactor = 1.0
+                }
+                let collapsedItemFrame = CGRect(origin: CGPoint(x: collapsedItemX, y: regularItemFrame.minY + collapsedItemOffsetY), size: CGSize(width: collapsedItemWidth, height: regularItemFrame.height))
                 
-                let itemFrame = regularItemFrame.interpolate(to: collapsedItemFrame, amount: component.collapseFraction)
+                let itemFrame: CGRect
+                if isReallyVisible {
+                    itemFrame = regularItemFrame.interpolate(to: collapsedItemFrame, amount: component.collapseFraction)
+                } else {
+                    itemFrame = regularItemFrame
+                }
                 
                 var leftItemFrame: CGRect?
                 var rightItemFrame: CGRect?
                 
                 var itemAlpha: CGFloat = 1.0
+                var isCollapsable: Bool = false
                 
                 if i >= collapseStartIndex && i <= collapseEndIndex {
+                    isCollapsable = true
+                    
                     if i != collapseStartIndex {
                         let regularLeftItemFrame = itemLayout.frame(at: i - 1)
                         let collapsedLeftItemFrame = CGRect(origin: CGPoint(x: collapsedContentOrigin + CGFloat(i - collapseStartIndex - 1) * collapsedItemDistance, y: regularLeftItemFrame.minY), size: CGSize(width: collapsedItemWidth, height: regularLeftItemFrame.height))
@@ -295,7 +315,11 @@ public final class StoryPeerListComponent: Component {
                         rightItemFrame = regularRightItemFrame.interpolate(to: collapsedRightItemFrame, amount: component.collapseFraction)
                     }
                 } else {
-                    itemAlpha = pow(1.0 - component.collapseFraction, 1.5)
+                    if component.collapseFraction == 1.0 {
+                        itemAlpha = 0.0
+                    } else {
+                        itemAlpha = 1.0
+                    }
                 }
                 
                 var leftNeighborDistance: CGFloat?
@@ -318,7 +342,8 @@ public final class StoryPeerListComponent: Component {
                         hasUnseen: hasUnseen,
                         hasItems: hasItems,
                         progress: itemProgress,
-                        collapseFraction: component.collapseFraction,
+                        collapseFraction: isReallyVisible ? component.collapseFraction : 0.0,
+                        collapsedScaleFactor: collapsedItemScaleFactor,
                         collapsedWidth: collapsedItemWidth,
                         leftNeighborDistance: leftNeighborDistance,
                         rightNeighborDistance: rightNeighborDistance,
@@ -329,14 +354,27 @@ public final class StoryPeerListComponent: Component {
                     containerSize: itemLayout.itemSize
                 )
                 
-                if let itemView = visibleItem.view.view {
+                if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
                     if itemView.superview == nil {
                         self.scrollView.addSubview(itemView)
+                        self.scrollView.addSubview(itemView.backgroundContainer)
                     }
-                    itemView.layer.zPosition = 1000.0 - CGFloat(i) * 0.01
+                    
+                    if isCollapsable {
+                        itemView.layer.zPosition = 1000.0 - CGFloat(i) * 0.01
+                        itemView.backgroundContainer.layer.zPosition = 1.0
+                    } else {
+                        itemView.layer.zPosition = 0.5
+                        itemView.backgroundContainer.layer.zPosition = 0.0
+                    }
+                    
                     itemTransition.setFrame(view: itemView, frame: itemFrame)
                     itemTransition.setAlpha(view: itemView, alpha: itemAlpha)
                     itemTransition.setScale(view: itemView, scale: itemScale)
+                    
+                    itemTransition.setFrame(view: itemView.backgroundContainer, frame: itemFrame)
+                    itemTransition.setAlpha(view: itemView.backgroundContainer, alpha: itemAlpha)
+                    itemTransition.setScale(view: itemView.backgroundContainer, scale: itemScale)
                 }
             }
             
@@ -344,12 +382,15 @@ public final class StoryPeerListComponent: Component {
             for (id, visibleItem) in self.visibleItems {
                 if !validIds.contains(id) {
                     removedIds.append(id)
-                    if let itemView = visibleItem.view.view {
+                    if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
                         if keepVisibleUntilCompletion && !transition.animation.isImmediate {
-                            transition.attachAnimation(view: itemView, id: "keep", completion: { [weak itemView] _ in
+                            let backgroundContainer = itemView.backgroundContainer
+                            transition.attachAnimation(view: itemView, id: "keep", completion: { [weak itemView, weak backgroundContainer] _ in
                                 itemView?.removeFromSuperview()
+                                backgroundContainer?.removeFromSuperview()
                             })
                         } else {
+                            itemView.backgroundContainer.removeFromSuperview()
                             itemView.removeFromSuperview()
                         }
                     }
@@ -423,7 +464,7 @@ public final class StoryPeerListComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
-                containerInsets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0),
+                containerInsets: UIEdgeInsets(top: 4.0, left: 10.0, bottom: 0.0, right: 10.0),
                 itemSize: CGSize(width: 60.0, height: 77.0),
                 itemSpacing: 24.0,
                 itemCount: self.sortedItems.count
@@ -432,7 +473,7 @@ public final class StoryPeerListComponent: Component {
             
             self.ignoreScrolling = true
             
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: -4.0), size: CGSize(width: availableSize.width, height: availableSize.height + 4.0)))
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize
             }
