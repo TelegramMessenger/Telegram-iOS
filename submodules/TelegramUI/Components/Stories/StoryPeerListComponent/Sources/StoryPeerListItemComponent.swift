@@ -131,6 +131,8 @@ private final class StoryProgressLayer: SimpleShapeLayer {
     }
 }
 
+private var sharedAvatarBackgroundImage: UIImage?
+
 public final class StoryPeerListItemComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
@@ -140,6 +142,7 @@ public final class StoryPeerListItemComponent: Component {
     public let hasItems: Bool
     public let progress: CGFloat?
     public let collapseFraction: CGFloat
+    public let collapsedScaleFactor: CGFloat
     public let collapsedWidth: CGFloat
     public let leftNeighborDistance: CGFloat?
     public let rightNeighborDistance: CGFloat?
@@ -155,6 +158,7 @@ public final class StoryPeerListItemComponent: Component {
         hasItems: Bool,
         progress: CGFloat?,
         collapseFraction: CGFloat,
+        collapsedScaleFactor: CGFloat,
         collapsedWidth: CGFloat,
         leftNeighborDistance: CGFloat?,
         rightNeighborDistance: CGFloat?,
@@ -169,6 +173,7 @@ public final class StoryPeerListItemComponent: Component {
         self.hasItems = hasItems
         self.progress = progress
         self.collapseFraction = collapseFraction
+        self.collapsedScaleFactor = collapsedScaleFactor
         self.collapsedWidth = collapsedWidth
         self.leftNeighborDistance = leftNeighborDistance
         self.rightNeighborDistance = rightNeighborDistance
@@ -201,6 +206,9 @@ public final class StoryPeerListItemComponent: Component {
         if lhs.collapseFraction != rhs.collapseFraction {
             return false
         }
+        if lhs.collapsedScaleFactor != rhs.collapsedScaleFactor {
+            return false
+        }
         if lhs.collapsedWidth != rhs.collapsedWidth {
             return false
         }
@@ -214,6 +222,8 @@ public final class StoryPeerListItemComponent: Component {
     }
     
     public final class View: UIView {
+        let backgroundContainer: UIView
+        
         private let extractedContainerNode: ContextExtractedContentContainingNode
         private let containerNode: ContextControllerSourceNode
         private let extractedBackgroundView: UIImageView
@@ -221,6 +231,8 @@ public final class StoryPeerListItemComponent: Component {
         private let button: HighlightTrackingButton
         
         private let avatarContainer: UIView
+        private let avatarBackgroundContainer: UIView
+        private let avatarBackgroundView: UIImageView
         private var avatarNode: AvatarNode?
         private var avatarAddBadgeView: UIImageView?
         private let avatarShapeLayer: SimpleShapeLayer
@@ -234,6 +246,9 @@ public final class StoryPeerListItemComponent: Component {
         private weak var componentState: EmptyComponentState?
         
         public override init(frame: CGRect) {
+            self.backgroundContainer = UIView()
+            self.backgroundContainer.isUserInteractionEnabled = false
+            
             self.button = HighlightTrackingButton()
             
             self.extractedContainerNode = ContextExtractedContentContainingNode()
@@ -243,6 +258,9 @@ public final class StoryPeerListItemComponent: Component {
             
             self.avatarContainer = UIView()
             self.avatarContainer.isUserInteractionEnabled = false
+            
+            self.avatarBackgroundContainer = UIView()
+            self.avatarBackgroundView = UIImageView()
             
             self.avatarShapeLayer = SimpleShapeLayer()
             
@@ -262,6 +280,9 @@ public final class StoryPeerListItemComponent: Component {
             self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
             self.addSubview(self.containerNode.view)
             
+            self.backgroundContainer.addSubview(self.avatarBackgroundContainer)
+            self.avatarBackgroundContainer.addSubview(self.avatarBackgroundView)
+            
             self.extractedContainerNode.contentNode.view.addSubview(self.button)
             self.button.addSubview(self.avatarContainer)
             
@@ -274,7 +295,6 @@ public final class StoryPeerListItemComponent: Component {
             
             self.indicatorShapeLayer.fillColor = nil
             self.indicatorShapeLayer.strokeColor = UIColor.white.cgColor
-            self.indicatorShapeLayer.lineWidth = 2.0
             self.indicatorShapeLayer.lineCap = .round
             
             self.button.highligthedChanged = { [weak self] highlighted in
@@ -358,7 +378,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let effectiveWidth: CGFloat = (1.0 - component.collapseFraction) * availableSize.width + component.collapseFraction * component.collapsedWidth
             
-            let effectiveScale: CGFloat = 1.0 * (1.0 - component.collapseFraction) + (24.0 / 52.0) * component.collapseFraction
+            let effectiveScale: CGFloat = 1.0 * (1.0 - component.collapseFraction) + (25.0 / 52.0) * component.collapsedScaleFactor * component.collapseFraction
             
             let avatarNode: AvatarNode
             if let current = self.avatarNode {
@@ -372,13 +392,34 @@ public final class StoryPeerListItemComponent: Component {
             }
             
             let avatarSize = CGSize(width: 52.0, height: 52.0)
+            
+            let avatarBackgroundImage: UIImage?
+            if let sharedAvatarBackgroundImage = sharedAvatarBackgroundImage, sharedAvatarBackgroundImage.size.width == avatarSize.width {
+                avatarBackgroundImage = sharedAvatarBackgroundImage
+            } else {
+                avatarBackgroundImage = generateFilledCircleImage(diameter: avatarSize.width, color: .white)?.withRenderingMode(.alwaysTemplate)
+            }
+            self.avatarBackgroundView.image = avatarBackgroundImage
+            
+            if themeUpdated {
+                self.avatarBackgroundView.tintColor = component.theme.rootController.navigationBar.opaqueBackgroundColor
+            }
+            
             let avatarFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - avatarSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: 4.0), size: avatarSize)
             
             transition.setFrame(view: avatarNode.view, frame: CGRect(origin: CGPoint(), size: avatarFrame.size))
+            transition.setFrame(view: self.avatarBackgroundView, frame: CGRect(origin: CGPoint(), size: avatarFrame.size).insetBy(dx: -3.0 - UIScreenPixel * 2.0, dy: -3.0 - UIScreenPixel * 2.0))
             
-            let indicatorFrame = avatarFrame.insetBy(dx: -4.0, dy: -4.0)
+            let indicatorFrame = avatarFrame.insetBy(dx: -6.0, dy: -6.0)
             
-            let indicatorLineWidth: CGFloat = 2.0 * (1.0 - component.collapseFraction) + (1.33 * (1.0 / effectiveScale)) * (component.collapseFraction)
+            let baseLineWidth: CGFloat
+            let minimizedLineWidth: CGFloat = 3.0
+            if component.hasUnseen || component.progress != nil {
+                baseLineWidth = 2.0
+            } else {
+                baseLineWidth = 1.0 + UIScreenPixel
+            }
+            let indicatorLineWidth: CGFloat = baseLineWidth * (1.0 - component.collapseFraction) + minimizedLineWidth * component.collapseFraction
             
             avatarNode.setPeer(
                 context: component.context,
@@ -389,9 +430,13 @@ public final class StoryPeerListItemComponent: Component {
             transition.setPosition(view: self.avatarContainer, position: avatarFrame.center)
             transition.setBounds(view: self.avatarContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
             
-            let scaledAvatarSize = effectiveScale * (avatarSize.width + 4.0 - indicatorLineWidth * 2.0)
+            transition.setPosition(view: self.avatarBackgroundContainer, position: avatarFrame.center)
+            transition.setBounds(view: self.avatarBackgroundContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+            
+            let scaledAvatarSize = effectiveScale * (avatarSize.width + 4.0 - 2.0 * 2.0)
             
             transition.setScale(view: self.avatarContainer, scale: scaledAvatarSize / avatarSize.width)
+            transition.setScale(view: self.avatarBackgroundContainer, scale: scaledAvatarSize / avatarSize.width)
             
             if component.peer.id == component.context.account.peerId && !component.hasItems && component.progress == nil {
                 self.indicatorColorLayer.isHidden = true
@@ -428,7 +473,7 @@ public final class StoryPeerListItemComponent: Component {
                         context.strokePath()
                     })
                 }
-                avatarAddBadgeTransition.setFrame(view: avatarAddBadgeView, frame: CGRect(origin: CGPoint(x: avatarFrame.width - 1.0 - badgeSize.width, y: avatarFrame.height - 1.0 - badgeSize.height), size: badgeSize))
+                avatarAddBadgeTransition.setFrame(view: avatarAddBadgeView, frame: CGRect(origin: CGPoint(x: avatarFrame.width - 1.0 - badgeSize.width, y: avatarFrame.height - 2.0 - badgeSize.height), size: badgeSize))
             } else {
                 if indicatorColorLayer.isHidden {
                     self.indicatorColorLayer.isHidden = false
@@ -439,6 +484,12 @@ public final class StoryPeerListItemComponent: Component {
                     avatarAddBadgeView.removeFromSuperview()
                 }
             }
+            
+            let baseRadius: CGFloat = 30.0
+            let collapsedRadius: CGFloat = 32.0
+            let indicatorRadius: CGFloat = baseRadius * (1.0 - component.collapseFraction) + collapsedRadius * component.collapseFraction
+            
+            self.indicatorShapeLayer.lineWidth = indicatorLineWidth
             
             if hadUnseen != component.hasUnseen || hadProgress != (component.progress != nil) {
                 let locations: [CGFloat] = [0.0, 1.0]
@@ -476,13 +527,13 @@ public final class StoryPeerListItemComponent: Component {
             avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -1.0, dy: -1.0))
             if component.peer.id == component.context.account.peerId && !component.hasItems && component.progress == nil {
                 let cutoutSize: CGFloat = 18.0 + UIScreenPixel * 2.0
-                avatarPath.addEllipse(in: CGRect(origin: CGPoint(x: avatarSize.width - cutoutSize + UIScreenPixel, y: avatarSize.height - cutoutSize + UIScreenPixel), size: CGSize(width: cutoutSize, height: cutoutSize)))
+                avatarPath.addEllipse(in: CGRect(origin: CGPoint(x: avatarSize.width - cutoutSize + UIScreenPixel, y: avatarSize.height - 1.0 - cutoutSize + UIScreenPixel), size: CGSize(width: cutoutSize, height: cutoutSize)))
             } else if let mappedRightCenter {
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineWidth, dy: -indicatorLineWidth).offsetBy(dx: abs(mappedRightCenter.x - indicatorCenter.x), dy: 0.0))
             }
             self.avatarShapeLayer.path = avatarPath
             
-            self.indicatorShapeLayer.path = calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorFrame.width * 0.5 - indicatorLineWidth * 0.5)
+            self.indicatorShapeLayer.path = calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineWidth * 0.5)
             
             //TODO:localize
             let titleString: String
@@ -501,14 +552,14 @@ public final class StoryPeerListItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width + 4.0, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.25, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 3.0) * effectiveScale), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 3.0) * effectiveScale), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
-                    titleView.layer.anchorPoint = CGPoint()
+                    titleView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
                     titleView.isUserInteractionEnabled = false
                     self.button.addSubview(titleView)
                 }
-                transition.setPosition(view: titleView, position: titleFrame.origin)
+                transition.setPosition(view: titleView, position: titleFrame.center)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                 transition.setScale(view: titleView, scale: effectiveScale)
                 transition.setAlpha(view: titleView, alpha: 1.0 - component.collapseFraction)

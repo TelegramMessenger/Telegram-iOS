@@ -376,7 +376,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode)
         
         if let controller, case .chatList(groupId: .root) = controller.location {
-            self.listNode.scrollHeightTopInset = navigationBarSearchContentHeight + 94.0
+            self.listNode.scrollHeightTopInset = navigationBarSearchContentHeight + 79.0
         }
         
         super.init()
@@ -935,7 +935,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             } else if self.storiesUnlocked {
                 switch offset {
                 case let .known(value):
-                    if value >= 94.0 {
+                    if value >= 79.0 {
                         self.storiesUnlocked = false
                         self.onStoriesLockedUpdated?(false)
                     }
@@ -950,7 +950,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
             switch self.currentItemNode.visibleContentOffset() {
             case let .known(value):
-                if value > 94.0 {
+                if value > 79.0 {
                     if self.storiesUnlocked {
                         self.storiesUnlocked = false
                         
@@ -1829,9 +1829,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         let headerContent = self.controller?.updateHeaderContent(layout: layout, transition: transition)
         
         var tabsNode: ASDisplayNode?
+        var tabsNodeIsSearch = false
         
         if let value = self.controller?.searchTabsNode {
             tabsNode = value
+            tabsNodeIsSearch = true
         } else if let value = self.controller?.tabsNode, self.controller?.hasTabs == true {
             tabsNode = value
         }
@@ -1851,6 +1853,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 secondaryTransition: self.inlineStackContainerTransitionFraction,
                 storySubscriptions: self.controller?.storySubscriptions,
                 tabsNode: tabsNode,
+                tabsNodeIsSearch: tabsNodeIsSearch,
                 activateSearch: { [weak self] searchContentNode in
                     guard let self, let controller = self.controller else {
                         return
@@ -2107,6 +2110,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             
             strongSelf.isSearchDisplayControllerActive = true
+            strongSelf.mainContainerNode.storiesUnlocked = false
             
             strongSelf.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
             strongSelf.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
@@ -2283,6 +2287,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     func setInlineChatList(inlineStackContainerNode: ChatListContainerNode?) {
         if let inlineStackContainerNode = inlineStackContainerNode {
             if self.inlineStackContainerNode !== inlineStackContainerNode {
+                self.mainContainerNode.storiesUnlocked = false
+                
                 inlineStackContainerNode.leftSeparatorLayer.isHidden = false
                 
                 inlineStackContainerNode.presentAlert = self.mainContainerNode.presentAlert
@@ -2338,8 +2344,6 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             if let inlineStackContainerNode = self.inlineStackContainerNode {
                 self.inlineStackContainerNode = nil
                 self.inlineStackContainerTransitionFraction = 0.0
-                
-                self.mainContainerNode.contentScrollingEnded = self.contentScrollingEnded
                 
                 if let _ = self.containerLayout {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)

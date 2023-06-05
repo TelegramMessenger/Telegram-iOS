@@ -173,7 +173,7 @@ final class StoryItemContentComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.environment?.presentationProgressUpdated(1.0)
+                        self.environment?.presentationProgressUpdated(1.0, true)
                     }
                     videoNode.ownsContentNodeUpdated = { [weak self] value in
                         guard let self else {
@@ -244,7 +244,7 @@ final class StoryItemContentComponent: Component {
                                     }
                                 }
                                 
-                                #if DEBUG// && false
+                                #if DEBUG && false
                                 let currentProgressTimerLimit: Double = 1 * 60.0
                                 #else
                                 let currentProgressTimerLimit: Double = 5.0
@@ -254,7 +254,7 @@ final class StoryItemContentComponent: Component {
                                 currentProgressTimerValue = max(0.0, min(currentProgressTimerLimit, currentProgressTimerValue))
                                 self.currentProgressTimerValue = currentProgressTimerValue
                                 
-                                self.environment?.presentationProgressUpdated(currentProgressTimerValue / currentProgressTimerLimit)
+                                self.environment?.presentationProgressUpdated(currentProgressTimerValue / currentProgressTimerLimit, true)
                             }
                         }, queue: .mainQueue()
                     )
@@ -280,10 +280,20 @@ final class StoryItemContentComponent: Component {
             default:
                 break
             }
+            
+            let effectiveDuration: Double
+            if videoPlaybackStatus.duration > 0.0 {
+                effectiveDuration = videoPlaybackStatus.duration
+            } else if case let .file(file) = self.currentMessageMedia, let duration = file.duration {
+                effectiveDuration = Double(max(1, duration))
+            } else {
+                effectiveDuration = 1.0
+            }
+            
             if case .buffering(true, _, _, _) = videoPlaybackStatus.status {
-                timestampAndDuration = (nil, videoPlaybackStatus.duration)
-            } else if Double(0.0).isLess(than: videoPlaybackStatus.duration) {
-                timestampAndDuration = (videoPlaybackStatus.timestamp, videoPlaybackStatus.duration)
+                timestampAndDuration = (nil, effectiveDuration)
+            } else if effectiveDuration > 0.0 {
+                timestampAndDuration = (videoPlaybackStatus.timestamp, effectiveDuration)
             }
             
             var currentProgress: Double = 0.0
@@ -316,7 +326,7 @@ final class StoryItemContentComponent: Component {
             }
             
             let clippedProgress = max(0.0, min(1.0, currentProgress))
-            self.environment?.presentationProgressUpdated(clippedProgress)
+            self.environment?.presentationProgressUpdated(clippedProgress, false)
         }
         
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {

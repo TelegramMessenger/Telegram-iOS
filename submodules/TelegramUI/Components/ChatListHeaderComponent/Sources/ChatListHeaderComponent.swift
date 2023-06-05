@@ -781,10 +781,6 @@ public final class ChatListHeaderComponent: Component {
             return defaultResult
         }
         
-        /*public func updateStories(offset: CGFloat, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, storySubscriptions: EngineStorySubscriptions?, transition: Transition) {
-            
-        }*/
-        
         private func updateContentStoryOffsets(transition: Transition) {
         }
         
@@ -872,7 +868,7 @@ public final class ChatListHeaderComponent: Component {
                 
                 var sideContentWidth: CGFloat = 0.0
                 if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
-                    sideContentWidth = self.storyPeerListExternalState.collapsedWidth + 8.0
+                    sideContentWidth = self.storyPeerListExternalState.collapsedWidth + 12.0
                 }
                 if let chatListTitle = primaryContent.chatListTitle {
                     if chatListTitle.activity {
@@ -968,17 +964,17 @@ public final class ChatListHeaderComponent: Component {
                     self.addSubview(storyPeerListComponentView)
                 }
                 
-                let storyPeerListMinOffset: CGFloat = -7.0
-                let storyPeerListMaxOffset: CGFloat = availableSize.height + 8.0
+                let storyPeerListMinOffset: CGFloat = -8.0
+                let storyPeerListMaxOffset: CGFloat = availableSize.height + 2.0
                 
                 let storyPeerListPosition: CGFloat = storyPeerListMinOffset * (1.0 - component.storiesFraction) + storyPeerListMaxOffset * component.storiesFraction
                 
                 var defaultStoryListX: CGFloat = 0.0
                 if let primaryContentView = self.primaryContentView {
-                    defaultStoryListX = primaryContentView.centerContentOrigin - (self.storyPeerListExternalState.collapsedWidth * 0.5 + 8.0) - availableSize.width * 0.5
+                    defaultStoryListX = primaryContentView.centerContentOrigin - (self.storyPeerListExternalState.collapsedWidth * 0.5 + 12.0) - availableSize.width * 0.5
                 }
                 
-                storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: -1.0 * availableSize.width * component.secondaryTransition + (1.0 - component.storiesFraction) * defaultStoryListX, y: storyPeerListPosition), size: CGSize(width: availableSize.width, height: 94.0)))
+                storyListTransition.setFrame(view: storyPeerListComponentView, frame: CGRect(origin: CGPoint(x: -1.0 * availableSize.width * component.secondaryTransition + (1.0 - component.storiesFraction) * defaultStoryListX, y: storyPeerListPosition), size: CGSize(width: availableSize.width, height: 79.0)))
                 
                 var storyListNormalAlpha: CGFloat = 1.0
                 if let chatListTitle = component.primaryContent?.chatListTitle {

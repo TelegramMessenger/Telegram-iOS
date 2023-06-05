@@ -469,7 +469,7 @@ public final class StoryItemSetContainerComponent: Component {
                 environment: {
                     StoryContentItem.Environment(
                         externalState: visibleItem.externalState,
-                        presentationProgressUpdated: { [weak self, weak visibleItem] progress in
+                        presentationProgressUpdated: { [weak self, weak visibleItem] progress, canSwitch in
                             guard let self = self, let component = self.component else {
                                 return
                             }
@@ -481,7 +481,7 @@ public final class StoryItemSetContainerComponent: Component {
                             if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
                                 navigationStripView.updateCurrentItemProgress(value: progress, transition: .immediate)
                             }
-                            if progress >= 1.0 && !visibleItem.requestedNext {
+                            if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
                                 visibleItem.requestedNext = true
                                 
                                 component.navigate(.next)

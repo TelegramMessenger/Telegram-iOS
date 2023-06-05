@@ -1642,29 +1642,19 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
         self.ignoreScrollingEvents = true
         if topItemFound && bottomItemFound {
-            if self.scroller.contentSize != CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0) {
-                self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: completeHeight)
-            }
+            self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: completeHeight)
             self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
-            if self.scroller.contentOffset != self.lastContentOffset {
-                self.scroller.contentOffset = self.lastContentOffset
-            }
+            self.scroller.contentOffset = self.lastContentOffset
         } else if topItemFound {
-            if self.scroller.contentSize != CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0) {
-                self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
-            }
+            self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
             if self.scroller.contentOffset != self.lastContentOffset {
                 self.scroller.contentOffset = self.lastContentOffset
             }
         } else if bottomItemFound {
-            if self.scroller.contentSize != CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0) {
-                self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
-            }
+            self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize * 2.0 - bottomItemEdge)
-            if self.scroller.contentOffset != self.lastContentOffset {
-                self.scroller.contentOffset = self.lastContentOffset
-            }
+            self.scroller.contentOffset = self.lastContentOffset
         } else if self.itemNodes.isEmpty {
             self.scroller.contentSize = self.visibleSize
             if self.lastContentOffset.y == infiniteScrollSize && self.scroller.contentOffset.y.isZero {
@@ -1672,14 +1662,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.lastContentOffset = .zero
             }
         } else {
-            if self.scroller.contentSize != CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0) {
-                self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
-            }
+            self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             if abs(self.scroller.contentOffset.y - infiniteScrollSize) > infiniteScrollSize / 2.0 {
                 self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize)
-                if self.scroller.contentOffset != self.lastContentOffset {
-                    self.scroller.contentOffset = self.lastContentOffset
-                }
+                self.scroller.contentOffset = self.lastContentOffset
             } else {
                 self.lastContentOffset = self.scroller.contentOffset
             }

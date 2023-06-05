@@ -329,6 +329,8 @@ public final class StoryContentContextImpl: StoryContentContext {
     private var pendingStateReadyDisposable: Disposable?
     
     private var storySubscriptions: EngineStorySubscriptions?
+    private var fixedSubscriptionOrder: [EnginePeer.Id] = []
+    private var startedWithUnseen: Bool?
     private var storySubscriptionsDisposable: Disposable?
     
     private var requestedStoryKeys = Set<StoryKey>()
@@ -350,7 +352,66 @@ public final class StoryContentContextImpl: StoryContentContext {
             guard let self else {
                 return
             }
-            self.storySubscriptions = storySubscriptions
+            
+            let startedWithUnseen: Bool
+            if let current = self.startedWithUnseen {
+                startedWithUnseen = current
+            } else {
+                var startedWithUnseenValue = false
+                
+                if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId {
+                } else {
+                    var centralIndex: Int?
+                    if let (focusedPeerId, _) = self.focusedItem {
+                        if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                            centralIndex = index
+                        }
+                    }
+                    if centralIndex == nil {
+                        if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
+                            centralIndex = index
+                        }
+                    }
+                    if centralIndex == nil {
+                        if !storySubscriptions.items.isEmpty {
+                            centralIndex = 0
+                        }
+                    }
+                    
+                    if let centralIndex {
+                        if storySubscriptions.items[centralIndex].hasUnseen {
+                            startedWithUnseenValue = true
+                        }
+                    }
+                }
+                
+                self.startedWithUnseen = startedWithUnseenValue
+                startedWithUnseen = startedWithUnseenValue
+            }
+            
+            var sortedItems: [EngineStorySubscriptions.Item] = []
+            for peerId in self.fixedSubscriptionOrder {
+                if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == peerId }) {
+                    sortedItems.append(storySubscriptions.items[index])
+                }
+            }
+            for item in storySubscriptions.items {
+                if !sortedItems.contains(where: { $0.peer.id == item.peer.id }) {
+                    if startedWithUnseen {
+                        if !item.hasUnseen {
+                            continue
+                        }
+                    }
+                    sortedItems.append(item)
+                }
+            }
+            self.fixedSubscriptionOrder = sortedItems.map(\.peer.id)
+            
+            self.storySubscriptions = EngineStorySubscriptions(
+                accountItem: storySubscriptions.accountItem,
+                items: sortedItems,
+                hasMoreToken: storySubscriptions.hasMoreToken
+            )
             self.updatePeerContexts()
         })
     }
@@ -372,7 +433,9 @@ public final class StoryContentContextImpl: StoryContentContext {
     }
     
     private func switchToFocusedPeerId() {
-        if let storySubscriptions = self.storySubscriptions {
+        if let currentStorySubscriptions = self.storySubscriptions {
+            let subscriptionItems = currentStorySubscriptions.items
+            
             if self.pendingState == nil {
                 let loadIds: ([StoryKey]) -> Void = { [weak self] keys in
                     guard let self else {
@@ -428,39 +491,39 @@ public final class StoryContentContextImpl: StoryContentContext {
                 } else {
                     var centralIndex: Int?
                     if let (focusedPeerId, _) = self.focusedItem {
-                        if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                        if let index = subscriptionItems.firstIndex(where: { $0.peer.id == focusedPeerId }) {
                             centralIndex = index
                         }
                     }
                     if centralIndex == nil {
-                        if !storySubscriptions.items.isEmpty {
+                        if !subscriptionItems.isEmpty {
                             centralIndex = 0
                         }
                     }
                     
                     if let centralIndex {
                         let centralPeerContext: PeerContext
-                        if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: storySubscriptions.items[centralIndex].peer.id) {
+                        if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex].peer.id) {
                             centralPeerContext = existingContext
                         } else {
-                            centralPeerContext = PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
+                            centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
                         }
                         
                         var previousPeerContext: PeerContext?
                         if centralIndex != 0 {
-                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: storySubscriptions.items[centralIndex - 1].peer.id) {
+                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex - 1].peer.id) {
                                 previousPeerContext = existingContext
                             } else {
-                                previousPeerContext = PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex - 1].peer.id, focusedId: nil, loadIds: loadIds)
+                                previousPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex - 1].peer.id, focusedId: nil, loadIds: loadIds)
                             }
                         }
                         
                         var nextPeerContext: PeerContext?
-                        if centralIndex != storySubscriptions.items.count - 1 {
-                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: storySubscriptions.items[centralIndex + 1].peer.id) {
+                        if centralIndex != subscriptionItems.count - 1 {
+                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex + 1].peer.id) {
                                 nextPeerContext = existingContext
                             } else {
-                                nextPeerContext = PeerContext(context: self.context, peerId: storySubscriptions.items[centralIndex + 1].peer.id, focusedId: nil, loadIds: loadIds)
+                                nextPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex + 1].peer.id, focusedId: nil, loadIds: loadIds)
                             }
                         }
                         

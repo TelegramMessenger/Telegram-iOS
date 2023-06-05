@@ -21,11 +21,11 @@ public final class StoryContentItem {
     
     public final class Environment: Equatable {
         public let externalState: ExternalState
-        public let presentationProgressUpdated: (Double) -> Void
+        public let presentationProgressUpdated: (Double, Bool) -> Void
         
         public init(
             externalState: ExternalState,
-            presentationProgressUpdated: @escaping (Double) -> Void
+            presentationProgressUpdated: @escaping (Double, Bool) -> Void
         ) {
             self.externalState = externalState
             self.presentationProgressUpdated = presentationProgressUpdated
