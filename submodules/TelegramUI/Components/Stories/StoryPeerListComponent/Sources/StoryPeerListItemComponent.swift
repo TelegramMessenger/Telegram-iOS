@@ -411,6 +411,8 @@ public final class StoryPeerListItemComponent: Component {
             }
             self.avatarBackgroundView.image = avatarBackgroundImage
             
+            self.avatarBackgroundView.isHidden = component.progress != nil
+            
             if themeUpdated {
                 self.avatarBackgroundView.tintColor = component.theme.rootController.navigationBar.opaqueBackgroundColor
             }

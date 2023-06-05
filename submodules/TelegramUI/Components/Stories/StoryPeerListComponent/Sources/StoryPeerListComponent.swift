@@ -464,7 +464,7 @@ public final class StoryPeerListComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
-                containerInsets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0),
+                containerInsets: UIEdgeInsets(top: 4.0, left: 10.0, bottom: 0.0, right: 10.0),
                 itemSize: CGSize(width: 60.0, height: 77.0),
                 itemSpacing: 24.0,
                 itemCount: self.sortedItems.count
@@ -473,7 +473,7 @@ public final class StoryPeerListComponent: Component {
             
             self.ignoreScrolling = true
             
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: -4.0), size: CGSize(width: availableSize.width, height: availableSize.height + 4.0)))
             if self.scrollView.contentSize != itemLayout.contentSize {
                 self.scrollView.contentSize = itemLayout.contentSize
             }
