@@ -277,7 +277,7 @@ public func makeVideoStickerDirectFrameSource(queue: Queue, path: String, width:
     return VideoStickerDirectFrameSource(queue: queue, path: path, width: width, height: height, cachePathPrefix: cachePathPrefix, unpremultiplyAlpha: unpremultiplyAlpha)
 }
 
-final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
+public final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
     private let queue: Queue
     private let path: String
     private let width: Int
@@ -285,13 +285,13 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
     private let cache: VideoStickerFrameSourceCache?
     private let image: UIImage?
     private let bytesPerRow: Int
-    var frameCount: Int
-    let frameRate: Int
+    public var frameCount: Int
+    public let frameRate: Int
     fileprivate var currentFrame: Int
     
     private let source: SoftwareVideoSource?
     
-    var frameIndex: Int {
+    public var frameIndex: Int {
         if self.frameCount == 0 {
             return 0
         } else {
@@ -299,7 +299,7 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
         }
     }
     
-    init?(queue: Queue, path: String, width: Int, height: Int, cachePathPrefix: String?, unpremultiplyAlpha: Bool = true) {
+    public init?(queue: Queue, path: String, width: Int, height: Int, cachePathPrefix: String?, unpremultiplyAlpha: Bool = true) {
         self.queue = queue
         self.path = path
         self.width = width
@@ -334,7 +334,7 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
         assert(self.queue.isCurrent())
     }
     
-    func takeFrame(draw: Bool) -> AnimatedStickerFrame? {
+    public func takeFrame(draw: Bool) -> AnimatedStickerFrame? {
         let frameIndex: Int
         if self.frameCount > 0 {
             frameIndex = self.currentFrame % self.frameCount
@@ -415,11 +415,11 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
         }
     }
     
-    func skipToEnd() {
+    public func skipToEnd() {
         self.currentFrame = self.frameCount - 1
     }
 
-    func skipToFrameIndex(_ index: Int) {
+    public func skipToFrameIndex(_ index: Int) {
         self.currentFrame = index
     }
 }
