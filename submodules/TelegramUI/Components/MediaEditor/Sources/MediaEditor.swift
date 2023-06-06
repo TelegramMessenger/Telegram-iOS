@@ -82,6 +82,11 @@ public final class MediaEditor {
         }
         set {
             self.histogramCalculationPass.isEnabled = newValue
+            if newValue {
+                Queue.mainQueue().justDispatch {
+                    self.updateRenderChain()
+                }
+            }
         }
     }
     

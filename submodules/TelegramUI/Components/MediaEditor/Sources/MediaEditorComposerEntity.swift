@@ -256,7 +256,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         }
                         
                         if let imagePixelBuffer {
-                            let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, pixelBuffer: imagePixelBuffer, colorSpace: strongSelf.colorSpace, tintColor: tintColor)
+                            let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, pixelBuffer: imagePixelBuffer, tintColor: tintColor)
                             strongSelf.image = image
                         }
                         completion(strongSelf.image)
@@ -296,7 +296,7 @@ protocol MediaEditorComposerEntity {
     func image(for time: CMTime, frameRate: Float, completion: @escaping (CIImage?) -> Void)
 }
 
-private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, pixelBuffer: CVPixelBuffer, colorSpace: CGColorSpace, tintColor: UIColor?) -> CIImage? {
+private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, pixelBuffer: CVPixelBuffer, tintColor: UIColor?) -> CIImage? {
     //let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
     //assert(bytesPerRow == calculatedBytesPerRow)
     
@@ -325,5 +325,5 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
     
     CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
     
-    return CIImage(cvPixelBuffer: pixelBuffer, options: [.colorSpace: colorSpace])
+    return CIImage(cvPixelBuffer: pixelBuffer, options: [.colorSpace: deviceColorSpace])
 }

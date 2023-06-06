@@ -662,6 +662,17 @@ private final class MediaToolsScreenComponent: Component {
                                 controller.mediaEditor.setToolValue(.highlightsTint, value: value)
                                 state?.updated()
                             }
+                        },
+                        isTrackingUpdated: { [weak self] isTracking in
+                            if let self {
+                                let transition: Transition
+                                if isTracking {
+                                    transition = .immediate
+                                } else {
+                                    transition = .easeInOut(duration: 0.25)
+                                }
+                                transition.setAlpha(view: self.optionsBackgroundView, alpha: isTracking ? 0.0 : 1.0)
+                            }
                         }
                     )),
                     environment: {},
@@ -867,6 +878,9 @@ public final class MediaToolsScreen: ViewController {
         }
         
         func animateOutToEditor(completion: @escaping () -> Void) {
+            if let mediaEditor = self.controller?.mediaEditor {
+                mediaEditor.play()
+            }
             if let view = self.componentHost.view as? MediaToolsScreenComponent.View {
                 view.animateOutToEditor(completion: completion)
             }
@@ -921,6 +935,13 @@ public final class MediaToolsScreen: ViewController {
                         sectionUpdated: { [weak self] section in
                             if let self {
                                 self.currentSection = section
+                                if let mediaEditor = self.controller?.mediaEditor {
+                                    if section == .curves {
+                                        mediaEditor.stop()
+                                    } else {
+                                        mediaEditor.play()
+                                    }
+                                }
                                 if let layout = self.validLayout {
                                     self.containerLayoutUpdated(layout: layout, transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                                 }

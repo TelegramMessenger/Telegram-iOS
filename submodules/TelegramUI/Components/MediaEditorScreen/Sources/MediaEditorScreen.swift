@@ -650,14 +650,28 @@ final class MediaEditorScreenComponent: Component {
                 
             }
             
-            let timeoutValue: Int32
+            var timeoutValue: String
             let timeoutSelected: Bool
             switch component.privacy {
-            case let .story(_, archive):
-                timeoutValue = 24
-                timeoutSelected = !archive
+            case let .story(_, timeout, archive):
+                switch timeout {
+                case 21600:
+                    timeoutValue = "6"
+                case 43200:
+                    timeoutValue = "12"
+                case 86400:
+                    timeoutValue = "24"
+                case 172800:
+                    timeoutValue = "2d"
+                default:
+                    timeoutValue = "24"
+                }
+                if archive {
+                    timeoutValue = "∞"
+                }
+                timeoutSelected = false
             case let .message(_, timeout):
-                timeoutValue = timeout ?? 1
+                timeoutValue = "\(timeout ?? 1)"
                 timeoutSelected = timeout != nil
             }
             
@@ -694,13 +708,7 @@ final class MediaEditorScreenComponent: Component {
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
-                        switch controller.state.privacy {
-                        case let .story(privacy, archive):
-                            controller.state.privacy = .story(privacy: privacy, archive: !archive)
-                            controller.node.presentStoryArchiveTooltip(sourceView: view)
-                        case .message:
-                            controller.presentTimeoutSetup(sourceView: view)
-                        }
+                        controller.presentTimeoutSetup(sourceView: view)
                     },
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
@@ -742,7 +750,7 @@ final class MediaEditorScreenComponent: Component {
             
             let privacyText: String
             switch component.privacy {
-            case let .story(privacy, _):
+            case let .story(privacy, _, _):
                 switch privacy.base {
                 case .everyone:
                     privacyText = "Everyone"
@@ -1027,7 +1035,7 @@ private let storyDimensions = CGSize(width: 1080.0, height: 1920.0)
 private let storyMaxVideoDuration: Double = 60.0
 
 public enum MediaEditorResultPrivacy: Equatable {
-    case story(privacy: EngineStoryPrivacy, archive: Bool)
+    case story(privacy: EngineStoryPrivacy, timeout: Int32, archive: Bool)
     case message(peers: [EnginePeer.Id], timeout: Int32?)
 }
 
@@ -1070,7 +1078,7 @@ public final class MediaEditorScreen: ViewController {
     }
     
     struct State {
-        var privacy: MediaEditorResultPrivacy = .story(privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), archive: false)
+        var privacy: MediaEditorResultPrivacy = .story(privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 86400, archive: false)
     }
     
     var state = State() {
@@ -1788,7 +1796,7 @@ public final class MediaEditorScreen: ViewController {
         
         private weak var storyArchiveTooltip: ViewController?
         func presentStoryArchiveTooltip(sourceView: UIView) {
-            guard let controller = self.controller, case let .story(_, archive) = controller.state.privacy else {
+            guard let controller = self.controller, case let .story(_, _, archive) = controller.state.privacy else {
                 return
             }
             
@@ -2158,9 +2166,13 @@ public final class MediaEditorScreen: ViewController {
                     return
                 }
                 
+                var archive = true
+                var timeout: Int32 = 86400
                 let initialPrivacy: EngineStoryPrivacy
-                if case let .story(privacy, _) = self.state.privacy {
+                if case let .story(privacy, timeoutValue, archiveValue) = self.state.privacy {
                     initialPrivacy = privacy
+                    timeout = timeoutValue
+                    archive = archiveValue
                 } else {
                     initialPrivacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
                 }
@@ -2174,7 +2186,7 @@ public final class MediaEditorScreen: ViewController {
                             guard let self else {
                                 return
                             }
-                            self.state.privacy = .story(privacy: privacy, archive: true)
+                            self.state.privacy = .story(privacy: privacy, timeout: timeout, archive: archive)
                         },
                         editCategory: { [weak self] privacy in
                             guard let self else {
@@ -2184,7 +2196,7 @@ public final class MediaEditorScreen: ViewController {
                                 guard let self else {
                                     return
                                 }
-                                self.state.privacy = .story(privacy: privacy, archive: true)
+                                self.state.privacy = .story(privacy: privacy, timeout: timeout, archive: archive)
                                 self.presentPrivacySettings()
                             })
                         },
@@ -2265,54 +2277,104 @@ public final class MediaEditorScreen: ViewController {
     func presentTimeoutSetup(sourceView: UIView) {
         var items: [ContextMenuItem] = []
 
-        let updateTimeout: (Int32?) -> Void = { [weak self] timeout in
+        let updateTimeout: (Int32?, Bool) -> Void = { [weak self] timeout, archive in
             guard let self else {
                 return
             }
-            if case let .message(peers, _) = self.state.privacy {
+            switch self.state.privacy {
+            case let .story(privacy, _, _):
+                self.state.privacy = .story(privacy: privacy, timeout: timeout ?? 86400, archive: archive)
+            case let .message(peers, _):
                 self.state.privacy = .message(peers: peers, timeout: timeout)
             }
         }
         
         let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
-        items.append(.action(ContextMenuActionItem(text: "Choose how long the media will be kept after opening.", textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
+        let title: String
+        switch self.state.privacy {
+        case .story:
+            title = "Choose how long the story will be kept."
+        case .message:
+            title = "Choose how long the media will be kept after opening."
+        }
         
-        items.append(.action(ContextMenuActionItem(text: "Until First View", icon: { _ in
-            return nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(1)
-        })))
-        items.append(.action(ContextMenuActionItem(text: "3 Seconds", icon: { _ in
-            return nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(3)
-        })))
-        items.append(.action(ContextMenuActionItem(text: "10 Seconds", icon: { _ in
-            return nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(10)
-        })))
-        items.append(.action(ContextMenuActionItem(text: "1 Minute", icon: { _ in
-            return nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(60)
-        })))
-        items.append(.action(ContextMenuActionItem(text: "Keep Always", icon: { _ in
-            return nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(nil)
-        })))
-
+        items.append(.action(ContextMenuActionItem(text: title, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
+        
+        switch self.state.privacy {
+        case .story:
+            items.append(.action(ContextMenuActionItem(text: "6 Hours", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(3600 * 6, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "12 Hours", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(3600 * 12, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "24 Hours", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(86400, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "2 Days", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(86400 * 2, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "Forever", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(86400, true)
+            })))
+        case .message:
+            items.append(.action(ContextMenuActionItem(text: "Until First View", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(1, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "3 Seconds", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(3, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "10 Seconds", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(10, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "1 Minute", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(60, false)
+            })))
+            items.append(.action(ContextMenuActionItem(text: "Keep Always", icon: { _ in
+                return nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(nil, false)
+            })))
+        }
+        
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         self.present(contextController, in: .window(.root))

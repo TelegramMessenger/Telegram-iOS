@@ -44,7 +44,7 @@ public final class MessageInputPanelComponent: Component {
     public let isRecordingLocked: Bool
     public let recordedAudioPreview: ChatRecordedMediaPreview?
     public let wasRecordingDismissed: Bool
-    public let timeoutValue: Int32?
+    public let timeoutValue: String?
     public let timeoutSelected: Bool
     public let displayGradient: Bool
     public let bottomInset: CGFloat
@@ -71,7 +71,7 @@ public final class MessageInputPanelComponent: Component {
         isRecordingLocked: Bool,
         recordedAudioPreview: ChatRecordedMediaPreview?,
         wasRecordingDismissed: Bool,
-        timeoutValue: Int32?,
+        timeoutValue: String?,
         timeoutSelected: Bool,
         displayGradient: Bool,
         bottomInset: CGFloat
@@ -673,10 +673,9 @@ public final class MessageInputPanelComponent: Component {
             }
             
             if let timeoutAction = component.timeoutAction, let timeoutValue = component.timeoutValue {
-                func generateIcon(value: Int32) -> UIImage? {
+                func generateIcon(value: String) -> UIImage? {
                     let image = UIImage(bundleImageName: "Media Editor/Timeout")!
-                    let string = "\(value)"
-                    let valueString = NSAttributedString(string: "\(value)", font: Font.with(size: string.count == 1 ? 12.0 : 10.0, design: .round, weight: .semibold), textColor: .white, paragraphAlignment: .center)
+                    let valueString = NSAttributedString(string: value, font: Font.with(size: value.count == 1 ? 12.0 : 10.0, design: .round, weight: .semibold), textColor: .white, paragraphAlignment: .center)
                    
                     return generateImage(image.size, contextGenerator: { size, context in
                         let bounds = CGRect(origin: CGPoint(), size: size)
