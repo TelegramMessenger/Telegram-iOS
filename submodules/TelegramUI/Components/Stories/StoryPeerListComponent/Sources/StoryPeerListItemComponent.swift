@@ -543,9 +543,9 @@ public final class StoryPeerListItemComponent: Component {
             } else if let mappedRightCenter {
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineWidth, dy: -indicatorLineWidth).offsetBy(dx: abs(mappedRightCenter.x - indicatorCenter.x), dy: 0.0))
             }
-            self.avatarShapeLayer.path = avatarPath
+            transition.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             
-            self.indicatorShapeLayer.path = calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineWidth * 0.5)
+            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineWidth * 0.5))
             
             //TODO:localize
             let titleString: String

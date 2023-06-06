@@ -461,11 +461,11 @@ public final class StoryPeerListComponent: Component {
                     self.requestedLoadMoreToken = hasMoreToken
                     
                     if component.includesHidden {
-                        if let storySubscriptionsContext = component.context.account.filteredStorySubscriptionsContext {
+                        if let storySubscriptionsContext = component.context.account.allStorySubscriptionsContext {
                             storySubscriptionsContext.loadMore()
                         }
                     } else {
-                        if let storySubscriptionsContext = component.context.account.allStorySubscriptionsContext {
+                        if let storySubscriptionsContext = component.context.account.filteredStorySubscriptionsContext {
                             storySubscriptionsContext.loadMore()
                         }
                     }
