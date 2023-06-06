@@ -601,7 +601,7 @@ public final class StoryPeerListItemComponent: Component {
                     self.progressLayer = progressLayer
                     self.indicatorMaskLayer.addSublayer(progressLayer)
                 }
-                let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size)
+                let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size).insetBy(dx: 2.0, dy: 2.0)
                 progressTransition.setFrame(layer: progressLayer, frame: progressFrame)
                 progressLayer.update(size: progressFrame.size, lineWidth: 4.0, progress: progress, transition: transition)
                 
