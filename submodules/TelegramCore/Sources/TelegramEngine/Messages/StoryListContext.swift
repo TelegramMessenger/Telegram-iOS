@@ -33,6 +33,7 @@ public final class EngineStoryItem: Equatable {
     
     public let id: Int32
     public let timestamp: Int32
+    public let expirationTimestamp: Int32
     public let media: EngineMedia
     public let text: String
     public let entities: [MessageTextEntity]
@@ -42,9 +43,10 @@ public final class EngineStoryItem: Equatable {
     public let isExpired: Bool
     public let isPublic: Bool
     
-    public init(id: Int32, timestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool) {
         self.id = id
         self.timestamp = timestamp
+        self.expirationTimestamp = expirationTimestamp
         self.media = media
         self.text = text
         self.entities = entities
@@ -60,6 +62,9 @@ public final class EngineStoryItem: Equatable {
             return false
         }
         if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.expirationTimestamp != rhs.expirationTimestamp {
             return false
         }
         if lhs.media != rhs.media {
@@ -483,6 +488,7 @@ public final class PeerStoryListContext {
                                     let mappedItem = EngineStoryItem(
                                         id: item.id,
                                         timestamp: item.timestamp,
+                                        expirationTimestamp: item.expirationTimestamp,
                                         media: EngineMedia(media),
                                         text: item.text,
                                         entities: item.entities,
@@ -597,6 +603,7 @@ public final class PeerStoryListContext {
                                                         updatedState.items[index] = EngineStoryItem(
                                                             id: item.id,
                                                             timestamp: item.timestamp,
+                                                            expirationTimestamp: item.expirationTimestamp,
                                                             media: EngineMedia(media),
                                                             text: item.text,
                                                             entities: item.entities,

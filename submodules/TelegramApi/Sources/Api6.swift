@@ -39,6 +39,42 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ExportedStoryLink: TypeConstructorDescription {
+        case exportedStoryLink(link: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .exportedStoryLink(let link):
+                    if boxed {
+                        buffer.appendInt32(1070138683)
+                    }
+                    serializeString(link, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .exportedStoryLink(let link):
+                return ("exportedStoryLink", [("link", link as Any)])
+    }
+    }
+    
+        public static func parse_exportedStoryLink(_ reader: BufferReader) -> ExportedStoryLink? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ExportedStoryLink.exportedStoryLink(link: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     

@@ -99,6 +99,7 @@ public enum Stories {
         private enum CodingKeys: String, CodingKey {
             case id
             case timestamp
+            case expirationTimestamp
             case media
             case text
             case entities
@@ -111,6 +112,7 @@ public enum Stories {
         
         public let id: Int32
         public let timestamp: Int32
+        public let expirationTimestamp: Int32
         public let media: Media?
         public let text: String
         public let entities: [MessageTextEntity]
@@ -123,6 +125,7 @@ public enum Stories {
         public init(
             id: Int32,
             timestamp: Int32,
+            expirationTimestamp: Int32,
             media: Media?,
             text: String,
             entities: [MessageTextEntity],
@@ -134,6 +137,7 @@ public enum Stories {
         ) {
             self.id = id
             self.timestamp = timestamp
+            self.expirationTimestamp = expirationTimestamp
             self.media = media
             self.text = text
             self.entities = entities
@@ -149,6 +153,7 @@ public enum Stories {
             
             self.id = try container.decode(Int32.self, forKey: .id)
             self.timestamp = try container.decode(Int32.self, forKey: .timestamp)
+            self.expirationTimestamp = try container.decode(Int32.self, forKey: .expirationTimestamp)
             
             if let mediaData = try container.decodeIfPresent(Data.self, forKey: .media) {
                 self.media = PostboxDecoder(buffer: MemoryBuffer(data: mediaData)).decodeRootObject() as? Media
@@ -170,6 +175,7 @@ public enum Stories {
             
             try container.encode(self.id, forKey: .id)
             try container.encode(self.timestamp, forKey: .timestamp)
+            try container.encode(self.expirationTimestamp, forKey: .expirationTimestamp)
             
             if let media = self.media {
                 let encoder = PostboxEncoder()
@@ -192,6 +198,9 @@ public enum Stories {
                 return false
             }
             if lhs.timestamp != rhs.timestamp {
+                return false
+            }
+            if lhs.expirationTimestamp != rhs.expirationTimestamp {
                 return false
             }
             
@@ -235,17 +244,21 @@ public enum Stories {
         private enum CodingKeys: String, CodingKey {
             case id
             case timestamp
+            case expirationTimestamp
         }
         
         public let id: Int32
         public let timestamp: Int32
+        public let expirationTimestamp: Int32
         
         public init(
             id: Int32,
-            timestamp: Int32
+            timestamp: Int32,
+            expirationTimestamp: Int32
         ) {
             self.id = id
             self.timestamp = timestamp
+            self.expirationTimestamp = expirationTimestamp
         }
         
         public init(from decoder: Decoder) throws {
@@ -253,6 +266,7 @@ public enum Stories {
             
             self.id = try container.decode(Int32.self, forKey: .id)
             self.timestamp = try container.decode(Int32.self, forKey: .timestamp)
+            self.expirationTimestamp = try container.decode(Int32.self, forKey: .expirationTimestamp)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -260,6 +274,7 @@ public enum Stories {
             
             try container.encode(self.id, forKey: .id)
             try container.encode(self.timestamp, forKey: .timestamp)
+            try container.encode(self.expirationTimestamp, forKey: .expirationTimestamp)
         }
         
         public static func ==(lhs: Placeholder, rhs: Placeholder) -> Bool {
@@ -267,6 +282,9 @@ public enum Stories {
                 return false
             }
             if lhs.timestamp != rhs.timestamp {
+                return false
+            }
+            if lhs.expirationTimestamp != rhs.expirationTimestamp {
                 return false
             }
             return true
@@ -492,7 +510,7 @@ public enum StoryUploadResult {
     case completed
 }
 
-func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy) -> Signal<StoryUploadResult, NoError> {
+func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int) -> Signal<StoryUploadResult, NoError> {
     let originalMedia: Media
     let contentToUpload: MessageContentToUpload
     
@@ -648,7 +666,8 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                         caption: apiCaption,
                         entities: apiEntities,
                         privacyRules: privacyRules,
-                        randomId: Int64.random(in: Int64.min ... Int64.max)
+                        randomId: Int64.random(in: Int64.min ... Int64.max),
+                        period: Int32(period)
                     ))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.Updates?, NoError> in
@@ -659,7 +678,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                             for update in updates.allUpdates {
                                 if case let .updateStory(_, story) = update {
                                     switch story {
-                                    case let .storyItem(_, _, _, _, _, media, _, _):
+                                    case let .storyItem(_, _, _, _, _, _, media, _, _):
                                         let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                         if let parsedMedia = parsedMedia {
                                             applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
@@ -744,6 +763,7 @@ func _internal_updateStoryIsPinned(account: Account, id: Int32, isPinned: Bool) 
             let updatedItem = Stories.Item(
                 id: item.id,
                 timestamp: item.timestamp,
+                expirationTimestamp: item.expirationTimestamp,
                 media: item.media,
                 text: item.text,
                 entities: item.entities,
@@ -775,11 +795,11 @@ func _internal_updateStoryIsPinned(account: Account, id: Int32, isPinned: Bool) 
 extension Api.StoryItem {
     var id: Int32 {
         switch self {
-        case let .storyItem(_, id, _, _, _, _, _, _):
+        case let .storyItem(_, id, _, _, _, _, _, _, _):
             return id
         case let .storyItemDeleted(id):
             return id
-        case let .storyItemSkipped(id, _):
+        case let .storyItemSkipped(id, _, _):
             return id
         }
     }
@@ -801,8 +821,7 @@ extension Stories.Item.Views {
 extension Stories.StoredItem {
     init?(apiStoryItem: Api.StoryItem, peerId: PeerId, transaction: Transaction) {
         switch apiStoryItem {
-        case let .storyItem(flags, id, date, caption, entities, media, privacy, views):
-            let _ = flags
+        case let .storyItem(flags, id, date, expireDate, caption, entities, media, privacy, views):
             let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
             if let parsedMedia = parsedMedia {
                 var parsedPrivacy: Stories.Item.Privacy?
@@ -843,6 +862,7 @@ extension Stories.StoredItem {
                 let item = Stories.Item(
                     id: id,
                     timestamp: date,
+                    expirationTimestamp: expireDate,
                     media: parsedMedia,
                     text: caption ?? "",
                     entities: entities.flatMap { entities in return messageTextEntitiesFromApiEntities(entities) } ?? [],
@@ -856,8 +876,8 @@ extension Stories.StoredItem {
             } else {
                 return nil
             }
-        case let .storyItemSkipped(id, date):
-            self = .placeholder(Stories.Placeholder(id: id, timestamp: date))
+        case let .storyItemSkipped(id, date, expireDate):
+            self = .placeholder(Stories.Placeholder(id: id, timestamp: date, expirationTimestamp: expireDate))
         case .storyItemDeleted:
             return nil
         }

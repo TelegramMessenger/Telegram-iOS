@@ -1,4 +1,40 @@
 public extension Api {
+    enum StatsURL: TypeConstructorDescription {
+        case statsURL(url: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsURL(let url):
+                    if boxed {
+                        buffer.appendInt32(1202287072)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsURL(let url):
+                return ("statsURL", [("url", url as Any)])
+    }
+    }
+    
+        public static func parse_statsURL(_ reader: BufferReader) -> StatsURL? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StatsURL.statsURL(url: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum StickerKeyword: TypeConstructorDescription {
         case stickerKeyword(documentId: Int64, keyword: [String])
     
@@ -328,19 +364,20 @@ public extension Api {
 }
 public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
-        case storyItem(flags: Int32, id: Int32, date: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
+        case storyItem(flags: Int32, id: Int32, date: Int32, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?)
         case storyItemDeleted(id: Int32)
-        case storyItemSkipped(id: Int32, date: Int32)
+        case storyItemSkipped(id: Int32, date: Int32, expireDate: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let views):
+                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let privacy, let views):
                     if boxed {
-                        buffer.appendInt32(-1882351956)
+                        buffer.appendInt32(1445635639)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(expireDate, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(caption!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(entities!.count))
@@ -361,24 +398,25 @@ public extension Api {
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
-                case .storyItemSkipped(let id, let date):
+                case .storyItemSkipped(let id, let date, let expireDate):
                     if boxed {
-                        buffer.appendInt32(-1579626609)
+                        buffer.appendInt32(1764886178)
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(expireDate, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .storyItem(let flags, let id, let date, let caption, let entities, let media, let privacy, let views):
-                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("views", views as Any)])
+                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let privacy, let views):
+                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("privacy", privacy as Any), ("views", views as Any)])
                 case .storyItemDeleted(let id):
                 return ("storyItemDeleted", [("id", id as Any)])
-                case .storyItemSkipped(let id, let date):
-                return ("storyItemSkipped", [("id", id as Any), ("date", date as Any)])
+                case .storyItemSkipped(let id, let date, let expireDate):
+                return ("storyItemSkipped", [("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any)])
     }
     }
     
@@ -389,34 +427,37 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
-            var _5: [Api.MessageEntity]?
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _6: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
-            var _6: Api.MessageMedia?
+            var _7: Api.MessageMedia?
             if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                _7 = Api.parse(reader, signature: signature) as? Api.MessageMedia
             }
-            var _7: [Api.PrivacyRule]?
+            var _8: [Api.PrivacyRule]?
             if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
             } }
-            var _8: Api.StoryViews?
+            var _9: Api.StoryViews?
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.StoryViews
+                _9 = Api.parse(reader, signature: signature) as? Api.StoryViews
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, caption: _4, entities: _5, media: _6!, privacy: _7, views: _8)
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 3) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, expireDate: _4!, caption: _5, entities: _6, media: _7!, privacy: _8, views: _9)
             }
             else {
                 return nil
@@ -438,10 +479,13 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StoryItem.storyItemSkipped(id: _1!, date: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StoryItem.storyItemSkipped(id: _1!, date: _2!, expireDate: _3!)
             }
             else {
                 return nil
