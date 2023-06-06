@@ -592,7 +592,7 @@ public extension TelegramEngine {
             }).start()
         }
         
-        public func storySubscriptions() -> Signal<EngineStorySubscriptions, NoError> {
+        public func storySubscriptions(includeHidden: Bool) -> Signal<EngineStorySubscriptions, NoError> {
             let debugTimerSignal: Signal<Bool, NoError>
             #if DEBUG && false
             debugTimerSignal = Signal<Bool, NoError>.single(true)
@@ -609,21 +609,24 @@ public extension TelegramEngine {
             debugTimerSignal = .single(true)
             #endif
             
+            let subscriptionsKey: PostboxStorySubscriptionsKey = includeHidden ? .all : .filtered
+            
             let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
+            let storySubscriptionsKey = PostboxViewKey.storySubscriptions(key: subscriptionsKey)
             return combineLatest(debugTimerSignal |> distinctUntilChanged,
                 self.account.postbox.combinedView(keys: [
                 basicPeerKey,
-                PostboxViewKey.storySubscriptions,
-                PostboxViewKey.storiesState(key: .subscriptions)
+                storySubscriptionsKey,
+                PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))
             ]))
             |> mapToSignal { debugTimer, views -> Signal<EngineStorySubscriptions, NoError> in
                 guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
                     return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
                 }
-                guard let storySubscriptionsView = views.views[PostboxViewKey.storySubscriptions] as? StorySubscriptionsView else {
+                guard let storySubscriptionsView = views.views[storySubscriptionsKey] as? StorySubscriptionsView else {
                     return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
                 }
-                guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))] as? StoryStatesView else {
                     return .single(EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil))
                 }
                 
@@ -756,21 +759,23 @@ public extension TelegramEngine {
             }
         }
         
-        public func preloadStorySubscriptions() -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> {
+        public func preloadStorySubscriptions(includeHidden: Bool) -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> {
             let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
+            let subscriptionsKey: PostboxStorySubscriptionsKey = includeHidden ? .all : .filtered
+            let storySubscriptionsKey = PostboxViewKey.storySubscriptions(key: subscriptionsKey)
             return self.account.postbox.combinedView(keys: [
                 basicPeerKey,
-                PostboxViewKey.storySubscriptions,
-                PostboxViewKey.storiesState(key: .subscriptions)
+                storySubscriptionsKey,
+                PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))
             ])
             |> mapToSignal { views -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> in
                 guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
                     return .single([:])
                 }
-                guard let storySubscriptionsView = views.views[PostboxViewKey.storySubscriptions] as? StorySubscriptionsView else {
+                guard let storySubscriptionsView = views.views[storySubscriptionsKey] as? StorySubscriptionsView else {
                     return .single([:])
                 }
-                guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))] as? StoryStatesView else {
                     return .single([:])
                 }
                 
@@ -898,6 +903,10 @@ public extension TelegramEngine {
         
         public func storyViewList(id: Int32, views: EngineStoryItem.Views) -> EngineStoryViewListContext {
             return EngineStoryViewListContext(account: self.account, storyId: id, views: views)
+        }
+        
+        public func exportStoryLink(peerId: EnginePeer.Id, id: Int32) -> Signal<String?, NoError> {
+            return _internal_exportStoryLink(account: self.account, peerId: peerId, id: id)
         }
     }
 }

@@ -973,7 +973,8 @@ public class Account {
     
     let networkStatsContext: NetworkStatsContext
     
-    public let storySubscriptionsContext: StorySubscriptionsContext?
+    public let filteredStorySubscriptionsContext: StorySubscriptionsContext?
+    public let allStorySubscriptionsContext: StorySubscriptionsContext?
     
     public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
         self.accountManager = accountManager
@@ -993,9 +994,11 @@ public class Account {
         self.peerInputActivityManager = PeerInputActivityManager()
         
         if !supplementary {
-            self.storySubscriptionsContext = StorySubscriptionsContext(accountPeerId: peerId, postbox: postbox, network: network)
+            self.filteredStorySubscriptionsContext = StorySubscriptionsContext(accountPeerId: peerId, postbox: postbox, network: network, includesHidden: false)
+            self.allStorySubscriptionsContext = StorySubscriptionsContext(accountPeerId: peerId, postbox: postbox, network: network, includesHidden: true)
         } else {
-            self.storySubscriptionsContext = nil
+            self.filteredStorySubscriptionsContext = nil
+            self.allStorySubscriptionsContext = nil
         }
         
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in

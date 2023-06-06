@@ -30,6 +30,8 @@ import BotPaymentsUI
 import PremiumUI
 import AuthorizationUI
 import ChatFolderLinkPreviewScreen
+import StoryContainerScreen
+import StoryContentComponent
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -803,5 +805,24 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }))
                 dismissInput()
             }
+        case let .story(peerId, id):
+            let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id))
+            let _ = (storyContent.state
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                let transitionIn: StoryContainerScreen.TransitionIn? = nil
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { _, _ in
+                        let transitionOut: StoryContainerScreen.TransitionOut? = nil
+                        
+                        return transitionOut
+                    }
+                )
+                navigationController?.pushViewController(storyContainerScreen)
+            })
     }
 }

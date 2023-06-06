@@ -111,6 +111,7 @@ public final class StorySubscriptionsContext {
         private let queue: Queue
         private let postbox: Postbox
         private let network: Network
+        private let includesHidden: Bool
         
         private var taskState = TaskState()
         
@@ -121,11 +122,12 @@ public final class StorySubscriptionsContext {
         private let loadMoreDisposable = MetaDisposable()
         private let refreshTimerDisposable = MetaDisposable()
         
-        init(queue: Queue, accountPeerId: PeerId, postbox: Postbox, network: Network) {
+        init(queue: Queue, accountPeerId: PeerId, postbox: Postbox, network: Network, includesHidden: Bool) {
             self.accountPeerId = accountPeerId
             self.queue = queue
             self.postbox = postbox
             self.network = network
+            self.includesHidden = includesHidden
             
             self.taskState.isRefreshScheduled = true
             
@@ -148,16 +150,18 @@ public final class StorySubscriptionsContext {
                 return
             }
             
+            let subscriptionsKey: PostboxStorySubscriptionsKey = self.includesHidden ? .all : .filtered
+            
             if self.taskState.isRefreshScheduled {
                 self.isLoading = true
                 
-                self.stateDisposable = (postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .subscriptions)])
+                self.stateDisposable = (postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))])
                 |> take(1)
                 |> deliverOn(self.queue)).start(next: { [weak self] views in
                     guard let `self` = self else {
                         return
                     }
-                    guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                    guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))] as? StoryStatesView else {
                         return
                     }
                     
@@ -173,13 +177,13 @@ public final class StorySubscriptionsContext {
             } else if self.taskState.isLoadMoreScheduled {
                 self.isLoading = true
                 
-                self.stateDisposable = (postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .subscriptions)])
+                self.stateDisposable = (postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))])
                 |> take(1)
                 |> deliverOn(self.queue)).start(next: { [weak self] views in
                     guard let `self` = self else {
                         return
                     }
-                    guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions)] as? StoryStatesView else {
+                    guard let storiesStateView = views.views[PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))] as? StoryStatesView else {
                         return
                     }
                     
@@ -206,6 +210,11 @@ public final class StorySubscriptionsContext {
         
         private func loadImpl(isRefresh: Bool, stateMark: OpaqueStateMark) {
             var flags: Int32 = 0
+            
+            if self.includesHidden {
+                flags |= 1 << 2
+            }
+            
             var state: String?
             switch stateMark {
             case .empty:
@@ -228,6 +237,9 @@ public final class StorySubscriptionsContext {
             
             let accountPeerId = self.accountPeerId
             
+            let includesHidden = self.includesHidden
+            let subscriptionsKey: PostboxStorySubscriptionsKey = self.includesHidden ? .all : .filtered
+            
             self.loadMoreDisposable.set((self.network.request(Api.functions.stories.getAllStories(flags: flags, state: state))
             |> deliverOn(self.queue)).start(next: { [weak self] result in
                 guard let `self` = self else {
@@ -238,7 +250,7 @@ public final class StorySubscriptionsContext {
                     switch result {
                     case let .allStoriesNotModified(state):
                         self.loadedStateMark = .value(state)
-                        let (currentStateValue, _) = transaction.getAllStorySubscriptions()
+                        let (currentStateValue, _) = transaction.getAllStorySubscriptions(key: subscriptionsKey)
                         let currentState = currentStateValue.flatMap { $0.get(Stories.SubscriptionsState.self) }
                         
                         var hasMore = false
@@ -246,7 +258,7 @@ public final class StorySubscriptionsContext {
                             hasMore = currentState.hasMore
                         }
                         
-                        transaction.setSubscriptionsStoriesState(state: CodableEntry(Stories.SubscriptionsState(
+                        transaction.setSubscriptionsStoriesState(key: subscriptionsKey, state: CodableEntry(Stories.SubscriptionsState(
                             opaqueState: state,
                             refreshId: currentState?.refreshId ?? UInt64.random(in: 0 ... UInt64.max),
                             hasMore: hasMore
@@ -263,14 +275,9 @@ public final class StorySubscriptionsContext {
                             peerPresences[telegramUser.id] = user
                         }
                         
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                        
                         let hasMore: Bool = (flags & (1 << 0)) != 0
                         
-                        let (_, currentPeerItems) = transaction.getAllStorySubscriptions()
+                        let (_, currentPeerItems) = transaction.getAllStorySubscriptions(key: subscriptionsKey)
                         var peerEntries: [PeerId] = []
                         
                         for userStorySet in userStories {
@@ -312,18 +319,29 @@ public final class StorySubscriptionsContext {
                             }
                         }
                         
-                        if !isRefresh {
+                        if isRefresh {
+                            if !includesHidden {
+                                if !peerEntries.contains(where: { $0 == accountPeerId }) {
+                                    transaction.setStoryItems(peerId: accountPeerId, items: [])
+                                }
+                            }
+                        } else {
                             let leftPeerIds = currentPeerItems.filter({ !peerEntries.contains($0) })
                             if !leftPeerIds.isEmpty {
                                 peerEntries = leftPeerIds + peerEntries
                             }
                         }
                         
-                        transaction.replaceAllStorySubscriptions(state: CodableEntry(Stories.SubscriptionsState(
+                        transaction.replaceAllStorySubscriptions(key: subscriptionsKey, state: CodableEntry(Stories.SubscriptionsState(
                             opaqueState: state,
                             refreshId: UInt64.random(in: 0 ... UInt64.max),
                             hasMore: hasMore
                         )), peerIds: peerEntries)
+                        
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     }
                 }
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
@@ -355,10 +373,10 @@ public final class StorySubscriptionsContext {
     private let queue = Queue(name: "StorySubscriptionsContext")
     private let impl: QueueLocalObject<Impl>
     
-    init(accountPeerId: PeerId, postbox: Postbox, network: Network) {
+    init(accountPeerId: PeerId, postbox: Postbox, network: Network, includesHidden: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            Impl(queue: queue, accountPeerId: accountPeerId, postbox: postbox, network: network)
+            Impl(queue: queue, accountPeerId: accountPeerId, postbox: postbox, network: network, includesHidden: includesHidden)
         })
     }
     

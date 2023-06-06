@@ -53,7 +53,22 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
         
         switch peerId.namespace {
             case Namespaces.Peer.CloudUser:
-                break
+                if let updated = updated as? TelegramUser, let storiesHidden = updated.storiesHidden {
+                    if storiesHidden {
+                        if transaction.storySubscriptionsContains(key: .filtered, peerId: updated.id) {
+                            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                            peerIds.removeAll(where: { $0 == updated.id })
+                            transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                        }
+                    } else {
+                        if transaction.storySubscriptionsContains(key: .all, peerId: updated.id) && !transaction.storySubscriptionsContains(key: .filtered, peerId: updated.id) {
+                            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .all)
+                            peerIds.removeAll(where: { $0 == updated.id })
+                            peerIds.append(updated.id)
+                            transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                        }
+                    }
+                }
             case Namespaces.Peer.CloudGroup:
                 if let group = updated as? TelegramGroup {
                     if group.flags.contains(.deactivated) {

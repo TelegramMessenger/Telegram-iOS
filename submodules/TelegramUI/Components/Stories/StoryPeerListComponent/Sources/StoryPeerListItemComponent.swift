@@ -388,7 +388,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let effectiveWidth: CGFloat = (1.0 - component.collapseFraction) * availableSize.width + component.collapseFraction * component.collapsedWidth
             
-            let effectiveScale: CGFloat = 1.0 * (1.0 - component.collapseFraction) + (25.0 / 52.0) * component.collapsedScaleFactor * component.collapseFraction
+            let effectiveScale: CGFloat = 1.0 * (1.0 - component.collapseFraction) + (24.0 / 52.0) * component.collapsedScaleFactor * component.collapseFraction
             
             let avatarNode: AvatarNode
             if let current = self.avatarNode {
@@ -577,7 +577,7 @@ public final class StoryPeerListItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width + 4.0, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 3.0) * effectiveScale), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 2.0) * effectiveScale), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)

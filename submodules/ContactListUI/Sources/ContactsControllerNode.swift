@@ -12,6 +12,9 @@ import SearchBarNode
 import SearchUI
 import AppBundle
 import ContextUI
+import ChatListHeaderComponent
+import ChatListTitleView
+import ComponentFlow
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -46,10 +49,13 @@ final class ContactsControllerNode: ASDisplayNode {
     
     private let context: AccountContext
     private(set) var searchDisplayController: SearchDisplayController?
+    private var isSearchDisplayControllerActive: Bool = false
+    private var storiesUnlocked: Bool = false
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var navigationBar: NavigationBar?
+    let navigationBarView = ComponentView<Empty>()
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
@@ -63,6 +69,18 @@ final class ContactsControllerNode: ASDisplayNode {
     private let stringsPromise = Promise<PresentationStrings>()
     
     weak var controller: ContactsController?
+    
+    private var initialScrollingOffset: CGFloat?
+    private var isSettingUpContentOffset: Bool = false
+    private var didSetupContentOffset: Bool = false
+    private var contentOffset: ListViewVisibleContentOffset?
+    private var ignoreStoryInsetAdjustment: Bool = false
+    var didAppear: Bool = false
+    
+    private(set) var storySubscriptions: EngineStorySubscriptions?
+    private var storySubscriptionsDisposable: Disposable?
+    
+    let storiesReady = Promise<Bool>()
     
     init(context: AccountContext, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void, controller: ContactsController) {
         self.context = context
@@ -139,10 +157,127 @@ final class ContactsControllerNode: ASDisplayNode {
         contextAction = { [weak self] peer, node, gesture, location in
             self?.contextAction(peer: peer, node: node, gesture: gesture, location: location)
         }
+        
+        self.contactListNode.contentOffsetChanged = { [weak self] offset in
+            guard let self else {
+                return
+            }
+            if self.isSettingUpContentOffset {
+                return
+            }
+            
+            if !self.didSetupContentOffset, let initialScrollingOffset = self.initialScrollingOffset {
+                self.initialScrollingOffset = nil
+                self.didSetupContentOffset = true
+                self.isSettingUpContentOffset = true
+                
+                let _ = self.contactListNode.listNode.scrollToOffsetFromTop(initialScrollingOffset, animated: false)
+                
+                let offset = self.contactListNode.listNode.visibleContentOffset()
+                self.contentOffset = offset
+                self.contentOffsetChanged(offset: offset)
+                
+                self.isSettingUpContentOffset = false
+                return
+            }
+            self.contentOffset = offset
+            self.contentOffsetChanged(offset: offset)
+            
+            if self.contactListNode.listNode.isTracking {
+                if case let .known(value) = offset {
+                    if !self.storiesUnlocked {
+                        if value < -40.0 {
+                            self.storiesUnlocked = true
+                            DispatchQueue.main.async { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                HapticFeedback().impact()
+                                
+                                self.contactListNode.ignoreStoryInsetAdjustment = true
+                                self.contactListNode.listNode.allowInsetFixWhileTracking = true
+                                self.onStoriesLockedUpdated(isLocked: true)
+                                self.contactListNode.ignoreStoryInsetAdjustment = false
+                                self.contactListNode.listNode.allowInsetFixWhileTracking = false
+                            }
+                        }
+                    }
+                }
+            } else if self.storiesUnlocked {
+                switch offset {
+                case let .known(value):
+                    if value >= ChatListNavigationBar.storiesScrollHeight {
+                        self.storiesUnlocked = false
+                        
+                        DispatchQueue.main.async { [weak self] in
+                            self?.onStoriesLockedUpdated(isLocked: false)
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+        }
+        
+        self.contactListNode.contentScrollingEnded = { [weak self] listView in
+            guard let self else {
+                return false
+            }
+            return self.contentScrollingEnded(listView: listView)
+        }
+        
+        self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(includeHidden: true)
+        |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
+            guard let self else {
+                return
+            }
+            
+            var wasEmpty = true
+            if let storySubscriptions = self.storySubscriptions, !storySubscriptions.items.isEmpty {
+                wasEmpty = false
+            }
+            self.storySubscriptions = storySubscriptions
+            let isEmpty = storySubscriptions.items.isEmpty
+            
+            let transition: ContainedViewLayoutTransition
+            if self.didAppear {
+                transition = .animated(duration: 0.4, curve: .spring)
+            } else {
+                transition = .immediate
+            }
+            
+            let _ = wasEmpty
+            let _ = isEmpty
+            
+            //self.chatListDisplayNode.temporaryContentOffsetChangeTransition = transition
+            self.controller?.requestLayout(transition: transition)
+            //self.chatListDisplayNode.temporaryContentOffsetChangeTransition = nil
+            
+            /*self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
+                var chatListState = chatListState
+                
+                var peersWithNewStories = Set<EnginePeer.Id>()
+                for item in storySubscriptions.items {
+                    if item.peer.id == self.context.account.peerId {
+                        continue
+                    }
+                    if item.hasUnseen {
+                        peersWithNewStories.insert(item.peer.id)
+                    }
+                }
+                chatListState.peersWithNewStories = peersWithNewStories
+                
+                return chatListState
+            }*/
+            
+            self.storiesReady.set(.single(true))
+        })
     }
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.storySubscriptionsDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -158,22 +293,180 @@ final class ContactsControllerNode: ASDisplayNode {
         }
     }
     
+    private func onStoriesLockedUpdated(isLocked: Bool) {
+        self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+    }
+    
+    private func contentOffsetChanged(offset: ListViewVisibleContentOffset) {
+        self.updateNavigationScrolling(transition: .immediate)
+    }
+    
+    private func contentScrollingEnded(listView: ListView) -> Bool {
+        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+            if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
+                if navigationBarComponentView.effectiveStoriesInsetHeight > 0.0 {
+                    if clippedScrollOffset > 0.0 && clippedScrollOffset < navigationBarComponentView.effectiveStoriesInsetHeight {
+                        if clippedScrollOffset < navigationBarComponentView.effectiveStoriesInsetHeight * 0.5 {
+                            let _ = listView.scrollToOffsetFromTop(0.0, animated: true)
+                        } else {
+                            let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight, animated: true)
+                        }
+                        return true
+                    } else {
+                        let searchScrollOffset = clippedScrollOffset - navigationBarComponentView.effectiveStoriesInsetHeight
+                        if searchScrollOffset > 0.0 && searchScrollOffset < ChatListNavigationBar.searchScrollHeight {
+                            if searchScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 {
+                                let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight, animated: true)
+                            } else {
+                                let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight + ChatListNavigationBar.searchScrollHeight, animated: true)
+                            }
+                            return true
+                        }
+                    }
+                } else {
+                    if clippedScrollOffset > 0.0 && clippedScrollOffset < ChatListNavigationBar.searchScrollHeight {
+                        if clippedScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 {
+                            let _ = listView.scrollToOffsetFromTop(0.0, animated: true)
+                        } else {
+                            let _ = listView.scrollToOffsetFromTop(ChatListNavigationBar.searchScrollHeight, animated: true)
+                        }
+                        return true
+                    }
+                }
+            }
+        }
+        
+        return false
+    }
+    
+    private func updateNavigationBar(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> (navigationHeight: CGFloat, storiesInset: CGFloat) {
+        let tabsNode: ASDisplayNode? = nil
+        let tabsNodeIsSearch = false
+        
+        //TODO:localize
+        let primaryContent = ChatListHeaderComponent.Content(
+            title: "Contacts",
+            navigationBackTitle: nil,
+            titleComponent: nil,
+            chatListTitle: NetworkStatusTitle(text: "Contacts", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil),
+            leftButton: AnyComponentWithIdentity(id: "sort", component: AnyComponent(NavigationButtonComponent(
+                content: .text(title: self.presentationData.strings.Contacts_Sort, isBold: false),
+                pressed: { [weak self] sourceView in
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.controller?.presentSortMenu(sourceView: sourceView, gesture: nil)
+                }
+            ))),
+            rightButtons: [AnyComponentWithIdentity(id: "add", component: AnyComponent(NavigationButtonComponent(
+                content: .icon(imageName: "Chat List/AddIcon"),
+                pressed: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.controller?.addPressed()
+                }
+            )))],
+            backTitle: nil,
+            backPressed: nil
+        )
+        
+        let navigationBarSize = self.navigationBarView.update(
+            transition: Transition(transition),
+            component: AnyComponent(ChatListNavigationBar(
+                context: self.context,
+                theme: self.presentationData.theme,
+                strings: self.presentationData.strings,
+                statusBarHeight: layout.statusBarHeight ?? 0.0,
+                sideInset: layout.safeInsets.left,
+                isSearchActive: self.isSearchDisplayControllerActive,
+                storiesUnlocked: self.storiesUnlocked,
+                primaryContent: primaryContent,
+                secondaryContent: nil,
+                secondaryTransition: 0.0,
+                storySubscriptions: self.storySubscriptions,
+                storiesIncludeHidden: true,
+                uploadProgress: nil,
+                tabsNode: tabsNode,
+                tabsNodeIsSearch: tabsNodeIsSearch,
+                activateSearch: { [weak self] searchContentNode in
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.contactListNode.activateSearch?()
+                },
+                openStatusSetup: { _ in
+                }
+            )),
+            environment: {},
+            containerSize: layout.size
+        )
+        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+            navigationBarComponentView.deferScrollApplication = true
+            
+            if navigationBarComponentView.superview == nil {
+                self.view.addSubview(navigationBarComponentView)
+            }
+            transition.updateFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
+            
+            return (navigationBarSize.height, navigationBarComponentView.effectiveStoriesInsetHeight)
+        } else {
+            return (0.0, 0.0)
+        }
+    }
+    
+    private func getEffectiveNavigationScrollingOffset() -> CGFloat {
+        let mainOffset: CGFloat
+        if let contentOffset = self.contentOffset, case let .known(value) = contentOffset {
+            mainOffset = value
+        } else {
+            mainOffset = 1000.0
+        }
+        
+        return mainOffset
+    }
+    
+    private func updateNavigationScrolling(transition: ContainedViewLayoutTransition) {
+        var offset = self.getEffectiveNavigationScrollingOffset()
+        if self.isSearchDisplayControllerActive {
+            offset = 0.0
+        }
+        
+        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+            navigationBarComponentView.applyScroll(offset: offset, transition: Transition(transition))
+        }
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         
+        let navigationBarLayout = self.updateNavigationBar(layout: layout, transition: transition)
+        self.initialScrollingOffset = 0.0//ChatListNavigationBar.searchScrollHeight + navigationBarLayout.storiesInset
+        
         var insets = layout.insets(options: [.input])
-        insets.top += navigationBarHeight
+        insets.top += navigationBarLayout.navigationHeight
     
         var headerInsets = layout.insets(options: [.input])
-        headerInsets.top += actualNavigationBarHeight
+        headerInsets.top = navigationBarLayout.navigationHeight - navigationBarLayout.storiesInset - ChatListNavigationBar.searchScrollHeight
+        
+        let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
         
         if let searchDisplayController = self.searchDisplayController {
-            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+            searchDisplayController.containerLayoutUpdated(innerLayout, navigationBarHeight: navigationBarLayout.navigationHeight, transition: transition)
         }
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
+        self.contactListNode.containerLayoutUpdated(innerLayout, headerInsets: headerInsets, storiesInset: navigationBarLayout.storiesInset, transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        
+        self.updateNavigationScrolling(transition: transition)
+        
+        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+            navigationBarComponentView.deferScrollApplication = false
+            navigationBarComponentView.applyCurrentScroll(transition: Transition(transition))
+        }
     }
     
     private func contextAction(peer: EnginePeer, node: ASDisplayNode?, gesture: ContextGesture?, location: CGPoint?) {
@@ -187,11 +480,14 @@ final class ContactsControllerNode: ASDisplayNode {
     }
     
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
-        guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
+        guard let (containerLayout, navigationBarHeight) = self.containerLayout, self.searchDisplayController == nil else {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], addContact: { [weak self] phoneNumber in
+        self.isSearchDisplayControllerActive = true
+        self.storiesUnlocked = false
+        
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], addContact: { [weak self] phoneNumber in
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
             }
@@ -208,21 +504,29 @@ final class ContactsControllerNode: ASDisplayNode {
         })
         
         self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
-            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+        self.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
+            if let strongSelf = self {
                 if isSearchBar {
-                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                    if let navigationBarComponentView = strongSelf.navigationBarView.view as? ChatListNavigationBar.View {
+                        navigationBarComponentView.addSubnode(subnode)
+                    }
                 } else {
-                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
+                    strongSelf.insertSubnode(subnode, aboveSubnode: strongSelf.contactListNode)
                 }
             }
         }, placeholder: placeholderNode)
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {
+        self.isSearchDisplayControllerActive = false
         if let searchDisplayController = self.searchDisplayController {
+            let previousFrame = placeholderNode.frame
+            placeholderNode.frame = previousFrame.offsetBy(dx: 0.0, dy: 54.0)
+            
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
+            
+            placeholderNode.frame = previousFrame
         }
     }
 }

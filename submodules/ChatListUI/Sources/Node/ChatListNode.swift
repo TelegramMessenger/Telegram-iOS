@@ -19,6 +19,7 @@ import MultiAnimationRenderer
 import Postbox
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
+import ChatListHeaderComponent
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
@@ -1154,6 +1155,8 @@ public final class ChatListNode: ListView {
     public var isEmptyUpdated: ((ChatListNodeEmptyState, Bool, ContainedViewLayoutTransition) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmptyState?
     
+    public var canExpandHiddenItems: (() -> Bool)?
+    
     public var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     
     private let currentRemovingItemId = Atomic<ChatListNodeState.ItemId?>(value: nil)
@@ -1210,7 +1213,7 @@ public final class ChatListNode: ListView {
         
         self.theme = theme
         
-        self.scrollHeightTopInset = navigationBarSearchContentHeight
+        self.scrollHeightTopInset = ChatListNavigationBar.searchScrollHeight
         
         super.init()
         
@@ -2379,11 +2382,11 @@ public final class ChatListNode: ListView {
                     }
                 }
                 if !isHiddenItemVisible && strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
-                    strongSelf.updateState { state in
+                    /*strongSelf.updateState { state in
                         var state = state
                         state.hiddenItemShouldBeTemporaryRevealed = false
                         return state
-                    }
+                    }*/
                 }
             }
         }
@@ -2717,6 +2720,7 @@ public final class ChatListNode: ListView {
             }
         }
         var startedScrollingAtUpperBound = false
+        var startedScrollingWithCanExpandHiddenItems = false
         
         self.beganInteractiveDragging = { [weak self] _ in
             guard let strongSelf = self else {
@@ -2728,6 +2732,13 @@ public final class ChatListNode: ListView {
                 case let .known(value):
                     startedScrollingAtUpperBound = value <= 0.0
             }
+            
+            if let canExpandHiddenItems = strongSelf.canExpandHiddenItems {
+                startedScrollingWithCanExpandHiddenItems = canExpandHiddenItems()
+            } else {
+                startedScrollingWithCanExpandHiddenItems = true
+            }
+            
             if strongSelf.currentState.peerIdWithRevealedOptions != nil {
                 strongSelf.updateState { state in
                     var state = state
@@ -2784,7 +2795,7 @@ public final class ChatListNode: ListView {
                     atTop = false
                 case let .known(value):
                     atTop = value <= 0.0
-                    if startedScrollingAtUpperBound && strongSelf.isTracking {
+                    if startedScrollingAtUpperBound && startedScrollingWithCanExpandHiddenItems && strongSelf.isTracking {
                         revealHiddenItems = value <= -60.0
                     }
             }

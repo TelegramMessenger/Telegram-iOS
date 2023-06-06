@@ -7,15 +7,21 @@ final class StoryStatesTable: Table {
     
     enum Key: Hashable {
         case local
-        case subscriptions
+        case subscriptions(PostboxStorySubscriptionsKey)
         case peer(PeerId)
         
-        init(key: ValueBoxKey) {
+        init?(key: ValueBoxKey) {
             switch key.getUInt8(0) {
             case 0:
                 self = .local
             case 1:
-                self = .subscriptions
+                if key.length != 1 + 4 {
+                    return nil
+                }
+                guard let subscriptionsKey = PostboxStorySubscriptionsKey(rawValue: key.getInt32(1)) else {
+                    return nil
+                }
+                self = .subscriptions(subscriptionsKey)
             case 2:
                 self = .peer(PeerId(key.getInt64(1)))
             default:
@@ -30,9 +36,10 @@ final class StoryStatesTable: Table {
                 let key = ValueBoxKey(length: 1)
                 key.setUInt8(0, value: 0)
                 return key
-            case .subscriptions:
-                let key = ValueBoxKey(length: 1)
+            case let .subscriptions(subscriptionsKey):
+                let key = ValueBoxKey(length: 1 + 4)
                 key.setUInt8(0, value: 1)
+                key.setInt32(1, value: subscriptionsKey.rawValue)
                 return key
             case let .peer(peerId):
                 let key = ValueBoxKey(length: 1 + 8)

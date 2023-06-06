@@ -133,7 +133,9 @@ public final class ChatListHeaderComponent: Component {
     public let secondaryTransition: CGFloat
     public let networkStatus: HeaderNetworkStatusComponent.Content?
     public let storySubscriptions: EngineStorySubscriptions?
+    public let storiesIncludeHidden: Bool
     public let storiesFraction: CGFloat
+    public let storiesUnlockedFraction: CGFloat
     public let uploadProgress: Float?
     public let context: AccountContext
     public let theme: PresentationTheme
@@ -149,7 +151,9 @@ public final class ChatListHeaderComponent: Component {
         secondaryTransition: CGFloat,
         networkStatus: HeaderNetworkStatusComponent.Content?,
         storySubscriptions: EngineStorySubscriptions?,
+        storiesIncludeHidden: Bool,
         storiesFraction: CGFloat,
+        storiesUnlockedFraction: CGFloat,
         uploadProgress: Float?,
         context: AccountContext,
         theme: PresentationTheme,
@@ -164,7 +168,9 @@ public final class ChatListHeaderComponent: Component {
         self.context = context
         self.networkStatus = networkStatus
         self.storySubscriptions = storySubscriptions
+        self.storiesIncludeHidden = storiesIncludeHidden
         self.storiesFraction = storiesFraction
+        self.storiesUnlockedFraction = storiesUnlockedFraction
         self.uploadProgress = uploadProgress
         self.theme = theme
         self.strings = strings
@@ -191,7 +197,13 @@ public final class ChatListHeaderComponent: Component {
         if lhs.storySubscriptions != rhs.storySubscriptions {
             return false
         }
+        if lhs.storiesIncludeHidden != rhs.storiesIncludeHidden {
+            return false
+        }
         if lhs.storiesFraction != rhs.storiesFraction {
+            return false
+        }
+        if lhs.storiesUnlockedFraction != rhs.storiesUnlockedFraction {
             return false
         }
         if lhs.uploadProgress != rhs.uploadProgress {
@@ -799,12 +811,6 @@ public final class ChatListHeaderComponent: Component {
             var storyListTransition = transition
             
             if let storySubscriptions = component.storySubscriptions {
-                var storyOffsetFraction: CGFloat = 1.0
-                storyOffsetFraction = component.storiesFraction
-                let _ = storyOffsetFraction
-            
-                //self.storyOffsetFraction = storyOffsetFraction
-                
                 let storyPeerList: ComponentView<Empty>
                 if let current = self.storyPeerList {
                     storyPeerList = current
@@ -821,8 +827,10 @@ public final class ChatListHeaderComponent: Component {
                         context: component.context,
                         theme: component.theme,
                         strings: component.strings,
+                        includesHidden: component.storiesIncludeHidden,
                         storySubscriptions: storySubscriptions,
                         collapseFraction: 1.0 - component.storiesFraction,
+                        unlockedFraction: 1.0 - component.storiesUnlockedFraction,
                         uploadProgress: component.uploadProgress,
                         peerAction: { [weak self] peer in
                             guard let self else {
@@ -971,8 +979,8 @@ public final class ChatListHeaderComponent: Component {
                     self.addSubview(storyPeerListComponentView)
                 }
                 
-                let storyPeerListMinOffset: CGFloat = -8.0
-                let storyPeerListMaxOffset: CGFloat = availableSize.height + 2.0
+                let storyPeerListMinOffset: CGFloat = -7.0
+                let storyPeerListMaxOffset: CGFloat = availableSize.height + 8.0
                 
                 let storyPeerListPosition: CGFloat = storyPeerListMinOffset * (1.0 - component.storiesFraction) + storyPeerListMaxOffset * component.storiesFraction
                 

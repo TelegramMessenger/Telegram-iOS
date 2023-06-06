@@ -1290,3 +1290,53 @@ public final class EngineStoryViewListContext {
         }
     }
 }
+
+func _internal_updatePeerStoriesHidden(account: Account, id: PeerId, isHidden: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        guard let peer = transaction.getPeer(id) else {
+            return nil
+        }
+        guard let user = peer as? TelegramUser else {
+            return nil
+        }
+        updatePeers(transaction: transaction, peers: [user.withUpdatedStoriesHidden(isHidden)], update: { _, updated in
+            return updated
+        })
+        return apiInputUser(peer)
+    }
+    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+        guard let inputUser = inputUser else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.contacts.toggleStoriesHidden(id: inputUser, hidden: isHidden ? .boolTrue : .boolFalse))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
+    }
+}
+
+func _internal_exportStoryLink(account: Account, peerId: EnginePeer.Id, id: Int32) -> Signal<String?, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(peerId).flatMap(apiInputUser)
+    }
+    |> mapToSignal { inputUser -> Signal<String?, NoError> in
+        guard let inputUser = inputUser else {
+            return .single(nil)
+        }
+        return account.network.request(Api.functions.stories.exportStoryLink(userId: inputUser, id: id))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.ExportedStoryLink?, NoError> in
+            return .single(nil)
+        }
+        |> map { result -> String? in
+            guard let result = result else {
+                return nil
+            }
+            switch result {
+            case let .exportedStoryLink(link):
+                return link
+            }
+        }
+    }
+}
