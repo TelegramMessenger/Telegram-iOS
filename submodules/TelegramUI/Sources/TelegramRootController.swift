@@ -437,7 +437,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     }
                                     if case let .story(storyPrivacy, pin) = privacy {
                                         chatListController.updateStoryUploadProgress(0.0)
-                                        let _ = (self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: Int(duration), resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy)
+                                        let _ = (self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy)
                                         |> deliverOnMainQueue).start(next: { [weak chatListController] result in
                                             if let chatListController {
                                                 switch result {

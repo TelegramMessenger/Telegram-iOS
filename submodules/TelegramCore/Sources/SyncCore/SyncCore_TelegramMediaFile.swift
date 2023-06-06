@@ -223,7 +223,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
     case Sticker(displayText: String, packReference: StickerPackReference?, maskData: StickerMaskCoords?)
     case ImageSize(size: PixelDimensions)
     case Animated
-    case Video(duration: Int, size: PixelDimensions, flags: TelegramMediaVideoFlags, preloadSize: Int32?)
+    case Video(duration: Double, size: PixelDimensions, flags: TelegramMediaVideoFlags, preloadSize: Int32?)
     case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: Data?)
     case HasLinkedStickers
     case hintFileIsLarge
@@ -243,7 +243,14 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
             case typeAnimated:
                 self = .Animated
             case typeVideo:
-                self = .Video(duration: Int(decoder.decodeInt32ForKey("du", orElse: 0)), size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"))
+                let duration: Double
+                if let value = decoder.decodeOptionalDoubleForKey("dur") {
+                    duration = value
+                } else {
+                    duration = Double(decoder.decodeInt32ForKey("du", orElse: 0))
+                }
+            
+                self = .Video(duration: duration, size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
                 var waveform: Data?
@@ -292,7 +299,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                 encoder.encodeInt32(typeAnimated, forKey: "t")
             case let .Video(duration, size, flags, preloadSize):
                 encoder.encodeInt32(typeVideo, forKey: "t")
-                encoder.encodeInt32(Int32(duration), forKey: "du")
+                encoder.encodeDouble(duration, forKey: "dur")
                 encoder.encodeInt32(Int32(size.width), forKey: "w")
                 encoder.encodeInt32(Int32(size.height), forKey: "h")
                 encoder.encodeInt32(flags.rawValue, forKey: "f")

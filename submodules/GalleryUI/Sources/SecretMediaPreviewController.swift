@@ -255,7 +255,7 @@ public final class SecretMediaPreviewController: ViewController {
                 if let _ = index {
                     if let message = strongSelf.messageView?.message, let media = mediaForMessage(message: message) {
                         var beginTimeAndTimeout: (Double, Double)?
-                        var videoDuration: Int32?
+                        var videoDuration: Double?
                         for media in message.media {
                             if let file = media as? TelegramMediaFile {
                                 videoDuration = file.duration
@@ -265,7 +265,7 @@ public final class SecretMediaPreviewController: ViewController {
                         if let attribute = message.autoclearAttribute {
                             if let countdownBeginTime = attribute.countdownBeginTime {
                                 if let videoDuration = videoDuration {
-                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                                 } else {
                                     beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                                 }
@@ -273,7 +273,7 @@ public final class SecretMediaPreviewController: ViewController {
                         } else if let attribute = message.autoremoveAttribute {
                             if let countdownBeginTime = attribute.countdownBeginTime {
                                 if let videoDuration = videoDuration {
-                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                                 } else {
                                     beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                                 }
@@ -444,7 +444,7 @@ public final class SecretMediaPreviewController: ViewController {
                 self.markMessageAsConsumedDisposable.set(self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: message.id).start())
             } else {
                 var beginTimeAndTimeout: (Double, Double)?
-                var videoDuration: Int32?
+                var videoDuration: Double?
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         videoDuration = file.duration
@@ -453,7 +453,7 @@ public final class SecretMediaPreviewController: ViewController {
                 if let attribute = message.autoclearAttribute {
                     if let countdownBeginTime = attribute.countdownBeginTime {
                         if let videoDuration = videoDuration {
-                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                         } else {
                             beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                         }
@@ -461,7 +461,7 @@ public final class SecretMediaPreviewController: ViewController {
                 } else if let attribute = message.autoremoveAttribute {
                     if let countdownBeginTime = attribute.countdownBeginTime {
                         if let videoDuration = videoDuration {
-                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, Double(videoDuration))
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
                         } else {
                             beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
                         }

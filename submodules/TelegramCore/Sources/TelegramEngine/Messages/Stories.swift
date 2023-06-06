@@ -5,7 +5,7 @@ import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data)
-    case video(dimensions: PixelDimensions, duration: Int, resource: TelegramMediaResource)
+    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource)
 }
 
 public struct EngineStoryPrivacy: Equatable {

@@ -668,7 +668,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                 var duration: Int32?
                 var isMin: Bool = false
                 if let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
-                    duration = file.duration
+                    duration = file.duration.flatMap(Int32.init)
                     isMin = layer.bounds.width < 80.0
                 }
                 layer.updateDuration(duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
