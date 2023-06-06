@@ -3275,6 +3275,12 @@ public final class ChatListNode: ListView {
         if let previousStoriesInset = self.previousStoriesInset {
             if self.ignoreStoryInsetAdjustment {
                 //additionalScrollDistance += -20.0
+                switch self.visibleContentOffset() {
+                case let .known(value):
+                    additionalScrollDistance += min(0.0, value)
+                default:
+                    break
+                }
             } else {
                 additionalScrollDistance += previousStoriesInset - storiesInset
             }
