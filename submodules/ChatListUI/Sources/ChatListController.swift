@@ -326,9 +326,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 case let .known(offset):
                     let isFirstFilter = strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter == strongSelf.chatListDisplayNode.mainContainerNode.availableFilters.first?.filter
                     
-                    if offset <= navigationBarSearchContentHeight + 1.0 && strongSelf.chatListDisplayNode.inlineStackContainerNode != nil {
+                    if offset <= ChatListNavigationBar.searchScrollHeight + 1.0 && strongSelf.chatListDisplayNode.inlineStackContainerNode != nil {
                         strongSelf.setInlineChatList(location: nil)
-                    } else if offset <= navigationBarSearchContentHeight + 1.0 && !isFirstFilter {
+                    } else if offset <= ChatListNavigationBar.searchScrollHeight + 1.0 && !isFirstFilter {
                         let firstFilter = strongSelf.chatListDisplayNode.effectiveContainerNode.availableFilters.first ?? .all
                         let targetTab: ChatListFilterTabEntryId
                         switch firstFilter {
@@ -1244,7 +1244,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            let storyContent = StoryContentContextImpl(context: self.context, focusedPeerId: peerId)
+            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peerId)
             let _ = (storyContent.state
             |> filter { $0.slice != nil }
             |> take(1)
@@ -1696,7 +1696,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.displayNodeDidLoad()
         
         if case .chatList(.root) = self.location {
-            self.preloadStorySubscriptionsDisposable = (self.context.engine.messages.preloadStorySubscriptions()
+            self.preloadStorySubscriptionsDisposable = (self.context.engine.messages.preloadStorySubscriptions(includeHidden: false)
             |> deliverOnMainQueue).start(next: { [weak self] resources in
                 guard let self else {
                     return
@@ -1729,7 +1729,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     self.preloadStoryResourceDisposables.removeValue(forKey: id)
                 }
             })
-            self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions()
+            self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(includeHidden: false)
             |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
                 guard let self else {
                     return
@@ -2313,10 +2313,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.validLayout = layout
         
-        if let searchTabsNode = self.searchTabsNode {
-            searchTabsNode.bounds.origin = CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) + navigationBarSearchContentHeight + 44.0)
-        }
-        
         self.updateLayout(layout: layout, transition: transition)
         
         if layout.inVoiceOver != wasInVoiceOver {
@@ -2329,7 +2325,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, focusedPeerId: peer?.id)
+                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peer?.id)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
@@ -2424,15 +2420,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })
                     })))
-                    items.append(.action(ContextMenuActionItem(text: "Mute", icon: { theme in
+                    /*items.append(.action(ContextMenuActionItem(text: "Mute", icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
                     }, action: { _, f in
                         f(.default)
-                    })))
+                    })))*/
                     items.append(.action(ContextMenuActionItem(text: "Archive", icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
-                    }, action: { _, f in
-                        f(.default)
+                    }, action: { [weak self] _, f in
+                        f(.dismissWithoutContent)
+                        
+                        guard let self else {
+                            return
+                        }
+                        self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
                     })))
                 }
                 

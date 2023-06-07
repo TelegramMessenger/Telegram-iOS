@@ -2,7 +2,7 @@ import Foundation
 
 public enum PostboxStoryStatesKey: Hashable {
     case local
-    case subscriptions
+    case subscriptions(PostboxStorySubscriptionsKey)
     case peer(PeerId)
 }
 
@@ -11,8 +11,8 @@ private extension PostboxStoryStatesKey {
         switch tableKey {
         case .local:
             self = .local
-        case .subscriptions:
-            self = .subscriptions
+        case let .subscriptions(key):
+            self = .subscriptions(key)
         case let .peer(peerId):
             self = .peer(peerId)
         }
@@ -22,8 +22,8 @@ private extension PostboxStoryStatesKey {
         switch self {
         case .local:
             return .local
-        case .subscriptions:
-            return .subscriptions
+        case let .subscriptions(key):
+            return .subscriptions(key)
         case let .peer(peerId):
             return .peer(peerId)
         }

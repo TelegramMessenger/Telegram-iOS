@@ -400,9 +400,10 @@ private final class StoryContainerScreenComponent: Component {
         
         func animateOut(completion: @escaping () -> Void) {
             self.isAnimatingOut = true
-            self.state?.updated(transition: .immediate)
             
             if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(slice.peer.id, slice.item.id) {
+                self.state?.updated(transition: .immediate)
+                
                 let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
                 transition.setAlpha(layer: self.backgroundLayer, alpha: 0.0)
                 transition.setAlpha(view: self.backgroundEffectView, alpha: 0.0)
@@ -413,10 +414,14 @@ private final class StoryContainerScreenComponent: Component {
                     transitionOutCompleted()
                 })
             } else {
-                self.layer.allowsGroupOpacity = true
-                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                self.dismissPanState = ItemSetPanState(fraction: 1.0, didBegin: true)
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                
+                let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                transition.setAlpha(layer: self.backgroundLayer, alpha: 0.0, completion: { _ in
                     completion()
                 })
+                transition.setAlpha(view: self.backgroundEffectView, alpha: 0.0)
             }
             
             self.didAnimateOut = true

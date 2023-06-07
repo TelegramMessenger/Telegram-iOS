@@ -310,6 +310,7 @@ public final class StoryContentContextImpl: StoryContentContext {
     }
     
     private let context: AccountContext
+    private let includeHidden: Bool
     
     public private(set) var stateValue: StoryContentContextState?
     public var state: Signal<StoryContentContextState, NoError> {
@@ -342,14 +343,16 @@ public final class StoryContentContextImpl: StoryContentContext {
     
     public init(
         context: AccountContext,
+        includeHidden: Bool,
         focusedPeerId: EnginePeer.Id?
     ) {
         self.context = context
+        self.includeHidden = includeHidden
         if let focusedPeerId {
             self.focusedItem = (focusedPeerId, nil)
         }
         
-        self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions()
+        self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(includeHidden: includeHidden)
         |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
             guard let self else {
                 return
@@ -741,6 +744,16 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
             guard let self else {
                 return
             }
+            
+            if item == nil {
+                let storyKey = StoryKey(peerId: storyId.peerId, id: storyId.id)
+                if !self.requestedStoryKeys.contains(storyKey) {
+                    self.requestedStoryKeys.insert(storyKey)
+                    
+                    self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: storyId.peerId, ids: [storyId.id]).start())
+                }
+            }
+            
             if let item, case let .item(itemValue) = item, let media = itemValue.media, let peer {
                 let mappedItem = EngineStoryItem(
                     id: itemValue.id,

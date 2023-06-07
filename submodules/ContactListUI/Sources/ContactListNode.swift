@@ -718,7 +718,7 @@ public final class ContactListNode: ASDisplayNode {
     private var indexSections: [String]?
     
     private var queuedTransitions: [ContactsListNodeTransition] = []
-    private var validLayout: (ContainerViewLayout, UIEdgeInsets)?
+    private var validLayout: (ContainerViewLayout, UIEdgeInsets, CGFloat)?
     
     private var _ready = ValuePromise<Bool>()
     public var ready: Signal<Bool, NoError> {
@@ -1369,8 +1369,8 @@ public final class ContactListNode: ASDisplayNode {
                         }
                     })
                     
-                    if let (validLayout, headerInsets) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(validLayout, headerInsets: headerInsets, transition: .immediate)
+                    if let (validLayout, headerInsets, storiesInset) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(validLayout, headerInsets: headerInsets, storiesInset: storiesInset, transition: .immediate)
                     }
                 }
             }
@@ -1433,9 +1433,12 @@ public final class ContactListNode: ASDisplayNode {
         }
     }
     
-    public func containerLayoutUpdated(_ layout: ContainerViewLayout, headerInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    private var previousStoriesInset: CGFloat?
+    public var ignoreStoryInsetAdjustment: Bool = false
+    
+    public func containerLayoutUpdated(_ layout: ContainerViewLayout, headerInsets: UIEdgeInsets, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = (layout, headerInsets)
+        self.validLayout = (layout, headerInsets, storiesInset)
         
         var insets = layout.insets(options: [.input])
         insets.left = layout.safeInsets.left
@@ -1446,12 +1449,22 @@ public final class ContactListNode: ASDisplayNode {
             headerInsets.top -= navigationBarSearchContentHeight
         }
         
+        var additionalScrollDistance: CGFloat = 0.0
+        
+        if let previousStoriesInset = self.previousStoriesInset {
+            if self.ignoreStoryInsetAdjustment {
+            } else {
+                additionalScrollDistance += previousStoriesInset - storiesInset
+            }
+        }
+        self.previousStoriesInset = storiesInset
+        
         transition.updateFrame(node: self.listNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height))
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
         
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         if let indexSections = self.indexSections {
             var insets = layout.insets(options: [.input])
             if let inputHeight = layout.inputHeight {
@@ -1506,7 +1519,7 @@ public final class ContactListNode: ASDisplayNode {
                         options.insert(.AnimateCrossfade)
                     }
                 }
-                if let (layout, _) = self.validLayout {
+                if let (layout, _, _) = self.validLayout {
                     self.indexSections = transition.indexSections
                     
                     var insets = layout.insets(options: [.input])

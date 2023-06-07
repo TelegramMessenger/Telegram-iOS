@@ -2,10 +2,11 @@ import Foundation
 
 final class StorySubscriptionsTable: Table {
     enum Event {
-        case replaceAll
+        case replaceAll(key: PostboxStorySubscriptionsKey)
     }
     
     private struct Key: Hashable {
+        var subscriptionsKey: PostboxStorySubscriptionsKey
         var peerId: PeerId
     }
     
@@ -13,20 +14,27 @@ final class StorySubscriptionsTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: false)
     }
     
-    private let sharedKey = ValueBoxKey(length: 8)
+    private let sharedKey = ValueBoxKey(length: 4 + 8)
     
     private func key(_ key: Key) -> ValueBoxKey {
-        self.sharedKey.setInt64(0, value: key.peerId.toInt64())
+        self.sharedKey.setInt32(0, value: key.subscriptionsKey.rawValue)
+        self.sharedKey.setInt64(4, value: key.peerId.toInt64())
         return self.sharedKey
     }
     
-    private func getAllKeys() -> [Key] {
+    private func getAllKeys(subscriptionsKey: PostboxStorySubscriptionsKey) -> [Key] {
         var result: [Key] = []
         
         self.valueBox.scan(self.table, keys: { key in
-            let peerId = PeerId(key.getInt64(0))
-            
-            result.append(Key(peerId: peerId))
+            if key.length != 4 + 8 {
+                return true
+            }
+            if let readSubscriptionsKey = PostboxStorySubscriptionsKey(rawValue: key.getInt32(0)) {
+                if readSubscriptionsKey == subscriptionsKey {
+                    let peerId = PeerId(key.getInt64(4))
+                    result.append(Key(subscriptionsKey: subscriptionsKey, peerId: peerId))
+                }
+            }
             
             return true
         })
@@ -34,12 +42,19 @@ final class StorySubscriptionsTable: Table {
         return result
     }
     
-    public func getAll() -> [PeerId] {
+    public func getAll(subscriptionsKey: PostboxStorySubscriptionsKey) -> [PeerId] {
         var result: [PeerId] = []
         
         self.valueBox.scan(self.table, keys: { key in
-            let peerId = PeerId(key.getInt64(0))
-            result.append(peerId)
+            if key.length != 4 + 8 {
+                return true
+            }
+            if let readSubscriptionsKey = PostboxStorySubscriptionsKey(rawValue: key.getInt32(0)) {
+                if readSubscriptionsKey == subscriptionsKey {
+                    let peerId = PeerId(key.getInt64(4))
+                    result.append(peerId)
+                }
+            }
             
             return true
         })
@@ -47,16 +62,24 @@ final class StorySubscriptionsTable: Table {
         return result
     }
     
-    public func replaceAll(peerIds: [PeerId], events: inout [Event]) {
-        for key in self.getAllKeys() {
+    public func contains(subscriptionsKey: PostboxStorySubscriptionsKey, peerId: PeerId) -> Bool {
+        if let _ = self.valueBox.get(self.table, key: self.key(Key(subscriptionsKey: subscriptionsKey, peerId: peerId))) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    public func replaceAll(subscriptionsKey: PostboxStorySubscriptionsKey, peerIds: [PeerId], events: inout [Event]) {
+        for key in self.getAllKeys(subscriptionsKey: subscriptionsKey) {
             self.valueBox.remove(self.table, key: self.key(key), secure: true)
         }
         
         for peerId in peerIds {
-            self.valueBox.set(self.table, key: self.key(Key(peerId: peerId)), value: MemoryBuffer())
+            self.valueBox.set(self.table, key: self.key(Key(subscriptionsKey: subscriptionsKey, peerId: peerId)), value: MemoryBuffer())
         }
         
-        events.append(.replaceAll)
+        events.append(.replaceAll(key: subscriptionsKey))
     }
     
     override func clearMemoryCache() {

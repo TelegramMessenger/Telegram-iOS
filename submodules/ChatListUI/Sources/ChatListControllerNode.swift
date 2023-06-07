@@ -185,7 +185,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
                         
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             
-            let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []))
+            let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil))
             let timestamp1: Int32 = 100000
             let peers: [EnginePeer.Id: EnginePeer] = [:]
             let interaction = ChatListNodeInteraction(context: context, animationCache: animationCache, animationRenderer: animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
@@ -376,7 +376,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode)
         
         if let controller, case .chatList(groupId: .root) = controller.location {
-            self.listNode.scrollHeightTopInset = navigationBarSearchContentHeight + 79.0
+            self.listNode.scrollHeightTopInset = ChatListNavigationBar.searchScrollHeight + ChatListNavigationBar.storiesScrollHeight
         }
         
         super.init()
@@ -838,6 +838,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             previousItemNode.listNode.openStories = nil
             previousItemNode.listNode.addedVisibleChatsWithPeerIds = nil
             previousItemNode.listNode.didBeginSelectingChats = nil
+            previousItemNode.listNode.canExpandHiddenItems = nil
             
             previousItemNode.accessibilityElementsHidden = true
         }
@@ -914,7 +915,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             if itemNode.listNode.isTracking {
                 if case let .known(value) = offset {
                     if !self.storiesUnlocked {
-                        if value < -50.0 {
+                        if value < -40.0 {
                             self.storiesUnlocked = true
                             DispatchQueue.main.async { [weak self] in
                                 guard let self else {
@@ -935,7 +936,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             } else if self.storiesUnlocked {
                 switch offset {
                 case let .known(value):
-                    if value >= 79.0 {
+                    if value >= ChatListNavigationBar.storiesScrollHeight {
                         self.storiesUnlocked = false
                         self.onStoriesLockedUpdated?(false)
                     }
@@ -950,7 +951,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
             switch self.currentItemNode.visibleContentOffset() {
             case let .known(value):
-                if value > 79.0 {
+                if value > ChatListNavigationBar.storiesScrollHeight {
                     if self.storiesUnlocked {
                         self.storiesUnlocked = false
                         
@@ -985,6 +986,12 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         }
         itemNode.listNode.didBeginSelectingChats = { [weak self] in
             self?.didBeginSelectingChats?()
+        }
+        itemNode.listNode.canExpandHiddenItems = { [weak self] in
+            guard let self, let canExpandHiddenItems = self.canExpandHiddenItems else {
+                return false
+            }
+            return canExpandHiddenItems()
         }
         
         self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
@@ -1047,6 +1054,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var openStories: ((EnginePeer.Id) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
+    var canExpandHiddenItems: (() -> Bool)?
     public var displayFilterLimit: (() -> Void)?
     
     public init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, chatListMode: ChatListNodeMode = .chatList(appendContacts: true), previewing: Bool, controlsHistoryPreload: Bool, isInlineMode: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
@@ -1715,8 +1723,23 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             guard let self else {
                 return
             }
-            //self.controller?.requestLayout(transition: .immediate)
-            self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+            if isLocked {
+                self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+            } else {
+                self.controller?.requestLayout(transition: .immediate)
+            }
+        }
+        
+        self.mainContainerNode.canExpandHiddenItems = { [weak self] in
+            guard let self, let controller = self.controller else {
+                return false
+            }
+            
+            if let storySubscriptions = controller.storySubscriptions, !storySubscriptions.items.isEmpty, !self.mainContainerNode.storiesUnlocked {
+                return false
+            } else {
+                return true
+            }
         }
         
         let inlineContentPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.inlineContentPanGesture(_:)), allowedDirections: { [weak self] _ in
@@ -1852,6 +1875,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 secondaryContent: headerContent?.secondaryContent,
                 secondaryTransition: self.inlineStackContainerTransitionFraction,
                 storySubscriptions: self.controller?.storySubscriptions,
+                storiesIncludeHidden: false,
                 uploadProgress: self.controller?.storyUploadProgress,
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
@@ -1948,7 +1972,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         var storiesInset = storiesInset
         
         let navigationBarLayout = self.updateNavigationBar(layout: layout, transition: transition)
-        self.mainContainerNode.initialScrollingOffset = navigationBarSearchContentHeight + navigationBarLayout.storiesInset
+        self.mainContainerNode.initialScrollingOffset = ChatListNavigationBar.searchScrollHeight + navigationBarLayout.storiesInset
         
         navigationBarHeight = navigationBarLayout.navigationHeight
         visualNavigationHeight = navigationBarLayout.navigationHeight
@@ -2146,8 +2170,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.mainContainerNode.accessibilityElementsHidden = false
             self.inlineStackContainerNode?.accessibilityElementsHidden = false
             
-            return { [weak self] in
-                if let strongSelf = self, let (layout, _, _, cleanNavigationBarHeight, _) = strongSelf.containerLayout {
+            return { [weak self, weak placeholderNode] in
+                if let strongSelf = self, let placeholderNode, let (layout, _, _, cleanNavigationBarHeight, _) = strongSelf.containerLayout {
                     searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
                     
                     searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
@@ -2242,21 +2266,21 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             return true
                         } else {
                             let searchScrollOffset = clippedScrollOffset - navigationBarComponentView.effectiveStoriesInsetHeight
-                            if searchScrollOffset > 0.0 && searchScrollOffset < navigationBarSearchContentHeight {
-                                if searchScrollOffset < navigationBarSearchContentHeight * 0.5 {
+                            if searchScrollOffset > 0.0 && searchScrollOffset < ChatListNavigationBar.searchScrollHeight {
+                                if searchScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 {
                                     let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight, animated: true)
                                 } else {
-                                    let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight + navigationBarSearchContentHeight, animated: true)
+                                    let _ = listView.scrollToOffsetFromTop(navigationBarComponentView.effectiveStoriesInsetHeight + ChatListNavigationBar.searchScrollHeight, animated: true)
                                 }
                                 return true
                             }
                         }
                     } else {
-                        if clippedScrollOffset > 0.0 && clippedScrollOffset < navigationBarSearchContentHeight {
-                            if clippedScrollOffset < navigationBarSearchContentHeight * 0.5 {
+                        if clippedScrollOffset > 0.0 && clippedScrollOffset < ChatListNavigationBar.searchScrollHeight {
+                            if clippedScrollOffset < ChatListNavigationBar.searchScrollHeight * 0.5 {
                                 let _ = listView.scrollToOffsetFromTop(0.0, animated: true)
                             } else {
-                                let _ = listView.scrollToOffsetFromTop(navigationBarSearchContentHeight, animated: true)
+                                let _ = listView.scrollToOffsetFromTop(ChatListNavigationBar.searchScrollHeight, animated: true)
                             }
                             return true
                         }

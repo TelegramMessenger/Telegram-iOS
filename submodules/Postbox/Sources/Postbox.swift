@@ -1256,24 +1256,29 @@ public final class Transaction {
         return self.postbox!.removeChatHidden(peerId: peerId, index: index)
     }
     
-    public func getAllStorySubscriptions() -> (state: CodableEntry?, peerIds: [PeerId]) {
+    public func getAllStorySubscriptions(key: PostboxStorySubscriptionsKey) -> (state: CodableEntry?, peerIds: [PeerId]) {
         assert(!self.disposed)
-        return self.postbox!.getAllStorySubscriptions()
+        return self.postbox!.getAllStorySubscriptions(key: key)
     }
     
-    public func replaceAllStorySubscriptions(state: CodableEntry?, peerIds: [PeerId]) {
+    public func storySubscriptionsContains(key: PostboxStorySubscriptionsKey, peerId: PeerId) -> Bool {
         assert(!self.disposed)
-        self.postbox!.replaceAllStorySubscriptions(state: state, peerIds: peerIds)
+        return self.postbox!.storySubscriptionsContains(key: key, peerId: peerId)
     }
     
-    public func getSubscriptionsStoriesState() -> CodableEntry? {
+    public func replaceAllStorySubscriptions(key: PostboxStorySubscriptionsKey, state: CodableEntry?, peerIds: [PeerId]) {
         assert(!self.disposed)
-        return self.postbox!.getSubscriptionsStoriesState()
+        self.postbox!.replaceAllStorySubscriptions(key: key, state: state, peerIds: peerIds)
     }
     
-    public func setSubscriptionsStoriesState(state: CodableEntry?) {
+    public func getSubscriptionsStoriesState(key: PostboxStorySubscriptionsKey) -> CodableEntry? {
         assert(!self.disposed)
-        self.postbox!.setSubscriptionsStoriesState(state: state)
+        return self.postbox!.getSubscriptionsStoriesState(key: key)
+    }
+    
+    public func setSubscriptionsStoriesState(key: PostboxStorySubscriptionsKey, state: CodableEntry?) {
+        assert(!self.disposed)
+        self.postbox!.setSubscriptionsStoriesState(key: key, state: state)
     }
     
     public func getLocalStoryState() -> CodableEntry? {
@@ -1767,7 +1772,7 @@ final class PostboxImpl {
         self.deviceContactImportInfoTable = DeviceContactImportInfoTable(valueBox: self.valueBox, table: DeviceContactImportInfoTable.tableSpec(54), useCaches: useCaches)
         self.groupMessageStatsTable = GroupMessageStatsTable(valueBox: self.valueBox, table: GroupMessageStatsTable.tableSpec(58), useCaches: useCaches)
         self.storyStatesTable = StoryStatesTable(valueBox: self.valueBox, table: StoryStatesTable.tableSpec(65), useCaches: useCaches)
-        self.storySubscriptionsTable = StorySubscriptionsTable(valueBox: self.valueBox, table: StorySubscriptionsTable.tableSpec(66), useCaches: useCaches)
+        self.storySubscriptionsTable = StorySubscriptionsTable(valueBox: self.valueBox, table: StorySubscriptionsTable.tableSpec(78), useCaches: useCaches)
         self.storyItemsTable = StoryItemsTable(valueBox: self.valueBox, table: StoryItemsTable.tableSpec(69), useCaches: useCaches)
         self.storyTable = StoryTable(valueBox: self.valueBox, table: StoryTable.tableSpec(70), useCaches: useCaches)
         
@@ -2179,28 +2184,32 @@ final class PostboxImpl {
         self.synchronizeGroupMessageStatsTable.set(groupId: groupId, namespace: namespace, needsValidation: false, operations: &self.currentUpdatedGroupSummarySynchronizeOperations)
     }
     
-    fileprivate func getAllStorySubscriptions() -> (state: CodableEntry?, peerIds: [PeerId]) {
+    fileprivate func getAllStorySubscriptions(key: PostboxStorySubscriptionsKey) -> (state: CodableEntry?, peerIds: [PeerId]) {
         return (
-            self.storyStatesTable.get(key: .subscriptions),
-            self.storySubscriptionsTable.getAll()
+            self.storyStatesTable.get(key: .subscriptions(key)),
+            self.storySubscriptionsTable.getAll(subscriptionsKey: key)
         )
     }
     
-    fileprivate func replaceAllStorySubscriptions(state: CodableEntry?, peerIds: [PeerId]) {
-        self.storyStatesTable.set(key: .subscriptions, value: state, events: &self.currentStoryStatesEvents)
-        self.storySubscriptionsTable.replaceAll(peerIds: peerIds, events: &self.currentStorySubscriptionsEvents)
+    fileprivate func storySubscriptionsContains(key: PostboxStorySubscriptionsKey, peerId: PeerId) -> Bool {
+        return self.storySubscriptionsTable.contains(subscriptionsKey: key, peerId: peerId)
+    }
+    
+    fileprivate func replaceAllStorySubscriptions(key: PostboxStorySubscriptionsKey, state: CodableEntry?, peerIds: [PeerId]) {
+        self.storyStatesTable.set(key: .subscriptions(key), value: state, events: &self.currentStoryStatesEvents)
+        self.storySubscriptionsTable.replaceAll(subscriptionsKey: key, peerIds: peerIds, events: &self.currentStorySubscriptionsEvents)
     }
     
     fileprivate func getLocalStoryState() -> CodableEntry? {
         return self.storyStatesTable.get(key: .local)
     }
     
-    fileprivate func getSubscriptionsStoriesState() -> CodableEntry? {
-        return self.storyStatesTable.get(key: .subscriptions)
+    fileprivate func getSubscriptionsStoriesState(key: PostboxStorySubscriptionsKey) -> CodableEntry? {
+        return self.storyStatesTable.get(key: .subscriptions(key))
     }
     
-    fileprivate func setSubscriptionsStoriesState(state: CodableEntry?) {
-        self.storyStatesTable.set(key: .subscriptions, value: state, events: &self.currentStoryStatesEvents)
+    fileprivate func setSubscriptionsStoriesState(key: PostboxStorySubscriptionsKey, state: CodableEntry?) {
+        self.storyStatesTable.set(key: .subscriptions(key), value: state, events: &self.currentStoryStatesEvents)
     }
     
     fileprivate func setLocalStoryState(state: CodableEntry?) {

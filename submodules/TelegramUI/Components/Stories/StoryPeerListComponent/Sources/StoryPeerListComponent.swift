@@ -21,8 +21,10 @@ public final class StoryPeerListComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let includesHidden: Bool
     public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
+    public let unlockedFraction: CGFloat
     public let uploadProgress: Float?
     public let peerAction: (EnginePeer?) -> Void
     public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
@@ -32,8 +34,10 @@ public final class StoryPeerListComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        includesHidden: Bool,
         storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
+        unlockedFraction: CGFloat,
         uploadProgress: Float?,
         peerAction: @escaping (EnginePeer?) -> Void,
         contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
@@ -42,8 +46,10 @@ public final class StoryPeerListComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.includesHidden = includesHidden
         self.storySubscriptions = storySubscriptions
         self.collapseFraction = collapseFraction
+        self.unlockedFraction = unlockedFraction
         self.uploadProgress = uploadProgress
         self.peerAction = peerAction
         self.contextPeerAction = contextPeerAction
@@ -59,10 +65,16 @@ public final class StoryPeerListComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
+        if lhs.includesHidden != rhs.includesHidden {
+            return false
+        }
         if lhs.storySubscriptions != rhs.storySubscriptions {
             return false
         }
         if lhs.collapseFraction != rhs.collapseFraction {
+            return false
+        }
+        if lhs.unlockedFraction != rhs.unlockedFraction {
             return false
         }
         if lhs.uploadProgress != rhs.uploadProgress {
@@ -211,7 +223,7 @@ public final class StoryPeerListComponent: Component {
             }
             let _ = hasStories
             
-            let collapseStartIndex = 1
+            let collapseStartIndex = component.includesHidden ? 0 : 1
             
             let collapsedItemWidth: CGFloat = 24.0
             let collapsedItemDistance: CGFloat = 14.0
@@ -290,7 +302,14 @@ public final class StoryPeerListComponent: Component {
                 
                 let itemFrame: CGRect
                 if isReallyVisible {
-                    itemFrame = regularItemFrame.interpolate(to: collapsedItemFrame, amount: component.collapseFraction)
+                    var adjustedRegularFrame = regularItemFrame
+                    if i < collapseStartIndex {
+                        adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: collapseStartIndex), amount: 1.0 - component.unlockedFraction)
+                    } else if i > collapseEndIndex {
+                        adjustedRegularFrame = adjustedRegularFrame.interpolate(to: itemLayout.frame(at: collapseEndIndex), amount: 1.0 - component.unlockedFraction)
+                    }
+                    
+                    itemFrame = adjustedRegularFrame.interpolate(to: collapsedItemFrame, amount: component.collapseFraction)
                 } else {
                     itemFrame = regularItemFrame
                 }
@@ -315,7 +334,7 @@ public final class StoryPeerListComponent: Component {
                         rightItemFrame = regularRightItemFrame.interpolate(to: collapsedRightItemFrame, amount: component.collapseFraction)
                     }
                 } else {
-                    if component.collapseFraction == 1.0 {
+                    if component.collapseFraction == 1.0 || component.unlockedFraction == 0.0 {
                         itemAlpha = 0.0
                     } else {
                         itemAlpha = 1.0
@@ -440,8 +459,15 @@ public final class StoryPeerListComponent: Component {
             if let storySubscriptions = component.storySubscriptions, let hasMoreToken = storySubscriptions.hasMoreToken {
                 if self.requestedLoadMoreToken != hasMoreToken {
                     self.requestedLoadMoreToken = hasMoreToken
-                    if let storySubscriptionsContext = component.context.account.storySubscriptionsContext {
-                        storySubscriptionsContext.loadMore()
+                    
+                    if component.includesHidden {
+                        if let storySubscriptionsContext = component.context.account.allStorySubscriptionsContext {
+                            storySubscriptionsContext.loadMore()
+                        }
+                    } else {
+                        if let storySubscriptionsContext = component.context.account.filteredStorySubscriptionsContext {
+                            storySubscriptionsContext.loadMore()
+                        }
                     }
                 }
             }
@@ -450,7 +476,7 @@ public final class StoryPeerListComponent: Component {
             
             self.sortedItems.removeAll(keepingCapacity: true)
             if let storySubscriptions = component.storySubscriptions {
-                if let accountItem = storySubscriptions.accountItem {
+                if !component.includesHidden, let accountItem = storySubscriptions.accountItem {
                     self.sortedItems.append(accountItem)
                 }
                 

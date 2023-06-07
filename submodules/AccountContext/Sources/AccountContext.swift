@@ -299,6 +299,7 @@ public enum ResolvedUrl {
     case invoice(slug: String, invoice: TelegramMediaInvoice?)
     case premiumOffer(reference: String?)
     case chatFolder(slug: String)
+    case story(peerId: PeerId, id: Int32)
 }
 
 public enum NavigateToChatKeepStack {

@@ -1132,6 +1132,10 @@ public extension TelegramEngine {
         public func tokenizeSearchString(string: String, transliteration: EngineStringIndexTokenTransliteration) -> [EngineDataBuffer] {
             return stringIndexTokens(string, transliteration: transliteration)
         }
+        
+        public func updatePeerStoriesHidden(id: PeerId, isHidden: Bool) {
+            let _ = _internal_updatePeerStoriesHidden(account: self.account, id: id, isHidden: isHidden).start()
+        }
     }
 }
 

@@ -388,7 +388,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let effectiveWidth: CGFloat = (1.0 - component.collapseFraction) * availableSize.width + component.collapseFraction * component.collapsedWidth
             
-            let effectiveScale: CGFloat = 1.0 * (1.0 - component.collapseFraction) + (25.0 / 52.0) * component.collapsedScaleFactor * component.collapseFraction
+            let effectiveScale: CGFloat = 1.0 * (1.0 - component.collapseFraction) + (24.0 / 52.0) * component.collapsedScaleFactor * component.collapseFraction
             
             let avatarNode: AvatarNode
             if let current = self.avatarNode {
@@ -543,9 +543,9 @@ public final class StoryPeerListItemComponent: Component {
             } else if let mappedRightCenter {
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineWidth, dy: -indicatorLineWidth).offsetBy(dx: abs(mappedRightCenter.x - indicatorCenter.x), dy: 0.0))
             }
-            self.avatarShapeLayer.path = avatarPath
+            transition.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             
-            self.indicatorShapeLayer.path = calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineWidth * 0.5)
+            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineWidth * 0.5))
             
             //TODO:localize
             let titleString: String
@@ -577,7 +577,7 @@ public final class StoryPeerListItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width + 4.0, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 3.0) * effectiveScale), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5) + (effectiveWidth - availableSize.width) * 0.5, y: indicatorFrame.midY + (indicatorFrame.height * 0.5 + 2.0) * effectiveScale), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
@@ -601,7 +601,7 @@ public final class StoryPeerListItemComponent: Component {
                     self.progressLayer = progressLayer
                     self.indicatorMaskLayer.addSublayer(progressLayer)
                 }
-                let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size)
+                let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size).insetBy(dx: 2.0, dy: 2.0)
                 progressTransition.setFrame(layer: progressLayer, frame: progressFrame)
                 progressLayer.update(size: progressFrame.size, lineWidth: 4.0, progress: progress, transition: transition)
                 

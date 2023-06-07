@@ -273,40 +273,26 @@ final class StoryItemSetContainerSendMessage {
     }
     
     func performInlineAction(view: StoryItemSetContainerComponent.View, item: StoryActionsComponent.Item) {
-        /*guard let component = view.component else {
+        guard let component = view.component else {
             return
         }
-        guard let focusedItemId = view.focusedItemId, let focusedItem = view.currentSlice?.items.first(where: { $0.id == focusedItemId }) else {
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
             return
         }
         
         switch item.kind {
         case .like:
-            if item.isActivated {
-                component.context.engine.messages.setMessageReactions(
-                    id: targetMessageId,
-                    reactions: [
-                    ]
-                )
-            } else {
-                component.context.engine.messages.setMessageReactions(
-                    id: targetMessageId,
-                    reactions: [
-                        .builtin("❤")
-                    ]
-                )
-            }
+            return
         case .share:
-            let _ = (component.context.engine.data.get(
-                TelegramEngine.EngineData.Item.Messages.Message(id: targetMessageId)
-            )
-            |> deliverOnMainQueue).start(next: { [weak view] message in
-                guard let view, let message, let component = view.component, let controller = component.controller() else {
+            let _ = (component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id)
+            |> deliverOnMainQueue).start(next: { [weak view] link in
+                guard let view, let link, let component = view.component, let controller = component.controller() else {
                     return
                 }
                 let shareController = ShareController(
                     context: component.context,
-                    subject: .messages([message._asMessage()]),
+                    subject: .url(link),
                     externalShare: false,
                     immediateExternalShare: false,
                     updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
@@ -314,7 +300,7 @@ final class StoryItemSetContainerSendMessage {
                 )
                 controller.present(shareController, in: .window(.root))
             })
-        }*/
+        }
     }
     
     private func clearInputText(view: StoryItemSetContainerComponent.View) {

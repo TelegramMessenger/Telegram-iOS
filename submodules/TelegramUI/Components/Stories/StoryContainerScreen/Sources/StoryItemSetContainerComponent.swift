@@ -1100,8 +1100,31 @@ public final class StoryItemSetContainerComponent: Component {
                         if component.slice.item.storyItem.isPublic {
                             items.append(.action(ContextMenuActionItem(text: "Copy link", icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-                            }, action: { _, a in
+                            }, action: { [weak self] _, a in
                                 a(.default)
+                                
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                
+                                let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
+                                |> deliverOnMainQueue).start(next: { [weak self] link in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    if let link {
+                                        UIPasteboard.general.string = link
+                                        
+                                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                                        component.presentController(UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .linkCopied(text: "Link copied."),
+                                            elevatedLayout: false,
+                                            animateInAsReplacement: false,
+                                            action: { _ in return false }
+                                        ))
+                                    }
+                                })
                             })))
                             items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
@@ -1695,9 +1718,9 @@ public final class StoryItemSetContainerComponent: Component {
                 )
                 if let inlineActionsView = self.inlineActions.view {
                     if inlineActionsView.superview == nil {
-                        //self.contentContainerView.addSubview(inlineActionsView)
+                        self.contentContainerView.addSubview(inlineActionsView)
                     }
-                    transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.width - 10.0 - inlineActionsSize.width, y: contentFrame.height - 20.0 - inlineActionsSize.height), size: inlineActionsSize))
+                    transition.setFrame(view: inlineActionsView, frame: CGRect(origin: CGPoint(x: contentFrame.width - 10.0 - inlineActionsSize.width, y: contentFrame.height - 10.0 - inlineActionsSize.height), size: inlineActionsSize))
                     
                     var inlineActionsAlpha: CGFloat = inputPanelIsOverlay ? 0.0 : 1.0
                     if self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil {
@@ -1707,6 +1730,9 @@ public final class StoryItemSetContainerComponent: Component {
                         inlineActionsAlpha = 0.0
                     }
                     if component.hideUI || self.displayViewList {
+                        inlineActionsAlpha = 0.0
+                    }
+                    if !component.slice.item.storyItem.isPublic {
                         inlineActionsAlpha = 0.0
                     }
                     
