@@ -173,7 +173,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
                 for attribute in file.attributes {
                     switch attribute {
                         case let .Video(duration, size, flags, _):
-                            bridgeVideo.duration = Int32(clamping: duration)
+                            bridgeVideo.duration = Int32(duration)
                             bridgeVideo.dimensions = size.cgSize
                             bridgeVideo.round = flags.contains(.instantRoundVideo)
                         default:

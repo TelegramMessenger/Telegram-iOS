@@ -685,8 +685,14 @@ public final class MessageInputPanelComponent: Component {
                             context.draw(cgImage, in: CGRect(origin: .zero, size: size))
                         }
                         
+                        var offset: CGPoint = CGPoint(x: 0.0, y: -3.0 - UIScreenPixel)
+                        if value == "∞" {
+                            offset.x += UIScreenPixel
+                            offset.y += 1.0 - UIScreenPixel
+                        }
+                        
                         let valuePath = CGMutablePath()
-                        valuePath.addRect(bounds.offsetBy(dx: 0.0, dy: -3.0 - UIScreenPixel))
+                        valuePath.addRect(bounds.offsetBy(dx: offset.x, dy: offset.y))
                         let valueFramesetter = CTFramesetterCreateWithAttributedString(valueString as CFAttributedString)
                         let valyeFrame = CTFramesetterCreateFrame(valueFramesetter, CFRangeMake(0, valueString.length), valuePath, nil)
                         CTFrameDraw(valyeFrame, context)
@@ -697,7 +703,7 @@ public final class MessageInputPanelComponent: Component {
                 let timeoutButtonSize = self.timeoutButton.update(
                     transition: transition,
                     component: AnyComponent(Button(
-                        content: AnyComponent(Image(image: icon, tintColor: component.timeoutSelected ? UIColor(rgb: 0xf8d74a) : UIColor(white: 1.0, alpha: 0.5), size: CGSize(width: 20.0, height: 20.0))),
+                        content: AnyComponent(Image(image: icon, tintColor: component.timeoutSelected ? UIColor(rgb: 0xf8d74a) : UIColor(white: 1.0, alpha: 1.0), size: CGSize(width: 20.0, height: 20.0))),
                         action: { [weak self] in
                             guard let self, let timeoutButtonView = self.timeoutButton.view else {
                                 return

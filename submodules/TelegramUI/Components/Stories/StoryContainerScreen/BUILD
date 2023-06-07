@@ -46,6 +46,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/TelegramUI/Components/Stories/StoryFooterPanelComponent",
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
+        "//submodules/TelegramUI/Components/MediaEditorScreen",
         "//submodules/TelegramPresentationData",
         "//submodules/ReactionSelectionNode",
         "//submodules/ContextUI",
@@ -53,6 +54,7 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramStringFormatting",
         "//submodules/ShimmerEffect",
+        "//submodules/ImageCompression",
     ],
     visibility = [
         "//visibility:public",

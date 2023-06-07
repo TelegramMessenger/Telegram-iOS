@@ -24,6 +24,7 @@ private let buttonFont = Font.semibold(13.0)
 
 enum ChatMessageAttachedContentActionIcon {
     case instant
+    case link
 }
 
 struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
@@ -135,7 +136,7 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
         })
     }
     
-    static func asyncLayout(_ current: ChatMessageAttachedContentButtonNode?) -> (_ width: CGFloat, _ regularImage: UIImage, _ highlightedImage: UIImage, _ iconImage: UIImage?, _ highlightedIconImage: UIImage?, _ title: String, _ titleColor: UIColor, _ highlightedTitleColor: UIColor, _ inProgress: Bool) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode)) {
+    static func asyncLayout(_ current: ChatMessageAttachedContentButtonNode?) -> (_ width: CGFloat, _ regularImage: UIImage, _ highlightedImage: UIImage, _ iconImage: UIImage?, _ highlightedIconImage: UIImage?, _ cornerIcon: Bool, _ title: String, _ titleColor: UIColor, _ highlightedTitleColor: UIColor, _ inProgress: Bool) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode)) {
         let previousRegularImage = current?.regularImage
         let previousHighlightedImage = current?.highlightedImage
         let previousRegularIconImage = current?.regularIconImage
@@ -144,7 +145,7 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
         let maybeMakeTextLayout = (current?.textNode).flatMap(TextNode.asyncLayout)
         let maybeMakeHighlightedTextLayout = (current?.highlightedTextNode).flatMap(TextNode.asyncLayout)
         
-        return { width, regularImage, highlightedImage, iconImage, highlightedIconImage, title, titleColor, highlightedTitleColor, inProgress in
+        return { width, regularImage, highlightedImage, iconImage, highlightedIconImage, cornerIcon, title, titleColor, highlightedTitleColor, inProgress in
             let targetNode: ChatMessageAttachedContentButtonNode
             if let current = current {
                 targetNode = current
@@ -235,8 +236,12 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
                     var textFrame = CGRect(origin: CGPoint(x: floor((refinedWidth - textSize.size.width) / 2.0), y: floor((34.0 - textSize.size.height) / 2.0)), size: textSize.size)
                     targetNode.backgroundNode.frame = backgroundFrame
                     if let image = targetNode.iconNode.image {
-                        textFrame.origin.x += floor(image.size.width / 2.0)
-                        targetNode.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 5.0, y: textFrame.minY + 2.0), size: image.size)
+                        if cornerIcon {
+                            targetNode.iconNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - image.size.width - 5.0, y: 5.0), size: image.size)
+                        } else {
+                            textFrame.origin.x += floor(image.size.width / 2.0)
+                            targetNode.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 5.0, y: textFrame.minY + 2.0), size: image.size)
+                        }
                         if targetNode.iconNode.supernode == nil {
                             targetNode.addSubnode(targetNode.iconNode)
                         }
@@ -791,14 +796,22 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     let buttonHighlightedImage: UIImage
                     var buttonIconImage: UIImage?
                     var buttonHighlightedIconImage: UIImage?
+                    var cornerIcon = false
                     let titleColor: UIColor
                     let titleHighlightedColor: UIColor
                     if incoming {
                         buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(presentationData.theme.theme)!
                         buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(presentationData.theme.theme)!
-                        if let actionIcon = actionIcon, case .instant = actionIcon {
-                            buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconInstantIncoming(presentationData.theme.theme)!
-                            buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantIncoming(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
+                        if let actionIcon {
+                            switch actionIcon {
+                            case .instant:
+                                buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconInstantIncoming(presentationData.theme.theme)!
+                                buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantIncoming(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
+                            case .link:
+                                buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconLinkIncoming(presentationData.theme.theme)!
+                                buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconLinkIncoming(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
+                                cornerIcon = true
+                            }
                         }
                         titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
@@ -806,15 +819,22 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     } else {
                         buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(presentationData.theme.theme)!
                         buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(presentationData.theme.theme)!
-                        if let actionIcon = actionIcon, case .instant = actionIcon {
-                            buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconInstantOutgoing(presentationData.theme.theme)!
-                            buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
+                        if let actionIcon {
+                            switch actionIcon {
+                            case .instant:
+                                buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconInstantOutgoing(presentationData.theme.theme)!
+                                buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconInstantOutgoing(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
+                            case .link:
+                                buttonIconImage = PresentationResourcesChat.chatMessageAttachedContentButtonIconLinkOutgoing(presentationData.theme.theme)!
+                                buttonHighlightedIconImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIconLinkOutgoing(presentationData.theme.theme, wallpaper: !presentationData.theme.wallpaper.isEmpty)!
+                                cornerIcon = true
+                            }
                         }
                         titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
                         titleHighlightedColor = bubbleColor.fill[0]
                     }
-                    let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, buttonIconImage, buttonHighlightedIconImage, actionTitle, titleColor, titleHighlightedColor, false)
+                    let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, buttonIconImage, buttonHighlightedIconImage, cornerIcon, actionTitle, titleColor, titleHighlightedColor, false)
                     boundingSize.width = max(buttonWidth, boundingSize.width)
                     continueActionButtonLayout = continueLayout
                 }

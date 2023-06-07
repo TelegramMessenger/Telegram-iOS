@@ -32,7 +32,7 @@ public final class NativeVideoContent: UniversalVideoContent {
     public let fileReference: FileMediaReference
     let imageReference: ImageMediaReference?
     public let dimensions: CGSize
-    public let duration: Int32
+    public let duration: Double
     public let streamVideo: MediaPlayerStreaming
     public let loopVideo: Bool
     public let enableSound: Bool
@@ -70,7 +70,7 @@ public final class NativeVideoContent: UniversalVideoContent {
             self.dimensions = CGSize(width: 128.0, height: 128.0)
         }
         
-        self.duration = fileReference.media.duration ?? 0
+        self.duration = fileReference.media.duration ?? 0.0
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo
         self.enableSound = enableSound

@@ -138,6 +138,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         let mappedItem = EngineStoryItem(
                             id: item.id,
                             timestamp: item.timestamp,
+                            expirationTimestamp: item.expirationTimestamp,
                             media: EngineMedia(media),
                             text: item.text,
                             entities: item.entities,
@@ -161,6 +162,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 nextItems.append(EngineStoryItem(
                                     id: item.id,
                                     timestamp: item.timestamp,
+                                    expirationTimestamp: item.expirationTimestamp,
                                     media: EngineMedia(media),
                                     text: item.text,
                                     entities: item.entities,
@@ -743,6 +745,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 let mappedItem = EngineStoryItem(
                     id: itemValue.id,
                     timestamp: itemValue.timestamp,
+                    expirationTimestamp: itemValue.expirationTimestamp,
                     media: EngineMedia(media),
                     text: itemValue.text,
                     entities: itemValue.entities,

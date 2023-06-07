@@ -50,7 +50,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
         case file(FileMediaReference)
         case url(String)
         
-        var duration: Int32? {
+        var duration: Double? {
             switch self {
             case let .file(file):
                 return file.media.duration
@@ -74,7 +74,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
     let userLocation: MediaResourceUserLocation
     let content: Content
     public let dimensions: CGSize
-    public let duration: Int32
+    public let duration: Double
     let streamVideo: Bool
     let loopVideo: Bool
     let enableSound: Bool
@@ -87,7 +87,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
         self.nativeId = id
         self.content = content
         self.dimensions = self.content.dimensions?.cgSize ?? CGSize(width: 480, height: 320)
-        self.duration = self.content.duration ?? 0
+        self.duration = self.content.duration ?? 0.0
         self.streamVideo = streamVideo
         self.loopVideo = loopVideo
         self.enableSound = enableSound

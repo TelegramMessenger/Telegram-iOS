@@ -1377,7 +1377,7 @@ public extension Api {
         case documentAttributeHasStickers
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
-        case documentAttributeVideo(flags: Int32, duration: Int32, w: Int32, h: Int32, preloadPrefixSize: Int32?)
+        case documentAttributeVideo(flags: Int32, duration: Double, w: Int32, h: Int32, preloadPrefixSize: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1435,10 +1435,10 @@ public extension Api {
                     break
                 case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize):
                     if boxed {
-                        buffer.appendInt32(-381651053)
+                        buffer.appendInt32(-745541182)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    serializeDouble(duration, buffer: buffer, boxed: false)
                     serializeInt32(w, buffer: buffer, boxed: false)
                     serializeInt32(h, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(preloadPrefixSize!, buffer: buffer, boxed: false)}
@@ -1567,8 +1567,8 @@ public extension Api {
         public static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _2: Double?
+            _2 = reader.readDouble()
             var _3: Int32?
             _3 = reader.readInt32()
             var _4: Int32?

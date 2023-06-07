@@ -17,13 +17,13 @@ func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> 
     return nil
 }
 
-func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> Int32? {
+func durationForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> Double? {
     for attribute in attributes {
         switch attribute {
             case let .Video(duration, _, _, _):
-                return Int32(duration)
+                return duration
             case let .Audio(_, duration, _, _, _):
-                return Int32(duration)
+                return Double(duration)
             default:
                 break
         }
@@ -42,7 +42,7 @@ public extension TelegramMediaFile {
         }
     }
     
-    var duration: Int32? {
+    var duration: Double? {
         return durationForFileAttributes(self.attributes)
     }
 }
@@ -105,7 +105,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 if (flags & (1 << 1)) != 0 {
                     videoFlags.insert(.supportsStreaming)
                 }
-                result.append(.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize))
+                result.append(.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: preloadSize))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
                 let waveformBuffer: Data? = waveform?.makeData()

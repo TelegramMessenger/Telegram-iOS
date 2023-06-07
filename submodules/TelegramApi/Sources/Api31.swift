@@ -8495,6 +8495,22 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
+                static func exportStoryLink(userId: Api.InputUser, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedStoryLink>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(384058318)
+                    userId.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stories.exportStoryLink", parameters: [("userId", String(describing: userId)), ("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedStoryLink? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ExportedStoryLink?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ExportedStoryLink
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stories {
                 static func getAllStories(flags: Int32, state: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.AllStories>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-290400731)
@@ -8652,9 +8668,9 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func sendStory(flags: Int32, media: Api.InputMedia, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendStory(flags: Int32, media: Api.InputMedia, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64, period: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1956877946)
+                    buffer.appendInt32(1112331386)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     media.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(caption!, buffer: buffer, boxed: false)}
@@ -8669,7 +8685,8 @@ public extension Api.functions.stories {
                         item.serialize(buffer, true)
                     }
                     serializeInt64(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.sendStory", parameters: [("flags", String(describing: flags)), ("media", String(describing: media)), ("caption", String(describing: caption)), ("entities", String(describing: entities)), ("privacyRules", String(describing: privacyRules)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(period!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stories.sendStory", parameters: [("flags", String(describing: flags)), ("media", String(describing: media)), ("caption", String(describing: caption)), ("entities", String(describing: entities)), ("privacyRules", String(describing: privacyRules)), ("randomId", String(describing: randomId)), ("period", String(describing: period))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

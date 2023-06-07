@@ -681,7 +681,7 @@ public extension MediaEditorValues {
     }
     
     var hasBlur: Bool {
-        if let blurValue = self.toolValues[.blur] as? BlurValue, blurValue.mode != .off || blurValue.intensity > toolEpsilon {
+        if let blurValue = self.toolValues[.blur] as? BlurValue, blurValue.mode != .off && blurValue.intensity > toolEpsilon {
             return true
         } else {
             return false

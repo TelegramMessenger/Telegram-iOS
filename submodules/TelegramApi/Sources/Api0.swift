@@ -209,7 +209,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1744710921] = { return Api.DocumentAttribute.parse_documentAttributeHasStickers($0) }
     dict[1815593308] = { return Api.DocumentAttribute.parse_documentAttributeImageSize($0) }
     dict[1662637586] = { return Api.DocumentAttribute.parse_documentAttributeSticker($0) }
-    dict[-381651053] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
+    dict[-745541182] = { return Api.DocumentAttribute.parse_documentAttributeVideo($0) }
     dict[-40996577] = { return Api.DraftMessage.parse_draftMessage($0) }
     dict[453805082] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
     dict[-1764723459] = { return Api.EmailVerification.parse_emailVerificationApple($0) }
@@ -243,6 +243,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[206668204] = { return Api.ExportedChatlistInvite.parse_exportedChatlistInvite($0) }
     dict[1103040667] = { return Api.ExportedContactToken.parse_exportedContactToken($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
+    dict[1070138683] = { return Api.ExportedStoryLink.parse_exportedStoryLink($0) }
     dict[-207944868] = { return Api.FileHash.parse_fileHash($0) }
     dict[-11252123] = { return Api.Folder.parse_folder($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
@@ -336,6 +337,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1279654347] = { return Api.InputMedia.parse_inputMediaPhoto($0) }
     dict[-440664550] = { return Api.InputMedia.parse_inputMediaPhotoExternal($0) }
     dict[261416433] = { return Api.InputMedia.parse_inputMediaPoll($0) }
+    dict[-1702447729] = { return Api.InputMedia.parse_inputMediaStory($0) }
     dict[1530447553] = { return Api.InputMedia.parse_inputMediaUploadedDocument($0) }
     dict[505969924] = { return Api.InputMedia.parse_inputMediaUploadedPhoto($0) }
     dict[-1052959727] = { return Api.InputMedia.parse_inputMediaVenue($0) }
@@ -526,6 +528,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-156940077] = { return Api.MessageMedia.parse_messageMediaInvoice($0) }
     dict[1766936791] = { return Api.MessageMedia.parse_messageMediaPhoto($0) }
     dict[1272375192] = { return Api.MessageMedia.parse_messageMediaPoll($0) }
+    dict[-946147823] = { return Api.MessageMedia.parse_messageMediaStory($0) }
     dict[-1618676578] = { return Api.MessageMedia.parse_messageMediaUnsupported($0) }
     dict[784356159] = { return Api.MessageMedia.parse_messageMediaVenue($0) }
     dict[-1557277184] = { return Api.MessageMedia.parse_messageMediaWebPage($0) }
@@ -771,7 +774,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-651419003] = { return Api.SendMessageAction.parse_speakingInGroupCallAction($0) }
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
     dict[-2010155333] = { return Api.SimpleWebViewResult.parse_simpleWebViewResultUrl($0) }
-    dict[-64636888] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
+    dict[-626000021] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
+    dict[1035529315] = { return Api.SponsoredWebPage.parse_sponsoredWebPage($0) }
     dict[-884757282] = { return Api.StatsAbsValueAndPrev.parse_statsAbsValueAndPrev($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
     dict[-1901828938] = { return Api.StatsGraph.parse_statsGraph($0) }
@@ -789,9 +793,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1087454222] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[2008112412] = { return Api.StickerSetCovered.parse_stickerSetNoCovered($0) }
-    dict[-1882351956] = { return Api.StoryItem.parse_storyItem($0) }
+    dict[1445635639] = { return Api.StoryItem.parse_storyItem($0) }
     dict[1374088783] = { return Api.StoryItem.parse_storyItemDeleted($0) }
-    dict[-1579626609] = { return Api.StoryItem.parse_storyItemSkipped($0) }
+    dict[1764886178] = { return Api.StoryItem.parse_storyItemSkipped($0) }
     dict[-1491424062] = { return Api.StoryView.parse_storyView($0) }
     dict[-748199729] = { return Api.StoryViews.parse_storyViews($0) }
     dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
@@ -1386,6 +1390,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.ExportedStoryLink:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.FileHash:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Folder:
@@ -1693,6 +1699,8 @@ public extension Api {
             case let _1 as Api.SimpleWebViewResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SponsoredMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.SponsoredWebPage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsAbsValueAndPrev:
                 _1.serialize(buffer, boxed)

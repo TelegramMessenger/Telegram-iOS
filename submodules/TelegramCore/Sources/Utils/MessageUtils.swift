@@ -264,7 +264,7 @@ public extension Message {
 }
 
 public extension Message {
-    var secretMediaDuration: Int32? {
+    var secretMediaDuration: Double? {
         var found = false
         for attribute in self.attributes {
             if let _ = attribute as? AutoremoveTimeoutMessageAttribute {

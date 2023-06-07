@@ -894,7 +894,8 @@ public final class MediaToolsScreen: ViewController {
             self.validLayout = layout
 
             let previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
-            let topInset: CGFloat = floorToScreenPixels(layout.size.height - previewSize.height) / 2.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let bottomInset = layout.size.height - previewSize.height - topInset
             
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
@@ -902,7 +903,7 @@ public final class MediaToolsScreen: ViewController {
                 safeInsets: UIEdgeInsets(
                     top: topInset,
                     left: layout.safeInsets.left,
-                    bottom: topInset,
+                    bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
                 inputHeight: layout.inputHeight ?? 0.0,

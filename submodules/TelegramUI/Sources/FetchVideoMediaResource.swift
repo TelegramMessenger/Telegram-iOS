@@ -273,18 +273,6 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                                     TempBox.shared.dispose(tempFile)
                                     subscriber.putNext(.moveTempFile(file: remuxedTempFile))
                                 } else {
-                                    let tempVideoPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
-                                    if let _ = try? FileManager.default.copyItem(atPath: tempFile.path, toPath: tempVideoPath) {
-                                        PHPhotoLibrary.shared().performChanges({
-                                            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: URL(fileURLWithPath: tempVideoPath))
-                                        }, completionHandler: { _, error in
-                                            if let error = error {
-                                                print("\(error)")
-                                            }
-                                            let _ = try? FileManager.default.removeItem(atPath: tempVideoPath)
-                                        })
-                                    }
-                                    
                                     TempBox.shared.dispose(remuxedTempFile)
                                     if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: [.mappedRead]) {
                                         var range: Range<Int64>?

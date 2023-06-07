@@ -166,6 +166,9 @@ private final class StoryContainerScreenComponent: Component {
             let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
             longPressRecognizer.delegate = self
             self.addGestureRecognizer(longPressRecognizer)
+            
+            let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            self.backgroundEffectView.addGestureRecognizer(tapGestureRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -327,6 +330,31 @@ private final class StoryContainerScreenComponent: Component {
                 }
             default:
                 break
+            }
+        }
+        
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            guard let component = self.component, let environment = self.environment, let stateValue = component.content.stateValue, case .recognized = recognizer.state else {
+                return
+            }
+        
+            let location = recognizer.location(in: recognizer.view)
+            if let currentItemView = self.visibleItemSetViews.first?.value {
+                if location.x < currentItemView.frame.minX {
+                    if stateValue.previousSlice == nil {
+                            
+                    } else {
+                        self.beginHorizontalPan()
+                        self.commitHorizontalPan(velocity: CGPoint(x: 100.0, y: 0.0))
+                    }
+                } else if location.x > currentItemView.frame.maxX {
+                    if stateValue.nextSlice == nil {
+                        environment.controller()?.dismiss()
+                    } else {
+                        self.beginHorizontalPan()
+                        self.commitHorizontalPan(velocity: CGPoint(x: -100.0, y: 0.0))
+                    }
+                }
             }
         }
         
