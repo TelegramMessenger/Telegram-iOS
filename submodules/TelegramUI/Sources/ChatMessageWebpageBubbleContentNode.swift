@@ -354,7 +354,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         actionTitle = item.presentationData.strings.Conversation_ViewGroup
                     }
                 } else {
-                    if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
+                    if case .webPage = adAttribute.target {
+                        actionTitle = item.presentationData.strings.Conversation_OpenLink
+                        actionIcon = .link
+                    } else if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
                         actionTitle = item.presentationData.strings.Conversation_ViewMessage
                     } else {
                         actionTitle = item.presentationData.strings.Conversation_ViewChannel

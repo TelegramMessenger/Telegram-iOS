@@ -54,7 +54,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     }
     
     public var baseSize: CGSize {
-        let size = max(10.0, min(self.referenceDrawingSize.width, self.referenceDrawingSize.height) * 0.2)
+        let size = max(10.0, min(self.referenceDrawingSize.width, self.referenceDrawingSize.height) * 0.25)
         return CGSize(width: size, height: size)
     }
     

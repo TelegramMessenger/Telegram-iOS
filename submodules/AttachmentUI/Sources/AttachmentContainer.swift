@@ -80,6 +80,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         })
         self.container.clipsToBounds = true
         self.container.overflowInset = overflowInset
+        self.container.shouldAnimateDisappearance = true
         
         super.init()
         

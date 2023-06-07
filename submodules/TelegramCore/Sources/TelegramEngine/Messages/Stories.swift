@@ -507,10 +507,10 @@ public final class EngineStorySubscriptions: Equatable {
 
 public enum StoryUploadResult {
     case progress(Float)
-    case completed
+    case completed(Int32?)
 }
 
-func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int) -> Signal<StoryUploadResult, NoError> {
+private func uploadedStoryContent(account: Account, media: EngineStoryInputMedia) -> (signal: Signal<PendingMessageUploadedContentResult?, NoError>, media: Media) {
     let originalMedia: Media
     let contentToUpload: MessageContentToUpload
     
@@ -589,48 +589,60 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
         contentSignal = signal
     }
     
-    return contentSignal
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
-        return .single(nil)
+    return (
+        contentSignal
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<PendingMessageUploadedContentResult?, NoError> in
+            return .single(nil)
+        },
+        originalMedia
+    )
+}
+
+private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Transaction) -> [Api.InputPrivacyRule] {
+    var privacyRules: [Api.InputPrivacyRule]
+    switch privacy.base {
+    case .everyone:
+        privacyRules = [.inputPrivacyValueAllowAll]
+    case .contacts:
+        privacyRules = [.inputPrivacyValueAllowContacts]
+    case .closeFriends:
+        privacyRules = [.inputPrivacyValueAllowCloseFriends]
+    case .nobody:
+        privacyRules = [.inputPrivacyValueDisallowAll]
     }
+    var privacyUsers: [Api.InputUser] = []
+    var privacyChats: [Int64] = []
+    for peerId in privacy.additionallyIncludePeers {
+        if let peer = transaction.getPeer(peerId) {
+            if let _ = peer as? TelegramUser {
+                if let inputUser = apiInputUser(peer) {
+                    privacyUsers.append(inputUser)
+                }
+            } else if peer is TelegramGroup || peer is TelegramChannel {
+                privacyChats.append(peer.id.id._internalGetInt64Value())
+            }
+        }
+    }
+    if !privacyUsers.isEmpty {
+        privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
+    }
+    if !privacyChats.isEmpty {
+        privacyRules.append(.inputPrivacyValueAllowChatParticipants(chats: privacyChats))
+    }
+    return privacyRules
+}
+
+func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
+    let (contentSignal, originalMedia) = uploadedStoryContent(account: account, media: media)
+    return contentSignal
     |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
-        return account.postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
-            switch result {
-            case let .progress(progress):
-                return .single(.progress(progress))
-            case let .content(content):
-                var privacyRules: [Api.InputPrivacyRule]
-                switch privacy.base {
-                case .everyone:
-                    privacyRules = [.inputPrivacyValueAllowAll]
-                case .contacts:
-                    privacyRules = [.inputPrivacyValueAllowContacts]
-                case .closeFriends:
-                    privacyRules = [.inputPrivacyValueAllowCloseFriends]
-                case .nobody:
-                    privacyRules = [.inputPrivacyValueDisallowAll]
-                }
-                var privacyUsers: [Api.InputUser] = []
-                var privacyChats: [Int64] = []
-                for peerId in privacy.additionallyIncludePeers {
-                    if let peer = transaction.getPeer(peerId) {
-                        if let _ = peer as? TelegramUser {
-                            if let inputUser = apiInputUser(peer) {
-                                privacyUsers.append(inputUser)
-                            }
-                        } else if peer is TelegramGroup || peer is TelegramChannel {
-                            privacyChats.append(peer.id.id._internalGetInt64Value())
-                        }
-                    }
-                }
-                if !privacyUsers.isEmpty {
-                    privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
-                }
-                if !privacyChats.isEmpty {
-                    privacyRules.append(.inputPrivacyValueAllowChatParticipants(chats: privacyChats))
-                }
-                
+        switch result {
+        case let .progress(progress):
+            return .single(.progress(progress))
+        case let .content(content):
+            return account.postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+                let privacyRules = apiInputPrivacyRules(privacy: privacy, transaction: transaction)
                 switch content.content {
                 case let .media(inputMedia, _):
                     var flags: Int32 = 0
@@ -640,7 +652,6 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                     if pin {
                         flags |= 1 << 2
                     }
-                    
                     if !text.isEmpty {
                         flags |= 1 << 0
                         apiCaption = text
@@ -666,7 +677,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                         caption: apiCaption,
                         entities: apiEntities,
                         privacyRules: privacyRules,
-                        randomId: Int64.random(in: Int64.min ... Int64.max),
+                        randomId: randomId,
                         period: Int32(period)
                     ))
                     |> map(Optional.init)
@@ -674,11 +685,13 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                         return .single(nil)
                     }
                     |> mapToSignal { updates -> Signal<StoryUploadResult, NoError> in
+                        var id: Int32?
                         if let updates = updates {
                             for update in updates.allUpdates {
                                 if case let .updateStory(_, story) = update {
                                     switch story {
-                                    case let .storyItem(_, _, _, _, _, _, media, _, _):
+                                    case let .storyItem(_, idValue, _, _, _, _, media, _, _):
+                                        id = idValue
                                         let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                         if let parsedMedia = parsedMedia {
                                             applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
@@ -692,13 +705,105 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                             account.stateManager.addUpdates(updates)
                         }
                         
-                        return .single(.completed)
+                        return .single(.completed(id))
                     }
                 default:
                     return .complete()
                 }
-            default:
-                return .complete()
+            }
+            |> switchToLatest
+        default:
+            return .complete()
+        }
+    }
+}
+
+func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: Int32, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
+    let contentSignal: Signal<PendingMessageUploadedContentResult?, NoError>
+    let originalMedia: Media?
+    if let media = media {
+        (contentSignal, originalMedia) = uploadedStoryContent(account: account, media: media)
+    } else {
+        contentSignal = .single(nil)
+        originalMedia = nil
+    }
+    
+    return contentSignal
+    |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
+        if let result = result, case let .progress(progress) = result {
+            return .single(.progress(progress))
+        }
+        
+        let inputMedia: Api.InputMedia?
+        if let result = result, case let .content(uploadedContent) = result, case let .media(media, _) = uploadedContent.content {
+            inputMedia = media
+        } else {
+            inputMedia = nil
+        }
+        
+        return account.postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+            var flags: Int32 = 0
+            var apiCaption: String?
+            var apiEntities: [Api.MessageEntity]?
+            var privacyRules: [Api.InputPrivacyRule]?
+            
+            if let _ = inputMedia {
+                flags |= 1 << 0
+            }
+            if !text.isEmpty {
+                flags |= 1 << 1
+                apiCaption = text
+                
+                if !entities.isEmpty {
+                    flags |= 1 << 1
+                    
+                    var associatedPeers: [PeerId: Peer] = [:]
+                    for entity in entities {
+                        for entityPeerId in entity.associatedPeerIds {
+                            if let peer = transaction.getPeer(entityPeerId) {
+                                associatedPeers[peer.id] = peer
+                            }
+                        }
+                    }
+                    apiEntities = apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary(associatedPeers))
+                }
+            }
+            if let privacy = privacy {
+                privacyRules = apiInputPrivacyRules(privacy: privacy, transaction: transaction)
+                flags |= 1 << 2
+            }
+            
+            return account.network.request(Api.functions.stories.editStory(
+                flags: flags,
+                id: id,
+                media: inputMedia,
+                caption: apiCaption,
+                entities: apiEntities,
+                privacyRules: privacyRules
+            ))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { updates -> Signal<StoryUploadResult, NoError> in
+                if let updates = updates {
+                    for update in updates.allUpdates {
+                        if case let .updateStory(_, story) = update {
+                            switch story {
+                            case let .storyItem(_, _, _, _, _, _, media, _, _):
+                                let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
+                                if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
+                                    applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    account.stateManager.addUpdates(updates)
+                }
+                
+                return .single(.completed(id))
             }
         }
         |> switchToLatest

@@ -17,6 +17,8 @@ import ContextUI
 import TelegramCore
 import Postbox
 import AvatarNode
+import MediaEditorScreen
+import ImageCompression
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -44,6 +46,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let isProgressPaused: Bool
     public let hideUI: Bool
     public let visibilityFraction: CGFloat
+    public let isPanning: Bool
     public let presentController: (ViewController) -> Void
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
@@ -63,6 +66,7 @@ public final class StoryItemSetContainerComponent: Component {
         isProgressPaused: Bool,
         hideUI: Bool,
         visibilityFraction: CGFloat,
+        isPanning: Bool,
         presentController: @escaping (ViewController) -> Void,
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
@@ -81,6 +85,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.isProgressPaused = isProgressPaused
         self.hideUI = hideUI
         self.visibilityFraction = visibilityFraction
+        self.isPanning = isPanning
         self.presentController = presentController
         self.close = close
         self.navigate = navigate
@@ -120,6 +125,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.visibilityFraction != rhs.visibilityFraction {
+            return false
+        }
+        if lhs.isPanning != rhs.isPanning {
             return false
         }
         return true
@@ -208,6 +216,8 @@ public final class StoryItemSetContainerComponent: Component {
         var displayViewList: Bool = false
         var viewList: ViewList?
         
+        var isEditingStory: Bool = false
+        
         var itemLayout: ItemLayout?
         var ignoreScrolling: Bool = false
         
@@ -237,6 +247,9 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.contentContainerView = UIView()
             self.contentContainerView.clipsToBounds = true
+            if #available(iOS 13.0, *) {
+                self.contentContainerView.layer.cornerCurve = .continuous
+            }
             
             self.topContentGradientLayer = SimpleGradientLayer()
             self.bottomContentGradientLayer = SimpleGradientLayer()
@@ -537,7 +550,7 @@ public final class StoryItemSetContainerComponent: Component {
             for (_, visibleItem) in self.visibleItems {
                 if let view = visibleItem.view.view {
                     if let view = view as? StoryContentItem.View {
-                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList)
+                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList || self.isEditingStory)
                     }
                 }
             }
@@ -788,6 +801,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             //self.updatePreloads()
             
+            let wasPanning = self.component?.isPanning ?? false
             self.component = component
             self.state = state
             
@@ -797,10 +811,23 @@ public final class StoryItemSetContainerComponent: Component {
             } else {
                 bottomContentInset = 0.0
             }
+                        
+            var inputPanelAvailableWidth = availableSize.width
+            var inputPanelTransition = transition
+            if case .regular = component.metrics.widthClass {
+                if (self.inputPanelExternalState.isEditing || self.inputPanelExternalState.hasText) {
+                    if wasPanning != component.isPanning {
+                        inputPanelTransition = .easeInOut(duration: 0.25)
+                    }
+                    if !component.isPanning {
+                        inputPanelAvailableWidth += 200.0
+                    }
+                }
+            }
             
             self.inputPanel.parentState = state
             let inputPanelSize = self.inputPanel.update(
-                transition: transition,
+                transition: inputPanelTransition,
                 component: AnyComponent(MessageInputPanelComponent(
                     externalState: self.inputPanelExternalState,
                     context: component.context,
@@ -808,6 +835,7 @@ public final class StoryItemSetContainerComponent: Component {
                     strings: component.strings,
                     style: .story,
                     placeholder: "Reply Privately...",
+                    alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
                     presentController: { [weak self] c in
                         guard let self, let component = self.component else {
                             return
@@ -881,11 +909,11 @@ public final class StoryItemSetContainerComponent: Component {
                     wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
                     timeoutValue: nil,
                     timeoutSelected: false,
-                    displayGradient: component.inputHeight != 0.0,
+                    displayGradient: component.inputHeight != 0.0 && component.metrics.widthClass != .regular,
                     bottomInset: component.inputHeight != 0.0 ? 0.0 : bottomContentInset
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 200.0)
+                containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
             )
             
             var currentItem: StoryContentItem?
@@ -1012,6 +1040,17 @@ public final class StoryItemSetContainerComponent: Component {
                             self.openItemPrivacySettings()
                         })))
                         
+                        items.append(.action(ContextMenuActionItem(text: "Edit Story", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self else {
+                                return
+                            }
+                            self.openStoryEditing()
+                        })))
+                        
                         items.append(.separator)
                         
                         component.controller()?.forEachController { c in
@@ -1119,11 +1158,15 @@ public final class StoryItemSetContainerComponent: Component {
             let inputPanelIsOverlay: Bool
             if component.inputHeight == 0.0 {
                 inputPanelBottomInset = bottomContentInset
-                bottomContentInset += inputPanelSize.height
+                if case .regular = component.metrics.widthClass {
+                    bottomContentInset += 60.0
+                } else {
+                    bottomContentInset += inputPanelSize.height
+                }
                 inputPanelIsOverlay = false
             } else {
                 bottomContentInset += 44.0
-                inputPanelBottomInset = component.inputHeight
+                inputPanelBottomInset = component.inputHeight - component.containerInsets.bottom
                 inputPanelIsOverlay = true
             }
             
@@ -1201,7 +1244,7 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setPosition(view: self.contentContainerView, position: contentFrame.center)
             transition.setBounds(view: self.contentContainerView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))
             transition.setScale(view: self.contentContainerView, scale: contentVisualScale)
-            transition.setCornerRadius(layer: self.contentContainerView.layer, cornerRadius: 10.0 * (1.0 / contentVisualScale))
+            transition.setCornerRadius(layer: self.contentContainerView.layer, cornerRadius: 12.0 * (1.0 / contentVisualScale))
             
             if self.closeButtonIconView.image == nil {
                 self.closeButtonIconView.image = UIImage(bundleImageName: "Media Gallery/Close")?.withRenderingMode(.alwaysTemplate)
@@ -1318,7 +1361,7 @@ public final class StoryItemSetContainerComponent: Component {
             let itemLayout = ItemLayout(size: CGSize(width: contentFrame.width, height: availableSize.height - component.containerInsets.top - 44.0 - bottomContentInsetWithoutInput))
             self.itemLayout = itemLayout
             
-            let inputPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
+            let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
             var inputPanelAlpha: CGFloat = focusedItem?.isMy == true ? 0.0 : 1.0
             if case .regular = component.metrics.widthClass {
                 inputPanelAlpha *= component.visibilityFraction
@@ -1327,7 +1370,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if inputPanelView.superview == nil {
                     self.addSubview(inputPanelView)
                 }
-                transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
+                inputPanelTransition.setFrame(view: inputPanelView, frame: inputPanelFrame)
                 transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
             }
             
@@ -1704,6 +1747,101 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         private func openItemPrivacySettings() {
+        }
+        
+        private func openStoryEditing() {
+            guard let context = self.component?.context, let id = self.component?.slice.item.storyItem.id else {
+                return
+            }
+            let _ = (getStorySource(engine: context.engine, id: Int64(id))
+            |> deliverOnMainQueue).start(next: { [weak self] source in
+                guard let self else {
+                    return
+                }
+                self.isEditingStory = true
+                self.updateIsProgressPaused()
+                
+                if let source {
+                    var updateProgressImpl: ((Float) -> Void)?
+                    let controller = MediaEditorScreen(
+                        context: context,
+                        subject: .single(.draft(source, Int64(id))),
+                        transitionIn: nil,
+                        transitionOut: { _ in return nil },
+                        completion: { [weak self] _, mediaResult, privacy, commit in
+                            switch mediaResult {
+                            case let .image(image, dimensions, caption):
+                                if let imageData = compressImageToJPEG(image, quality: 0.6), case let .story(storyPrivacy, _, _) = privacy {
+                                    let _ = (context.engine.messages.editStory(media: .image(dimensions: dimensions, data: imageData), id: id, text: caption?.string ?? "", entities: [], privacy: storyPrivacy)
+                                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                                            switch result {
+                                            case let .progress(progress):
+                                                updateProgressImpl?(progress)
+                                            case .completed:
+                                                Queue.mainQueue().after(0.1) {
+                                                    if let self {
+                                                        self.isEditingStory = false
+                                                        self.rewindCurrentItem()
+                                                        self.updateIsProgressPaused()
+                                                    }
+                                                    commit({})
+                                                }
+                                            }
+                                    })
+                                }
+                            default:
+                                break
+//                            case let .video(content, _, values, duration, dimensions, caption):
+//                                let adjustments: VideoMediaResourceAdjustments
+//                                if let valuesData = try? JSONEncoder().encode(values) {
+//                                    let data = MemoryBuffer(data: valuesData)
+//                                    let digest = MemoryBuffer(data: data.md5Digest())
+//                                    adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
+//
+//                                    let resource: TelegramMediaResource
+//                                    switch content {
+//                                    case let .imageFile(path):
+//                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+//                                    case let .videoFile(path):
+//                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+//                                    case let .asset(localIdentifier):
+//                                        resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
+//                                    }
+//                                    if case let .story(storyPrivacy, period, pin) = privacy {
+//                                        let _ = (context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
+//                                        |> deliverOnMainQueue).start(next: { [weak chatListController] result in
+//                                            if let chatListController {
+//                                                switch result {
+//                                                case let .progress(progress):
+//                                                    let _ = progress
+//                                                    break
+//                                                case .completed:
+//                                                    Queue.mainQueue().after(0.1) {
+//                                                        commit()
+//                                                    }
+//                                                }
+//                                            }
+//                                        })
+//                                        Queue.mainQueue().justDispatch {
+//                                            commit({ [weak chatListController] in
+//                                                chatListController?.animateStoryUploadRipple()
+//                                            })
+//                                        }
+//                                    }
+//                                }
+                            }
+                        }
+                    )
+                    controller.dismissed = { [weak self] in
+                        self?.isEditingStory = false
+                        self?.updateIsProgressPaused()
+                    }
+                    self.component?.controller()?.push(controller)
+                    updateProgressImpl = { [weak controller] progress in
+                        controller?.updateEditProgress(progress)
+                    }
+                }
+            })
         }
     }
     

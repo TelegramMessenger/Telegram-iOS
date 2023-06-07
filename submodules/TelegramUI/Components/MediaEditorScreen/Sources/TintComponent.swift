@@ -110,17 +110,20 @@ final class TintComponent: Component {
     let highlightsValue: TintValue
     let shadowsValueUpdated: (TintValue) -> Void
     let highlightsValueUpdated: (TintValue) -> Void
+    let isTrackingUpdated: (Bool) -> Void
     
     init(
         shadowsValue: TintValue,
         highlightsValue: TintValue,
         shadowsValueUpdated: @escaping (TintValue) -> Void,
-        highlightsValueUpdated: @escaping (TintValue) -> Void
+        highlightsValueUpdated: @escaping (TintValue) -> Void,
+        isTrackingUpdated: @escaping (Bool) -> Void
     ) {
         self.shadowsValue = shadowsValue
         self.highlightsValue = highlightsValue
         self.shadowsValueUpdated = shadowsValueUpdated
         self.highlightsValueUpdated = highlightsValueUpdated
+        self.isTrackingUpdated = isTrackingUpdated
     }
     
     static func ==(lhs: TintComponent, rhs: TintComponent) -> Bool {
@@ -300,6 +303,32 @@ final class TintComponent: Component {
                 sizes.append(size)
             }
             
+            let isTrackingUpdated: (Bool) -> Void = { [weak self] isTracking in
+                component.isTrackingUpdated(isTracking)
+                
+                if let self {
+                    let transition: Transition
+                    if isTracking {
+                        transition = .immediate
+                    } else {
+                        transition = .easeInOut(duration: 0.25)
+                    }
+                    
+                    let alpha: CGFloat = isTracking ? 0.0 : 1.0
+                    if let view = self.shadowsButton.view {
+                        transition.setAlpha(view: view, alpha: alpha)
+                    }
+                    if let view = self.highlightsButton.view {
+                        transition.setAlpha(view: view, alpha: alpha)
+                    }
+                    for color in self.colorViews {
+                        if let view = color.view {
+                            transition.setAlpha(view: view, alpha: alpha)
+                        }
+                    }
+                }
+            }
+            
             let sliderSize = self.slider.update(
                 transition: transition,
                 component: AnyComponent(
@@ -321,6 +350,9 @@ final class TintComponent: Component {
                                     highlightsValueUpdated(state.highlightsValue.withUpdatedIntensity(value))
                                 }
                             }
+                        },
+                        isTrackingUpdated: { isTracking in
+                            isTrackingUpdated(isTracking)
                         }
                     )
                 ),

@@ -1077,7 +1077,11 @@ public class CameraScreen: ViewController {
             
             let progress = 1.0 - value
             let maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
-            let maxOffset = -56.0
+            
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            
+            let maxOffset = (topInset - (layout.size.height - layout.size.height * maxScale) / 2.0)
+            //let maxOffset = -56.0
             
             let scale = 1.0 * progress + (1.0 - progress) * maxScale
             let offset = (1.0 - progress) * maxOffset
@@ -1129,7 +1133,8 @@ public class CameraScreen: ViewController {
             self.validLayout = layout
             
             let previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
-            let topInset: CGFloat = floorToScreenPixels(layout.size.height - previewSize.height) / 2.0
+            let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            let bottomInset = layout.size.height - previewSize.height - topInset
             
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
@@ -1137,7 +1142,7 @@ public class CameraScreen: ViewController {
                 safeInsets: UIEdgeInsets(
                     top: topInset,
                     left: layout.safeInsets.left,
-                    bottom: topInset,
+                    bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
                 inputHeight: layout.inputHeight ?? 0.0,

@@ -9355,3 +9355,5 @@ Sorry for the inconvenience.";
 "Privacy.Bio.CustomHelp" = "You can restrict who can see your profile bio with granular precision.";
 "Privacy.Bio.AlwaysShareWith.Title" = "Always Share With";
 "Privacy.Bio.NeverShareWith.Title" = "Never Share With";
+
+"Conversation.OpenLink" = "OPEN LINK";

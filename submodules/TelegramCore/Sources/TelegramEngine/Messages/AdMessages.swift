@@ -32,6 +32,7 @@ private class AdMessagesHistoryContextImpl {
             enum CodingKeys: String, CodingKey {
                 case peer
                 case invite
+                case webPage
             }
             
             struct Invite: Equatable, Codable {
@@ -39,8 +40,14 @@ private class AdMessagesHistoryContextImpl {
                 var joinHash: String
             }
             
+            struct WebPage: Equatable, Codable {
+                var title: String
+                var url: String
+            }
+            
             case peer(PeerId)
             case invite(Invite)
+            case webPage(WebPage)
             
             init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -49,6 +56,8 @@ private class AdMessagesHistoryContextImpl {
                     self = .peer(PeerId(peer))
                 } else if let invite = try container.decodeIfPresent(Invite.self, forKey: .invite) {
                     self = .invite(invite)
+                } else if let webPage = try container.decodeIfPresent(WebPage.self, forKey: .webPage) {
+                    self = .webPage(webPage)
                 } else {
                     throw DecodingError.generic
                 }
@@ -62,6 +71,8 @@ private class AdMessagesHistoryContextImpl {
                     try container.encode(peerId.toInt64(), forKey: .peer)
                 case let .invite(invite):
                     try container.encode(invite, forKey: .invite)
+                case let .webPage(webPage):
+                    try container.encode(webPage, forKey: .webPage)
                 }
             }
         }
@@ -205,6 +216,8 @@ private class AdMessagesHistoryContextImpl {
                 target = .peer(id: peerId, message: self.messageId, startParam: self.startParam)
             case let .invite(invite):
                 target = .join(title: invite.title, joinHash: invite.joinHash)
+            case let .webPage(webPage):
+                target = .webPage(title: webPage.title, url: webPage.url)
             }
             let mappedMessageType: AdMessageAttribute.MessageType
             switch self.messageType {
@@ -251,6 +264,23 @@ private class AdMessagesHistoryContextImpl {
                     defaultBannedRights: nil,
                     usernames: []
                 )
+            case let .webPage(webPage):
+                author = TelegramChannel(
+                    id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1)),
+                    accessHash: nil,
+                    title: webPage.title,
+                    username: nil,
+                    photo: [],
+                    creationDate: 0,
+                    version: 0,
+                    participationStatus: .left,
+                    info: .broadcast(TelegramChannelBroadcastInfo(flags: [])),
+                    flags: [],
+                    restrictionInfo: nil,
+                    adminRights: nil,
+                    bannedRights: nil,
+                    defaultBannedRights: nil,
+                    usernames: [])
             }
             
             messagePeers[author.id] = author
@@ -471,8 +501,7 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, webpage, message, entities, sponsorInfo, additionalInfo):
-                                let _ = webpage
+                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, webPage, message, entities, sponsorInfo, additionalInfo):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
@@ -484,6 +513,11 @@ private class AdMessagesHistoryContextImpl {
                                 var target: CachedMessage.Target?
                                 if let fromId = fromId {
                                     target = .peer(fromId.peerId)
+                                } else if let webPage = webPage {
+                                    if case let .sponsoredWebPage(_, url, siteName, photo) = webPage {
+                                        let _ = photo
+                                        target = .webPage(CachedMessage.Target.WebPage(title: siteName, url: url))
+                                    }
                                 } else if let chatInvite = chatInvite, let chatInviteHash = chatInviteHash {
                                     switch chatInvite {
                                     case let .chatInvite(flags, title, _, photo, participantsCount, participants):

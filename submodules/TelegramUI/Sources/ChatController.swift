@@ -2576,6 +2576,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let author = message?.author, author.isVerified {
                     skipConcealedAlert = true
                 }
+                
+                if let message, let adAttribute = message.attributes.first(where: { $0 is AdMessageAttribute }) as? AdMessageAttribute {
+                    strongSelf.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
+                }
+                
                 strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message)
             }
         }, shareCurrentLocation: { [weak self] in
@@ -4351,7 +4356,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                     }
                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
-                             |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
                         if let self, let peer = peer {
                             self.openPeer(peer: peer, navigation: navigationData, fromMessage: nil)
                         }
@@ -4359,6 +4364,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             case let .join(_, joinHash):
                 self.controllerInteraction?.openJoinLink(joinHash)
+            case let .webPage(_, url):
+                self.controllerInteraction?.openUrl(url, false, false, nil)
             }
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId in
             guard let self else {

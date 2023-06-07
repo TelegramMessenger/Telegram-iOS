@@ -166,6 +166,9 @@ private final class StoryContainerScreenComponent: Component {
             let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
             longPressRecognizer.delegate = self
             self.addGestureRecognizer(longPressRecognizer)
+            
+            let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            self.backgroundEffectView.addGestureRecognizer(tapGestureRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -327,6 +330,31 @@ private final class StoryContainerScreenComponent: Component {
                 }
             default:
                 break
+            }
+        }
+        
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            guard let component = self.component, let environment = self.environment, let stateValue = component.content.stateValue, case .recognized = recognizer.state else {
+                return
+            }
+        
+            let location = recognizer.location(in: recognizer.view)
+            if let currentItemView = self.visibleItemSetViews.first?.value {
+                if location.x < currentItemView.frame.minX {
+                    if stateValue.previousSlice == nil {
+                            
+                    } else {
+                        self.beginHorizontalPan()
+                        self.commitHorizontalPan(velocity: CGPoint(x: 100.0, y: 0.0))
+                    }
+                } else if location.x > currentItemView.frame.maxX {
+                    if stateValue.nextSlice == nil {
+                        environment.controller()?.dismiss()
+                    } else {
+                        self.beginHorizontalPan()
+                        self.commitHorizontalPan(velocity: CGPoint(x: -100.0, y: 0.0))
+                    }
+                }
             }
         }
         
@@ -561,14 +589,15 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         
                         var itemSetContainerSize = availableSize
-                        var itemSetContainerTopInset = environment.statusBarHeight + 12.0
+                        var itemSetContainerInsets = UIEdgeInsets(top: environment.statusBarHeight + 12.0, left: 0.0, bottom: 0.0, right: 0.0)
                         var itemSetContainerSafeInsets = environment.safeInsets
                         if case .regular = environment.metrics.widthClass {
                             let availableHeight = min(1080.0, availableSize.height - max(45.0, environment.safeInsets.bottom) * 2.0)
                             let mediaHeight = availableHeight - 40.0
                             let mediaWidth = floor(mediaHeight * 0.5625)
                             itemSetContainerSize = CGSize(width: mediaWidth, height: availableHeight)
-                            itemSetContainerTopInset = 0.0
+                            itemSetContainerInsets.top = 0.0
+                            itemSetContainerInsets.bottom = floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)
                             itemSetContainerSafeInsets.bottom = 0.0
                         }
                         
@@ -580,13 +609,14 @@ private final class StoryContainerScreenComponent: Component {
                                 slice: slice,
                                 theme: environment.theme,
                                 strings: environment.strings,
-                                containerInsets: UIEdgeInsets(top: itemSetContainerTopInset, left: 0.0, bottom: environment.inputHeight, right: 0.0),
+                                containerInsets: itemSetContainerInsets,
                                 safeInsets: itemSetContainerSafeInsets,
                                 inputHeight: environment.inputHeight,
                                 metrics: environment.metrics,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
                                 hideUI: i == focusedIndex && self.itemSetPanState?.didBegin == false,
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
+                                isPanning: self.itemSetPanState?.didBegin == true,
                                 presentController: { [weak self] c in
                                     guard let self, let environment = self.environment else {
                                         return
@@ -675,6 +705,7 @@ private final class StoryContainerScreenComponent: Component {
                                 self.addSubview(itemSetView)
                             }
                             if itemSetComponentView.superview == nil {
+                                itemSetView.tintLayer.isDoubleSided = false
                                 itemSetComponentView.layer.isDoubleSided = false
                                 itemSetView.addSubview(itemSetComponentView)
                                 itemSetView.layer.addSublayer(itemSetView.tintLayer)
