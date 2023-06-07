@@ -881,6 +881,43 @@ public extension TelegramEngine {
             }
         }
         
+        public func refreshStoryViews(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
+            if peerId != self.account.peerId {
+                return .complete()
+            }
+            
+            return _internal_getStoryViews(account: self.account, ids: ids)
+            |> mapToSignal { views -> Signal<Never, NoError> in
+                return self.account.postbox.transaction { transaction -> Void in
+                    var currentItems = transaction.getStoryItems(peerId: peerId)
+                    for i in 0 ..< currentItems.count {
+                        if ids.contains(currentItems[i].id) {
+                            if case let .item(item) = currentItems[i].value.get(Stories.StoredItem.self) {
+                                let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                                    id: item.id,
+                                    timestamp: item.timestamp,
+                                    expirationTimestamp: item.expirationTimestamp,
+                                    media: item.media,
+                                    text: item.text,
+                                    entities: item.entities,
+                                    views: views[currentItems[i].id],
+                                    privacy: item.privacy,
+                                    isPinned: item.isPinned,
+                                    isExpired: item.isExpired,
+                                    isPublic: item.isPublic
+                                ))
+                                if let entry = CodableEntry(updatedItem) {
+                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)
+                                }
+                            }
+                        }
+                    }
+                    transaction.setStoryItems(peerId: peerId, items: currentItems)
+                }
+                |> ignoreValues
+            }
+        }
+        
         public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int) -> Signal<StoryUploadResult, NoError> {
             return _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, pin: pin, privacy: privacy, period: period)
         }
