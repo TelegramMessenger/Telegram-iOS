@@ -2362,6 +2362,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                                     return StoryContainerScreen.TransitionOut(
                                         destinationView: transitionView,
+                                        transitionView: nil,
                                         destinationRect: transitionView.bounds,
                                         destinationCornerRadius: transitionView.bounds.height * 0.5,
                                         destinationIsAvatar: true,

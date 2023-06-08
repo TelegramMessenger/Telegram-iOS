@@ -3,19 +3,11 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import ComponentFlow
-import SwiftSignalKit
-import ViewControllerComponent
 import ComponentDisplayAdapters
 import TelegramPresentationData
-import AccountContext
-import TelegramCore
-import MultilineTextComponent
-import EmojiStatusComponent
-import TelegramStringFormatting
-import CheckNode
 import SolidRoundedButtonComponent
 
-final class StorageUsageScreenSelectionPanelComponent: Component {
+public final class BottomButtonPanelComponent: Component {
     let theme: PresentationTheme
     let title: String
     let label: String?
@@ -23,7 +15,7 @@ final class StorageUsageScreenSelectionPanelComponent: Component {
     let insets: UIEdgeInsets
     let action: () -> Void
     
-    init(
+    public init(
         theme: PresentationTheme,
         title: String,
         label: String?,
@@ -39,7 +31,7 @@ final class StorageUsageScreenSelectionPanelComponent: Component {
         self.action = action
     }
     
-    static func ==(lhs: StorageUsageScreenSelectionPanelComponent, rhs: StorageUsageScreenSelectionPanelComponent) -> Bool {
+    public static func ==(lhs: BottomButtonPanelComponent, rhs: BottomButtonPanelComponent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -58,14 +50,14 @@ final class StorageUsageScreenSelectionPanelComponent: Component {
         return true
     }
     
-    class View: UIView {
+    public class View: UIView {
         private let backgroundView: BlurredBackgroundView
         private let separatorLayer: SimpleLayer
         private let actionButton = ComponentView<Empty>()
         
-        private var component: StorageUsageScreenSelectionPanelComponent?
+        private var component: BottomButtonPanelComponent?
         
-        override init(frame: CGRect) {
+        override public init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
             self.separatorLayer = SimpleLayer()
             
@@ -75,11 +67,11 @@ final class StorageUsageScreenSelectionPanelComponent: Component {
             self.layer.addSublayer(self.separatorLayer)
         }
         
-        required init?(coder: NSCoder) {
+        required public init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: StorageUsageScreenSelectionPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: BottomButtonPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             self.component = component
             
@@ -146,11 +138,11 @@ final class StorageUsageScreenSelectionPanelComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

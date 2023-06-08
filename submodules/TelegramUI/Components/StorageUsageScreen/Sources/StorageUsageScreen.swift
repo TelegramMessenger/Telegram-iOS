@@ -23,6 +23,7 @@ import TelegramAnimatedStickerNode
 import TelegramStringFormatting
 import GalleryData
 import AnimatedTextComponent
+import BottomButtonPanelComponent
 
 #if DEBUG
 import os.signpost
@@ -1207,7 +1208,7 @@ final class StorageUsageScreenComponent: Component {
                 
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
-                    component: AnyComponent(StorageUsageScreenSelectionPanelComponent(
+                    component: AnyComponent(BottomButtonPanelComponent(
                         theme: environment.theme,
                         title: bottomPanelSelectionData.isComplete ? environment.strings.StorageManagement_ClearCache : environment.strings.StorageManagement_ClearSelected,
                         label: bottomPanelSelectionData.size == 0 ? nil : dataSizeString(Int(bottomPanelSelectionData.size), formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: ".")),

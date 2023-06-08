@@ -926,16 +926,16 @@ public extension TelegramEngine {
             return _internal_editStory(account: self.account, media: media, id: id, text: text, entities: entities, privacy: privacy)
         }
         
-        public func deleteStory(id: Int32) -> Signal<Never, NoError> {
-            return _internal_deleteStory(account: self.account, id: id)
+        public func deleteStories(ids: [Int32]) -> Signal<Never, NoError> {
+            return _internal_deleteStories(account: self.account, ids: ids)
         }
         
-        public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int32) -> Signal<Never, NoError> {
-            return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id)
+        public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int32, asPinned: Bool) -> Signal<Never, NoError> {
+            return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id, asPinned: asPinned)
         }
         
-        public func updateStoryIsPinned(id: Int32, isPinned: Bool) -> Signal<Never, NoError> {
-            return _internal_updateStoryIsPinned(account: self.account, id: id, isPinned: isPinned)
+        public func updateStoriesArePinned(ids: [Int32: EngineStoryItem], isPinned: Bool) -> Signal<Never, NoError> {
+            return _internal_updateStoriesArePinned(account: self.account, ids: ids, isPinned: isPinned)
         }
         
         public func getStoryViewList(account: Account, id: Int32, offsetTimestamp: Int32?, offsetPeerId: PeerId?, limit: Int) -> Signal<StoryViewList?, NoError> {

@@ -51,6 +51,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
     public let delete: () -> Void
+    public let markAsSeen: (StoryId) -> Void
     public let controller: () -> ViewController?
     
     public init(
@@ -71,6 +72,7 @@ public final class StoryItemSetContainerComponent: Component {
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
         delete: @escaping () -> Void,
+        markAsSeen: @escaping (StoryId) -> Void,
         controller: @escaping () -> ViewController?
     ) {
         self.context = context
@@ -90,6 +92,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.close = close
         self.navigate = navigate
         self.delete = delete
+        self.markAsSeen = markAsSeen
         self.controller = controller
     }
     
@@ -489,31 +492,38 @@ public final class StoryItemSetContainerComponent: Component {
                 self.visibleItems[focusedItem.id] = visibleItem
             }
             
+            let itemEnvironment = StoryContentItem.Environment(
+                externalState: visibleItem.externalState,
+                presentationProgressUpdated: { [weak self, weak visibleItem] progress, canSwitch in
+                    guard let self = self, let component = self.component else {
+                        return
+                    }
+                    guard let visibleItem else {
+                        return
+                    }
+                    visibleItem.currentProgress = progress
+                    
+                    if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
+                        navigationStripView.updateCurrentItemProgress(value: progress, transition: .immediate)
+                    }
+                    if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
+                        visibleItem.requestedNext = true
+                        
+                        component.navigate(.next)
+                    }
+                },
+                markAsSeen: { [weak self] id in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.markAsSeen(id)
+                }
+            )
             let _ = visibleItem.view.update(
                 transition: itemTransition,
                 component: focusedItem.component,
                 environment: {
-                    StoryContentItem.Environment(
-                        externalState: visibleItem.externalState,
-                        presentationProgressUpdated: { [weak self, weak visibleItem] progress, canSwitch in
-                            guard let self = self, let component = self.component else {
-                                return
-                            }
-                            guard let visibleItem else {
-                                return
-                            }
-                            visibleItem.currentProgress = progress
-                            
-                            if let navigationStripView = self.navigationStrip.view as? MediaNavigationStripComponent.View {
-                                navigationStripView.updateCurrentItemProgress(value: progress, transition: .immediate)
-                            }
-                            if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {
-                                visibleItem.requestedNext = true
-                                
-                                component.navigate(.next)
-                            }
-                        }
-                    )
+                    itemEnvironment
                 },
                 containerSize: itemLayout.size
             )
@@ -678,6 +688,8 @@ public final class StoryItemSetContainerComponent: Component {
                 let sourceLocalFrame = sourceView.convert(transitionOut.destinationRect, to: self)
                 let innerSourceLocalFrame = CGRect(origin: CGPoint(x: sourceLocalFrame.minX - self.contentContainerView.frame.minX, y: sourceLocalFrame.minY - self.contentContainerView.frame.minY), size: sourceLocalFrame.size)
                 
+                let contentSourceFrame = self.contentContainerView.frame
+                
                 if let centerInfoView = self.centerInfoItem?.view.view {
                     centerInfoView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
                 }
@@ -702,6 +714,35 @@ public final class StoryItemSetContainerComponent: Component {
                     duration: 0.3,
                     removeOnCompletion: false
                 )
+                
+                let transitionView = transitionOut.transitionView
+                let transitionViewImpl = transitionView?.makeView()
+                if let transitionViewImpl {
+                    self.insertSubview(transitionViewImpl, belowSubview: self.contentContainerView)
+                    
+                    transitionViewImpl.frame = contentSourceFrame
+                    transitionViewImpl.alpha = 0.0
+                    transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                        sourceSize: contentSourceFrame.size,
+                        destinationSize: sourceLocalFrame.size,
+                        progress: 0.0
+                    ), .immediate)
+                }
+                
+                if let transitionViewImpl {
+                    let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                    
+                    transitionViewImpl.alpha = 1.0
+                    transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    self.contentContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    
+                    transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
+                    transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                        sourceSize: contentSourceFrame.size,
+                        destinationSize: sourceLocalFrame.size,
+                        progress: 1.0
+                    ), transition)
+                }
                 
                 if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view {
                     let innerScale = innerSourceLocalFrame.width / visibleItemView.bounds.width
@@ -755,7 +796,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
-                let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id).start()
+                component.markAsSeen(StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id))
             }
             
             if self.topContentGradientLayer.colors == nil {
@@ -1069,7 +1110,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 return
                             }
                             
-                            let _ = component.context.engine.messages.updateStoryIsPinned(id: component.slice.item.storyItem.id, isPinned: !component.slice.item.storyItem.isPinned).start()
+                            let _ = component.context.engine.messages.updateStoriesArePinned(ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
                             
                             if component.slice.item.storyItem.isPinned {
                                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)

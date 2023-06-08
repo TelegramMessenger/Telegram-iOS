@@ -29,22 +29,63 @@ func hasFirstResponder(_ view: UIView) -> Bool {
     return false
 }
 
+private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
+    var updateIsTracking: ((Bool) -> Void)?
+    
+    override var state: UIGestureRecognizer.State {
+        didSet {
+            switch self.state {
+            case .began, .cancelled, .ended, .failed:
+                if self.isTracking {
+                    self.isTracking = false
+                    self.updateIsTracking?(false)
+                }
+            default:
+                break
+            }
+        }
+    }
+    
+    private var isTracking: Bool = false
+    
+    override func reset() {
+        super.reset()
+        
+        if self.isTracking {
+            self.isTracking = false
+            self.updateIsTracking?(false)
+        }
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        if !self.isTracking {
+            self.isTracking = true
+            self.updateIsTracking?(true)
+        }
+    }
+}
+
 private final class StoryContainerScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let content: StoryContentContext
+    let focusedItemPromise: Promise<StoryId?>
     let transitionIn: StoryContainerScreen.TransitionIn?
     let transitionOut: (EnginePeer.Id, AnyHashable) -> StoryContainerScreen.TransitionOut?
     
     init(
         context: AccountContext,
         content: StoryContentContext,
+        focusedItemPromise: Promise<StoryId?>,
         transitionIn: StoryContainerScreen.TransitionIn?,
         transitionOut: @escaping (EnginePeer.Id, AnyHashable) -> StoryContainerScreen.TransitionOut?
     ) {
         self.context = context
         self.content = content
+        self.focusedItemPromise = focusedItemPromise
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
     }
@@ -118,12 +159,14 @@ private final class StoryContainerScreenComponent: Component {
         private let backgroundLayer: SimpleLayer
         private let backgroundEffectView: BlurredBackgroundView
         
+        private let focusedItem = ValuePromise<StoryId?>(nil, ignoreRepeated: true)
         private var contentUpdatedDisposable: Disposable?
         
         private var visibleItemSetViews: [EnginePeer.Id: ItemSetView] = [:]
         
         private var itemSetPanState: ItemSetPanState?
         private var dismissPanState: ItemSetPanState?
+        private var isHoldingTouch: Bool = false
         
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
@@ -163,8 +206,15 @@ private final class StoryContainerScreenComponent: Component {
             })
             self.addGestureRecognizer(verticalPanRecognizer)
             
-            let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
+            let longPressRecognizer = StoryLongPressRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
             longPressRecognizer.delegate = self
+            longPressRecognizer.updateIsTracking = { [weak self] isTracking in
+                guard let self else {
+                    return
+                }
+                self.isHoldingTouch = isTracking
+                self.state?.updated(transition: .immediate)
+            }
             self.addGestureRecognizer(longPressRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
@@ -316,7 +366,7 @@ private final class StoryContainerScreenComponent: Component {
             }
         }
         
-        @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+        @objc private func longPressGesture(_ recognizer: StoryLongPressRecognizer) {
             switch recognizer.state {
             case .began:
                 if self.itemSetPanState == nil {
@@ -381,6 +431,10 @@ private final class StoryContainerScreenComponent: Component {
         }
         
         func animateIn() {
+            if let component = self.component {
+                component.focusedItemPromise.set(self.focusedItem.get())
+            }
+            
             if let transitionIn = self.component?.transitionIn, transitionIn.sourceView != nil {
                 self.backgroundLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.28, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                 self.backgroundEffectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.28, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
@@ -409,17 +463,22 @@ private final class StoryContainerScreenComponent: Component {
                 transition.setAlpha(view: self.backgroundEffectView, alpha: 0.0)
                 
                 let transitionOutCompleted = transitionOut.completed
+                let focusedItemPromise = component.focusedItemPromise
                 itemSetComponentView.animateOut(transitionOut: transitionOut, completion: {
                     completion()
                     transitionOutCompleted()
+                    focusedItemPromise.set(.single(nil))
                 })
             } else {
                 self.dismissPanState = ItemSetPanState(fraction: 1.0, didBegin: true)
                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                 
+                let focusedItemPromise = self.component?.focusedItemPromise
+                
                 let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 transition.setAlpha(layer: self.backgroundLayer, alpha: 0.0, completion: { _ in
                     completion()
+                    focusedItemPromise?.set(.single(nil))
                 })
                 transition.setAlpha(view: self.backgroundEffectView, alpha: 0.0)
             }
@@ -475,6 +534,12 @@ private final class StoryContainerScreenComponent: Component {
                         return
                     }
                     if update {
+                        var focusedItemId: StoryId?
+                        if let slice = component.content.stateValue?.slice {
+                            focusedItemId = StoryId(peerId: slice.peer.id, id: slice.item.storyItem.id)
+                        }
+                        self.focusedItem.set(focusedItemId)
+                        
                         if component.content.stateValue?.slice == nil {
                             self.environment?.controller()?.dismiss()
                         } else {
@@ -509,6 +574,9 @@ private final class StoryContainerScreenComponent: Component {
                 isProgressPaused = true
             }
             if self.isAnimatingOut {
+                isProgressPaused = true
+            }
+            if self.isHoldingTouch {
                 isProgressPaused = true
             }
             
@@ -684,8 +752,14 @@ private final class StoryContainerScreenComponent: Component {
                                             environment.controller()?.dismiss()
                                         }
                                         
-                                        let _ = component.context.engine.messages.deleteStory(id: slice.item.storyItem.id).start()
+                                        let _ = component.context.engine.messages.deleteStories(ids: [slice.item.storyItem.id]).start()
                                     }
+                                },
+                                markAsSeen: { [weak self] id in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    component.content.markAsSeen(id: id)
                                 },
                                 controller: { [weak self] in
                                     return self?.environment?.controller()
@@ -865,6 +939,35 @@ private final class StoryContainerScreenComponent: Component {
 }
 
 public class StoryContainerScreen: ViewControllerComponentContainer {
+    public struct TransitionState: Equatable {
+        public var sourceSize: CGSize
+        public var destinationSize: CGSize
+        public var progress: CGFloat
+        
+        public init(
+            sourceSize: CGSize,
+            destinationSize: CGSize,
+            progress: CGFloat
+        ) {
+            self.sourceSize = sourceSize
+            self.destinationSize = destinationSize
+            self.progress = progress
+        }
+    }
+    
+    public final class TransitionView {
+        public let makeView: () -> UIView
+        public let updateView: (UIView, TransitionState, Transition) -> Void
+        
+        public init(
+            makeView: @escaping () -> UIView,
+            updateView: @escaping (UIView, TransitionState, Transition) -> Void
+        ) {
+            self.makeView = makeView
+            self.updateView = updateView
+        }
+    }
+    
     public final class TransitionIn {
         public weak var sourceView: UIView?
         public let sourceRect: CGRect
@@ -883,6 +986,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     
     public final class TransitionOut {
         public weak var destinationView: UIView?
+        public let transitionView: TransitionView?
         public let destinationRect: CGRect
         public let destinationCornerRadius: CGFloat
         public let destinationIsAvatar: Bool
@@ -890,12 +994,14 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         
         public init(
             destinationView: UIView,
+            transitionView: TransitionView?,
             destinationRect: CGRect,
             destinationCornerRadius: CGFloat,
             destinationIsAvatar: Bool,
             completed: @escaping () -> Void
         ) {
             self.destinationView = destinationView
+            self.transitionView = transitionView
             self.destinationRect = destinationRect
             self.destinationCornerRadius = destinationCornerRadius
             self.destinationIsAvatar = destinationIsAvatar
@@ -905,6 +1011,11 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     
     private let context: AccountContext
     private var isDismissed: Bool = false
+    
+    private let focusedItemPromise = Promise<StoryId?>(nil)
+    public var focusedItem: Signal<StoryId?, NoError> {
+        return self.focusedItemPromise.get()
+    }
     
     public init(
         context: AccountContext,
@@ -917,6 +1028,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         super.init(context: context, component: StoryContainerScreenComponent(
             context: context,
             content: content,
+            focusedItemPromise: self.focusedItemPromise,
             transitionIn: transitionIn,
             transitionOut: transitionOut
         ), navigationBarAppearance: .none, theme: .dark)
@@ -925,6 +1037,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         self.navigationPresentation = .flatModal
         self.blocksBackgroundWhenInOverlay = true
         self.automaticallyControlPresentationContextLayout = false
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: [.portrait])
         
         self.context.sharedContext.hasPreloadBlockingContent.set(.single(true))
     }

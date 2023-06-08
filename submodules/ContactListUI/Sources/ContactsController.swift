@@ -515,7 +515,7 @@ public class ContactsController: ViewController {
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peer?.id)
+                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: true, focusedPeerId: peer?.id)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
@@ -551,6 +551,7 @@ public class ContactsController: ViewController {
                                 if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                                     return StoryContainerScreen.TransitionOut(
                                         destinationView: transitionView,
+                                        transitionView: nil,
                                         destinationRect: transitionView.bounds,
                                         destinationCornerRadius: transitionView.bounds.height * 0.5,
                                         destinationIsAvatar: true,

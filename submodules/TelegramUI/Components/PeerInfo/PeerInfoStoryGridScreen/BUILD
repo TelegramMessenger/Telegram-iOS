@@ -21,7 +21,10 @@ swift_library(
         "//submodules/Components/ViewControllerComponent",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
+        "//submodules/TelegramUI/Components/ChatTitleView",
         "//submodules/ContextUI",
+        "//submodules/UndoUI",
+        "//submodules/TelegramUI/Components/BottomButtonPanelComponent",
     ],
     visibility = [
         "//visibility:public",

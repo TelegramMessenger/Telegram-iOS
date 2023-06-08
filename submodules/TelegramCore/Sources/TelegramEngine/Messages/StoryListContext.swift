@@ -95,6 +95,34 @@ public final class EngineStoryItem: Equatable {
     }
 }
 
+extension EngineStoryItem {
+    func asStoryItem() -> Stories.Item {
+        return Stories.Item(
+            id: self.id,
+            timestamp: self.timestamp,
+            expirationTimestamp: self.expirationTimestamp,
+            media: self.media._asMedia(),
+            text: self.text,
+            entities: self.entities,
+            views: self.views.flatMap { views in
+                return Stories.Item.Views(
+                    seenCount: views.seenCount,
+                    seenPeerIds: views.seenPeers.map(\.id)
+                )
+            },
+            privacy: self.privacy.flatMap { privacy in
+                return Stories.Item.Privacy(
+                    base: privacy.base,
+                    additionallyIncludePeers: privacy.additionallyIncludePeers
+                )
+            },
+            isPinned: self.isPinned,
+            isExpired: self.isExpired,
+            isPublic: self.isPublic
+        )
+    }
+}
+
 public final class StorySubscriptionsContext {
     private enum OpaqueStateMark: Equatable {
         case empty
@@ -599,15 +627,17 @@ public final class PeerStoryListContext {
                             return
                         }
                         
+                        var finalUpdatedState: State?
+                        
                         for update in updates {
                             switch update {
                             case let .deleted(peerId, id):
                                 if self.peerId == peerId {
                                     if let index = self.stateValue.items.firstIndex(where: { $0.id == id }) {
-                                        var updatedState = self.stateValue
+                                        var updatedState = finalUpdatedState ?? self.stateValue
                                         updatedState.items.remove(at: index)
                                         updatedState.totalCount = max(0, updatedState.totalCount - 1)
-                                        self.stateValue = updatedState
+                                        finalUpdatedState = updatedState
                                     }
                                 }
                             case let .added(peerId, item):
@@ -617,7 +647,7 @@ public final class PeerStoryListContext {
                                             if case let .item(item) = item {
                                                 if item.isPinned {
                                                     if let media = item.media {
-                                                        var updatedState = self.stateValue
+                                                        var updatedState = finalUpdatedState ?? self.stateValue
                                                         updatedState.items[index] = EngineStoryItem(
                                                             id: item.id,
                                                             timestamp: item.timestamp,
@@ -638,13 +668,47 @@ public final class PeerStoryListContext {
                                                             isExpired: item.isExpired,
                                                             isPublic: item.isPublic
                                                         )
-                                                        self.stateValue = updatedState
+                                                        finalUpdatedState = updatedState
                                                     }
                                                 } else {
-                                                    var updatedState = self.stateValue
+                                                    var updatedState = finalUpdatedState ?? self.stateValue
                                                     updatedState.items.remove(at: index)
                                                     updatedState.totalCount = max(0, updatedState.totalCount - 1)
-                                                    self.stateValue = updatedState
+                                                    finalUpdatedState = updatedState
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        if !self.isArchived {
+                                            if case let .item(item) = item {
+                                                if item.isPinned {
+                                                    if let media = item.media {
+                                                        var updatedState = finalUpdatedState ?? self.stateValue
+                                                        updatedState.items.append(EngineStoryItem(
+                                                            id: item.id,
+                                                            timestamp: item.timestamp,
+                                                            expirationTimestamp: item.expirationTimestamp,
+                                                            media: EngineMedia(media),
+                                                            text: item.text,
+                                                            entities: item.entities,
+                                                            views: item.views.flatMap { views in
+                                                                return EngineStoryItem.Views(
+                                                                    seenCount: views.seenCount,
+                                                                    seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                                        return peers[id].flatMap(EnginePeer.init)
+                                                                    }
+                                                                )
+                                                            },
+                                                            privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                                            isPinned: item.isPinned,
+                                                            isExpired: item.isExpired,
+                                                            isPublic: item.isPublic
+                                                        ))
+                                                        updatedState.items.sort(by: { lhs, rhs in
+                                                            return lhs.timestamp > rhs.timestamp
+                                                        })
+                                                        finalUpdatedState = updatedState
+                                                    }
                                                 }
                                             }
                                         }
@@ -653,6 +717,10 @@ public final class PeerStoryListContext {
                             case .read:
                                 break
                             }
+                        }
+                        
+                        if let finalUpdatedState = finalUpdatedState {
+                            self.stateValue = finalUpdatedState
                         }
                     })
                 })

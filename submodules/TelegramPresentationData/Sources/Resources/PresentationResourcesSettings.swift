@@ -29,16 +29,14 @@ public struct PresentationResourcesSettings {
     public static let devices = renderIcon(name: "Settings/Menu/Sessions")
     public static let chatFolders = renderIcon(name: "Settings/Menu/ChatListFilters")
     public static let stickers = renderIcon(name: "Settings/Menu/Stickers")
-    
     public static let notifications = renderIcon(name: "Settings/Menu/Notifications")
     public static let security = renderIcon(name: "Settings/Menu/Security")
     public static let dataAndStorage = renderIcon(name: "Settings/Menu/DataAndStorage")
     public static let appearance = renderIcon(name: "Settings/Menu/Appearance")
     public static let language = renderIcon(name: "Settings/Menu/Language")
-    
     public static let deleteAccount = renderIcon(name: "Chat/Info/GroupRemovedIcon")
-    
     public static let powerSaving = renderIcon(name: "Settings/Menu/PowerSaving")
+    public static let stories = renderIcon(name: "Settings/Menu/Stories")
     
     public static let premium = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)

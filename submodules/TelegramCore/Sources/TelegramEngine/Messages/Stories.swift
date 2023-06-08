@@ -810,16 +810,25 @@ func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: In
     }
 }
 
-func _internal_deleteStory(account: Account, id: Int32) -> Signal<Never, NoError> {
+func _internal_deleteStories(account: Account, ids: [Int32]) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         var items = transaction.getStoryItems(peerId: account.peerId)
-        if let index = items.firstIndex(where: { $0.id == id }) {
-            items.remove(at: index)
+        var updated = false
+        for id in ids {
+            if let index = items.firstIndex(where: { $0.id == id }) {
+                items.remove(at: index)
+                updated = true
+            }
+        }
+        if updated {
             transaction.setStoryItems(peerId: account.peerId, items: items)
         }
+        account.stateManager.injectStoryUpdates(updates: ids.map { id in
+            return .deleted(peerId: account.peerId, id: id)
+        })
     }
     |> mapToSignal { _ -> Signal<Never, NoError> in
-        return account.network.request(Api.functions.stories.deleteStories(id: [id]))
+        return account.network.request(Api.functions.stories.deleteStories(id: ids))
         |> `catch` { _ -> Signal<[Int32], NoError> in
             return .single([])
         }
@@ -829,67 +838,114 @@ func _internal_deleteStory(account: Account, id: Int32) -> Signal<Never, NoError
     }
 }
 
-func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputUser? in
-        if let peerStoryState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
-            transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
-                subscriptionsOpaqueState: peerStoryState.subscriptionsOpaqueState,
-                maxReadId: max(peerStoryState.maxReadId, id)
-            )))
+func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPinned: Bool) -> Signal<Never, NoError> {
+    if asPinned {
+        return account.postbox.transaction { transaction -> Api.InputUser? in
+            return transaction.getPeer(peerId).flatMap(apiInputUser)
         }
-        
-        return transaction.getPeer(peerId).flatMap(apiInputUser)
-    }
-    |> mapToSignal { inputUser -> Signal<Never, NoError> in
-        guard let inputUser = inputUser else {
-            return .complete()
+        |> mapToSignal { inputUser -> Signal<Never, NoError> in
+            guard let inputUser = inputUser else {
+                return .complete()
+            }
+            
+            #if DEBUG && false
+            if "".isEmpty {
+                return .complete()
+            }
+            #endif
+            
+            return account.network.request(Api.functions.stories.incrementStoryViews(userId: inputUser, id: [id]))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
         }
-        
-        account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
-        
-        #if DEBUG
-        if "".isEmpty {
-            return .complete()
+    } else {
+        return account.postbox.transaction { transaction -> Api.InputUser? in
+            if let peerStoryState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
+                transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                    subscriptionsOpaqueState: peerStoryState.subscriptionsOpaqueState,
+                    maxReadId: max(peerStoryState.maxReadId, id)
+                )))
+            }
+            
+            return transaction.getPeer(peerId).flatMap(apiInputUser)
         }
-        #endif
-        
-        return account.network.request(Api.functions.stories.readStories(userId: inputUser, maxId: id))
-        |> `catch` { _ -> Signal<[Int32], NoError> in
-            return .single([])
+        |> mapToSignal { inputUser -> Signal<Never, NoError> in
+            guard let inputUser = inputUser else {
+                return .complete()
+            }
+            
+            account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
+            
+            #if DEBUG && false
+            if "".isEmpty {
+                return .complete()
+            }
+            #endif
+            
+            return account.network.request(Api.functions.stories.readStories(userId: inputUser, maxId: id))
+            |> `catch` { _ -> Signal<[Int32], NoError> in
+                return .single([])
+            }
+            |> ignoreValues
         }
-        |> ignoreValues
     }
 }
 
-func _internal_updateStoryIsPinned(account: Account, id: Int32, isPinned: Bool) -> Signal<Never, NoError> {
+func _internal_updateStoriesArePinned(account: Account, ids: [Int32: EngineStoryItem], isPinned: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         var items = transaction.getStoryItems(peerId: account.peerId)
-        if let index = items.firstIndex(where: { $0.id == id }), case let .item(item) = items[index].value.get(Stories.StoredItem.self) {
-            let updatedItem = Stories.Item(
-                id: item.id,
-                timestamp: item.timestamp,
-                expirationTimestamp: item.expirationTimestamp,
-                media: item.media,
-                text: item.text,
-                entities: item.entities,
-                views: item.views,
-                privacy: item.privacy,
-                isPinned: isPinned,
-                isExpired: item.isExpired,
-                isPublic: item.isPublic
-            )
-            if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
-                items[index] = StoryItemsTableEntry(value: entry, id: item.id)
-                transaction.setStoryItems(peerId: account.peerId, items: items)
+        var updatedItems: [Stories.Item] = []
+        for (id, referenceItem) in ids {
+            if let index = items.firstIndex(where: { $0.id == id }), case let .item(item) = items[index].value.get(Stories.StoredItem.self) {
+                let updatedItem = Stories.Item(
+                    id: item.id,
+                    timestamp: item.timestamp,
+                    expirationTimestamp: item.expirationTimestamp,
+                    media: item.media,
+                    text: item.text,
+                    entities: item.entities,
+                    views: item.views,
+                    privacy: item.privacy,
+                    isPinned: isPinned,
+                    isExpired: item.isExpired,
+                    isPublic: item.isPublic
+                )
+                if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
+                    items[index] = StoryItemsTableEntry(value: entry, id: item.id)
+                }
+                
+                updatedItems.append(updatedItem)
+            } else {
+                let item = referenceItem.asStoryItem()
+                let updatedItem = Stories.Item(
+                    id: item.id,
+                    timestamp: item.timestamp,
+                    expirationTimestamp: item.expirationTimestamp,
+                    media: item.media,
+                    text: item.text,
+                    entities: item.entities,
+                    views: item.views,
+                    privacy: item.privacy,
+                    isPinned: isPinned,
+                    isExpired: item.isExpired,
+                    isPublic: item.isPublic
+                )
+                updatedItems.append(updatedItem)
             }
-            
+        }
+        transaction.setStoryItems(peerId: account.peerId, items: items)
+        if !updatedItems.isEmpty {
             DispatchQueue.main.async {
-                account.stateManager.injectStoryUpdates(updates: [.added(peerId: account.peerId, item: Stories.StoredItem.item(updatedItem))])
+                account.stateManager.injectStoryUpdates(updates: updatedItems.map { updatedItem in
+                    return .added(peerId: account.peerId, item: Stories.StoredItem.item(updatedItem))
+                })
             }
         }
     }
     |> mapToSignal { _ -> Signal<Never, NoError> in
-        return account.network.request(Api.functions.stories.togglePinned(id: [id], pinned: isPinned ? .boolTrue : .boolFalse))
+        return account.network.request(Api.functions.stories.togglePinned(id: ids.keys.sorted(), pinned: isPinned ? .boolTrue : .boolFalse))
         |> `catch` { _ -> Signal<[Int32], NoError> in
             return .single([])
         }
