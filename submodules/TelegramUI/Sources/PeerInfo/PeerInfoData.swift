@@ -1142,10 +1142,18 @@ func peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: PeerInfoHeaderButtonKe
     return hiddenWhileExpanded
 }
 
+func peerInfoHeaderActionButtons(peer: Peer?, isSecretChat: Bool, isContact: Bool) -> [PeerInfoHeaderButtonKey] {
+    var result: [PeerInfoHeaderButtonKey] = []
+    if !isContact && !isSecretChat, let user = peer as? TelegramUser, user.botInfo == nil {
+        result = [.message, .addContact]
+    }
+    return result
+}
+
 func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
-        if !isOpenedFromChat {
+        if !isOpenedFromChat && isContact {
             result.append(.message)
         }
         var callsAvailable = false
