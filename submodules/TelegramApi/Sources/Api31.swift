@@ -8527,12 +8527,13 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func getExpiredStories(offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
+                static func getPinnedStories(userId: Api.InputUser, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(150442738)
+                    buffer.appendInt32(189206839)
+                    userId.serialize(buffer, true)
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.getExpiredStories", parameters: [("offsetId", String(describing: offsetId)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.Stories? in
+                    return (FunctionDescription(name: "stories.getPinnedStories", parameters: [("userId", String(describing: userId)), ("offsetId", String(describing: offsetId)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.Stories? in
                         let reader = BufferReader(buffer)
                         var result: Api.stories.Stories?
                         if let signature = reader.readInt32() {
@@ -8543,13 +8544,12 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func getPinnedStories(userId: Api.InputUser, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
+                static func getStoriesArchive(offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.Stories>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(189206839)
-                    userId.serialize(buffer, true)
+                    buffer.appendInt32(526108114)
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.getPinnedStories", parameters: [("userId", String(describing: userId)), ("offsetId", String(describing: offsetId)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.Stories? in
+                    return (FunctionDescription(name: "stories.getStoriesArchive", parameters: [("offsetId", String(describing: offsetId)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.Stories? in
                         let reader = BufferReader(buffer)
                         var result: Api.stories.Stories?
                         if let signature = reader.readInt32() {

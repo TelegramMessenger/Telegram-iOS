@@ -340,6 +340,7 @@ public final class StoryContentContextImpl: StoryContentContext {
     private var requestStoryDisposables = DisposableSet()
     
     private var preloadStoryResourceDisposables: [MediaResourceId: Disposable] = [:]
+    private var pollStoryMetadataDisposables = DisposableSet()
     
     public init(
         context: AccountContext,
@@ -427,6 +428,7 @@ public final class StoryContentContextImpl: StoryContentContext {
         for (_, disposable) in self.preloadStoryResourceDisposables {
             disposable.dispose()
         }
+        self.pollStoryMetadataDisposables.dispose()
     }
     
     private func updatePeerContexts() {
@@ -581,9 +583,18 @@ public final class StoryContentContextImpl: StoryContentContext {
         self.updatedPromise.set(.single(Void()))
         
         var possibleItems: [(EnginePeer, EngineStoryItem)] = []
+        var pollItems: [StoryKey] = []
         if let slice = currentState.centralPeerContext.sliceValue {
+            if slice.peer.id == self.context.account.peerId {
+                pollItems.append(StoryKey(peerId: slice.peer.id, id: slice.item.storyItem.id))
+            }
+            
             for item in currentState.centralPeerContext.nextItems {
                 possibleItems.append((slice.peer, item))
+                
+                if slice.peer.id == self.context.account.peerId {
+                    pollItems.append(StoryKey(peerId: slice.peer.id, id: item.id))
+                }
             }
         }
         if let nextPeerContext = currentState.nextPeerContext, let slice = nextPeerContext.sliceValue {
@@ -638,9 +649,6 @@ public final class StoryContentContextImpl: StoryContentContext {
                 if let size = info.size {
                     fetchRange = (0 ..< Int64(size), .default)
                 }
-                #if DEBUG
-                fetchRange = nil
-                #endif
                 self.preloadStoryResourceDisposables[resource.resource.id] = fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource, range: fetchRange).start()
             }
         }
@@ -654,6 +662,18 @@ public final class StoryContentContextImpl: StoryContentContext {
         }
         for id in removeIds {
             self.preloadStoryResourceDisposables.removeValue(forKey: id)
+        }
+        
+        var pollIdByPeerId: [EnginePeer.Id: [Int32]] = [:]
+        for storyKey in pollItems.prefix(3) {
+            if pollIdByPeerId[storyKey.peerId] == nil {
+                pollIdByPeerId[storyKey.peerId] = [storyKey.id]
+            } else {
+                pollIdByPeerId[storyKey.peerId]?.append(storyKey.id)
+            }
+        }
+        for (peerId, ids) in pollIdByPeerId {
+            self.pollStoryMetadataDisposables.add(self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).start())
         }
     }
     

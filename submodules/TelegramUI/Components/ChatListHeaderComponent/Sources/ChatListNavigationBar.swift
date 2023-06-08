@@ -151,9 +151,11 @@ public final class ChatListNavigationBar: Component {
         
         private var applyScrollFractionAnimator: DisplayLinkAnimator?
         private var applyScrollFraction: CGFloat = 1.0
+        private var storiesOffsetStartFraction: CGFloat = 1.0
         private var applyScrollUnlockedFraction: CGFloat = 1.0
-        private var applyScrollStartFraction: CGFloat = 0.0
         private var storiesOffsetFraction: CGFloat = 0.0
+        private var storiesUnlockedFraction: CGFloat = 0.0
+        private var storiesUnlockedStartFraction: CGFloat = 1.0
         
         private var tabsNode: ASDisplayNode?
         private var tabsNodeIsSearch: Bool = false
@@ -298,8 +300,8 @@ public final class ChatListNavigationBar: Component {
             }
             
             if self.applyScrollFractionAnimator != nil {
-                storiesOffsetFraction = self.applyScrollFraction * storiesOffsetFraction + (1.0 - self.applyScrollFraction) * 1.0
-                storiesUnlockedOffsetFraction = self.applyScrollUnlockedFraction * storiesUnlockedOffsetFraction + (1.0 - self.applyScrollUnlockedFraction) * 1.0
+                storiesOffsetFraction = self.applyScrollFraction * storiesOffsetFraction + (1.0 - self.applyScrollFraction) * self.storiesOffsetStartFraction
+                storiesUnlockedOffsetFraction = self.applyScrollUnlockedFraction * storiesUnlockedOffsetFraction + (1.0 - self.applyScrollUnlockedFraction) * self.storiesUnlockedStartFraction
             }
             
             let searchSize = CGSize(width: currentLayout.size.width, height: navigationBarSearchContentHeight)
@@ -322,6 +324,8 @@ public final class ChatListNavigationBar: Component {
             }
             
             self.storiesOffsetFraction = storiesOffsetFraction
+            self.storiesUnlockedFraction = storiesUnlockedOffsetFraction
+            
             let headerContentSize = self.headerContent.update(
                 transition: headerTransition,
                 component: AnyComponent(ChatListHeaderComponent(
@@ -490,19 +494,25 @@ public final class ChatListNavigationBar: Component {
                 }
             }
             
-            if storiesUnlockedUpdated && component.storiesUnlocked {
-                self.applyScrollStartFraction = 0.0
-                let startFraction = self.storiesOffsetFraction
-                self.applyScrollFraction = (1.0 - 0.0) * startFraction + 0.0 * 1.0
+            if storiesUnlockedUpdated, case let .curve(duration, _) = transition.animation {
+                self.applyScrollFractionAnimator?.invalidate()
+                self.applyScrollFractionAnimator = nil
+                
+                self.storiesOffsetStartFraction = self.storiesOffsetFraction
+                self.storiesUnlockedStartFraction = self.storiesUnlockedFraction
+                
+                let storiesUnlocked = component.storiesUnlocked
+                
+                self.applyScrollFraction = 0.0
                 self.applyScrollUnlockedFraction = 0.0
-                self.applyScrollFractionAnimator = DisplayLinkAnimator(duration: 0.3, from: 0.0, to: 1.0, update: { [weak self] value in
+                self.applyScrollFractionAnimator = DisplayLinkAnimator(duration: duration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
                     guard let self else {
                         return
                     }
                     
                     let t = listViewAnimationCurveSystem(value)
-                    self.applyScrollFraction = (1.0 - t) * startFraction + t * 1.0
-                    self.applyScrollUnlockedFraction = t
+                    self.applyScrollFraction = t
+                    self.applyScrollUnlockedFraction = storiesUnlocked ? t : (1.0 - t)
                     
                     if let rawScrollOffset = self.rawScrollOffset {
                         self.hasDeferredScrollOffset = true

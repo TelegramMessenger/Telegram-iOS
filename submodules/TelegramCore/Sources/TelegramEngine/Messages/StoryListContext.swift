@@ -464,7 +464,7 @@ public final class PeerStoryListContext {
             
             let signal: Signal<Api.stories.Stories, MTRpcError>
             if isArchived {
-                signal = account.network.request(Api.functions.stories.getExpiredStories(offsetId: Int32(loadMoreToken), limit: 100))
+                signal = account.network.request(Api.functions.stories.getStoriesArchive(offsetId: Int32(loadMoreToken), limit: 100))
             } else {
                 signal = account.network.request(Api.functions.stories.getPinnedStories(userId: inputUser, offsetId: Int32(loadMoreToken), limit: 100))
             }

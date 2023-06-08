@@ -23,7 +23,6 @@ import TelegramNotices
 import TelegramUIPreferences
 import CheckNode
 import AppBundle
-import ChatControllerInteraction
 import InvisibleInkDustNode
 import MediaPickerUI
 import StoryContainerScreen
@@ -33,20 +32,20 @@ private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
 
 private final class VisualMediaItemInteraction {
-    let openMessage: (Message) -> Void
-    let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
-    let toggleSelection: (MessageId, Bool) -> Void
+    let openItem: (EngineStoryItem) -> Void
+    let openItemContextActions: (EngineStoryItem, ASDisplayNode, CGRect, ContextGesture?) -> Void
+    let toggleSelection: (Int32, Bool) -> Void
     
-    var hiddenMedia: [MessageId: [Media]] = [:]
-    var selectedMessageIds: Set<MessageId>?
+    var hiddenMedia = Set<Int32>()
+    var selectedIds: Set<Int32>?
     
     init(
-        openMessage: @escaping (Message) -> Void,
-        openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
-        toggleSelection: @escaping (MessageId, Bool) -> Void
+        openItem: @escaping (EngineStoryItem) -> Void,
+        openItemContextActions: @escaping (EngineStoryItem, ASDisplayNode, CGRect, ContextGesture?) -> Void,
+        toggleSelection: @escaping (Int32, Bool) -> Void
     ) {
-        self.openMessage = openMessage
-        self.openMessageContextActions = openMessageContextActions
+        self.openItem = openItem
+        self.openItemContextActions = openItemContextActions
         self.toggleSelection = toggleSelection
     }
 }
@@ -483,7 +482,6 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     let directMediaImageCache: DirectMediaImageCache
     let captureProtected: Bool
     var strings: PresentationStrings
-    let chatControllerInteraction: ChatControllerInteraction
     var chatPresentationData: ChatPresentationData
     var checkNodeTheme: CheckNodeTheme
 
@@ -500,10 +498,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
-    init(context: AccountContext, chatLocation: ChatLocation, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
+    init(context: AccountContext, chatLocation: ChatLocation, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
         self.context = context
         self.chatLocation = chatLocation
-        self.chatControllerInteraction = chatControllerInteraction
         self.directMediaImageCache = directMediaImageCache
         self.captureProtected = false
 
@@ -674,13 +671,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                 layer.updateDuration(duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
             }
             
-            if let selectionState = self.chatControllerInteraction.selectionState {
-                //TODO:selection
-                let _ = selectionState
-                layer.updateSelection(theme: self.checkNodeTheme, isSelected: false, animated: false)
-            } else {
-                layer.updateSelection(theme: self.checkNodeTheme, isSelected: nil, animated: false)
-            }
+            //TODO:selection
+            layer.updateSelection(theme: self.checkNodeTheme, isSelected: nil, animated: false)
             
             layer.bind(item: item)
         }
@@ -764,10 +756,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let context: AccountContext
     private let peerId: PeerId
     private let chatLocation: ChatLocation
-    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
-    private let chatControllerInteraction: ChatControllerInteraction
+    private let isArchive: Bool
     public private(set) var contentType: ContentType
     private var contentTypePromise: ValuePromise<ContentType>
+    
+    private let navigationController: () -> NavigationController?
     
     public weak var parentController: ViewController?
 
@@ -825,14 +818,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
-    public init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, contentType: ContentType, captureProtected: Bool) {
+    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.peerId = peerId
         self.chatLocation = chatLocation
-        self.chatLocationContextHolder = chatLocationContextHolder
-        self.chatControllerInteraction = chatControllerInteraction
         self.contentType = contentType
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
+        self.navigationController = navigationController
+        self.isArchive = isArchive
 
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
@@ -843,12 +836,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         self.itemGridBinding = SparseItemGridBindingImpl(
             context: context,
             chatLocation: .peer(id: peerId),
-            chatControllerInteraction: chatControllerInteraction,
             directMediaImageCache: self.directMediaImageCache,
             captureProtected: captureProtected
         )
 
-        self.listSource = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
+        self.listSource = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: self.isArchive)
         self.calendarSource = nil
         
         super.init()
@@ -879,155 +871,75 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             guard let self else {
                 return
             }
-            if let selectionState = self.chatControllerInteraction.selectionState {
-                let _ = selectionState
-                //TODO:selection
-                /*var toggledValue = true
-                if selectionState.selectedIds.contains(item.message.id) {
-                    toggledValue = false
+            //TODO:selection
+            let listContext = PeerStoryListContentContextImpl(
+                context: self.context,
+                peerId: self.peerId,
+                listContext: self.listSource,
+                initialId: item.story.id
+            )
+            let _ = (listContext.state
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let self, let navigationController = self.navigationController() else {
+                    return
                 }
-                strongSelf.chatControllerInteraction.toggleMessagesSelection([item.message.id], toggledValue)*/
-            } else {
-                let listContext = PeerStoryListContentContextImpl(
-                    context: self.context,
-                    peerId: self.peerId,
-                    listContext: self.listSource,
-                    initialId: item.story.id
-                )
-                let _ = (listContext.state
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
-                    guard let self, let navigationController = self.chatControllerInteraction.navigationController() else {
-                        return
-                    }
-                    
-                    var transitionIn: StoryContainerScreen.TransitionIn?
-                    
-                    let story = item.story
-                    var foundItemLayer: SparseItemGridLayer?
-                    self.itemGrid.forEachVisibleItem { item in
-                        guard let itemLayer = item.layer as? ItemLayer else {
-                            return
-                        }
-                        if let listItem = itemLayer.item, listItem.story.id == story.id {
-                            foundItemLayer = itemLayer
-                        }
-                    }
-                    if let foundItemLayer {
-                        let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
-                        transitionIn = StoryContainerScreen.TransitionIn(
-                            sourceView: self.view,
-                            sourceRect: self.itemGrid.view.convert(itemRect, to: self.view),
-                            sourceCornerRadius: 0.0
-                        )
-                    }
-                    
-                    let storyContainerScreen = StoryContainerScreen(
-                        context: self.context,
-                        content: listContext,
-                        transitionIn: transitionIn,
-                        transitionOut: { [weak self] _, itemId in
-                            guard let self else {
-                                return nil
-                            }
-                            
-                            var foundItemLayer: SparseItemGridLayer?
-                            self.itemGrid.forEachVisibleItem { item in
-                                guard let itemLayer = item.layer as? ItemLayer else {
-                                    return
-                                }
-                                if let listItem = itemLayer.item, AnyHashable(listItem.story.id) == itemId {
-                                    foundItemLayer = itemLayer
-                                }
-                            }
-                            if let foundItemLayer {
-                                let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
-                                return StoryContainerScreen.TransitionOut(
-                                    destinationView: self.view,
-                                    destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),
-                                    destinationCornerRadius: 0.0,
-                                    destinationIsAvatar: false,
-                                    completed: {}
-                                )
-                            }
-                            
-                            return nil
-                        }
-                    )
-                    navigationController.pushViewController(storyContainerScreen)
-                })
                 
-                /*let _ = (StoryChatContent.stories(
-                    context: self.context,
-                    storyList: self.listSource,
-                    focusItem: item.story.id
-                )
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] initialContent in
-                    guard let self, let navigationController = self.chatControllerInteraction.navigationController() else {
+                var transitionIn: StoryContainerScreen.TransitionIn?
+                
+                let story = item.story
+                var foundItemLayer: SparseItemGridLayer?
+                self.itemGrid.forEachVisibleItem { item in
+                    guard let itemLayer = item.layer as? ItemLayer else {
                         return
                     }
-                    
-                    
-                    var transitionIn: StoryContainerScreen.TransitionIn?
-                    
-                    let story = item.story
-                    var foundItemLayer: SparseItemGridLayer?
-                    self.itemGrid.forEachVisibleItem { item in
-                        guard let itemLayer = item.layer as? ItemLayer else {
-                            return
-                        }
-                        if let listItem = itemLayer.item, listItem.story.id == story.id {
-                            foundItemLayer = itemLayer
-                        }
+                    if let listItem = itemLayer.item, listItem.story.id == story.id {
+                        foundItemLayer = itemLayer
                     }
-                    if let foundItemLayer {
-                        let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
-                        transitionIn = StoryContainerScreen.TransitionIn(
-                            sourceView: self.view,
-                            sourceRect: self.itemGrid.view.convert(itemRect, to: self.view),
-                            sourceCornerRadius: 0.0
-                        )
-                    }
-                    
-                    let storyContainerScreen = StoryContainerScreen(
-                        context: self.context,
-                        initialFocusedId: AnyHashable(peerId),
-                        initialContent: initialContent,
-                        transitionIn: transitionIn,
-                        transitionOut: { [weak self] _, itemId in
-                            guard let self else {
-                                return nil
-                            }
-                            
-                            var foundItemLayer: SparseItemGridLayer?
-                            self.itemGrid.forEachVisibleItem { item in
-                                guard let itemLayer = item.layer as? ItemLayer else {
-                                    return
-                                }
-                                if let listItem = itemLayer.item, AnyHashable(listItem.story.id) == itemId {
-                                    foundItemLayer = itemLayer
-                                }
-                            }
-                            if let foundItemLayer {
-                                let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
-                                return StoryContainerScreen.TransitionOut(
-                                    destinationView: self.view,
-                                    destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),
-                                    destinationCornerRadius: 0.0,
-                                    destinationIsAvatar: false,
-                                    completed: {}
-                                )
-                            }
-                            
+                }
+                if let foundItemLayer {
+                    let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: self.view,
+                        sourceRect: self.itemGrid.view.convert(itemRect, to: self.view),
+                        sourceCornerRadius: 0.0
+                    )
+                }
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: self.context,
+                    content: listContext,
+                    transitionIn: transitionIn,
+                    transitionOut: { [weak self] _, itemId in
+                        guard let self else {
                             return nil
                         }
-                    )
-                    navigationController.pushViewController(storyContainerScreen)
-                })*/
-                //TODO:open
-                //let _ = strongSelf.chatControllerInteraction.openMessage(item.message, .default)
-            }
+                        
+                        var foundItemLayer: SparseItemGridLayer?
+                        self.itemGrid.forEachVisibleItem { item in
+                            guard let itemLayer = item.layer as? ItemLayer else {
+                                return
+                            }
+                            if let listItem = itemLayer.item, AnyHashable(listItem.story.id) == itemId {
+                                foundItemLayer = itemLayer
+                            }
+                        }
+                        if let foundItemLayer {
+                            let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: self.view,
+                                destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),
+                                destinationCornerRadius: 0.0,
+                                destinationIsAvatar: false,
+                                completed: {}
+                            )
+                        }
+                        
+                        return nil
+                    }
+                )
+                navigationController.pushViewController(storyContainerScreen)
+            })
         }
 
         self.itemGridBinding.onTagTapImpl = { [weak self] in
@@ -1118,17 +1030,27 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
         
         self._itemInteraction = VisualMediaItemInteraction(
-            openMessage: { [weak self] message in
-                let _ = self?.chatControllerInteraction.openMessage(message, .default)
+            openItem: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                let _ = self
             },
-            openMessageContextActions: { [weak self] message, sourceNode, sourceRect, gesture in
-                self?.chatControllerInteraction.openMessageContextActions(message, sourceNode, sourceRect, gesture)
+            openItemContextActions: { [weak self] item, sourceNode, sourceRect, gesture in
+                guard let self else {
+                    return
+                }
+                let _ = self
             },
             toggleSelection: { [weak self] id, value in
-                self?.chatControllerInteraction.toggleMessagesSelection([id], value)
+                guard let self else {
+                    return
+                }
+                let _ = self
             }
         )
-        self.itemInteraction.selectedMessageIds = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
+        //TODO:selection
+        //self.itemInteraction.selectedItemIds =
 
         self.contextGestureContainerNode.isGestureEnabled = true
         self.contextGestureContainerNode.addSubnode(self.itemGrid)
@@ -1664,78 +1586,6 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     private func handlePanSelection(location: CGPoint) {
-        /*var location = location
-        if location.y < 0.0 {
-            location.y = 5.0
-        } else if location.y > self.frame.height {
-            location.y = self.frame.height - 5.0
-        }
-        
-        var hasState = false
-        if let state = self.selectionPanState {
-            hasState = true
-            if let message = self.messageAtPoint(location) {
-                if message.id == state.initialMessageId {
-                    if !state.toggledMessageIds.isEmpty {
-                        self.chatControllerInteraction.toggleMessagesSelection(state.toggledMessageIds.flatMap { $0.compactMap({ $0 }) }, !state.selecting)
-                        self.selectionPanState = (state.selecting, state.initialMessageId, [])
-                    }
-                } else if state.toggledMessageIds.last?.first != message.id {
-                    var updatedToggledMessageIds: [[EngineMessage.Id]] = []
-                    var previouslyToggled = false
-                    for i in (0 ..< state.toggledMessageIds.count) {
-                        if let messageId = state.toggledMessageIds[i].first {
-                            if messageId == message.id {
-                                previouslyToggled = true
-                                updatedToggledMessageIds = Array(state.toggledMessageIds.prefix(i + 1))
-                                
-                                let messageIdsToToggle = Array(state.toggledMessageIds.suffix(state.toggledMessageIds.count - i - 1)).flatMap { $0 }
-                                self.chatControllerInteraction.toggleMessagesSelection(messageIdsToToggle, !state.selecting)
-                                break
-                            }
-                        }
-                    }
-                    
-                    if !previouslyToggled {
-                        updatedToggledMessageIds = state.toggledMessageIds
-                        let isSelected = self.chatControllerInteraction.selectionState?.selectedIds.contains(message.id) ?? false
-                        if state.selecting != isSelected {
-                            updatedToggledMessageIds.append([message.id])
-                            self.chatControllerInteraction.toggleMessagesSelection([message.id], state.selecting)
-                        }
-                    }
-                    
-                    self.selectionPanState = (state.selecting, state.initialMessageId, updatedToggledMessageIds)
-                }
-            }
-        }
-        guard hasState else {
-            return
-        }
-        let scrollingAreaHeight: CGFloat = 50.0
-        if location.y < scrollingAreaHeight || location.y > self.frame.height - scrollingAreaHeight {
-            if location.y < self.frame.height / 2.0 {
-                self.selectionScrollDelta = (scrollingAreaHeight - location.y) / scrollingAreaHeight
-            } else {
-                self.selectionScrollDelta = -(scrollingAreaHeight - min(scrollingAreaHeight, max(0.0, (self.frame.height - location.y)))) / scrollingAreaHeight
-            }
-            if let displayLink = self.selectionScrollDisplayLink {
-                displayLink.isPaused = false
-            } else {
-                if let _ = self.selectionScrollActivationTimer {
-                } else {
-                    let timer = SwiftSignalKit.Timer(timeout: 0.45, repeat: false, completion: { [weak self] in
-                        self?.setupSelectionScrolling()
-                    }, queue: .mainQueue())
-                    timer.start()
-                    self.selectionScrollActivationTimer = timer
-                }
-            }
-        } else {
-            self.selectionScrollDisplayLink?.isPaused = true
-            self.selectionScrollActivationTimer?.invalidate()
-            self.selectionScrollActivationTimer = nil
-        }*/
     }
     
     private var selectionScrollSkipUpdate = false

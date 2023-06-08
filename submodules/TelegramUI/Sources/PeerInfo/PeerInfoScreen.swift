@@ -87,6 +87,7 @@ import StorageUsageScreen
 import AvatarEditorScreen
 import SendInviteLinkScreen
 import PeerInfoVisualMediaPaneNode
+import PeerInfoStoryGridScreen
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -456,6 +457,7 @@ private enum PeerInfoSettingsSection {
     case avatar
     case edit
     case proxy
+    case stories
     case savedMessages
     case recentCalls
     case devices
@@ -655,6 +657,7 @@ private enum SettingsSection: Int, CaseIterable {
     case phone
     case accounts
     case proxy
+    case stories
     case shortcuts
     case advanced
     case payment
@@ -784,6 +787,11 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
         }
     }
+    
+    //TODO:localize
+    items[.stories]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "My Stories", icon: PresentationResourcesSettings.stickers, action: {
+        interaction.openSettings(.stories)
+    }))
     
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
@@ -7849,6 +7857,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
             case .proxy:
                 self.controller?.push(proxySettingsController(context: self.context))
+            case .stories:
+                self.controller?.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .saved))
             case .savedMessages:
                 let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -8688,6 +8698,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             }
                             return .dismiss(consume: false, result: nil)
                         } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
+                        } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoStoryPaneNode {
                             node.brieflyDisableTouchActions()
                             return .dismiss(consume: false, result: nil)
                         } else {
