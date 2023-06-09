@@ -352,39 +352,30 @@ public enum Stories {
     
     public final class PeerState: Equatable, Codable {
         private enum CodingKeys: CodingKey {
-            case subscriptionsOpaqueState
             case maxReadId
         }
         
-        public let subscriptionsOpaqueState: String?
         public let maxReadId: Int32
         
         public init(
-            subscriptionsOpaqueState: String?,
             maxReadId: Int32
         ){
-            self.subscriptionsOpaqueState = subscriptionsOpaqueState
             self.maxReadId = maxReadId
         }
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
-            self.subscriptionsOpaqueState = try container.decodeIfPresent(String.self, forKey: .subscriptionsOpaqueState)
             self.maxReadId = try container.decode(Int32.self, forKey: .maxReadId)
         }
         
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             
-            try container.encodeIfPresent(self.subscriptionsOpaqueState, forKey: .subscriptionsOpaqueState)
             try container.encode(self.maxReadId, forKey: .maxReadId)
         }
         
         public static func ==(lhs: PeerState, rhs: PeerState) -> Bool {
-            if lhs.subscriptionsOpaqueState != rhs.subscriptionsOpaqueState {
-                return false
-            }
             if lhs.maxReadId != rhs.maxReadId {
                 return false
             }
@@ -864,7 +855,6 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
         return account.postbox.transaction { transaction -> Api.InputUser? in
             if let peerStoryState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
                 transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
-                    subscriptionsOpaqueState: peerStoryState.subscriptionsOpaqueState,
                     maxReadId: max(peerStoryState.maxReadId, id)
                 )))
             }

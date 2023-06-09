@@ -3493,7 +3493,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 headerNodesTransition.0.animatePositionAdditive(node: topItemOverscrollBackground, offset: CGPoint(x: 0.0, y: -headerNodesTransition.2))
             }
             
-            self.updateVisibleContentOffset()
+            if !self.useMainQueueTransactions {
+                self.updateVisibleContentOffset()
+            }
             
             if self.debugInfo {
                 //let delta = CACurrentMediaTime() - timestamp
@@ -3501,6 +3503,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
             
             completion()
+            
+            if self.useMainQueueTransactions {
+                self.updateVisibleContentOffset()
+            }
         }
     }
     

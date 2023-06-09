@@ -192,6 +192,7 @@ final class PeerInfoScreenData {
     let groupsInCommon: GroupsInCommonContext?
     let linkedDiscussionPeer: Peer?
     let members: PeerInfoMembersData?
+    let storyListContext: PeerStoryListContext?
     let encryptionKeyFingerprint: SecretChatKeyFingerprint?
     let globalSettings: TelegramGlobalSettings?
     let invitations: PeerExportedInvitationsState?
@@ -214,6 +215,7 @@ final class PeerInfoScreenData {
         groupsInCommon: GroupsInCommonContext?,
         linkedDiscussionPeer: Peer?,
         members: PeerInfoMembersData?,
+        storyListContext: PeerStoryListContext?,
         encryptionKeyFingerprint: SecretChatKeyFingerprint?,
         globalSettings: TelegramGlobalSettings?,
         invitations: PeerExportedInvitationsState?,
@@ -235,6 +237,7 @@ final class PeerInfoScreenData {
         self.groupsInCommon = groupsInCommon
         self.linkedDiscussionPeer = linkedDiscussionPeer
         self.members = members
+        self.storyListContext = storyListContext
         self.encryptionKeyFingerprint = encryptionKeyFingerprint
         self.globalSettings = globalSettings
         self.invitations = invitations
@@ -390,10 +393,22 @@ func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, chatLoca
         case .none, .settings:
             return .complete()
         case .user, .channel, .group:
-            return combineLatest(
-                context.peerChannelMemberCategoriesContextsManager.profileData(postbox: context.account.postbox, network: context.account.network, peerId: peerId, customData: peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder) |> ignoreValues),
-                context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId)) |> ignoreValues
-            )
+            var signals: [Signal<Never, NoError>] = []
+            
+            signals.append(context.peerChannelMemberCategoriesContextsManager.profileData(postbox: context.account.postbox, network: context.account.network, peerId: peerId, customData: peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder) |> ignoreValues) |> ignoreValues)
+            signals.append(context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId)) |> ignoreValues)
+            
+            if case .user = inputData {
+                signals.append(Signal { _ in
+                    let listContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
+                    
+                    return ActionDisposable {
+                        let _ = listContext
+                    }
+                })
+            }
+            
+            return combineLatest(signals)
             |> ignoreValues
         }
     }
@@ -529,6 +544,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             groupsInCommon: nil,
             linkedDiscussionPeer: nil,
             members: nil,
+            storyListContext: nil,
             encryptionKeyFingerprint: nil,
             globalSettings: globalSettings,
             invitations: nil,
@@ -561,6 +577,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 groupsInCommon: nil,
                 linkedDiscussionPeer: nil,
                 members: nil,
+                storyListContext: nil,
                 encryptionKeyFingerprint: nil,
                 globalSettings: nil,
                 invitations: nil,
@@ -667,17 +684,25 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 secretChatKeyFingerprint = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.SecretChatKeyFingerprint(id: secretChatId))
             }
             
+            let storyListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
+            let hasStories: Signal<Bool, NoError> = storyListContext.state
+            |> map { state -> Bool in
+                return !state.items.isEmpty
+            }
+            |> distinctUntilChanged
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                 secretChatKeyFingerprint,
-                status
+                status,
+                hasStories
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 
-                if peerView.peers[peerView.peerId] is TelegramUser {
+                if hasStories, peerView.peers[peerView.peerId] is TelegramUser {
                     availablePanes?.insert(.stories, at: 0)
                 }
                 
@@ -700,6 +725,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     groupsInCommon: groupsInCommon,
                     linkedDiscussionPeer: nil,
                     members: nil,
+                    storyListContext: storyListContext,
                     encryptionKeyFingerprint: encryptionKeyFingerprint,
                     globalSettings: nil,
                     invitations: nil,
@@ -779,6 +805,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
                     members: nil,
+                    storyListContext: nil,
                     encryptionKeyFingerprint: nil,
                     globalSettings: nil,
                     invitations: invitations,
@@ -982,6 +1009,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
                     members: membersData,
+                    storyListContext: nil,
                     encryptionKeyFingerprint: nil,
                     globalSettings: nil,
                     invitations: invitations,

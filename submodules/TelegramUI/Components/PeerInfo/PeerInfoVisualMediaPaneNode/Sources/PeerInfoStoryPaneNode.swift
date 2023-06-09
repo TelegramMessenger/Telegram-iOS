@@ -890,7 +890,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
-    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?) {
+    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
         self.peerId = peerId
         self.chatLocation = chatLocation
@@ -913,7 +913,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             captureProtected: captureProtected
         )
 
-        self.listSource = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: self.isArchive)
+        self.listSource = listContext ?? PeerStoryListContext(account: context.account, peerId: peerId, isArchived: self.isArchive)
         self.calendarSource = nil
         
         super.init()

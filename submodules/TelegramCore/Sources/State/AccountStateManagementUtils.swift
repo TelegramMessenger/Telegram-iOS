@@ -4351,10 +4351,6 @@ func replayFinalState(
                     }
                 }
                 
-                var filteredSubscriptionsOpaqueState: String?
-                if let state = transaction.getSubscriptionsStoriesState(key: .filtered)?.get(Stories.SubscriptionsState.self) {
-                    filteredSubscriptionsOpaqueState = state.opaqueState
-                }
                 var appliedMaxReadId: Int32?
                 if let currentState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
                     if let appliedMaxReadIdValue = appliedMaxReadId {
@@ -4366,7 +4362,6 @@ func replayFinalState(
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
                 transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
-                    subscriptionsOpaqueState: filteredSubscriptionsOpaqueState,
                     maxReadId: appliedMaxReadId ?? 0
                 )))
                 
@@ -4381,12 +4376,7 @@ func replayFinalState(
                     appliedMaxReadId = max(appliedMaxReadId, currentState.maxReadId)
                 }
                 
-                var filteredSubscriptionsOpaqueState: String?
-                if let state = transaction.getSubscriptionsStoriesState(key: .filtered)?.get(Stories.SubscriptionsState.self) {
-                    filteredSubscriptionsOpaqueState = state.opaqueState
-                }
                 transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
-                    subscriptionsOpaqueState: filteredSubscriptionsOpaqueState,
                     maxReadId: appliedMaxReadId
                 )))
             

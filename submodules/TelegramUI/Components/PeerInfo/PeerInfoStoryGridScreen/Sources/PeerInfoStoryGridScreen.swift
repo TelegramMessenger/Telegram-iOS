@@ -386,7 +386,8 @@ final class PeerInfoStoryGridScreenComponent: Component {
                             return nil
                         }
                         return self.environment?.controller()?.navigationController as? NavigationController
-                    }
+                    },
+                    listContext: nil
                 )
                 self.paneNode = paneNode
                 self.addSubview(paneNode.view)
