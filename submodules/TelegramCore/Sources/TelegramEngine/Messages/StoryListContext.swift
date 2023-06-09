@@ -838,7 +838,7 @@ public final class PeerExpiringStoryListContext {
         private var listDisposable: Disposable?
         private var pollDisposable: Disposable?
         
-        private let statePromise = Promise<State>()
+        fileprivate let statePromise = Promise<State>()
         
         init(queue: Queue, account: Account, peerId: EnginePeer.Id) {
             self.queue = queue
@@ -1041,4 +1041,17 @@ public final class PeerExpiringStoryListContext {
             return Impl(queue: queue, account: account, peerId: peerId)
         })
     }
+    
+    public var state: Signal<State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.statePromise.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
 }
