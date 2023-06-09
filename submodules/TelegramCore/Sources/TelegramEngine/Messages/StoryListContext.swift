@@ -1032,6 +1032,22 @@ public final class PeerExpiringStoryListContext {
             }
             return true
         }
+        
+        public var hasUnseen: Bool {
+            for item in items {
+                switch item {
+                case let .item(item):
+                    if item.id > maxReadId {
+                        return true
+                    }
+                case let .placeholder(id, _, _):
+                    if id > maxReadId {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
     }
     
     private let queue: Queue
