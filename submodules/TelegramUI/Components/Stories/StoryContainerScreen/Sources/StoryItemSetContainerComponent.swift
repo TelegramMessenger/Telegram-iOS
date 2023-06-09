@@ -472,6 +472,19 @@ public final class StoryItemSetContainerComponent: Component {
             return super.hitTest(point, with: event)
         }
         
+        private func isProgressPaused() -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
+                return true
+            }
+            if let captionItem = self.captionItem, captionItem.externalState.expandFraction > 0.0 {
+                return true
+            }
+            return false
+        }
+        
         private func updateScrolling(transition: Transition) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
@@ -535,7 +548,7 @@ public final class StoryItemSetContainerComponent: Component {
                 itemTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(), size: itemLayout.size))
                 
                 if let view = view as? StoryContentItem.View {
-                    view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList)
+                    view.setIsProgressPaused(self.isProgressPaused())
                 }
             }
             
@@ -554,13 +567,10 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func updateIsProgressPaused() {
-            guard let component = self.component else {
-                return
-            }
             for (_, visibleItem) in self.visibleItems {
                 if let view = visibleItem.view.view {
                     if let view = view as? StoryContentItem.View {
-                        view.setIsProgressPaused(self.inputPanelExternalState.isEditing || component.isProgressPaused || self.displayReactions || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList || self.isEditingStory)
+                        view.setIsProgressPaused(self.isProgressPaused())
                     }
                 }
             }

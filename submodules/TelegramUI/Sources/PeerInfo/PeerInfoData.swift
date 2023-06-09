@@ -401,9 +401,11 @@ func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, chatLoca
             if case .user = inputData {
                 signals.append(Signal { _ in
                     let listContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
+                    let expiringListContext = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
                     
                     return ActionDisposable {
                         let _ = listContext
+                        let _ = expiringListContext
                     }
                 })
             }

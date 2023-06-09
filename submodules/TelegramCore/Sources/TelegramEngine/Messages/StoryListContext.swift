@@ -839,6 +839,9 @@ public final class PeerExpiringStoryListContext {
         private var pollDisposable: Disposable?
         
         private let statePromise = Promise<State>()
+        var state: Signal<State, NoError> {
+            return self.statePromise.get()
+        }
         
         init(queue: Queue, account: Account, peerId: EnginePeer.Id) {
             self.queue = queue
@@ -1033,6 +1036,12 @@ public final class PeerExpiringStoryListContext {
     
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
+    
+    public var state: Signal<State, NoError> {
+        return impl.signalWith { impl, subscriber in
+            return impl.state.start(next: subscriber.putNext)
+        }
+    }
     
     public init(account: Account, peerId: EnginePeer.Id) {
         let queue = Queue.mainQueue()
