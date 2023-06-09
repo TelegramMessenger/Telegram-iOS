@@ -317,11 +317,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            if "".isEmpty {
-                strongSelf.scrollToStories()
-                return
-            }
-            
             if strongSelf.chatListDisplayNode.searchDisplayController != nil {
                 strongSelf.deactivateSearch(animated: true)
             } else {
