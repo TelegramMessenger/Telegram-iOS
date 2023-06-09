@@ -74,25 +74,46 @@ private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, 
     return path
 }
 
-private final class StoryProgressLayer: SimpleShapeLayer {
+private final class StoryProgressLayer: SimpleLayer {
+    enum Value: Equatable {
+        case indefinite
+        case progress(Float)
+    }
+    
     private struct Params: Equatable {
         var size: CGSize
         var lineWidth: CGFloat
-        var progress: Float
+        var value: Value
     }
-    
     private var currentParams: Params?
+    
+    private let uploadProgressLayer = SimpleShapeLayer()
+    
+    private let indefiniteDashLayer = SimpleShapeLayer()
+    private let indefiniteReplicatorLayer = CAReplicatorLayer()
     
     override init() {
         super.init()
         
-        self.fillColor = UIColor.white.cgColor
-        self.fillRule = .evenOdd
+        self.uploadProgressLayer.fillColor = nil
+        self.uploadProgressLayer.strokeColor = UIColor.white.cgColor
+        self.uploadProgressLayer.lineWidth = 2.0
+        self.uploadProgressLayer.lineCap = .round
         
-        self.fillColor = nil
-        self.strokeColor = UIColor.white.cgColor
-        self.lineWidth = 2.0
-        self.lineCap = .round
+        self.indefiniteDashLayer.fillColor = nil
+        self.indefiniteDashLayer.strokeColor = UIColor.white.cgColor
+        self.indefiniteDashLayer.lineWidth = 2.0
+        self.indefiniteDashLayer.lineCap = .round
+        self.indefiniteDashLayer.lineJoin = .round
+        self.indefiniteDashLayer.strokeEnd = 0.0333
+        
+        let count = 1.0 / self.indefiniteDashLayer.strokeEnd
+        let angle = (2.0 * Double.pi) / Double(count)
+        self.indefiniteReplicatorLayer.addSublayer(self.indefiniteDashLayer)
+        self.indefiniteReplicatorLayer.instanceCount = Int(count)
+        self.indefiniteReplicatorLayer.instanceTransform = CATransform3DMakeRotation(CGFloat(angle), 0.0, 0.0, 1.0)
+        self.indefiniteReplicatorLayer.transform = CATransform3DMakeRotation(-.pi / 2.0, 0.0, 0.0, 1.0)
+        self.indefiniteReplicatorLayer.instanceDelay = 0.025
     }
     
     override init(layer: Any) {
@@ -105,14 +126,15 @@ private final class StoryProgressLayer: SimpleShapeLayer {
     
     func reset() {
         self.currentParams = nil
-        self.path = nil
+        self.indefiniteDashLayer.path = nil
+        self.uploadProgressLayer.path = nil
     }
     
-    func update(size: CGSize, lineWidth: CGFloat, progress: Float, transition: Transition) {
+    func update(size: CGSize, lineWidth: CGFloat, value: Value, transition: Transition) {
         let params = Params(
             size: size,
             lineWidth: lineWidth,
-            progress: progress
+            value: value
         )
         if self.currentParams == params {
             return
@@ -120,23 +142,70 @@ private final class StoryProgressLayer: SimpleShapeLayer {
         self.currentParams = params
         
         let lineWidth: CGFloat = 2.0
-        
-        if self.path == nil {
+        let bounds = CGRect(origin: .zero, size: size)
+        if self.uploadProgressLayer.path == nil {
             let path = CGMutablePath()
             path.addEllipse(in: CGRect(origin: CGPoint(x: lineWidth * 0.5, y: lineWidth * 0.5), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
-            self.path = path
+            self.uploadProgressLayer.path = path
+            self.uploadProgressLayer.frame = bounds
         }
         
-        transition.setShapeLayerStrokeEnd(layer: self, strokeEnd: CGFloat(progress))
+        if self.indefiniteDashLayer.path == nil {
+            let path = CGMutablePath()
+            path.addEllipse(in: CGRect(origin: CGPoint(x: lineWidth * 0.5, y: lineWidth * 0.5), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
+            self.indefiniteDashLayer.path = path
+            self.indefiniteReplicatorLayer.frame = bounds
+            self.indefiniteDashLayer.frame = bounds
+        }
         
-        if self.animation(forKey: "rotation") == nil {
-            let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-            basicAnimation.duration = 2.0
-            basicAnimation.fromValue = NSNumber(value: Float(0.0))
-            basicAnimation.toValue = NSNumber(value: Float(Double.pi * 2.0))
-            basicAnimation.repeatCount = Float.infinity
-            basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-            self.add(basicAnimation, forKey: "rotation")
+        switch value {
+        case let .progress(progress):
+            if self.indefiniteReplicatorLayer.superlayer != nil {
+                self.indefiniteReplicatorLayer.removeFromSuperlayer()
+            }
+            if self.uploadProgressLayer.superlayer == nil {
+                self.addSublayer(self.uploadProgressLayer)
+            }
+            transition.setShapeLayerStrokeEnd(layer: self.uploadProgressLayer, strokeEnd: CGFloat(progress))
+            if self.uploadProgressLayer.animation(forKey: "rotation") == nil {
+                let rotationAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                rotationAnimation.duration = 2.0
+                rotationAnimation.fromValue = NSNumber(value: Float(0.0))
+                rotationAnimation.toValue = NSNumber(value: Float(Double.pi * 2.0))
+                rotationAnimation.repeatCount = Float.infinity
+                rotationAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                self.uploadProgressLayer.add(rotationAnimation, forKey: "rotation")
+            }
+        case .indefinite:
+            if self.uploadProgressLayer.superlayer == nil {
+                self.uploadProgressLayer.removeFromSuperlayer()
+            }
+            if self.indefiniteReplicatorLayer.superlayer == nil {
+                self.addSublayer(self.indefiniteReplicatorLayer)
+            }
+            if self.indefiniteReplicatorLayer.animation(forKey: "rotation") == nil {
+                let rotationAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                rotationAnimation.duration = 4.0
+                rotationAnimation.fromValue = NSNumber(value: -.pi / 2.0)
+                rotationAnimation.toValue = NSNumber(value: -.pi / 2.0 + Double.pi * 2.0)
+                rotationAnimation.repeatCount = Float.infinity
+                rotationAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                self.indefiniteReplicatorLayer.add(rotationAnimation, forKey: "rotation")
+            }
+            if self.indefiniteDashLayer.animation(forKey: "dash") == nil {
+                let dashAnimation = CAKeyframeAnimation(keyPath: "strokeStart")
+                dashAnimation.keyTimes = [0.0, 0.45, 0.55, 1.0]
+                dashAnimation.values = [
+                    self.indefiniteDashLayer.strokeStart,
+                    self.indefiniteDashLayer.strokeEnd,
+                    self.indefiniteDashLayer.strokeEnd,
+                    self.indefiniteDashLayer.strokeStart,
+                ]
+                dashAnimation.timingFunction = CAMediaTimingFunction(name: .linear)
+                dashAnimation.duration = 2.5
+                dashAnimation.repeatCount = .infinity
+                self.indefiniteDashLayer.add(dashAnimation, forKey: "dash")
+            }
         }
     }
 }
@@ -144,13 +213,18 @@ private final class StoryProgressLayer: SimpleShapeLayer {
 private var sharedAvatarBackgroundImage: UIImage?
 
 public final class StoryPeerListItemComponent: Component {
+    public enum RingAnimation: Equatable {
+        case progress(Float)
+        case loading
+    }
+    
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let peer: EnginePeer
     public let hasUnseen: Bool
     public let hasItems: Bool
-    public let progress: Float?
+    public let ringAnimation: RingAnimation?
     public let collapseFraction: CGFloat
     public let collapsedScaleFactor: CGFloat
     public let collapsedWidth: CGFloat
@@ -166,7 +240,7 @@ public final class StoryPeerListItemComponent: Component {
         peer: EnginePeer,
         hasUnseen: Bool,
         hasItems: Bool,
-        progress: Float?,
+        ringAnimation: RingAnimation?,
         collapseFraction: CGFloat,
         collapsedScaleFactor: CGFloat,
         collapsedWidth: CGFloat,
@@ -181,7 +255,7 @@ public final class StoryPeerListItemComponent: Component {
         self.peer = peer
         self.hasUnseen = hasUnseen
         self.hasItems = hasItems
-        self.progress = progress
+        self.ringAnimation = ringAnimation
         self.collapseFraction = collapseFraction
         self.collapsedScaleFactor = collapsedScaleFactor
         self.collapsedWidth = collapsedWidth
@@ -210,7 +284,7 @@ public final class StoryPeerListItemComponent: Component {
         if lhs.hasItems != rhs.hasItems {
             return false
         }
-        if lhs.progress != rhs.progress {
+        if lhs.ringAnimation != rhs.ringAnimation {
             return false
         }
         if lhs.collapseFraction != rhs.collapseFraction {
@@ -254,6 +328,8 @@ public final class StoryPeerListItemComponent: Component {
         
         private var component: StoryPeerListItemComponent?
         private weak var componentState: EmptyComponentState?
+        
+        private var demoLoading = false
         
         public override init(frame: CGRect) {
             self.backgroundContainer = UIView()
@@ -378,7 +454,7 @@ public final class StoryPeerListItemComponent: Component {
             self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             
             let hadUnseen = self.component?.hasUnseen
-            let hadProgress = self.component?.progress != nil
+            let hadProgress = self.component?.ringAnimation != nil
             let themeUpdated = self.component?.theme !== component.theme
             
             let previousComponent = self.component
@@ -411,7 +487,7 @@ public final class StoryPeerListItemComponent: Component {
             }
             self.avatarBackgroundView.image = avatarBackgroundImage
             
-            self.avatarBackgroundView.isHidden = component.progress != nil
+            self.avatarBackgroundView.isHidden = component.ringAnimation != nil
             
             if themeUpdated {
                 self.avatarBackgroundView.tintColor = component.theme.rootController.navigationBar.opaqueBackgroundColor
@@ -426,7 +502,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let baseLineWidth: CGFloat
             let minimizedLineWidth: CGFloat = 3.0
-            if component.hasUnseen || component.progress != nil {
+            if component.hasUnseen || component.ringAnimation != nil {
                 baseLineWidth = 2.0
             } else {
                 baseLineWidth = 1.0 + UIScreenPixel
@@ -450,7 +526,7 @@ public final class StoryPeerListItemComponent: Component {
             transition.setScale(view: self.avatarContainer, scale: scaledAvatarSize / avatarSize.width)
             transition.setScale(view: self.avatarBackgroundContainer, scale: scaledAvatarSize / avatarSize.width)
             
-            if component.peer.id == component.context.account.peerId && !component.hasItems && component.progress == nil {
+            if component.peer.id == component.context.account.peerId && !component.hasItems && component.ringAnimation == nil {
                 self.indicatorColorLayer.isHidden = true
                 
                 let avatarAddBadgeView: UIImageView
@@ -503,11 +579,11 @@ public final class StoryPeerListItemComponent: Component {
             
             self.indicatorShapeLayer.lineWidth = indicatorLineWidth
             
-            if hadUnseen != component.hasUnseen || hadProgress != (component.progress != nil) {
+            if hadUnseen != component.hasUnseen || hadProgress != (component.ringAnimation != nil) {
                 let locations: [CGFloat] = [0.0, 1.0]
                 let colors: [CGColor]
                 
-                if component.hasUnseen || component.progress != nil {
+                if component.hasUnseen || component.ringAnimation != nil {
                     colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
                 } else {
                     colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
@@ -537,7 +613,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let avatarPath = CGMutablePath()
             avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -1.0, dy: -1.0))
-            if component.peer.id == component.context.account.peerId && !component.hasItems && component.progress == nil {
+            if component.peer.id == component.context.account.peerId && !component.hasItems && component.ringAnimation == nil {
                 let cutoutSize: CGFloat = 18.0 + UIScreenPixel * 2.0
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(x: avatarSize.width - cutoutSize + UIScreenPixel, y: avatarSize.height - 1.0 - cutoutSize + UIScreenPixel), size: CGSize(width: cutoutSize, height: cutoutSize)))
             } else if let mappedRightCenter {
@@ -550,7 +626,7 @@ public final class StoryPeerListItemComponent: Component {
             //TODO:localize
             let titleString: String
             if component.peer.id == component.context.account.peerId {
-                if let _ = component.progress {
+                if let ringAnimation = component.ringAnimation, case .progress = ringAnimation {
                     titleString = "Uploading..."
                 } else {
                     titleString = "My story"
@@ -560,7 +636,7 @@ public final class StoryPeerListItemComponent: Component {
             }
             
             var titleTransition = transition
-            if previousComponent?.progress != nil && component.progress == nil {
+            if previousComponent?.ringAnimation != nil && component.ringAnimation == nil {
                 if let titleView = self.title.view, let snapshotView = titleView.snapshotContentTree() {
                     titleView.superview?.addSubview(snapshotView)
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -590,7 +666,7 @@ public final class StoryPeerListItemComponent: Component {
                 transition.setAlpha(view: titleView, alpha: 1.0 - component.collapseFraction)
             }
             
-            if let progress = component.progress {
+            if let ringAnimation = component.ringAnimation {
                 var progressTransition = transition
                 let progressLayer: StoryProgressLayer
                 if let current = self.progressLayer {
@@ -603,8 +679,13 @@ public final class StoryPeerListItemComponent: Component {
                 }
                 let progressFrame = CGRect(origin: CGPoint(), size: indicatorFrame.size).insetBy(dx: 2.0, dy: 2.0)
                 progressTransition.setFrame(layer: progressLayer, frame: progressFrame)
-                progressLayer.update(size: progressFrame.size, lineWidth: 4.0, progress: progress, transition: transition)
                 
+                switch ringAnimation {
+                case let .progress(progress):
+                    progressLayer.update(size: progressFrame.size, lineWidth: 4.0, value: .progress(progress), transition: transition)
+                case .loading:
+                    progressLayer.update(size: progressFrame.size, lineWidth: 4.0, value: .indefinite, transition: transition)
+                }
                 self.indicatorShapeLayer.opacity = 0.0
             } else {
                 self.indicatorShapeLayer.opacity = 1.0

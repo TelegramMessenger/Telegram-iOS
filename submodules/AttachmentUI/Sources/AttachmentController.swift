@@ -207,7 +207,7 @@ public class AttachmentController: ViewController {
         private weak var controller: AttachmentController?
         private let dim: ASDisplayNode
         private let shadowNode: ASImageNode
-        private let container: AttachmentContainer
+        fileprivate let container: AttachmentContainer
         private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
         let panel: AttachmentPanel
         
@@ -216,7 +216,7 @@ public class AttachmentController: ViewController {
         
         private var validLayout: ContainerViewLayout?
         private var modalProgress: CGFloat = 0.0
-        private var isDismissing = false
+        fileprivate var isDismissing = false
                 
         private let captionDisposable = MetaDisposable()
         private let mediaSelectionCountDisposable = MetaDisposable()
@@ -313,6 +313,10 @@ public class AttachmentController: ViewController {
             
             self.container.updateModalProgress = { [weak self] progress, transition in
                 if let strongSelf = self, let layout = strongSelf.validLayout, !strongSelf.isDismissing {
+                    var transition = transition
+                    if strongSelf.container.supernode == nil {
+                        transition = .animated(duration: 0.4, curve: .spring)
+                    }
                     strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
                     
                     strongSelf.modalProgress = progress
@@ -645,7 +649,7 @@ public class AttachmentController: ViewController {
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
                 
-                let targetPosition = self.container.position
+                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
                 let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
                 
                 self.container.position = startPosition
@@ -877,7 +881,7 @@ public class AttachmentController: ViewController {
                 
                 self.container.update(layout: containerLayout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
                                     
-                if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
+                if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady && !self.isDismissing {
                     self.wrapperNode.addSubnode(self.container)
                     
                     if fromMenu, let _ = controller.getInputContainerNode() {
@@ -965,12 +969,17 @@ public class AttachmentController: ViewController {
                     self?.didDismiss()
                     self?._dismiss()
                     completion?()
+                    self?.dismissedFlag = false
+                    self?.node.isDismissing = false
+                    self?.node.container.removeFromSupernode()
                 })
             }
         } else {
             self.didDismiss()
             self._dismiss()
             completion?()
+            self.node.isDismissing = false
+            self.node.container.removeFromSupernode()
         }
     }
     

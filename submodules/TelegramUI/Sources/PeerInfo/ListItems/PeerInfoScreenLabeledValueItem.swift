@@ -635,7 +635,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
-                linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.5))
+                linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.2))
                 self.linkHighlightingNode = linkHighlightingNode
                 self.contextSourceNode.contentNode.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
             }

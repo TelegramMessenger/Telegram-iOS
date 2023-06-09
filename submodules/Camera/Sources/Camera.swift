@@ -157,6 +157,12 @@ private final class CameraContext {
             }
         }
     }
+    
+    private var _positionPromise = ValuePromise<Camera.Position>(.unspecified)
+    var position: Signal<Camera.Position, NoError> {
+        return self._positionPromise.get()
+    }
+    
     func togglePosition() {
         self.configure {
             self.input.invalidate(for: self.session)
@@ -166,6 +172,7 @@ private final class CameraContext {
             } else {
                 targetPosition = .back
             }
+            self._positionPromise.set(targetPosition)
             self.changingPosition = true
             self.device.configure(for: self.session, position: targetPosition)
             self.input.configure(for: self.session, device: self.device, audio: self.initialConfiguration.audio)
@@ -179,6 +186,7 @@ private final class CameraContext {
     
     public func setPosition(_ position: Camera.Position) {
         self.configure {
+            self._positionPromise.set(position)
             self.input.invalidate(for: self.session)
             self.device.configure(for: self.session, position: position)
             self.input.configure(for: self.session, device: self.device, audio: self.initialConfiguration.audio)
@@ -320,6 +328,22 @@ public final class Camera {
             }
         }
 #endif
+    }
+    
+    public var position: Signal<Camera.Position, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.async {
+                if let context = self.contextRef?.takeUnretainedValue() {
+                    disposable.set(context.position.start(next: { flashMode in
+                        subscriber.putNext(flashMode)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    }))
+                }
+            }
+            return disposable
+        }
     }
     
     public func togglePosition() {

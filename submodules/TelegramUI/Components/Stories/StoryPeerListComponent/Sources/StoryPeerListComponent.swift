@@ -211,7 +211,7 @@ public final class StoryPeerListComponent: Component {
                 self.updateScrolling(transition: .immediate, keepVisibleUntilCompletion: false)
             }
         }
-        
+                
         private func updateScrolling(transition: Transition, keepVisibleUntilCompletion: Bool) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
@@ -276,14 +276,16 @@ public final class StoryPeerListComponent: Component {
                 hasUnseen = itemSet.hasUnseen
                 
                 var hasItems = true
-                var itemProgress: Float?
+                var itemRingAnimation: StoryPeerListItemComponent.RingAnimation?
                 if peer.id == component.context.account.peerId {
                     if let storySubscriptions = component.storySubscriptions, let accountItem = storySubscriptions.accountItem {
                         hasItems = accountItem.storyCount != 0
                     } else {
                         hasItems = false
                     }
-                    itemProgress = component.uploadProgress
+                    if let uploadProgress = component.uploadProgress {
+                        itemRingAnimation = .progress(uploadProgress)
+                    }
                 }
                 
                 let collapsedItemX: CGFloat
@@ -360,7 +362,7 @@ public final class StoryPeerListComponent: Component {
                         peer: peer,
                         hasUnseen: hasUnseen,
                         hasItems: hasItems,
-                        progress: itemProgress,
+                        ringAnimation: itemRingAnimation,
                         collapseFraction: isReallyVisible ? component.collapseFraction : 0.0,
                         collapsedScaleFactor: collapsedItemScaleFactor,
                         collapsedWidth: collapsedItemWidth,

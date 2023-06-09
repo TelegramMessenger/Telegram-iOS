@@ -1255,39 +1255,42 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     }
                 }
                 
-                var applyNodeAsCurrent: ChatListFilterTabEntryId?
-                
-                if let directionIsToRight = directionIsToRight {
-                    var updatedIndex = selectedIndex
-                    if directionIsToRight {
-                        updatedIndex = min(updatedIndex + 1, maxFilterIndex)
-                    } else {
-                        updatedIndex = max(updatedIndex - 1, 0)
+                let hasStoryCameraTransition = self.controller?.hasStoryCameraTransition ?? false
+                if hasStoryCameraTransition {
+                    self.controller?.storyCameraPanGestureEnded(transitionFraction: translation.x / layout.size.width, velocity: velocity.x)
+                } else {
+                    var applyNodeAsCurrent: ChatListFilterTabEntryId?
+                    
+                    if let directionIsToRight = directionIsToRight {
+                        var updatedIndex = selectedIndex
+                        if directionIsToRight {
+                            updatedIndex = min(updatedIndex + 1, maxFilterIndex)
+                        } else {
+                            updatedIndex = max(updatedIndex - 1, 0)
+                        }
+                        let switchToId = self.availableFilters[updatedIndex].id
+                        if switchToId != self.selectedId, let itemNode = self.itemNodes[switchToId] {
+                            let _ = itemNode
+                            self.selectedId = switchToId
+                            applyNodeAsCurrent = switchToId
+                        }
                     }
-                    let switchToId = self.availableFilters[updatedIndex].id
-                    if switchToId != self.selectedId, let itemNode = self.itemNodes[switchToId] {
-                        let _ = itemNode
-                        self.selectedId = switchToId
-                        applyNodeAsCurrent = switchToId
+                    self.transitionFraction = 0.0
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
+                    self.disableItemNodeOperationsWhileAnimating = true
+                    self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: transition)
+                    DispatchQueue.main.async {
+                        self.disableItemNodeOperationsWhileAnimating = false
+                        if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = self.validLayout {
+                            self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .immediate)
+                        }
                     }
-                }
-                self.transitionFraction = 0.0
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
-                self.disableItemNodeOperationsWhileAnimating = true
-                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: transition)
-                DispatchQueue.main.async {
-                    self.disableItemNodeOperationsWhileAnimating = false
-                    if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = self.validLayout {
-                        self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .immediate)
+                                        
+                    if let switchToId = applyNodeAsCurrent, let itemNode = self.itemNodes[switchToId] {
+                        self.applyItemNodeAsCurrent(id: switchToId, itemNode: itemNode)
                     }
+                    self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
                 }
-                
-                self.controller?.storyCameraPanGestureEnded(transitionFraction: translation.x / layout.size.width, velocity: velocity.x)
-                
-                if let switchToId = applyNodeAsCurrent, let itemNode = self.itemNodes[switchToId] {
-                    self.applyItemNodeAsCurrent(id: switchToId, itemNode: itemNode)
-                }
-                self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
             }
         default:
             break

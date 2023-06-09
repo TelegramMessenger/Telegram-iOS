@@ -544,7 +544,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
-                                if queryItem.name == "startApp"{
+                                if queryItem.name == "startapp" {
                                     startApp = value
                                 }
                             }

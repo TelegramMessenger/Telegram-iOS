@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import LegacyComponents
 import MediaEditor
+import MultilineTextComponent
 
 private class HistogramView: UIView {
     private var size: CGSize?
@@ -332,6 +333,7 @@ final class CurvesScreenComponent: Component {
         private let line3 = SimpleLayer()
         private let line4 = SimpleLayer()
         
+        private let curveContainer = SimpleLayer()
         private let guideLayer = SimpleShapeLayer()
         private let curveLayer = SimpleShapeLayer()
         
@@ -346,8 +348,15 @@ final class CurvesScreenComponent: Component {
             self.layer.addSublayer(self.line3)
             self.layer.addSublayer(self.line4)
             
-            self.layer.addSublayer(self.guideLayer)
-            self.layer.addSublayer(self.curveLayer)
+            self.layer.addSublayer(self.curveContainer)
+            self.curveContainer.addSublayer(self.guideLayer)
+            self.curveContainer.addSublayer(self.curveLayer)
+            
+            self.curveContainer.masksToBounds = true
+            self.curveContainer.cornerRadius = 12.0
+            if #available(iOS 13.0, *) {
+                self.curveContainer.cornerCurve = .continuous
+            }
             
             self.line1.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
             self.line2.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
@@ -360,6 +369,26 @@ final class CurvesScreenComponent: Component {
             
             self.curveLayer.lineWidth = 2.0
             self.curveLayer.fillColor = UIColor.clear.cgColor
+            
+            let allLayers = [
+                self.line1,
+                self.line2,
+                self.line3,
+                self.line4,
+                self.guideLayer,
+            ]
+            
+            for layer in allLayers {
+                layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                layer.shadowRadius = 1.5
+                layer.shadowColor = UIColor.black.cgColor
+                layer.shadowOpacity = 0.3
+            }
+            
+            self.curveLayer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+            self.curveLayer.shadowRadius = 2.0
+            self.curveLayer.shadowColor = UIColor.black.cgColor
+            self.curveLayer.shadowOpacity = 0.16
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             self.addGestureRecognizer(panGestureRecognizer)
@@ -495,10 +524,16 @@ final class CurvesScreenComponent: Component {
             let blacksSize = self.blacks.update(
                 transition: transition,
                 component: AnyComponent(
-                    Text(
-                        text: String(format: "%.2f", value.blacks),
-                        font: Font.regular(14.0),
-                        color: UIColor(rgb: 0xffffff, alpha: 0.75)
+                    MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: String(format: "%.2f", value.blacks),
+                                font: Font.regular(14.0),
+                                textColor: UIColor(rgb: 0xffffff)
+                            )
+                        ),
+                        textShadowColor: UIColor(rgb: 0x000000, alpha: 0.3),
+                        textShadowBlur: 1.5
                     )
                 ),
                 environment: {},
@@ -509,16 +544,23 @@ final class CurvesScreenComponent: Component {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
+                view.alpha = 0.75
                 transition.setFrame(view: view, frame: blacksFrame)
             }
             
             let shadowsSize = self.shadows.update(
                 transition: transition,
                 component: AnyComponent(
-                    Text(
-                        text: String(format: "%.2f", value.shadows),
-                        font: Font.regular(14.0),
-                        color: UIColor(rgb: 0xffffff, alpha: 0.75)
+                    MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: String(format: "%.2f", value.shadows),
+                                font: Font.regular(14.0),
+                                textColor: UIColor(rgb: 0xffffff)
+                            )
+                        ),
+                        textShadowColor: UIColor(rgb: 0x000000, alpha: 0.3),
+                        textShadowBlur: 1.5
                     )
                 ),
                 environment: {},
@@ -529,16 +571,23 @@ final class CurvesScreenComponent: Component {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
+                view.alpha = 0.75
                 transition.setFrame(view: view, frame: shadowsFrame)
             }
             
             let midtonesSize = self.midtones.update(
                 transition: transition,
                 component: AnyComponent(
-                    Text(
-                        text: String(format: "%.2f", value.midtones),
-                        font: Font.regular(14.0),
-                        color: UIColor(rgb: 0xffffff, alpha: 0.75)
+                    MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: String(format: "%.2f", value.midtones),
+                                font: Font.regular(14.0),
+                                textColor: UIColor(rgb: 0xffffff)
+                            )
+                        ),
+                        textShadowColor: UIColor(rgb: 0x000000, alpha: 0.3),
+                        textShadowBlur: 1.5
                     )
                 ),
                 environment: {},
@@ -549,16 +598,23 @@ final class CurvesScreenComponent: Component {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
+                view.alpha = 0.75
                 transition.setFrame(view: view, frame: midtonesFrame)
             }
             
             let highlightsSize = self.highlights.update(
                 transition: transition,
                 component: AnyComponent(
-                    Text(
-                        text: String(format: "%.2f", value.highlights),
-                        font: Font.regular(14.0),
-                        color: UIColor(rgb: 0xffffff, alpha: 0.75)
+                    MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: String(format: "%.2f", value.highlights),
+                                font: Font.regular(14.0),
+                                textColor: UIColor(rgb: 0xffffff)
+                            )
+                        ),
+                        textShadowColor: UIColor(rgb: 0x000000, alpha: 0.3),
+                        textShadowBlur: 1.5
                     )
                 ),
                 environment: {},
@@ -569,16 +625,23 @@ final class CurvesScreenComponent: Component {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
+                view.alpha = 0.75
                 transition.setFrame(view: view, frame: highlightsFrame)
             }
             
             let whitesSize = self.whites.update(
                 transition: transition,
                 component: AnyComponent(
-                    Text(
-                        text: String(format: "%.2f", value.whites),
-                        font: Font.regular(14.0),
-                        color: UIColor(rgb: 0xffffff, alpha: 0.75)
+                    MultilineTextComponent(
+                        text: .plain(
+                            NSAttributedString(
+                                string: String(format: "%.2f", value.whites),
+                                font: Font.regular(14.0),
+                                textColor: UIColor(rgb: 0xffffff)
+                            )
+                        ),
+                        textShadowColor: UIColor(rgb: 0x000000, alpha: 0.3),
+                        textShadowBlur: 1.5
                     )
                 ),
                 environment: {},
@@ -589,8 +652,11 @@ final class CurvesScreenComponent: Component {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
+                view.alpha = 0.75
                 transition.setFrame(view: view, frame: whitesFrame)
             }
+            
+            self.curveContainer.frame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: availableSize.height + 12.0))
             
             let lineWidth: CGFloat = 1.0 - UIScreenPixel
             self.line1.frame = CGRect(x: fieldWidth, y: 0.0, width: lineWidth, height: availableSize.height)

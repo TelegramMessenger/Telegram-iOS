@@ -692,6 +692,17 @@ private final class MediaToolsScreenComponent: Component {
                                 controller.mediaEditor.setToolValue(.blur, value: value)
                                 state?.updated()
                             }
+                        },
+                        isTrackingUpdated: { [weak self] isTracking in
+                            if let self {
+                                let transition: Transition
+                                if isTracking {
+                                    transition = .immediate
+                                } else {
+                                    transition = .easeInOut(duration: 0.25)
+                                }
+                                transition.setAlpha(view: self.optionsBackgroundView, alpha: isTracking ? 0.0 : 1.0)
+                            }
                         }
                     )),
                     environment: {},
@@ -715,6 +726,20 @@ private final class MediaToolsScreenComponent: Component {
                                 if let controller = environment.controller() as? MediaToolsScreen {
                                     controller.mediaEditor.setToolValue(.blur, value: value)
                                     state?.updated()
+                                }
+                            },
+                            isTrackingUpdated: { [weak self] isTracking in
+                                if let self {
+                                    let transition: Transition
+                                    if isTracking {
+                                        transition = .immediate
+                                    } else {
+                                        transition = .easeInOut(duration: 0.25)
+                                    }
+                                    transition.setAlpha(view: self.optionsBackgroundView, alpha: isTracking ? 0.0 : 1.0)
+                                    if let view = self.toolOptions.view {
+                                        transition.setAlpha(view: view, alpha: isTracking ? 0.0 : 1.0)
+                                    }
                                 }
                             }
                         )

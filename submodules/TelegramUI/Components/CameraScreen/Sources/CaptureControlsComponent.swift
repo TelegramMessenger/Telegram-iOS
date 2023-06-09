@@ -397,15 +397,18 @@ final class CaptureControlsComponent: Component {
         }
         
         @objc private func handlePress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
             let location = gestureRecognizer.location(in: self)
             switch gestureRecognizer.state {
             case .began:
-                self.component?.shutterPressed()
-                self.component?.swipeHintUpdated(.zoom)
+                component.shutterPressed()
+                component.swipeHintUpdated(.zoom)
                 self.shutterUpdateOffset.invoke((0.0, .immediate))
             case .ended, .cancelled:
                 if location.x < self.frame.width / 2.0 - 60.0 {
-                    self.component?.lockRecording()
+                    component.lockRecording()
 
                     var blobOffset: CGFloat = 0.0
                     if let galleryButton = self.galleryButtonView.view {
@@ -414,7 +417,7 @@ final class CaptureControlsComponent: Component {
                     self.shutterUpdateOffset.invoke((blobOffset, .spring(duration: 0.35)))
                 } else {
                     self.hapticFeedback.impact(.light)
-                    self.component?.shutterReleased()
+                    component.shutterReleased()
                     self.shutterUpdateOffset.invoke((0.0, .spring(duration: 0.25)))
                 }
             default:
@@ -426,6 +429,9 @@ final class CaptureControlsComponent: Component {
         private var wasBanding: Bool?
         private var panBlobState: ShutterBlobView.BlobState?
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
             func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
                 let bandedOffset = offset - bandingStart
                 let range: CGFloat = 60.0
@@ -437,6 +443,9 @@ final class CaptureControlsComponent: Component {
             let location = gestureRecognizer.location(in: self)
             switch gestureRecognizer.state {
             case .changed:
+                guard case .holdRecording = component.shutterState else {
+                    return
+                }
                 var blobOffset: CGFloat = 0.0
                 if let galleryButton = self.galleryButtonView.view, let flipButton = self.flipButtonView.view {
                     blobOffset = max(galleryButton.center.x, min(flipButton.center.x, location.x))
@@ -445,21 +454,21 @@ final class CaptureControlsComponent: Component {
                 var isBanding = false
                 if location.y < -10.0 {
                     let fraction = 1.0 + min(8.0, ((abs(location.y) - 10.0) / 60.0))
-                    self.component?.zoomUpdated(fraction)
+                    component.zoomUpdated(fraction)
                 } else {
-                    self.component?.zoomUpdated(1.0)
+                    component.zoomUpdated(1.0)
                 }
                 
                 if location.x < self.frame.width / 2.0 - 30.0 {
                     if location.x < self.frame.width / 2.0 - 60.0 {
-                        self.component?.swipeHintUpdated(.releaseLock)
+                        component.swipeHintUpdated(.releaseLock)
                         if location.x < 75.0 {
                             self.panBlobState = .lock
                         } else {
                             self.panBlobState = .transientToLock
                         }
                     } else {
-                        self.component?.swipeHintUpdated(.lock)
+                        component.swipeHintUpdated(.lock)
                         self.panBlobState = .video
                         blobOffset = rubberBandingOffset(offset: blobOffset, bandingStart: 0.0)
                         isBanding = true
@@ -472,7 +481,7 @@ final class CaptureControlsComponent: Component {
                             self.didFlip = true
                             self.hapticFeedback.impact(.light)
                             self.flipAnimationAction.invoke(Void())
-                            self.component?.flipTapped()
+                            component.flipTapped()
                         }
                     } else {
                         self.didFlip = false
@@ -482,7 +491,7 @@ final class CaptureControlsComponent: Component {
                     }
                 } else {
                     blobOffset = rubberBandingOffset(offset: blobOffset, bandingStart: 0.0)
-                    self.component?.swipeHintUpdated(.zoom)
+                    component.swipeHintUpdated(.zoom)
                     self.panBlobState = .video
                     isBanding = true
                 }

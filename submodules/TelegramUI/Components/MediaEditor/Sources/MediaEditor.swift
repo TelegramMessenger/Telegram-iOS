@@ -52,8 +52,10 @@ public final class MediaEditor {
                 self.updateRenderChain()
             }
             self.valuesPromise.set(.single(self.values))
+            self.valuesUpdated(self.values)
         }
     }
+    public var valuesUpdated: (MediaEditorValues) -> Void = { _ in }
     private var valuesPromise = Promise<MediaEditorValues>()
     
     private let renderer = MediaEditorRenderer()
@@ -329,6 +331,7 @@ public final class MediaEditor {
                 if asset.mediaType == .video {
                     let options = PHImageRequestOptions()
                     options.deliveryMode = .fastFormat
+                    options.isNetworkAccessAllowed = true
                     let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 128.0, height: 128.0), contentMode: .aspectFit, options: options, resultHandler: { image, info in
                         if let image {
                             if let info {
@@ -353,6 +356,7 @@ public final class MediaEditor {
                 } else {
                     let options = PHImageRequestOptions()
                     options.deliveryMode = .highQualityFormat
+                    options.isNetworkAccessAllowed = true
                     let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 1920.0, height: 1920.0), contentMode: .aspectFit, options: options, resultHandler: { image, info in
                         if let image {
                             var degraded = false
@@ -498,6 +502,11 @@ public final class MediaEditor {
         self.player?.pause()
     }
     
+    public func invalidate() {
+        self.player?.pause()
+        self.renderer.textureSource?.invalidate()
+    }
+    
     private func updateVideoTimePosition() {
         guard let (targetPosition, _) = self.targetTimePosition else {
             return
@@ -616,7 +625,7 @@ final class MediaEditorRenderChain {
             switch key {
             case .enhance:
                 if let value = value as? Float {
-                    self.enhancePass.value = value
+                    self.enhancePass.value = abs(value)
                 } else {
                     self.enhancePass.value = 0.0
                 }

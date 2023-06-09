@@ -19,6 +19,7 @@ public final class MultilineTextComponent: Component {
     public let cutout: TextNodeCutout?
     public let insets: UIEdgeInsets
     public let textShadowColor: UIColor?
+    public let textShadowBlur: CGFloat?
     public let textStroke: (UIColor, CGFloat)?
     public let highlightColor: UIColor?
     public let highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)?
@@ -35,6 +36,7 @@ public final class MultilineTextComponent: Component {
         cutout: TextNodeCutout? = nil,
         insets: UIEdgeInsets = UIEdgeInsets(),
         textShadowColor: UIColor? = nil,
+        textShadowBlur: CGFloat? = nil,
         textStroke: (UIColor, CGFloat)? = nil,
         highlightColor: UIColor? = nil,
         highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? = nil,
@@ -50,6 +52,7 @@ public final class MultilineTextComponent: Component {
         self.cutout = cutout
         self.insets = insets
         self.textShadowColor = textShadowColor
+        self.textShadowBlur = textShadowBlur
         self.textStroke = textStroke
         self.highlightColor = highlightColor
         self.highlightAction = highlightAction
@@ -88,6 +91,9 @@ public final class MultilineTextComponent: Component {
                 return false
             }
         } else if (lhs.textShadowColor != nil) != (rhs.textShadowColor != nil) {
+            return false
+        }
+        if lhs.textShadowBlur != rhs.textShadowBlur {
             return false
         }
         
@@ -134,6 +140,7 @@ public final class MultilineTextComponent: Component {
             self.cutout = component.cutout
             self.insets = component.insets
             self.textShadowColor = component.textShadowColor
+            self.textShadowBlur = component.textShadowBlur
             self.textStroke = component.textStroke
             self.linkHighlightColor = component.highlightColor
             self.highlightAttributeAction = component.highlightAction

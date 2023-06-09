@@ -6,6 +6,11 @@ import TelegramUIPreferences
 import PersistentStringHash
 import Postbox
 
+public enum MediaEditorResultPrivacy: Equatable {
+    case story(privacy: EngineStoryPrivacy, timeout: Int, archive: Bool)
+    case message(peers: [EnginePeer.Id], timeout: Int?)
+}
+
 public final class MediaEditorDraft: Codable, Equatable {
     public static func == (lhs: MediaEditorDraft, rhs: MediaEditorDraft) -> Bool {
         return lhs.path == rhs.path
@@ -25,13 +30,15 @@ public final class MediaEditorDraft: Codable, Equatable {
     public let thumbnail: UIImage
     public let dimensions: PixelDimensions
     public let values: MediaEditorValues
+    public let privacy: MediaEditorResultPrivacy?
         
-    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, values: MediaEditorValues) {
+    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, values: MediaEditorValues, privacy: MediaEditorResultPrivacy?) {
         self.path = path
         self.isVideo = isVideo
         self.thumbnail = thumbnail
         self.dimensions = dimensions
         self.values = values
+        self.privacy = privacy
     }
     
     public init(from decoder: Decoder) throws {
@@ -55,6 +62,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             fatalError()
         }
+        self.privacy = nil
     }
     
     public func encode(to encoder: Encoder) throws {

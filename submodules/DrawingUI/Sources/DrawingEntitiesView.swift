@@ -496,6 +496,15 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return nil
     }
     
+    public func getView(where f: (DrawingEntityView) -> Bool) -> DrawingEntityView? {
+        for case let view as DrawingEntityView in self.subviews {
+            if f(view) {
+                return view
+            }
+        }
+        return nil
+    }
+    
     public func play() {
         for case let view as DrawingEntityView in self.subviews {
             view.play()

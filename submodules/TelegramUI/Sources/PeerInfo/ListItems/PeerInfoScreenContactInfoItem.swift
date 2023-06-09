@@ -294,9 +294,10 @@ private final class PeerInfoScreenContactInfoItemNode: PeerInfoScreenItemNode {
         var height = topOffset * 2.0
         let usernameFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: usernameSize)
         let phoneFrame = CGRect(origin: CGPoint(x: usernameSize.width > 0.0 ? width - sideInset - phoneSize.width : sideInset, y: topOffset), size: phoneSize)
-        height += max(usernameSize.height, phoneSize.height)
-        
-        let additionalTextFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: additionalTextSize)
+        let textHeight = max(usernameSize.height, phoneSize.height)
+        height += textHeight
+                
+        let additionalTextFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset + textHeight + 3.0), size: additionalTextSize)
         transition.updateFrame(node: self.usernameNode, frame: usernameFrame)
     
         transition.updateFrame(node: self.phoneNumberNode, frame: phoneFrame)
@@ -385,7 +386,7 @@ private final class PeerInfoScreenContactInfoItemNode: PeerInfoScreenItemNode {
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
-                linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.5))
+                linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.2))
                 self.linkHighlightingNode = linkHighlightingNode
                 self.contextSourceNode.contentNode.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
             }

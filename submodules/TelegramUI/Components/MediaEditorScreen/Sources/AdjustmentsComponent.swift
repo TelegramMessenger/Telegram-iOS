@@ -313,12 +313,21 @@ final class AdjustmentsComponent: Component {
                     componentView = self.toolViews[i]
                 }
                 
+                var valueIsNegative = false
+                var value = tool.value
+                if case .enhance = tool.key {
+                    if value < 0.0 {
+                        valueIsNegative = true
+                    }
+                    value = abs(value)
+                }
+                
                 let size = componentView.update(
                     transition: transition,
                     component: AnyComponent(
                         AdjustmentSliderComponent(
                             title: tool.title,
-                            value: tool.value,
+                            value: value,
                             minValue: tool.minValue,
                             maxValue: tool.maxValue,
                             startValue: tool.startValue,
@@ -326,7 +335,11 @@ final class AdjustmentsComponent: Component {
                             trackColor: nil,
                             displayValue: true,
                             valueUpdated: { value in
-                                valueUpdated(tool.key, value)
+                                var updatedValue = value
+                                if valueIsNegative {
+                                    updatedValue *= -1.0
+                                }
+                                valueUpdated(tool.key, updatedValue)
                             },
                             isTrackingUpdated: { isTracking in
                                 isTrackingUpdated(tool.key, isTracking)

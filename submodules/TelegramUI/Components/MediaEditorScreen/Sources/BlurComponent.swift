@@ -118,15 +118,18 @@ final class BlurComponent: Component {
     let value: BlurValue
     let hasPortrait: Bool
     let valueUpdated: (BlurValue) -> Void
+    let isTrackingUpdated: (Bool) -> Void
     
     init(
         value: BlurValue,
         hasPortrait: Bool,
-        valueUpdated: @escaping (BlurValue) -> Void
+        valueUpdated: @escaping (BlurValue) -> Void,
+        isTrackingUpdated: @escaping (Bool) -> Void
     ) {
         self.value = value
         self.hasPortrait = hasPortrait
         self.valueUpdated = valueUpdated
+        self.isTrackingUpdated = isTrackingUpdated
     }
     
     static func ==(lhs: BlurComponent, rhs: BlurComponent) -> Bool {
@@ -287,6 +290,36 @@ final class BlurComponent: Component {
                 environment: {},
                 containerSize: availableSize
             )
+            
+            let isTrackingUpdated: (Bool) -> Void = { [weak self] isTracking in
+                component.isTrackingUpdated(isTracking)
+                
+                if let self {
+                    let transition: Transition
+                    if isTracking {
+                        transition = .immediate
+                    } else {
+                        transition = .easeInOut(duration: 0.25)
+                    }
+                    
+                    let alpha: CGFloat = isTracking ? 0.0 : 1.0
+                    if let view = self.title.view {
+                        transition.setAlpha(view: view, alpha: alpha)
+                    }
+                    if let view = self.offButton.view {
+                        transition.setAlpha(view: view, alpha: alpha)
+                    }
+                    if let view = self.radialButton.view {
+                        transition.setAlpha(view: view, alpha: alpha)
+                    }
+                    if let view = self.linearButton.view {
+                        transition.setAlpha(view: view, alpha: alpha)
+                    }
+                    if let view = self.portraitButton.view {
+                        transition.setAlpha(view: view, alpha: alpha)
+                    }
+                }
+            }
 
             let sliderSize = self.slider.update(
                 transition: transition,
@@ -304,6 +337,9 @@ final class BlurComponent: Component {
                             if let state {
                                 valueUpdated(state.value.withUpdatedIntensity(value))
                             }
+                        },
+                        isTrackingUpdated: { isTracking in
+                            isTrackingUpdated(isTracking)
                         }
                     )
                 ),
@@ -364,14 +400,17 @@ final class BlurScreenComponent: Component {
     
     let value: BlurValue
     let valueUpdated: (BlurValue) -> Void
+    let isTrackingUpdated: (Bool) -> Void
     
     init(
         value: BlurValue,
-        valueUpdated: @escaping (BlurValue) -> Void
+        valueUpdated: @escaping (BlurValue) -> Void,
+        isTrackingUpdated: @escaping (Bool) -> Void
         
     ) {
         self.value = value
         self.valueUpdated = valueUpdated
+        self.isTrackingUpdated = isTrackingUpdated
     }
     
     static func ==(lhs: BlurScreenComponent, rhs: BlurScreenComponent) -> Bool {
@@ -435,6 +474,7 @@ final class BlurScreenComponent: Component {
             case .began:
                 switch component.value.mode {
                 case .radial:
+                    component.isTrackingUpdated(true)
                     let distance = sqrt(delta.x * delta.x + delta.y * delta.y)
                     
                     let close = abs(outerRadius - innerRadius) < blurInsetProximity
@@ -455,6 +495,7 @@ final class BlurScreenComponent: Component {
                         self.startRadius = outerRadius
                     }
                 case .linear:
+                    component.isTrackingUpdated(true)
                     let radialDistance = sqrt(delta.x * delta.x + delta.y * delta.y)
                     let distance = abs(delta.x * cos(CGFloat(component.value.rotation) + .pi / 2.0) + delta.y * sin(CGFloat(component.value.rotation) + .pi / 2.0))
                     
@@ -617,6 +658,7 @@ final class BlurScreenComponent: Component {
                     break
                 }
             default:
+                component.isTrackingUpdated(false)
                 self.activeControl = nil
                 self.startCenterPoint = nil
                 self.startDistance = nil
@@ -630,6 +672,7 @@ final class BlurScreenComponent: Component {
             }
             switch gestureRecognizer.state {
             case .began:
+                component.isTrackingUpdated(true)
                 self.activeControl = .wholeArea
             case .changed:
                 let scale = Float(gestureRecognizer.scale)
@@ -640,6 +683,7 @@ final class BlurScreenComponent: Component {
                                 
                 gestureRecognizer.scale = 1.0
             default:
+                component.isTrackingUpdated(false)
                 self.activeControl = nil
             }
         }

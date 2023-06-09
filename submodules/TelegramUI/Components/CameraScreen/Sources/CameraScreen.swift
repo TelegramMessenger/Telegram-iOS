@@ -33,25 +33,30 @@ private struct CameraState {
         case handsFree
     }
     let mode: CameraMode
+    let position: Camera.Position
     let flashMode: Camera.FlashMode
     let flashModeDidChange: Bool
     let recording: Recording
     let duration: Double
     
     func updatedMode(_ mode: CameraMode) -> CameraState {
-        return CameraState(mode: mode, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration)
+        return CameraState(mode: mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration)
+    }
+    
+    func updatedPosition(_ mode: Camera.Position) -> CameraState {
+        return CameraState(mode: self.mode, position: position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration)
     }
     
     func updatedFlashMode(_ flashMode: Camera.FlashMode) -> CameraState {
-        return CameraState(mode: self.mode, flashMode: flashMode, flashModeDidChange: self.flashMode != flashMode, recording: self.recording, duration: self.duration)
+        return CameraState(mode: self.mode, position: self.position, flashMode: flashMode, flashModeDidChange: self.flashMode != flashMode, recording: self.recording, duration: self.duration)
     }
     
     func updatedRecording(_ recording: Recording) -> CameraState {
-        return CameraState(mode: self.mode, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: recording, duration: self.duration)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: recording, duration: self.duration)
     }
     
     func updatedDuration(_ duration: Double) -> CameraState {
-        return CameraState(mode: self.mode, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: duration)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: duration)
     }
 }
 
@@ -141,7 +146,7 @@ private final class CameraScreenComponent: CombinedComponent {
         fileprivate var lastGalleryAsset: PHAsset?
         private var lastGalleryAssetsDisposable: Disposable?
         
-        var cameraState = CameraState(mode: .photo, flashMode: .off, flashModeDidChange: false, recording: .none, duration: 0.0)
+        var cameraState = CameraState(mode: .photo, position: .unspecified, flashMode: .off, flashModeDidChange: false, recording: .none, duration: 0.0)
         var swipeHint: CaptureControlsComponent.SwipeHint = .none
         
         private let hapticFeedback = HapticFeedback()
@@ -154,13 +159,18 @@ private final class CameraScreenComponent: CombinedComponent {
             
             super.init()
             
-            self.cameraStateDisposable = (camera.flashMode
-            |> deliverOnMainQueue).start(next: { [weak self] flashMode in
+            self.cameraStateDisposable = combineLatest(queue: Queue.mainQueue(), camera.flashMode, camera.position)
+            .start(next: { [weak self] flashMode, position in
                 guard let self else {
                     return
                 }
-                self.cameraState = self.cameraState.updatedFlashMode(flashMode)
+                let previousState = self.cameraState
+                self.cameraState = self.cameraState.updatedPosition(position).updatedFlashMode(flashMode)
                 self.updated(transition: .easeInOut(duration: 0.2))
+                
+                if previousState.position != self.cameraState.position {
+                    UserDefaults.standard.set((self.cameraState.position == .front) as NSNumber, forKey: "TelegramStoryCameraUseFrontPosition")
+                }
             })
             
             Queue.mainQueue().async {
@@ -206,7 +216,13 @@ private final class CameraScreenComponent: CombinedComponent {
             self.hapticFeedback.impact(.light)
         }
         
+        private var lastFlipTimestamp: Double?
         func togglePosition() {
+            let currentTimestamp = CACurrentMediaTime()
+            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 2.0 {
+                return
+            }
+            self.lastFlipTimestamp = currentTimestamp
             self.camera.togglePosition()
             self.hapticFeedback.impact(.light)
         }
@@ -752,7 +768,13 @@ public class CameraScreen: ViewController {
                     self.previewView = CameraPreviewView(test: false)!
                     self.simplePreviewView = nil
                 }
-                self.camera = Camera(configuration: Camera.Configuration(preset: .hd1920x1080, position: .back, audio: true, photo: true, metadata: false, preferredFps: 60.0), previewView: self.simplePreviewView)
+                
+                var cameraFrontPosition = false
+                if let useCameraFrontPosition = UserDefaults.standard.object(forKey: "TelegramStoryCameraUseFrontPosition") as? NSNumber, useCameraFrontPosition.boolValue {
+                    cameraFrontPosition = true
+                }
+                
+                self.camera = Camera(configuration: Camera.Configuration(preset: .hd1920x1080, position: cameraFrontPosition ? .front : .back, audio: true, photo: true, metadata: false, preferredFps: 60.0), previewView: self.simplePreviewView)
                 if !useSimplePreviewView {
 #if targetEnvironment(simulator)
 #else
@@ -1079,12 +1101,11 @@ public class CameraScreen: ViewController {
             let maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
             
             let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
-            
-            let maxOffset = (topInset - (layout.size.height - layout.size.height * maxScale) / 2.0)
-            //let maxOffset = -56.0
+            let targetTopInset = ceil((layout.statusBarHeight ?? 0.0) - (layout.size.height - layout.size.height * maxScale) / 2.0)
+            let deltaOffset = (targetTopInset - topInset)
             
             let scale = 1.0 * progress + (1.0 - progress) * maxScale
-            let offset = (1.0 - progress) * maxOffset
+            let offset = (1.0 - progress) * deltaOffset
             transition.updateSublayerTransformScaleAndOffset(layer: self.containerView.layer, scale: scale, offset: CGPoint(x: 0.0, y: offset), beginWithCurrentState: true)
         }
         
@@ -1117,9 +1138,9 @@ public class CameraScreen: ViewController {
                 
                 if let view = self.componentHost.findTaggedView(tag: flashButtonTag) {
                     view.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                    view.layer.shadowRadius = 4.0
+                    view.layer.shadowRadius = 3.0
                     view.layer.shadowColor = UIColor.black.cgColor
-                    view.layer.shadowOpacity = 0.2
+                    view.layer.shadowOpacity = 0.35
                 }
             }
         }
@@ -1311,7 +1332,7 @@ public class CameraScreen: ViewController {
         })
     }
     
-    private weak var galleryController: ViewController?
+    private var galleryController: ViewController?
     public func returnFromEditor() {
         self.node.animateInFromEditor(toGallery: self.galleryController != nil)
     }
@@ -1331,38 +1352,42 @@ public class CameraScreen: ViewController {
             self.node.pauseCameraCapture()
         }
         
-        let controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
-            if let self {
-                stopCameraCapture()
-                
-                let resultTransition = ResultTransition(
-                    sourceView: transitionView,
-                    sourceRect: transitionRect,
-                    sourceImage: transitionImage,
-                    transitionOut: transitionOut
-                )
-                if let asset = result as? PHAsset {
-                    self.completion(.single(.asset(asset)), resultTransition, dismissed)
-                } else if let draft = result as? MediaEditorDraft {
-                    self.completion(.single(.draft(draft)), resultTransition, dismissed)
-                }
-            }
-        }, dismissed: { [weak self] in
-            if let self {
-                self.node.resumeCameraCapture()
-            }
-        })
-        controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
-            if let self, let controller {
-                let transitionFactor = controller.modalStyleOverlayTransitionFactor
-                if transitionFactor > 0.1 {
+        let controller: ViewController
+        if let current = self.galleryController {
+            controller = current
+        } else {
+            controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
+                if let self {
                     stopCameraCapture()
+                    
+                    let resultTransition = ResultTransition(
+                        sourceView: transitionView,
+                        sourceRect: transitionRect,
+                        sourceImage: transitionImage,
+                        transitionOut: transitionOut
+                    )
+                    if let asset = result as? PHAsset {
+                        self.completion(.single(.asset(asset)), resultTransition, dismissed)
+                    } else if let draft = result as? MediaEditorDraft {
+                        self.completion(.single(.draft(draft)), resultTransition, dismissed)
+                    }
                 }
-                self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+            }, dismissed: { [weak self] in
+                if let self {
+                    self.node.resumeCameraCapture()
+                }
+            })
+            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+                if let self, let controller {
+                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                    if transitionFactor > 0.1 {
+                        stopCameraCapture()
+                    }
+                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
             }
+            self.galleryController = controller
         }
-        
-        self.galleryController = controller
         self.push(controller)
     }
     

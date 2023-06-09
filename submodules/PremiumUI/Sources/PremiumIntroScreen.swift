@@ -1900,7 +1900,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         horizontalAlignment: .natural,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.0,
-                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
+                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
                         highlightAction: { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)

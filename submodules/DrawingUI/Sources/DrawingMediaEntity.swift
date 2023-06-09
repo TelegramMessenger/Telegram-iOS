@@ -11,19 +11,19 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     private var mediaEntity: DrawingMediaEntity {
         return self.entity as! DrawingMediaEntity
     }
-    
-    var started: ((Double) -> Void)?
-    
+        
     private var currentSize: CGSize?
     private var isVisible = true
     private var isPlaying = false
     
-    public var previewView: MediaEditorPreviewView? {
+    public weak var previewView: MediaEditorPreviewView? {
         didSet {
             if let previewView = self.previewView {
                 previewView.isUserInteractionEnabled = false
                 previewView.layer.allowsEdgeAntialiasing = true
                 self.addSubview(previewView)
+            } else {
+                oldValue?.removeFromSuperview()
             }
         }
     }
@@ -37,7 +37,10 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     }
     
     deinit {
-
+        if let previewView = self.previewView {
+            previewView.removeFromSuperview()
+            self.previewView = nil
+        }
     }
     
     override func play() {

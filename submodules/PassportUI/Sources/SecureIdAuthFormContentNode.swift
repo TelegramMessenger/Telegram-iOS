@@ -68,7 +68,7 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
         
         super.init()
         
-        self.textNode.linkHighlightColor = theme.list.itemAccentColor.withAlphaComponent(0.5)
+        self.textNode.linkHighlightColor = theme.list.itemAccentColor.withAlphaComponent(0.2)
         self.textNode.highlightAttributeAction = { attributes in
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)

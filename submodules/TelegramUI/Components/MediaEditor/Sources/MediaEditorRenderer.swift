@@ -30,6 +30,7 @@ protocol RenderPass: AnyObject {
 
 protocol TextureSource {
     func connect(to: TextureConsumer)
+    func invalidate()
 }
 
 protocol RenderTarget: AnyObject {

@@ -26,8 +26,8 @@ func textureRotatonForAVAsset(_ asset: AVAsset) -> TextureRotation {
 }
 
 final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullDelegate {
-    private let player: AVPlayer
-    private var playerItem: AVPlayerItem?
+    private weak var player: AVPlayer?
+    private weak var playerItem: AVPlayerItem?
     private var playerItemOutput: AVPlayerItemVideoOutput?
     
     private var playerItemStatusObservation: NSKeyValueObservation?
@@ -57,17 +57,26 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         
         super.init()
         
-        self.playerItemObservation = self.player.observe(\.currentItem, options: [.initial, .new], changeHandler: { [weak self] (player, change) in
-            guard let strongSelf = self, strongSelf.player == player else {
+        self.playerItemObservation = player.observe(\.currentItem, options: [.initial, .new], changeHandler: { [weak self] (player, change) in
+            guard let strongSelf = self else {
                 return
             }
-            strongSelf.updatePlayerItem(strongSelf.player.currentItem)
+            strongSelf.updatePlayerItem(player.currentItem)
         })
     }
     
     deinit {
         self.playerItemObservation?.invalidate()
         self.playerItemStatusObservation?.invalidate()
+    }
+    
+    func invalidate() {
+        self.playerItemOutput?.setDelegate(nil, queue: self.queue)
+        self.playerItemOutput = nil
+        self.playerItemObservation?.invalidate()
+        self.playerItemStatusObservation?.invalidate()
+        self.displayLink?.invalidate()
+        self.displayLink = nil
     }
     
     private func updatePlayerItem(_ playerItem: AVPlayerItem?) {
@@ -160,7 +169,10 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
     }
     
     private func handleUpdate() {
-        if self.player.rate != 0 {
+        guard let player = self.player else {
+            return
+        }
+        if player.rate != 0 {
             self.forceUpdate = true
         }
         self.update(forced: self.forceUpdate)

@@ -230,7 +230,8 @@ public final class MessageInputActionButtonComponent: Component {
                         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                         
                         if let image = UIImage(bundleImageName: "Media Editor/Apply"), let cgImage = image.cgImage {
-                            context.setBlendMode(.clear)
+                            context.setBlendMode(.copy)
+                            context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.35).cgColor)
                             context.clip(to: CGRect(origin: CGPoint(x: -4.0 + UIScreenPixel, y: -3.0 - UIScreenPixel), size: CGSize(width: 40.0, height: 40.0)), mask: cgImage)
                             context.fill(CGRect(origin: .zero, size: size))
                         }

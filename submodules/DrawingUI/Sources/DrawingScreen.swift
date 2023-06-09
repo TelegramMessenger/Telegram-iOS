@@ -494,6 +494,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     let existingStickerPickerInputData: Promise<StickerPickerInputData>?
     let isVideo: Bool
     let isAvatar: Bool
+    let isInteractingWithEntities: Bool
     let present: (ViewController) -> Void
     let updateState: ActionSlot<DrawingView.NavigationState>
     let updateColor: ActionSlot<DrawingColor>
@@ -528,6 +529,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         existingStickerPickerInputData: Promise<StickerPickerInputData>?,
         isVideo: Bool,
         isAvatar: Bool,
+        isInteractingWithEntities: Bool,
         present: @escaping (ViewController) -> Void,
         updateState: ActionSlot<DrawingView.NavigationState>,
         updateColor: ActionSlot<DrawingColor>,
@@ -560,6 +562,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         self.existingStickerPickerInputData = existingStickerPickerInputData
         self.isVideo = isVideo
         self.isAvatar = isAvatar
+        self.isInteractingWithEntities = isInteractingWithEntities
         self.present = present
         self.updateState = updateState
         self.updateColor = updateColor
@@ -592,7 +595,13 @@ private final class DrawingScreenComponent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
+        if lhs.isVideo != rhs.isVideo {
+            return false
+        }
         if lhs.isAvatar != rhs.isAvatar {
+            return false
+        }
+        if lhs.isInteractingWithEntities != rhs.isInteractingWithEntities {
             return false
         }
         return true
@@ -1138,9 +1147,9 @@ private final class DrawingScreenComponent: CombinedComponent {
                 }
             }
             
-            var controlsVisible = true
-            if state.drawingViewState.isDrawing {
-                controlsVisible = false
+            var controlsAreVisible = true
+            if state.drawingViewState.isDrawing || component.isInteractingWithEntities {
+                controlsAreVisible = false
             }
                  
             let previewSize = CGSize(width: context.availableSize.width, height: floorToScreenPixels(context.availableSize.width * 1.77778))
@@ -1187,7 +1196,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             )
             context.add(bottomGradient
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomGradient.size.height / 2.0))
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             
             if let textEntity = state.selectedEntity as? DrawingTextEntity {
@@ -1328,7 +1337,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             offsetX += delta
         
@@ -1356,7 +1365,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1384,7 +1393,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1412,7 +1421,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1440,7 +1449,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             delay += 0.025
@@ -1469,7 +1478,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1497,7 +1506,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             offsetX += delta
             
@@ -1525,7 +1534,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         completion()
                     })
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
          
             if state.selectedEntity is DrawingStickerEntity || state.selectedEntity is DrawingTextEntity {
@@ -1569,7 +1578,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             completion()
                         }
                     }))
-                    .opacity(controlsVisible ? 1.0 : 0.0)
+                    .opacity(controlsAreVisible ? 1.0 : 0.0)
                 )
             }
             
@@ -1744,7 +1753,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             )
             context.add(textSize
                 .position(CGPoint(x: textSize.size.width / 2.0, y: topInset + (context.availableSize.height - topInset - bottomInset) / 2.0))
-                .opacity(sizeSliderVisible && controlsVisible ? 1.0 : 0.0)
+                .opacity(sizeSliderVisible && controlsAreVisible ? 1.0 : 0.0)
             )
             
             let undoButton = undoButton.update(
@@ -1764,7 +1773,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             context.add(undoButton
                 .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: topInset))
                 .scale(isEditingText ? 0.01 : 1.0)
-                .opacity(isEditingText || !controlsVisible ? 0.0 : 1.0)
+                .opacity(isEditingText || !controlsAreVisible ? 0.0 : 1.0)
             )
             
             
@@ -1784,7 +1793,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             context.add(redoButton
                 .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: topInset))
                 .scale(state.drawingViewState.canRedo && !isEditingText ? 1.0 : 0.01)
-                .opacity(state.drawingViewState.canRedo && !isEditingText && controlsVisible ? 1.0 : 0.0)
+                .opacity(state.drawingViewState.canRedo && !isEditingText && controlsAreVisible ? 1.0 : 0.0)
             )
             
             let clearAllButton = clearAllButton.update(
@@ -1804,7 +1813,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             context.add(clearAllButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: topInset))
                 .scale(isEditingText ? 0.01 : 1.0)
-                .opacity(isEditingText || !controlsVisible ? 0.0 : 1.0)
+                .opacity(isEditingText || !controlsAreVisible ? 0.0 : 1.0)
             )
             
             let textButtonTopInset: CGFloat
@@ -1896,7 +1905,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .position(CGPoint(x: leftEdge + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
       
             let modeRightInset: CGFloat = 57.0
@@ -1946,7 +1955,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
                 .cornerRadius(12.0)
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             
             let doneButton = doneButton.update(
@@ -1984,7 +1993,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     })
                     transition.animatePosition(view: view, from: CGPoint(), to: CGPoint(x: 12.0, y: 0.0), additive: true)
                 })
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             
             let selectedIndex: Int
@@ -2049,7 +2058,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             }
             context.add(modeAndSize
                 .position(modeAndSizePosition)
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             
             var animatingOut = false
@@ -2088,7 +2097,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             }
             context.add(backButton
                 .position(backButtonPosition)
-                .opacity(controlsVisible ? 1.0 : 0.0)
+                .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             
             return context.availableSize
@@ -2119,6 +2128,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         fileprivate let insertText: ActionSlot<Void>
         private let updateEntityView: ActionSlot<(UUID, Bool)>
         private let endEditingTextEntityView: ActionSlot<(UUID, Bool)>
+        private var isInteractingWithEntities = false
         
         private let apply: ActionSlot<Void>
         private let dismiss: ActionSlot<Void>
@@ -2408,6 +2418,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                         self.updateColor.invoke(color)
                     }
                 },
+                onInteractionUpdated: { [weak self] isInteracting in
+                    if let self {
+                        self.isInteractingWithEntities = isInteracting
+                        self.requestUpdate(transition: .easeInOut(duration: 0.2))
+                    }
+                },
                 getCurrentImage: { [weak controller] in
                     return controller?.getCurrentImage()
                 },
@@ -2549,6 +2565,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
             return result
         }
         
+        func requestUpdate(transition: Transition = .immediate) {
+            if let (layout, orientation) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, orientation: orientation, transition: transition)
+            }
+        }
+        
         func containerLayoutUpdated(layout: ContainerViewLayout, orientation: UIInterfaceOrientation?, forceUpdate: Bool = false, animateOut: Bool = false, transition: Transition) {
             guard let controller = self.controller else {
                 return
@@ -2594,6 +2616,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                         existingStickerPickerInputData: controller.existingStickerPickerInputData,
                         isVideo: controller.isVideo,
                         isAvatar: controller.isAvatar,
+                        isInteractingWithEntities: self.isInteractingWithEntities,
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
                         },
@@ -2873,8 +2896,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, sessionDidUpdate session: UIDropSession) -> UIDropProposal {
-        //self.chatDisplayNode.updateDropInteraction(isActive: true)
-        
         let operation: UIDropOperation
         operation = .copy
         return UIDropProposal(operation: operation)
@@ -2887,8 +2908,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 return
             }
             let images = imageItems as! [UIImage]
-            
-            //strongSelf.chatDisplayNode.updateDropInteraction(isActive: false)
             if images.count == 1, let image = images.first, max(image.size.width, image.size.height) > 1.0 {
                 let entity = DrawingStickerEntity(content: .image(image))
                 strongSelf.node.insertEntity.invoke(entity)
@@ -2898,12 +2917,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, sessionDidExit session: UIDropSession) {
-        //self.chatDisplayNode.updateDropInteraction(isActive: false)
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, sessionDidEnd session: UIDropSession) {
-        //self.chatDisplayNode.updateDropInteraction(isActive: false)
     }
 }
 
@@ -2917,6 +2934,7 @@ public final class DrawingToolsInteraction {
     private let updateVideoPlayback: (Bool) -> Void
     private let updateColor: (DrawingColor) -> Void
     
+    private let onInteractionUpdated: (Bool) -> Void
     private let getCurrentImage: () -> UIImage?
     private let getControllerNode: () -> ASDisplayNode?
     private let present: (ViewController, PresentationContextType, Any?) -> Void
@@ -2942,6 +2960,7 @@ public final class DrawingToolsInteraction {
         updateSelectedEntity: @escaping (DrawingEntity?) -> Void,
         updateVideoPlayback: @escaping (Bool) -> Void,
         updateColor: @escaping (DrawingColor) -> Void,
+        onInteractionUpdated: @escaping (Bool) -> Void,
         getCurrentImage: @escaping () -> UIImage?,
         getControllerNode: @escaping () -> ASDisplayNode?,
         present: @escaping (ViewController, PresentationContextType, Any?) -> Void,
@@ -2955,6 +2974,7 @@ public final class DrawingToolsInteraction {
         self.updateSelectedEntity = updateSelectedEntity
         self.updateVideoPlayback = updateVideoPlayback
         self.updateColor = updateColor
+        self.onInteractionUpdated = onInteractionUpdated
         self.getCurrentImage = getCurrentImage
         self.getControllerNode = getControllerNode
         self.present = present
@@ -2975,7 +2995,11 @@ public final class DrawingToolsInteraction {
                 self.updateSelectedEntity(entity)
             }
         }
-        
+        self.entitiesView.onInteractionUpdated = { [weak self] isInteracting in
+            if let self {
+                self.onInteractionUpdated(isInteracting)
+            }
+        }
         self.entitiesView.requestedMenuForEntityView = { [weak self] entityView, isTopmost in
             guard let self, let node = self.getControllerNode() else {
                 return
@@ -2998,6 +3022,12 @@ public final class DrawingToolsInteraction {
                     if let self, let entityView {
                         entityView.beginEditing(accessoryView: self.textEditAccessoryView)
                         self.entitiesView.selectEntity(entityView.entity)
+                    }
+                }))
+            } else if entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView {
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Flip, accessibilityLabel: presentationData.strings.Paint_Flip), action: { [weak self] in
+                    if let self {
+                        self.flipSelectedEntity()
                     }
                 }))
             }
@@ -3069,6 +3099,21 @@ public final class DrawingToolsInteraction {
                 selectedEntityView.entity.lineWidth = size
             }
             selectedEntityView.update()
+        }
+    }
+    
+    public func flipSelectedEntity() {
+        if let selectedEntityView = self.entitiesView.selectedEntityView {
+            let selectedEntity = selectedEntityView.entity
+            if let entity = selectedEntity as? DrawingBubbleEntity {
+                var updatedTailPosition = entity.tailPosition
+                updatedTailPosition.x = 1.0 - updatedTailPosition.x
+                entity.tailPosition = updatedTailPosition
+                selectedEntityView.update(animated: false)
+            } else if let entity = selectedEntity as? DrawingStickerEntity {
+                entity.mirrored = !entity.mirrored
+                selectedEntityView.update(animated: true)
+            }
         }
     }
     

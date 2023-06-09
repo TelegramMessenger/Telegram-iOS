@@ -56,6 +56,10 @@ final class ImageTextureSource: TextureSource {
             self.output?.consumeTexture(texture, render: false)
         }
     }
+    
+    func invalidate() {
+        self.texture = nil
+    }
 }
 
 func pixelBufferToMTLTexture(pixelBuffer: CVPixelBuffer, textureCache: CVMetalTextureCache) -> MTLTexture? {

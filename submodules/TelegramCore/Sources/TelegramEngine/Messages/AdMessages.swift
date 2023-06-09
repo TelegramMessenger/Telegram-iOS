@@ -43,6 +43,7 @@ private class AdMessagesHistoryContextImpl {
             struct WebPage: Equatable, Codable {
                 var title: String
                 var url: String
+                var photo: TelegramMediaImage?
             }
             
             case peer(PeerId)
@@ -270,7 +271,7 @@ private class AdMessagesHistoryContextImpl {
                     accessHash: nil,
                     title: webPage.title,
                     username: nil,
-                    photo: [],
+                    photo: webPage.photo?.representations ?? [],
                     creationDate: 0,
                     version: 0,
                     participationStatus: .left,
@@ -514,9 +515,10 @@ private class AdMessagesHistoryContextImpl {
                                 if let fromId = fromId {
                                     target = .peer(fromId.peerId)
                                 } else if let webPage = webPage {
-                                    if case let .sponsoredWebPage(_, url, siteName, photo) = webPage {
-                                        let _ = photo
-                                        target = .webPage(CachedMessage.Target.WebPage(title: siteName, url: url))
+                                    switch webPage {
+                                    case let .sponsoredWebPage(_, url, siteName, photo):
+                                        let photo = photo.flatMap { telegramMediaImageFromApiPhoto($0) }
+                                        target = .webPage(CachedMessage.Target.WebPage(title: siteName, url: url, photo: photo))
                                     }
                                 } else if let chatInvite = chatInvite, let chatInviteHash = chatInviteHash {
                                     switch chatInvite {

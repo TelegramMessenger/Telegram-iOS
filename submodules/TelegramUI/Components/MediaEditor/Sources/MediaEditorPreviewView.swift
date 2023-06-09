@@ -5,7 +5,7 @@ import MetalKit
 import SwiftSignalKit
 
 public final class MediaEditorPreviewView: MTKView, MTKViewDelegate, RenderTarget {
-    var renderer: MediaEditorRenderer? {
+    weak var renderer: MediaEditorRenderer? {
         didSet {
             if let renderer = self.renderer {
                 renderer.renderTargetDidChange(self)
