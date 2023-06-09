@@ -71,7 +71,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
     }
     
     func invalidate() {
-        self.playerItemOutput?.setDelegate(nil, queue: self.queue)
+        self.playerItemOutput?.setDelegate(nil, queue: nil)
         self.playerItemOutput = nil
         self.playerItemObservation?.invalidate()
         self.playerItemStatusObservation?.invalidate()

@@ -370,6 +370,12 @@ final class CaptureControlsComponent: Component {
         
         private let lockImage = UIImage(bundleImageName: "Camera/LockIcon")
         
+        private var lastFlipTimestamp: Double?
+        private var didFlip = false
+        
+        private var wasBanding: Bool?
+        private var panBlobState: ShutterBlobView.BlobState?
+        
         private let hapticFeedback = HapticFeedback()
         
         public func matches(tag: Any) -> Bool {
@@ -425,9 +431,6 @@ final class CaptureControlsComponent: Component {
             }
         }
         
-        private var didFlip = false
-        private var wasBanding: Bool?
-        private var panBlobState: ShutterBlobView.BlobState?
         @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let component = self.component else {
                 return
@@ -651,7 +654,15 @@ final class CaptureControlsComponent: Component {
                             )
                         ),
                         minSize: CGSize(width: 44.0, height: 44.0),
-                        action: {
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            let currentTimestamp = CACurrentMediaTime()
+                            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.3 {
+                                return
+                            }
+                            self.lastFlipTimestamp = currentTimestamp
                             component.flipTapped()
                             flipAnimationAction.invoke(Void())
                         }

@@ -29,6 +29,14 @@ private class VideoFrameLayer: SimpleShapeLayer {
     }
 }
 
+private final class HandleView: UIImageView {
+    var hitTestSlop = UIEdgeInsets()
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        return self.bounds.inset(by: self.hitTestSlop).contains(point)
+    }
+}
+
 final class VideoScrubberComponent: Component {
     typealias EnvironmentType = Empty
     
@@ -93,10 +101,10 @@ final class VideoScrubberComponent: Component {
     }
     
     final class View: UIView, UITextFieldDelegate {
-        private let leftHandleView = UIImageView()
-        private let rightHandleView = UIImageView()
+        private let leftHandleView = HandleView()
+        private let rightHandleView = HandleView()
         private let borderView = UIImageView()
-        private let cursorView = UIImageView()
+        private let cursorView = HandleView()
         
         private let transparentFramesContainer = UIView()
         private let opaqueFramesContainer = UIView()
@@ -144,14 +152,17 @@ final class VideoScrubberComponent: Component {
             self.leftHandleView.image = handleImage
             self.leftHandleView.isUserInteractionEnabled = true
             self.leftHandleView.tintColor = .white
+            self.leftHandleView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
             
             self.rightHandleView.image = handleImage
             self.rightHandleView.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
             self.rightHandleView.isUserInteractionEnabled = true
             self.rightHandleView.tintColor = .white
+            self.rightHandleView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
             
             self.cursorView.image = positionImage
             self.cursorView.isUserInteractionEnabled = true
+            self.cursorView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
             
             self.borderView.image = generateImage(CGSize(width: 1.0, height: scrubberHeight), rotatedContext: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))

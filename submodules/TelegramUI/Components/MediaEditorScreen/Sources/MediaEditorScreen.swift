@@ -287,10 +287,14 @@ final class MediaEditorScreenComponent: Component {
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 }
-            }
-            
-            if let view = self.inputPanel.view {
-                if case .camera = source {
+                
+                if let view = self.inputPanel.view {
+                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    view.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
+                }
+                
+                if let view = self.scrubber.view {
                     view.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     view.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
@@ -327,8 +331,15 @@ final class MediaEditorScreenComponent: Component {
                 transition.setScale(view: view, scale: 0.1)
             }
             
-            if let view = self.inputPanel.view {
-                if case .camera = source {
+            
+            if case .camera = source {
+                if let view = self.inputPanel.view {
+                    view.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                    view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
+                }
+                
+                if let view = self.scrubber.view {
                     view.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                     view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
                     view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
@@ -426,6 +437,7 @@ final class MediaEditorScreenComponent: Component {
             }
         }
         
+        private var isEditingCaption = false
         func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
@@ -749,16 +761,25 @@ final class MediaEditorScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 200.0)
             )
-
+            
             let fadeTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
             if self.inputPanelExternalState.isEditing {
-                component.mediaEditor?.stop()
                 fadeTransition.setAlpha(view: self.fadeView, alpha: 1.0)
             } else {
-                component.mediaEditor?.play()
                 fadeTransition.setAlpha(view: self.fadeView, alpha: 0.0)
             }
             transition.setFrame(view: self.fadeView, frame: CGRect(origin: .zero, size: availableSize))
+
+            let isEditingCaption = self.inputPanelExternalState.isEditing
+            if self.isEditingCaption != isEditingCaption {
+                self.isEditingCaption = isEditingCaption
+                
+                if isEditingCaption {
+                    mediaEditor?.stop()
+                } else {
+                    mediaEditor?.play()
+                }
+            }
             
             var isEditingTextEntity = false
             var sizeSliderVisible = false
@@ -1130,6 +1151,8 @@ public final class MediaEditorScreen: ViewController {
         
         fileprivate var subject: MediaEditorScreen.Subject?
         private var subjectDisposable: Disposable?
+        private var appInForegroundDisposable: Disposable?
+        private var wasPlaying = false
         
         private let backgroundDimView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
@@ -1289,11 +1312,24 @@ public final class MediaEditorScreen: ViewController {
                     }
                 }
             }
+            
+            self.appInForegroundDisposable = (controller.context.sharedContext.applicationBindings.applicationInForeground
+            |> deliverOnMainQueue).start(next: { [weak self] inForeground in
+                if let self, let mediaEditor = self.mediaEditor {
+                    if inForeground && self.wasPlaying {
+                        mediaEditor.play()
+                    } else if !inForeground {
+                        self.wasPlaying = mediaEditor.isPlaying
+                        mediaEditor.stop()
+                    }
+                }
+            })
         }
         
         deinit {
             self.subjectDisposable?.dispose()
             self.gradientColorsDisposable?.dispose()
+            self.appInForegroundDisposable?.dispose()
         }
         
         private func setup(with subject: MediaEditorScreen.Subject) {
@@ -2254,6 +2290,10 @@ public final class MediaEditorScreen: ViewController {
         self.transitionOut = transitionOut
         self.completion = completion
         
+        if let transitionIn, case .camera = transitionIn {
+            self.isSavingAvailable = true
+        }
+        
         super.init(navigationBarPresentationData: nil)
         
         self.navigationPresentation = .flatModal
@@ -3094,7 +3134,7 @@ private final class ToolValueComponent: Component {
             self.state = state
             
             let titleSize = self.title.update(
-                transition: transition,
+                transition: .immediate,
                 component: AnyComponent(Text(
                     text: component.title,
                     font: Font.light(34.0),
@@ -3116,11 +3156,11 @@ private final class ToolValueComponent: Component {
                     self.addSubview(titleView)
                 }
                 transition.setPosition(view: titleView, position: titleFrame.center)
-                transition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleFrame.size))
+                titleView.bounds = CGRect(origin: .zero, size: titleFrame.size)
             }
             
             let valueSize = self.value.update(
-                transition: transition,
+                transition: .immediate,
                 component: AnyComponent(Text(
                     text: component.value,
                     font: Font.with(size: 90.0, weight: .thin, traits: .monospacedNumbers),
@@ -3142,7 +3182,7 @@ private final class ToolValueComponent: Component {
                     self.addSubview(valueView)
                 }
                 transition.setPosition(view: valueView, position: valueFrame.center)
-                transition.setBounds(view: valueView, bounds: CGRect(origin: .zero, size: valueFrame.size))
+                valueView.bounds = CGRect(origin: .zero, size: valueFrame.size)
             }
             
             if let previousValue, component.value != previousValue, self.alpha > 0.0 {

@@ -43,7 +43,7 @@ private struct CameraState {
         return CameraState(mode: mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration)
     }
     
-    func updatedPosition(_ mode: Camera.Position) -> CameraState {
+    func updatedPosition(_ position: Camera.Position) -> CameraState {
         return CameraState(mode: self.mode, position: position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration)
     }
     
@@ -216,13 +216,7 @@ private final class CameraScreenComponent: CombinedComponent {
             self.hapticFeedback.impact(.light)
         }
         
-        private var lastFlipTimestamp: Double?
         func togglePosition() {
-            let currentTimestamp = CACurrentMediaTime()
-            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 2.0 {
-                return
-            }
-            self.lastFlipTimestamp = currentTimestamp
             self.camera.togglePosition()
             self.hapticFeedback.impact(.light)
         }
@@ -1334,7 +1328,7 @@ public class CameraScreen: ViewController {
     
     private var galleryController: ViewController?
     public func returnFromEditor() {
-        self.node.animateInFromEditor(toGallery: self.galleryController != nil)
+        self.node.animateInFromEditor(toGallery: self.galleryController?.displayNode.supernode != nil)
     }
     
     func presentGallery(fromGesture: Bool = false) {
@@ -1377,16 +1371,16 @@ public class CameraScreen: ViewController {
                     self.node.resumeCameraCapture()
                 }
             })
-            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
-                if let self, let controller {
-                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
-                    if transitionFactor > 0.1 {
-                        stopCameraCapture()
-                    }
-                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
-                }
-            }
             self.galleryController = controller
+        }
+        controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+            if let self, let controller {
+                let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                if transitionFactor > 0.1 {
+                    stopCameraCapture()
+                }
+                self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+            }
         }
         self.push(controller)
     }

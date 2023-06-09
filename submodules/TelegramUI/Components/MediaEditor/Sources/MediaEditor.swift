@@ -494,6 +494,10 @@ public final class MediaEditor {
         }
     }
     
+    public var isPlaying: Bool {
+        return (self.player?.rate ?? 0.0) > 0.0
+    }
+    
     public func play() {
         self.player?.play()
     }

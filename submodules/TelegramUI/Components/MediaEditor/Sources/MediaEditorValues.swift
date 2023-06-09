@@ -21,21 +21,21 @@ public enum EditorToolKey: Int32, CaseIterable {
     case highlightsTint
     case blur
     case curves
+    
+    static let adjustmentToolsKeys: [EditorToolKey] = [
+        .enhance,
+        .brightness,
+        .contrast,
+        .saturation,
+        .warmth,
+        .fade,
+        .highlights,
+        .shadows,
+        .vignette,
+        .grain,
+        .sharpen
+    ]
 }
-
-private let adjustmentToolsKeys: [EditorToolKey] = [
-    .enhance,
-    .brightness,
-    .contrast,
-    .saturation,
-    .warmth,
-    .fade,
-    .highlights,
-    .shadows,
-    .vignette,
-    .grain,
-    .sharpen
-]
 
 public final class MediaEditorValues: Codable, Equatable {
     public static func == (lhs: MediaEditorValues, rhs: MediaEditorValues) -> Bool {
@@ -75,9 +75,28 @@ public final class MediaEditorValues: Codable, Equatable {
         if lhs.entities != rhs.entities {
             return false
         }
-//        if lhs.toolValues != rhs.toolValues {
-//            return false
-//        }
+
+        
+        for key in EditorToolKey.allCases {
+            let lhsToolValue = lhs.toolValues[key]
+            let rhsToolValue = rhs.toolValues[key]
+            if (lhsToolValue == nil) != (rhsToolValue == nil) {
+                return false
+            }
+            if let lhsToolValue = lhsToolValue as? Float, let rhsToolValue = rhsToolValue as? Float {
+                return lhsToolValue != rhsToolValue
+            }
+            if let lhsToolValue = lhsToolValue as? BlurValue, let rhsToolValue = rhsToolValue as? BlurValue {
+                return lhsToolValue != rhsToolValue
+            }
+            if let lhsToolValue = lhsToolValue as? TintValue, let rhsToolValue = rhsToolValue as? TintValue {
+                return lhsToolValue != rhsToolValue
+            }
+            if let lhsToolValue = lhsToolValue as? CurvesValue, let rhsToolValue = rhsToolValue as? CurvesValue {
+                return lhsToolValue != rhsToolValue
+            }
+        }
+        
         return true
     }
     
@@ -662,7 +681,7 @@ public struct CurvesValue: Equatable, Codable {
 private let toolEpsilon: Float = 0.005
 public extension MediaEditorValues {
     var hasAdjustments: Bool {
-        for key in adjustmentToolsKeys {
+        for key in EditorToolKey.adjustmentToolsKeys {
             if let value = self.toolValues[key] as? Float, abs(value) > toolEpsilon {
                 return true
             }
