@@ -308,6 +308,7 @@ public final class AccountViewTracker {
     
     private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var refreshSecretChatMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var refreshStoriesForMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
     private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
     
@@ -1216,6 +1217,71 @@ public final class AccountViewTracker {
                                     }
                                 }
                             }
+                        }
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
+    public func refreshStoriesForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.refreshStoriesForMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil {
+                    self.refreshStoriesForMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (_, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                    self.nextUpdatedUnsupportedMediaDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = account.postbox.transaction { transaction -> Set<StoryId> in
+                            var result = Set<StoryId>()
+                            for id in messageIds {
+                                if let message = transaction.getMessage(id) {
+                                    for media in message.media {
+                                        if let storyMedia = media as? TelegramMediaStory {
+                                            result.insert(storyMedia.storyId)
+                                        }
+                                    }
+                                }
+                            }
+                            return result
+                        }
+                        |> mapToSignal { ids -> Signal<Never, NoError> in
+                            guard !ids.isEmpty else {
+                                return .complete()
+                            }
+                            
+                            var requests: [Signal<Never, NoError>] = []
+                            
+                            var idsGroupedByPeerId: [PeerId: Set<Int32>] = [:]
+                            for id in ids {
+                                if idsGroupedByPeerId[id.peerId] == nil {
+                                    idsGroupedByPeerId[id.peerId] = Set([id.id])
+                                } else {
+                                    idsGroupedByPeerId[id.peerId]?.insert(id.id)
+                                }
+                            }
+                            
+                            for (peerId, ids) in idsGroupedByPeerId {
+                                requests.append(_internal_refreshStories(account: account, peerId: peerId, ids: Array(ids)))
+                            }
+                            
+                            return combineLatest(requests)
+                            |> ignoreValues
                         }
                         |> afterDisposed { [weak self] in
                             self?.queue.async {

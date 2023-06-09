@@ -523,6 +523,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let unseenReactionsProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2, submitInterval: 0.0)
     private let extendedMediaProcessingManager = ChatMessageVisibleThrottledProcessingManager(interval: 5.0)
     private let translationProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)
+    private let refreshStoriesProcessingManager = ChatMessageThrottledProcessingManager()
     
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
@@ -792,6 +793,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.refreshMediaProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: messageIds)
+        }
+        self.refreshStoriesProcessingManager.process = { [weak context] messageIds in
+            context?.account.viewTracker.refreshStoriesForMessageIds(messageIds: messageIds)
         }
         self.translationProcessingManager.process = { [weak self, weak context] messageIds in
             if let context = context, let toLang = self?.toLang {
@@ -2043,6 +2047,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
+            var messageIdsWithRefreshStories: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
             var messageIdsWithInactiveExtendedMedia = Set<MessageId>()
@@ -2068,6 +2073,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         var contentRequiredValidation = false
                         var mediaRequiredValidation = false
                         var hasUnseenReactions = false
+                        var storiesRequiredValidation = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -2126,6 +2132,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if invoice.version != TelegramMediaInvoice.lastVersion {
                                     contentRequiredValidation = true
                                 }
+                            } else if let story = media as? TelegramMediaStory {
+                                if message.associatedStories[story.storyId] == nil {
+                                    storiesRequiredValidation = true
+                                }
                             }
                         }
                         if contentRequiredValidation {
@@ -2133,6 +2143,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                         if mediaRequiredValidation {
                             messageIdsWithRefreshMedia.append(message.id)
+                        }
+                        if storiesRequiredValidation {
+                            messageIdsWithRefreshStories.append(message.id)
                         }
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
@@ -2328,6 +2341,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             if !messageIdsWithRefreshMedia.isEmpty {
                 self.refreshMediaProcessingManager.add(messageIdsWithRefreshMedia)
+            }
+            if !messageIdsWithRefreshStories.isEmpty {
+                self.refreshStoriesProcessingManager.add(messageIdsWithRefreshStories)
             }
             if !messageIdsWithUnseenPersonalMention.isEmpty {
                 self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)

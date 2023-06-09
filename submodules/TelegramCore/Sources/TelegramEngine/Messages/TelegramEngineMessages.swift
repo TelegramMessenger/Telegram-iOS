@@ -862,23 +862,7 @@ public extension TelegramEngine {
         }
         
         public func refreshStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
-            return _internal_getStoriesById(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peerId: peerId, ids: ids)
-            |> mapToSignal { result -> Signal<Never, NoError> in
-                return self.account.postbox.transaction { transaction -> Void in
-                    var currentItems = transaction.getStoryItems(peerId: peerId)
-                    for i in 0 ..< currentItems.count {
-                        if let updatedItem = result.first(where: { $0.id == currentItems[i].id }) {
-                            if case .item = updatedItem {
-                                if let entry = CodableEntry(updatedItem) {
-                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)
-                                }
-                            }
-                        }
-                    }
-                    transaction.setStoryItems(peerId: peerId, items: currentItems)
-                }
-                |> ignoreValues
-            }
+            return _internal_refreshStories(account: self.account, peerId: peerId, ids: ids)
         }
         
         public func refreshStoryViews(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {

@@ -137,6 +137,20 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                                 }
                             }
                         }
+                        if lhsMessage.associatedStories.count != rhsMessage.associatedStories.count {
+                            return false
+                        }
+                        if !lhsMessage.associatedStories.isEmpty {
+                            for (id, story) in lhsMessage.associatedStories {
+                                if let otherStory = rhsMessage.associatedStories[id] {
+                                    if story != otherStory {
+                                        return false
+                                    }
+                                } else {
+                                    return false
+                                }
+                            }
+                        }
                         if lhsSelection != rhsSelection {
                             return false
                         }
@@ -191,6 +205,20 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                                     if otherMessage.stableVersion != message.stableVersion {
                                         return false
                                     }
+                                }
+                            }
+                        }
+                        if lhsMessage.associatedStories.count != rhsMessage.associatedStories.count {
+                            return false
+                        }
+                        if !lhsMessage.associatedStories.isEmpty {
+                            for (id, story) in lhsMessage.associatedStories {
+                                if let otherStory = rhsMessage.associatedStories[id] {
+                                    if story != otherStory {
+                                        return false
+                                    }
+                                } else {
+                                    return false
                                 }
                             }
                         }

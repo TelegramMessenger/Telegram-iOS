@@ -1491,3 +1491,36 @@ func _internal_exportStoryLink(account: Account, peerId: EnginePeer.Id, id: Int3
         }
     }
 }
+
+func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) -> Signal<Never, NoError> {
+    return _internal_getStoriesById(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peerId: peerId, ids: ids)
+    |> mapToSignal { result -> Signal<Never, NoError> in
+        return account.postbox.transaction { transaction -> Void in
+            var currentItems = transaction.getStoryItems(peerId: peerId)
+            for i in 0 ..< currentItems.count {
+                if let updatedItem = result.first(where: { $0.id == currentItems[i].id }) {
+                    if case .item = updatedItem {
+                        if let entry = CodableEntry(updatedItem) {
+                            currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)
+                        }
+                    }
+                }
+            }
+            transaction.setStoryItems(peerId: peerId, items: currentItems)
+            
+            for id in ids {
+                let current = transaction.getStory(id: StoryId(peerId: peerId, id: id))
+                var updated: CodableEntry?
+                if let updatedItem = result.first(where: { $0.id == id }) {
+                    if let entry = CodableEntry(updatedItem) {
+                        updated = entry
+                    }
+                }
+                if current != updated {
+                    transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))
+                }
+            }
+        }
+        |> ignoreValues
+    }
+}

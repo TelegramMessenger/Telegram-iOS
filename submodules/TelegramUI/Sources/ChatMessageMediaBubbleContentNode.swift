@@ -92,14 +92,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             automaticDownload = .full
                         }
                     } else if let telegramStory = media as? TelegramMediaStory {
+                        selectedMedia = telegramStory
                         if let storyMedia = item.message.associatedStories[telegramStory.storyId], case let .item(storyItem) = storyMedia.get(Stories.StoredItem.self), let media = storyItem.media {
                             if let telegramImage = media as? TelegramMediaImage {
-                                selectedMedia = telegramImage
                                 if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {
                                     automaticDownload = .full
                                 }
                             } else if let telegramFile = media as? TelegramMediaFile {
-                                selectedMedia = telegramFile
                                 if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramFile) {
                                     automaticDownload = .full
                                 } else if shouldPredownloadMedia(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile) {

@@ -3415,6 +3415,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateSublayerTransformScale(node: self.avatarListNode.avatarContainerNode, scale: avatarScale)
             transition.updateSublayerTransformScale(node: self.avatarOverlayNode, scale: avatarScale)
         }
+        
+        if let avatarStoryView = self.avatarListNode.avatarContainerNode.avatarStoryView?.view {
+            transition.updateAlpha(layer: avatarStoryView.layer, alpha: 1.0 - transitionFraction)
+        }
+        
         let apparentAvatarFrame: CGRect
         let controlsClippingFrame: CGRect
         if self.isAvatarExpanded {
