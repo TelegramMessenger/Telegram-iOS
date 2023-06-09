@@ -1244,7 +1244,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peerId)
+            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peerId, singlePeer: false)
             let _ = (storyContent.state
             |> filter { $0.slice != nil }
             |> take(1)
@@ -2325,7 +2325,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peer?.id)
+                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peer?.id, singlePeer: false)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in

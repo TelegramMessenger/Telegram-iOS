@@ -328,10 +328,13 @@ public final class StoryContentContextImpl: StoryContentContext {
     private var preloadStoryResourceDisposables: [MediaResourceId: Disposable] = [:]
     private var pollStoryMetadataDisposables = DisposableSet()
     
+    private var singlePeerListContext: PeerExpiringStoryListContext?
+    
     public init(
         context: AccountContext,
         includeHidden: Bool,
-        focusedPeerId: EnginePeer.Id?
+        focusedPeerId: EnginePeer.Id?,
+        singlePeer: Bool
     ) {
         self.context = context
         self.includeHidden = includeHidden
@@ -339,73 +342,163 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.focusedItem = (focusedPeerId, nil)
         }
         
-        self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(includeHidden: includeHidden)
-        |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
-            guard let self else {
+        if singlePeer {
+            guard let focusedPeerId else {
+                assertionFailure()
                 return
             }
-            
-            let startedWithUnseen: Bool
-            if let current = self.startedWithUnseen {
-                startedWithUnseen = current
-            } else {
-                var startedWithUnseenValue = false
+            let singlePeerListContext = PeerExpiringStoryListContext(account: context.account, peerId: focusedPeerId)
+            self.singlePeerListContext = singlePeerListContext
+            self.storySubscriptionsDisposable = (combineLatest(
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: focusedPeerId))
+                singlePeerListContext.state
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] peer, state in
+                guard let self, let peer else {
+                    return
+                }
                 
-                if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId {
+                let storySubscriptions = EngineStorySubscriptions(
+                    accountItem: nil,
+                    items: [EngineStorySubscriptions.Item(
+                        peer: peer,
+                        hasUnseen: state.hasUnseen,
+                        storyCount: state.items.count,
+                        lastTimestamp: state.items.last?.timestamp ?? 0
+                    )],
+                    hasMoreToken: nil
+                )
+                
+                let startedWithUnseen: Bool
+                if let current = self.startedWithUnseen {
+                    startedWithUnseen = current
                 } else {
-                    var centralIndex: Int?
-                    if let (focusedPeerId, _) = self.focusedItem {
-                        if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
-                            centralIndex = index
+                    var startedWithUnseenValue = false
+                    
+                    if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId {
+                    } else {
+                        var centralIndex: Int?
+                        if let (focusedPeerId, _) = self.focusedItem {
+                            if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                                centralIndex = index
+                            }
                         }
-                    }
-                    if centralIndex == nil {
-                        if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
-                            centralIndex = index
+                        if centralIndex == nil {
+                            if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
+                                centralIndex = index
+                            }
                         }
-                    }
-                    if centralIndex == nil {
-                        if !storySubscriptions.items.isEmpty {
-                            centralIndex = 0
+                        if centralIndex == nil {
+                            if !storySubscriptions.items.isEmpty {
+                                centralIndex = 0
+                            }
+                        }
+                        
+                        if let centralIndex {
+                            if storySubscriptions.items[centralIndex].hasUnseen {
+                                startedWithUnseenValue = true
+                            }
                         }
                     }
                     
-                    if let centralIndex {
-                        if storySubscriptions.items[centralIndex].hasUnseen {
-                            startedWithUnseenValue = true
-                        }
-                    }
+                    self.startedWithUnseen = startedWithUnseenValue
+                    startedWithUnseen = startedWithUnseenValue
                 }
                 
-                self.startedWithUnseen = startedWithUnseenValue
-                startedWithUnseen = startedWithUnseenValue
-            }
-            
-            var sortedItems: [EngineStorySubscriptions.Item] = []
-            for peerId in self.fixedSubscriptionOrder {
-                if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == peerId }) {
-                    sortedItems.append(storySubscriptions.items[index])
+                var sortedItems: [EngineStorySubscriptions.Item] = []
+                for peerId in self.fixedSubscriptionOrder {
+                    if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == peerId }) {
+                        sortedItems.append(storySubscriptions.items[index])
+                    }
                 }
-            }
-            for item in storySubscriptions.items {
-                if !sortedItems.contains(where: { $0.peer.id == item.peer.id }) {
-                    if startedWithUnseen {
-                        if !item.hasUnseen {
-                            continue
+                for item in storySubscriptions.items {
+                    if !sortedItems.contains(where: { $0.peer.id == item.peer.id }) {
+                        if startedWithUnseen {
+                            if !item.hasUnseen {
+                                continue
+                            }
+                        }
+                        sortedItems.append(item)
+                    }
+                }
+                self.fixedSubscriptionOrder = sortedItems.map(\.peer.id)
+                
+                self.storySubscriptions = EngineStorySubscriptions(
+                    accountItem: storySubscriptions.accountItem,
+                    items: sortedItems,
+                    hasMoreToken: storySubscriptions.hasMoreToken
+                )
+                self.updatePeerContexts()
+            })
+        } else {
+            self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(includeHidden: includeHidden)
+            |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
+                guard let self else {
+                    return
+                }
+                
+                let startedWithUnseen: Bool
+                if let current = self.startedWithUnseen {
+                    startedWithUnseen = current
+                } else {
+                    var startedWithUnseenValue = false
+                    
+                    if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId {
+                    } else {
+                        var centralIndex: Int?
+                        if let (focusedPeerId, _) = self.focusedItem {
+                            if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                                centralIndex = index
+                            }
+                        }
+                        if centralIndex == nil {
+                            if let index = storySubscriptions.items.firstIndex(where: { $0.hasUnseen }) {
+                                centralIndex = index
+                            }
+                        }
+                        if centralIndex == nil {
+                            if !storySubscriptions.items.isEmpty {
+                                centralIndex = 0
+                            }
+                        }
+                        
+                        if let centralIndex {
+                            if storySubscriptions.items[centralIndex].hasUnseen {
+                                startedWithUnseenValue = true
+                            }
                         }
                     }
-                    sortedItems.append(item)
+                    
+                    self.startedWithUnseen = startedWithUnseenValue
+                    startedWithUnseen = startedWithUnseenValue
                 }
-            }
-            self.fixedSubscriptionOrder = sortedItems.map(\.peer.id)
-            
-            self.storySubscriptions = EngineStorySubscriptions(
-                accountItem: storySubscriptions.accountItem,
-                items: sortedItems,
-                hasMoreToken: storySubscriptions.hasMoreToken
-            )
-            self.updatePeerContexts()
-        })
+                
+                var sortedItems: [EngineStorySubscriptions.Item] = []
+                for peerId in self.fixedSubscriptionOrder {
+                    if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == peerId }) {
+                        sortedItems.append(storySubscriptions.items[index])
+                    }
+                }
+                for item in storySubscriptions.items {
+                    if !sortedItems.contains(where: { $0.peer.id == item.peer.id }) {
+                        if startedWithUnseen {
+                            if !item.hasUnseen {
+                                continue
+                            }
+                        }
+                        sortedItems.append(item)
+                    }
+                }
+                self.fixedSubscriptionOrder = sortedItems.map(\.peer.id)
+                
+                self.storySubscriptions = EngineStorySubscriptions(
+                    accountItem: storySubscriptions.accountItem,
+                    items: sortedItems,
+                    hasMoreToken: storySubscriptions.hasMoreToken
+                )
+                self.updatePeerContexts()
+            })
+        }
     }
     
     deinit {
@@ -415,6 +508,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             disposable.dispose()
         }
         self.pollStoryMetadataDisposables.dispose()
+        self.storySubscriptionsDisposable?.dispose()
     }
     
     private func updatePeerContexts() {

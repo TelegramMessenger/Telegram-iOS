@@ -515,7 +515,7 @@ public class ContactsController: ViewController {
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: true, focusedPeerId: peer?.id)
+                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: true, focusedPeerId: peer?.id, singlePeer: false)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
