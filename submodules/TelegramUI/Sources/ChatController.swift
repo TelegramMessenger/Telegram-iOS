@@ -96,6 +96,7 @@ import LegacyCamera
 import LegacyInstantVideoController
 import StoryContainerScreen
 import StoryContentComponent
+import MoreHeaderButton
 
 #if DEBUG
 import os.signpost

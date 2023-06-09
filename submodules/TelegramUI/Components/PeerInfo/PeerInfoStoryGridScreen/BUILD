@@ -25,6 +25,7 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/UndoUI",
         "//submodules/TelegramUI/Components/BottomButtonPanelComponent",
+        "//submodules/TelegramUI/Components/MoreHeaderButton",
     ],
     visibility = [
         "//visibility:public",

@@ -6,8 +6,10 @@ import AppBundle
 import BundleIconComponent
 import AccountContext
 import TelegramCore
+import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import StoryContainerScreen
 
 public final class StoryPeerListComponent: Component {
     public final class ExternalState {
@@ -142,6 +144,9 @@ public final class StoryPeerListComponent: Component {
         private var requestedLoadMoreToken: String?
         private let loadMoreDisposable = MetaDisposable()
         
+        private var previewedItemDisposable: Disposable?
+        private var previewedItemId: EnginePeer.Id?
+        
         public override init(frame: CGRect) {
             self.collapsedButton = HighlightableButton()
             
@@ -187,6 +192,7 @@ public final class StoryPeerListComponent: Component {
         
         deinit {
             self.loadMoreDisposable.dispose()
+            self.previewedItemDisposable?.dispose()
         }
         
         @objc private func collapsedButtonPressed() {
@@ -196,12 +202,41 @@ public final class StoryPeerListComponent: Component {
             component.peerAction(nil)
         }
         
-        public func transitionViewForItem(peerId: EnginePeer.Id) -> UIView? {
+        public func setPreviewedItem(signal: Signal<StoryId?, NoError>) {
+            self.previewedItemDisposable?.dispose()
+            self.previewedItemDisposable = (signal |> map(\.?.peerId) |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] itemId in
+                guard let self else {
+                    return
+                }
+                self.previewedItemId = itemId
+                
+                for (peerId, visibleItem) in self.visibleItems {
+                    if let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
+                        itemView.updateIsPreviewing(isPreviewing: peerId == itemId)
+                    }
+                }
+            })
+        }
+        
+        public func transitionViewForItem(peerId: EnginePeer.Id) -> (UIView, StoryContainerScreen.TransitionView)? {
             if self.collapsedButton.isUserInteractionEnabled {
                 return nil
             }
             if let visibleItem = self.visibleItems[peerId], let itemView = visibleItem.view.view as? StoryPeerListItemComponent.View {
-                return itemView.transitionView()
+                if !self.scrollView.bounds.intersects(itemView.frame) {
+                    return nil
+                }
+                
+                return itemView.transitionView().flatMap { transitionView in
+                    return (transitionView, StoryContainerScreen.TransitionView(
+                        makeView: { [weak itemView] in
+                            return StoryPeerListItemComponent.TransitionView(itemView: itemView)
+                        },
+                        updateView: { view, state, transition in
+                            (view as? StoryPeerListItemComponent.TransitionView)?.update(state: state, transition: transition)
+                        }
+                    ))
+                }
             }
             return nil
         }
@@ -394,6 +429,8 @@ public final class StoryPeerListComponent: Component {
                     itemTransition.setFrame(view: itemView.backgroundContainer, frame: itemFrame)
                     itemTransition.setAlpha(view: itemView.backgroundContainer, alpha: itemAlpha)
                     itemTransition.setScale(view: itemView.backgroundContainer, scale: itemScale)
+                    
+                    itemView.updateIsPreviewing(isPreviewing: self.previewedItemId == itemSet.peer.id)
                 }
             }
             

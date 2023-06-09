@@ -13,6 +13,7 @@ import ContextUI
 import ChatTitleView
 import BottomButtonPanelComponent
 import UndoUI
+import MoreHeaderButton
 
 final class PeerInfoStoryGridScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment

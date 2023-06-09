@@ -4,10 +4,10 @@ import Display
 import ComponentFlow
 import AppBundle
 import BundleIconComponent
-import ChatListHeaderComponent
 import AnimatedAvatarSetNode
 import AccountContext
 import TelegramCore
+import MoreHeaderButton
 
 public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext

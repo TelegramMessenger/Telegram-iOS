@@ -529,7 +529,7 @@ public class ContactsController: ViewController {
                     
                     var transitionIn: StoryContainerScreen.TransitionIn?
                     if let peer, let componentView = self.chatListHeaderView() {
-                        if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
+                        if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
                             transitionIn = StoryContainerScreen.TransitionIn(
                                 sourceView: transitionView,
                                 sourceRect: transitionView.bounds,
@@ -548,10 +548,10 @@ public class ContactsController: ViewController {
                             }
                             
                             if let componentView = self.chatListHeaderView() {
-                                if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                                if let (transitionView, transitionContentView) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                                     return StoryContainerScreen.TransitionOut(
                                         destinationView: transitionView,
-                                        transitionView: nil,
+                                        transitionView: transitionContentView,
                                         destinationRect: transitionView.bounds,
                                         destinationCornerRadius: transitionView.bounds.height * 0.5,
                                         destinationIsAvatar: true,

@@ -696,6 +696,42 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if let rightInfoView = self.rightInfoItem?.view.view {
                     if transitionOut.destinationIsAvatar {
+                        let transitionView = transitionOut.transitionView
+                        let transitionViewImpl = transitionView?.makeView()
+                        if let transitionViewImpl {
+                            self.insertSubview(transitionViewImpl, aboveSubview: self.contentContainerView)
+                            
+                            let rightInfoSourceFrame = rightInfoView.convert(rightInfoView.bounds, to: self)
+                            let positionKeyframes: [CGPoint] = generateParabollicMotionKeyframes(from: sourceLocalFrame.center, to: rightInfoSourceFrame.center, elevation: 0.0, duration: 0.3, curve: .spring, reverse: true)
+                            
+                            transitionViewImpl.frame = rightInfoSourceFrame
+                            transitionViewImpl.alpha = 0.0
+                            transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                                sourceSize: rightInfoSourceFrame.size,
+                                destinationSize: sourceLocalFrame.size,
+                                progress: 0.0
+                            ), .immediate)
+                            
+                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            
+                            transitionViewImpl.alpha = 1.0
+                            transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                            
+                            rightInfoView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                            
+                            transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
+                            
+                            transitionViewImpl.layer.position = positionKeyframes[positionKeyframes.count - 1]
+                            transitionViewImpl.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: 0.3, keyPath: "position", removeOnCompletion: false, additive: false)
+                            transitionViewImpl.layer.animateBounds(from: CGRect(origin: CGPoint(), size: rightInfoSourceFrame.size), to: CGRect(origin: CGPoint(), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                            
+                            transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                                sourceSize: rightInfoSourceFrame.size,
+                                destinationSize: sourceLocalFrame.size,
+                                progress: 1.0
+                            ), transition)
+                        }
+                        
                         let positionKeyframes: [CGPoint] = generateParabollicMotionKeyframes(from: innerSourceLocalFrame.center, to: rightInfoView.layer.position, elevation: 0.0, duration: 0.3, curve: .spring, reverse: true)
                         rightInfoView.layer.position = positionKeyframes[positionKeyframes.count - 1]
                         rightInfoView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: 0.3, keyPath: "position", removeOnCompletion: false, additive: false)
@@ -715,33 +751,33 @@ public final class StoryItemSetContainerComponent: Component {
                     removeOnCompletion: false
                 )
                 
-                let transitionView = transitionOut.transitionView
-                let transitionViewImpl = transitionView?.makeView()
-                if let transitionViewImpl {
-                    self.insertSubview(transitionViewImpl, belowSubview: self.contentContainerView)
-                    
-                    transitionViewImpl.frame = contentSourceFrame
-                    transitionViewImpl.alpha = 0.0
-                    transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
-                        sourceSize: contentSourceFrame.size,
-                        destinationSize: sourceLocalFrame.size,
-                        progress: 0.0
-                    ), .immediate)
-                }
-                
-                if let transitionViewImpl {
-                    let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
-                    
-                    transitionViewImpl.alpha = 1.0
-                    transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                    self.contentContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-                    
-                    transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
-                    transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
-                        sourceSize: contentSourceFrame.size,
-                        destinationSize: sourceLocalFrame.size,
-                        progress: 1.0
-                    ), transition)
+                if !transitionOut.destinationIsAvatar {
+                    let transitionView = transitionOut.transitionView
+                    let transitionViewImpl = transitionView?.makeView()
+                    if let transitionViewImpl {
+                        self.insertSubview(transitionViewImpl, belowSubview: self.contentContainerView)
+                        
+                        transitionViewImpl.frame = contentSourceFrame
+                        transitionViewImpl.alpha = 0.0
+                        transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                            sourceSize: contentSourceFrame.size,
+                            destinationSize: sourceLocalFrame.size,
+                            progress: 0.0
+                        ), .immediate)
+                        
+                        let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                        
+                        transitionViewImpl.alpha = 1.0
+                        transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        self.contentContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                        
+                        transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
+                        transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                            sourceSize: contentSourceFrame.size,
+                            destinationSize: sourceLocalFrame.size,
+                            progress: 1.0
+                        ), transition)
+                    }
                 }
                 
                 if let component = self.component, let visibleItemView = self.visibleItems[component.slice.item.id]?.view.view {

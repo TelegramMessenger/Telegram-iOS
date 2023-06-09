@@ -23,6 +23,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryPeerListComponent",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/SearchUI",
+        "//submodules/TelegramUI/Components/MoreHeaderButton",
     ],
     visibility = [
         "//visibility:public",

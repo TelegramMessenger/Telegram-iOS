@@ -11,6 +11,7 @@ import TelegramPresentationData
 import AvatarNode
 import ContextUI
 import AsyncDisplayKit
+import StoryContainerScreen
 
 private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, radius: CGFloat) -> (point1Angle: CGFloat, point2Angle: CGFloat)? {
     let distanceVector = CGPoint(x: otherCenter.x - center.x, y: otherCenter.y - center.y)
@@ -144,6 +145,47 @@ private final class StoryProgressLayer: SimpleShapeLayer {
 private var sharedAvatarBackgroundImage: UIImage?
 
 public final class StoryPeerListItemComponent: Component {
+    public final class TransitionView: UIView {
+        private weak var itemView: StoryPeerListItemComponent.View?
+        private var snapshotView: UIView?
+        private var portalView: PortalView?
+        
+        init(itemView: StoryPeerListItemComponent.View?) {
+            self.itemView = itemView
+            
+            super.init(frame: CGRect())
+            
+            if let itemView {
+                if let portalView = PortalView(matchPosition: false) {
+                    itemView.avatarContent.addPortal(view: portalView)
+                    self.portalView = portalView
+                    self.addSubview(portalView.view)
+                }
+                /*if let snapshotView = itemView.avatarContent.snapshotView(afterScreenUpdates: false) {
+                    self.addSubview(snapshotView)
+                    self.snapshotView = snapshotView
+                }*/
+            }
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(state: StoryContainerScreen.TransitionState, transition: Transition) {
+            let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+            
+            if let snapshotView = self.snapshotView {
+                transition.setPosition(view: snapshotView, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                transition.setScale(view: snapshotView, scale: size.width / state.destinationSize.width)
+            }
+            if let portalView = self.portalView {
+                transition.setPosition(view: portalView.view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                transition.setScale(view: portalView.view, scale: size.width / state.destinationSize.width)
+            }
+        }
+    }
+    
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -240,6 +282,7 @@ public final class StoryPeerListItemComponent: Component {
         
         private let button: HighlightTrackingButton
         
+        fileprivate let avatarContent: PortalSourceView
         private let avatarContainer: UIView
         private let avatarBackgroundContainer: UIView
         private let avatarBackgroundView: UIImageView
@@ -265,6 +308,9 @@ public final class StoryPeerListItemComponent: Component {
             self.containerNode = ContextControllerSourceNode()
             self.extractedBackgroundView = UIImageView()
             self.extractedBackgroundView.alpha = 0.0
+            
+            self.avatarContent = PortalSourceView()
+            self.avatarContent.isUserInteractionEnabled = false
             
             self.avatarContainer = UIView()
             self.avatarContainer.isUserInteractionEnabled = false
@@ -294,9 +340,10 @@ public final class StoryPeerListItemComponent: Component {
             self.avatarBackgroundContainer.addSubview(self.avatarBackgroundView)
             
             self.extractedContainerNode.contentNode.view.addSubview(self.button)
-            self.button.addSubview(self.avatarContainer)
+            self.avatarContent.addSubview(self.avatarContainer)
+            self.button.addSubview(self.avatarContent)
             
-            self.button.layer.addSublayer(self.indicatorColorLayer)
+            self.avatarContent.layer.addSublayer(self.indicatorColorLayer)
             self.indicatorMaskLayer.addSublayer(self.indicatorShapeLayer)
             self.indicatorColorLayer.mask = self.indicatorMaskLayer
             
@@ -364,6 +411,10 @@ public final class StoryPeerListItemComponent: Component {
         
         public func transitionView() -> UIView? {
             return self.avatarNode?.view
+        }
+        
+        func updateIsPreviewing(isPreviewing: Bool) {
+            self.avatarContent.alpha = isPreviewing ? 0.0 : 1.0
         }
         
         func update(component: StoryPeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -439,7 +490,11 @@ public final class StoryPeerListItemComponent: Component {
                 peer: component.peer
             )
             avatarNode.updateSize(size: avatarSize)
-            transition.setPosition(view: self.avatarContainer, position: avatarFrame.center)
+            
+            transition.setPosition(view: self.avatarContent, position: CGPoint(x: avatarFrame.midX, y: avatarFrame.midY))
+            transition.setBounds(view: self.avatarContent, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+            
+            transition.setPosition(view: self.avatarContainer, position: CGPoint(x: avatarFrame.width * 0.5, y: avatarFrame.height * 0.5))
             transition.setBounds(view: self.avatarContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
             
             transition.setPosition(view: self.avatarBackgroundContainer, position: avatarFrame.center)
@@ -517,7 +572,7 @@ public final class StoryPeerListItemComponent: Component {
                 self.indicatorColorLayer.colors = colors
             }
             
-            transition.setPosition(layer: self.indicatorColorLayer, position: indicatorFrame.center)
+            transition.setPosition(layer: self.indicatorColorLayer, position: indicatorFrame.offsetBy(dx: -avatarFrame.minX, dy: -avatarFrame.minY).center)
             transition.setBounds(layer: self.indicatorColorLayer, bounds: CGRect(origin: CGPoint(), size: indicatorFrame.size))
             transition.setPosition(layer: self.indicatorShapeLayer, position: CGPoint(x: indicatorFrame.width * 0.5, y: indicatorFrame.height * 0.5))
             transition.setBounds(layer: self.indicatorShapeLayer, bounds: CGRect(origin: CGPoint(), size: indicatorFrame.size))
