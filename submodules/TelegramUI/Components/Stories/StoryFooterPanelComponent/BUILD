@@ -14,10 +14,10 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/AppBundle",
         "//submodules/Components/BundleIconComponent",
-        "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/AnimatedAvatarSetNode",
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
+        "//submodules/TelegramUI/Components/MoreHeaderButton",
     ],
     visibility = [
         "//visibility:public",

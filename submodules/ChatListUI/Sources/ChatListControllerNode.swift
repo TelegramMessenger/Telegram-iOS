@@ -773,6 +773,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     private var selectedId: ChatListFilterTabEntryId
     
     var storiesUnlocked: Bool = false
+    var ignoreStoryUnlockedScrolling: Bool = false
     
     var initialScrollingOffset: CGFloat?
     
@@ -936,7 +937,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             } else if self.storiesUnlocked {
                 switch offset {
                 case let .known(value):
-                    if value >= ChatListNavigationBar.storiesScrollHeight {
+                    if value >= ChatListNavigationBar.storiesScrollHeight && !self.ignoreStoryUnlockedScrolling {
                         self.storiesUnlocked = false
                         self.onStoriesLockedUpdated?(false)
                     }
@@ -1329,9 +1330,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
         }
     }
     
-    public func scrollToTop() {
+    public func scrollToTop(animated: Bool) {
         if let itemNode = self.itemNodes[self.selectedId] {
-            itemNode.listNode.scrollToPosition(.top)
+            itemNode.listNode.scrollToPosition(.top, animated: animated)
         }
     }
     
@@ -1968,6 +1969,18 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         let _ = self.updateNavigationBar(layout: layout, transition: transition)
     }
     
+    func scrollToStories() {
+        if self.inlineStackContainerNode != nil {
+            return
+        }
+        self.mainContainerNode.scrollToTop(animated: false)
+        self.mainContainerNode.storiesUnlocked = true
+        self.mainContainerNode.ignoreStoryUnlockedScrolling = true
+        self.controller?.requestLayout(transition: .immediate)
+        self.mainContainerNode.scrollToTop(animated: false)
+        self.mainContainerNode.ignoreStoryUnlockedScrolling = false
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var navigationBarHeight = navigationBarHeight
         var visualNavigationHeight = visualNavigationHeight
@@ -2405,9 +2418,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.contentNode.scrollToTop()
         } else if let inlineStackContainerNode = self.inlineStackContainerNode {
-            inlineStackContainerNode.scrollToTop()
+            inlineStackContainerNode.scrollToTop(animated: true)
         } else {
-            self.mainContainerNode.scrollToTop()
+            self.mainContainerNode.scrollToTop(animated: true)
         }
     }
 }

@@ -41,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryContentComponent",
         "//submodules/TelegramUI/Components/Stories/StoryPeerListComponent",
         "//submodules/TelegramUI/Components/ChatListTitleView",
+        "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/ComponentFlow",
     ],
     visibility = [

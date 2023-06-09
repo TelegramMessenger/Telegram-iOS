@@ -20,6 +20,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/AvatarNode",
         "//submodules/ContextUI",
+        "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
     ],
     visibility = [
         "//visibility:public",

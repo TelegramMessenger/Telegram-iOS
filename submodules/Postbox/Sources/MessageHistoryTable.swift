@@ -2574,10 +2574,19 @@ final class MessageHistoryTable: Table {
             }
         }
         
+        var associatedStories: [StoryId: CodableEntry] = [:]
+        
         for media in parsedMedia {
             for peerId in media.peerIds {
                 if let peer = peerTable.get(peerId) {
                     peers[peer.id] = peer
+                }
+            }
+            for storyId in media.storyIds {
+                if associatedStories[storyId] == nil {
+                    if let story = storyTable.get(id: storyId) {
+                        associatedStories[storyId] = story
+                    }
                 }
             }
         }
@@ -2585,7 +2594,6 @@ final class MessageHistoryTable: Table {
         var associatedMessageIds: [MessageId] = []
         var associatedMessages = SimpleDictionary<MessageId, Message>()
         var associatedMedia: [MediaId: Media] = [:]
-        var associatedStories: [StoryId: CodableEntry] = [:]
         
         for attribute in parsedAttributes {
             for peerId in attribute.associatedPeerIds {

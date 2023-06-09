@@ -1144,7 +1144,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         }
     }
 
-    func onTap(item: SparseItemGrid.Item) {
+    func onTap(item: SparseItemGrid.Item, itemLayer: CALayer, point: CGPoint) {
         guard let item = item as? VisualMediaItem else {
             return
         }

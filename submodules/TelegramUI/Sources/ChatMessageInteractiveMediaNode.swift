@@ -586,6 +586,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
                                 messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
                             }
+                        } else if let storyMedia = media as? TelegramMediaStory, let storyItem = message.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                            if case let .item(item) = storyItem, let media = item.media {
+                                if let media = media as? TelegramMediaFile {
+                                    messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: media)
+                                } else if let media = media as? TelegramMediaImage, let resource = largestImageRepresentation(media.representations)?.resource {
+                                    messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: media, resource: resource)
+                                }
+                            }
                         }
                     }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
@@ -615,6 +623,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
                         media = fullMedia
                     }
+                    
+                    if let storyMedia = media as? TelegramMediaStory, let storyItem = self.message?.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                        if case let .item(item) = storyItem, let mediaValue = item.media {
+                            media = mediaValue
+                        }
+                    }
+                    
                     videoContentMatch = self.message?.stableId == stableId && media?.id == mediaId
                 }
                 self.activateLocalContent((self.automaticPlayback ?? false) && videoContentMatch ? .automaticPlayback : .default)
@@ -626,6 +641,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 } else {
                     if let invoice = self.media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
                         self.activateLocalContent(.default)
+                    } else if let storyMedia = media as? TelegramMediaStory, let storyItem = self.message?.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                        if case let .item(item) = storyItem, let mediaValue = item.media {
+                            let _ = mediaValue
+                            self.activateLocalContent(.default)
+                        }
                     } else {
                         self.progressPressed(canActivate: true)
                     }
@@ -682,7 +702,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var maxHeight = layoutConstants.image.maxDimensions.height
             
             var unboundSize: CGSize
-            if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
+            if let _ = media as? TelegramMediaStory {
+                unboundSize = CGSize(width: 1080, height: 1920)
+            } else if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 unboundSize = CGSize(width: max(10.0, floor(dimensions.cgSize.width * 0.5)), height: max(10.0, floor(dimensions.cgSize.height * 0.5)))
             } else if let file = media as? TelegramMediaFile, var dimensions = file.dimensions {
                 if let thumbnail = file.previewRepresentations.first {
@@ -888,6 +910,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     var mediaUpdated = false
                     if let currentMedia = currentMedia {
                         mediaUpdated = !media.isSemanticallyEqual(to: currentMedia)
+                        
+                        if !mediaUpdated, let media = media as? TelegramMediaStory {
+                            if message.associatedStories[media.storyId] != currentMessage?.associatedStories[media.storyId] {
+                                mediaUpdated = true
+                            }
+                        }
                     } else {
                         mediaUpdated = true
                     }
@@ -958,7 +986,134 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                         }
                         
-                        if let image = media as? TelegramMediaImage {
+                        if let story = media as? TelegramMediaStory {
+                            if hasCurrentVideoNode {
+                                replaceVideoNode = true
+                            }
+                            if hasCurrentAnimatedStickerNode {
+                                replaceAnimatedStickerNode = true
+                            }
+                            
+                            if let storyItem = message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(item) = storyItem, let media = item.media {
+                                if let image = media as? TelegramMediaImage {
+                                    if hasCurrentVideoNode {
+                                        replaceVideoNode = true
+                                    }
+                                    if hasCurrentAnimatedStickerNode {
+                                        replaceAnimatedStickerNode = true
+                                    }
+                                    if isSecretMedia {
+                                        updateImageSignal = { synchronousLoad, _ in
+                                            return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image))
+                                        }
+                                    } else {
+                                        updateImageSignal = { synchronousLoad, highQuality in
+                                            return chatMessagePhoto(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
+                                        }
+                                        updateBlurredImageSignal = { synchronousLoad, _ in
+                                            return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), ignoreFullSize: true, synchronousLoad: true)
+                                        }
+                                    }
+                                    
+                                    updatedFetchControls = FetchControls(fetch: { manual in
+                                        if let strongSelf = self {
+                                            if let representation = largestRepresentationForPhoto(image) {
+                                                strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: nil/*isSecretMedia ? nil : 600*/), userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).start())
+                                            }
+                                        }
+                                    }, cancel: {
+                                        chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
+                                        if let resource = largestRepresentationForPhoto(image)?.resource {
+                                            messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: resource)
+                                        }
+                                    })
+                                } else if let file = media as? TelegramMediaFile {
+                                    if isSecretMedia {
+                                        updateImageSignal = { synchronousLoad, _ in
+                                            return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
+                                        }
+                                    } else {
+                                        if file.isAnimatedSticker {
+                                            let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                                            updateImageSignal = { synchronousLoad, _ in
+                                                return chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0)))
+                                            }
+                                        } else if file.isSticker || file.isVideoSticker {
+                                            updateImageSignal = { synchronousLoad, _ in
+                                                return chatMessageSticker(account: context.account, userLocation: .peer(message.id.peerId), file: file, small: false)
+                                            }
+                                        } else {
+                                            onlyFullSizeVideoThumbnail = isSendingUpdated
+                                            updateImageSignal = { synchronousLoad, _ in
+                                                return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
+                                            }
+                                            updateBlurredImageSignal = { synchronousLoad, _ in
+                                                return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: true)
+                                            }
+                                        }
+                                    }
+                                    
+                                    var uploading = false
+                                    if file.resource is VideoLibraryMediaResource {
+                                        uploading = true
+                                    }
+                                    
+                                    if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !uploading {
+                                        updateVideoFile = file
+                                        if hasCurrentVideoNode {
+                                            if let currentFile = currentMedia as? TelegramMediaFile {
+                                                if currentFile.resource is EmptyMediaResource {
+                                                    replaceVideoNode = true
+                                                } else if currentFile.fileId.namespace == Namespaces.Media.CloudFile && file.fileId.namespace == Namespaces.Media.CloudFile && currentFile.fileId != file.fileId {
+                                                    replaceVideoNode = true
+                                                } else if currentFile.fileId != file.fileId && file.fileId.namespace == Namespaces.Media.CloudSecretFile {
+                                                    replaceVideoNode = true
+                                                } else if file.isAnimated && currentFile.fileId.namespace == Namespaces.Media.LocalFile && file.fileId.namespace == Namespaces.Media.CloudFile {
+                                                    replaceVideoNode = true
+                                                }
+                                            }
+                                        } else if !(file.resource is LocalFileVideoMediaResource) {
+                                            replaceVideoNode = true
+                                        }
+                                    } else {
+                                        if hasCurrentVideoNode {
+                                            replaceVideoNode = false
+                                        }
+                                        
+                                        if file.isAnimatedSticker || file.isVideoSticker {
+                                            updateAnimatedStickerFile = file
+                                            if hasCurrentAnimatedStickerNode {
+                                                if let currentMedia = currentMedia {
+                                                    if !currentMedia.isSemanticallyEqual(to: file) {
+                                                        replaceAnimatedStickerNode = true
+                                                    }
+                                                } else {
+                                                    replaceAnimatedStickerNode = true
+                                                }
+                                            } else {
+                                                replaceAnimatedStickerNode = true
+                                            }
+                                        }
+                                    }
+                                    
+                                    updatedFetchControls = FetchControls(fetch: { manual in
+                                        if let strongSelf = self {
+                                            if file.isAnimated {
+                                                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
+                                            } else {
+                                                strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).start())
+                                            }
+                                        }
+                                    }, cancel: {
+                                        if file.isAnimated {
+                                            context.account.postbox.mediaBox.cancelInteractiveResourceFetch(file.resource)
+                                        } else {
+                                            messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                                        }
+                                    })
+                                }
+                            }
+                        } else if let image = media as? TelegramMediaImage {
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
                             }
@@ -1148,6 +1303,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
                             isExtendedMedia = true
                             media = fullMedia
+                        }
+                        if let storyMedia = media as? TelegramMediaStory, let storyItem = message.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                            if case let .item(item) = storyItem, let mediaValue = item.media {
+                                media = mediaValue
+                            }
                         }
                         
                         if let image = media as? TelegramMediaImage {
@@ -1426,6 +1586,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
                                     media = fullMedia
                                 }
+                                if let storyMedia = media as? TelegramMediaStory, let storyItem = message.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                                    if case let .item(item) = storyItem, let mediaValue = item.media {
+                                        media = mediaValue
+                                    }
+                                }
                                 
                                 if case .full = automaticDownload {
                                     if let _ = media as? TelegramMediaImage {
@@ -1669,6 +1834,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var media = self.media
             if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
                 media = fullMedia
+            }
+            if let storyMedia = media as? TelegramMediaStory, let storyItem = message.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
+                if case let .item(item) = storyItem, let mediaValue = item.media {
+                    media = mediaValue
+                }
             }
             
             switch fetchStatus {

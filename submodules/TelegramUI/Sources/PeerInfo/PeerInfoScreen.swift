@@ -88,6 +88,8 @@ import AvatarEditorScreen
 import SendInviteLinkScreen
 import PeerInfoVisualMediaPaneNode
 import PeerInfoStoryGridScreen
+import StoryContainerScreen
+import StoryContentComponent
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -789,7 +791,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }
     
     //TODO:localize
-    items[.stories]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "My Stories", icon: PresentationResourcesSettings.stickers, action: {
+    items[.stories]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "My Stories", icon: PresentationResourcesSettings.stories, action: {
         interaction.openSettings(.stories)
     }))
     
@@ -2146,6 +2148,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var translationState: ChatTranslationState?
     private var translationStateDisposable: Disposable?
     
+    private var expiringStoryList: PeerExpiringStoryListContext?
+    private var expiringStoryListState: PeerExpiringStoryListContext.State?
+    private var expiringStoryListDisposable: Disposable?
+    
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
         return self._ready
@@ -3038,6 +3044,58 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             
+            if !gallery, let expiringStoryList = strongSelf.expiringStoryList, let expiringStoryListState = strongSelf.expiringStoryListState, !expiringStoryListState.items.isEmpty {
+                let _ = expiringStoryList
+                let storyContent = StoryContentContextImpl(context: strongSelf.context, includeHidden: false, focusedPeerId: strongSelf.peerId, singlePeer: true)
+                let _ = (storyContent.state
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { storyContentState in
+                    guard let self else {
+                        return
+                    }
+                    var transitionIn: StoryContainerScreen.TransitionIn?
+                    transitionIn = nil
+                    
+                    let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.view
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: transitionView,
+                        sourceRect: transitionView.bounds,
+                        sourceCornerRadius: transitionView.bounds.height * 0.5
+                    )
+                    
+                    self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
+                    
+                    let storyContainerScreen = StoryContainerScreen(
+                        context: self.context,
+                        content: storyContent,
+                        transitionIn: transitionIn,
+                        transitionOut: { [weak self] peerId, _ in
+                            guard let self else {
+                                return nil
+                            }
+                            
+                            let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.view
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: transitionView,
+                                transitionView: nil,
+                                destinationRect: transitionView.bounds,
+                                destinationCornerRadius: transitionView.bounds.height * 0.5,
+                                destinationIsAvatar: true,
+                                completed: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
+                                }
+                            )
+                        }
+                    )
+                    self.controller?.push(storyContainerScreen)
+                })
+                
+                return
+            }
+            
             guard peer.smallProfileImage != nil else {
                 return
             }
@@ -3852,6 +3910,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             |> deliverOnMainQueue).start(next: { [weak self] translationState in
                 self?.translationState = translationState
             })
+        } else if peerId.namespace == Namespaces.Peer.CloudUser {
+            let expiringStoryList = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
+            self.expiringStoryList = expiringStoryList
+            self.expiringStoryListDisposable = (expiringStoryList.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                self.expiringStoryListState = state
+                if state.items.isEmpty {
+                    self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = nil
+                } else {
+                    self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = state.hasUnseen
+                }
+                self.headerNode.avatarListNode.avatarContainerNode.updateStoryView(transition: .immediate)
+            })
         }
     }
     
@@ -3877,8 +3951,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.refreshMessageTagStatsDisposable?.dispose()
         self.forumTopicNotificationExceptionsDisposable?.dispose()
         self.translationStateDisposable?.dispose()
-        
         self.copyProtectionTooltipController?.dismiss()
+        self.expiringStoryListDisposable?.dispose()
     }
     
     override func didLoad() {

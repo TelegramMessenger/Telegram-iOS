@@ -666,6 +666,18 @@ final class MutableMessageHistoryView {
                     hasChanges = true
                 }
             }
+            if !transaction.storyEvents.isEmpty {
+                var updatedStories = Set<StoryId>()
+                for event in transaction.storyEvents {
+                    switch event {
+                    case let .updated(id):
+                        updatedStories.insert(id)
+                    }
+                }
+                if loadedState.updateStories(postbox: postbox, updatedStories: updatedStories) {
+                    hasChanges = true
+                }
+            }
         }
         
         if hasChanges {

@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import SwiftSignalKit
 import TelegramCore
+import Postbox
 
 public final class StoryContentItem {
     public final class ExternalState {
@@ -22,13 +23,16 @@ public final class StoryContentItem {
     public final class Environment: Equatable {
         public let externalState: ExternalState
         public let presentationProgressUpdated: (Double, Bool) -> Void
+        public let markAsSeen: (StoryId) -> Void
         
         public init(
             externalState: ExternalState,
-            presentationProgressUpdated: @escaping (Double, Bool) -> Void
+            presentationProgressUpdated: @escaping (Double, Bool) -> Void,
+            markAsSeen: @escaping (StoryId) -> Void
         ) {
             self.externalState = externalState
             self.presentationProgressUpdated = presentationProgressUpdated
+            self.markAsSeen = markAsSeen
         }
         
         public static func ==(lhs: Environment, rhs: Environment) -> Bool {
@@ -46,10 +50,6 @@ public final class StoryContentItem {
     public let rightInfoComponent: AnyComponent<Empty>?
     public let peerId: EnginePeer.Id?
     public let storyItem: EngineStoryItem
-    public let preload: Signal<Never, NoError>?
-    public let delete: (() -> Void)?
-    public let markAsSeen: (() -> Void)?
-    public let hasLike: Bool
     public let isMy: Bool
 
     public init(
@@ -60,10 +60,6 @@ public final class StoryContentItem {
         rightInfoComponent: AnyComponent<Empty>?,
         peerId: EnginePeer.Id?,
         storyItem: EngineStoryItem,
-        preload: Signal<Never, NoError>?,
-        delete: (() -> Void)?,
-        markAsSeen: (() -> Void)?,
-        hasLike: Bool,
         isMy: Bool
     ) {
         self.id = id
@@ -73,10 +69,6 @@ public final class StoryContentItem {
         self.rightInfoComponent = rightInfoComponent
         self.peerId = peerId
         self.storyItem = storyItem
-        self.preload = preload
-        self.delete = delete
-        self.markAsSeen = markAsSeen
-        self.hasLike = hasLike
         self.isMy = isMy
     }
 }
@@ -183,4 +175,5 @@ public protocol StoryContentContext: AnyObject {
     
     func resetSideStates()
     func navigate(navigation: StoryContentContextNavigation)
+    func markAsSeen(id: StoryId)
 }

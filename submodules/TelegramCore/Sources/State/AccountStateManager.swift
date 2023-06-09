@@ -526,7 +526,8 @@ public final class AccountStateManager {
                             referencedReplyMessageIds: ReferencedReplyMessageIds(),
                             referencedGeneralMessageIds: Set(),
                             peerIdsRequiringLocalChatState: Set(),
-                            locallyGeneratedMessageTimestamps: [:]
+                            locallyGeneratedMessageTimestamps: [:],
+                            storedStories: [:]
                         )
                     }
                     |> mapToSignal { state -> Signal<AccountMutableState, NoError> in

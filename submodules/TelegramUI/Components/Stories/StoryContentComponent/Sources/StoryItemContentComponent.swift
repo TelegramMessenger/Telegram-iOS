@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import AccountContext
 import TelegramCore
+import Postbox
 import AsyncDisplayKit
 import PhotoResources
 import SwiftSignalKit
@@ -240,7 +241,7 @@ final class StoryItemContentComponent: Component {
                                 if !self.markedAsSeen {
                                     self.markedAsSeen = true
                                     if let component = self.component {
-                                        let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peer.id, id: component.item.id).start()
+                                        self.environment?.markAsSeen(StoryId(peerId: component.peer.id, id: component.item.id))
                                     }
                                 }
                                 
@@ -319,7 +320,7 @@ final class StoryItemContentComponent: Component {
                     if !self.markedAsSeen {
                         self.markedAsSeen = true
                         if let component = self.component {
-                            let _ = component.context.engine.messages.markStoryAsSeen(peerId: component.peer.id, id: component.item.id).start()
+                            self.environment?.markAsSeen(StoryId(peerId: component.peer.id, id: component.item.id))
                         }
                     }
                 }

@@ -96,6 +96,7 @@ import LegacyCamera
 import LegacyInstantVideoController
 import StoryContainerScreen
 import StoryContentComponent
+import MoreHeaderButton
 
 #if DEBUG
 import os.signpost
@@ -4564,6 +4565,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     if let result = itemNode.targetForStoryTransition(id: storyId) {
                                         transitionOut = StoryContainerScreen.TransitionOut(
                                             destinationView: result,
+                                            transitionView: nil,
                                             destinationRect: result.bounds,
                                             destinationCornerRadius: 2.0,
                                             destinationIsAvatar: false,

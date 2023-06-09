@@ -17,7 +17,7 @@ public enum MediaTrackFrameResult {
 }
 
 private let traceEvents: Bool = {
-    #if DEBUG
+    #if DEBUG && false
     return true
     #else
     return false

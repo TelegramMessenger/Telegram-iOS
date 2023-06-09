@@ -8,6 +8,7 @@ import ChatListTitleView
 import AppBundle
 import StoryPeerListComponent
 import TelegramCore
+import MoreHeaderButton
 
 public final class HeaderNetworkStatusComponent: Component {
     public enum Content: Equatable {

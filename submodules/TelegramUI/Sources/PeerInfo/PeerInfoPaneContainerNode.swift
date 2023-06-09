@@ -368,7 +368,7 @@ private final class PeerInfoPendingPane {
         let paneNode: PeerInfoPaneNode
         switch key {
         case .stories:
-            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, chatLocation: chatLocation, contentType: .photoOrVideo, captureProtected: captureProtected, isArchive: false, navigationController: chatControllerInteraction.navigationController)
+            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, chatLocation: chatLocation, contentType: .photoOrVideo, captureProtected: captureProtected, isSaved: false, isArchive: false, navigationController: chatControllerInteraction.navigationController, listContext: data.storyListContext)
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()

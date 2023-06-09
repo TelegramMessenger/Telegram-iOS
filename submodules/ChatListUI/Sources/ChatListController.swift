@@ -316,6 +316,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             guard let strongSelf = self else {
                 return
             }
+            
             if strongSelf.chatListDisplayNode.searchDisplayController != nil {
                 strongSelf.deactivateSearch(animated: true)
             } else {
@@ -1244,7 +1245,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peerId)
+            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peerId, singlePeer: false)
             let _ = (storyContent.state
             |> filter { $0.slice != nil }
             |> take(1)
@@ -2277,7 +2278,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     fileprivate func openStoryCamera() {
         var cameraTransitionIn: StoryCameraTransitionIn?
         if let componentView = self.chatListHeaderView() {
-            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+            if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                 cameraTransitionIn = StoryCameraTransitionIn(
                     sourceView: transitionView,
                     sourceRect: transitionView.bounds,
@@ -2292,7 +2293,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return nil
                 }
                 if let componentView = self.chatListHeaderView() {
-                    if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                         return StoryCameraTransitionOut(
                             destinationView: transitionView,
                             destinationRect: transitionView.bounds,
@@ -2325,7 +2326,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peer?.id)
+                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peer?.id, singlePeer: false)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
@@ -2340,7 +2341,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     var transitionIn: StoryContainerScreen.TransitionIn?
                     if let peer, let componentView = self.chatListHeaderView() {
-                        if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
+                        if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
                             transitionIn = StoryContainerScreen.TransitionIn(
                                 sourceView: transitionView,
                                 sourceRect: transitionView.bounds,
@@ -2359,9 +2360,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                             
                             if let componentView = self.chatListHeaderView() {
-                                if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                                if let (transitionView, transitionContentView) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
                                     return StoryContainerScreen.TransitionOut(
                                         destinationView: transitionView,
+                                        transitionView: transitionContentView,
                                         destinationRect: transitionView.bounds,
                                         destinationCornerRadius: transitionView.bounds.height * 0.5,
                                         destinationIsAvatar: true,
@@ -2373,6 +2375,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             return nil
                         }
                     )
+                    if let componentView = self.chatListHeaderView() {
+                        componentView.storyPeerListView()?.setPreviewedItem(signal: storyContainerScreen.focusedItem)
+                    }
                     self.push(storyContainerScreen)
                 })
             }
@@ -2445,7 +2450,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     public func transitionViewForOwnStoryItem() -> UIView? {
         if let componentView = self.chatListHeaderView() {
-            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+            if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                 return transitionView
             }
         }
@@ -2454,7 +2459,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     public func animateStoryUploadRipple() {
         if let componentView = self.chatListHeaderView() {
-            if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+            if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                 let localRect = transitionView.convert(transitionView.bounds, to: self.view)
                 self.animateRipple(centerLocation: localRect.center)
             }
@@ -2490,7 +2495,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public func scrollToStories() {
-        
+        self.chatListDisplayNode.scrollToStories()
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -4777,7 +4782,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return nil
                 }
                 if finished, let componentView = self.chatListHeaderView() {
-                    if let transitionView = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
                         return StoryCameraTransitionOut(
                             destinationView: transitionView,
                             destinationRect: transitionView.bounds,

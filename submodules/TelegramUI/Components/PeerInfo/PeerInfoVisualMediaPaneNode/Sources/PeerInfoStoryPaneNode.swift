@@ -476,6 +476,49 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
     }
 }
 
+private final class ItemTransitionView: UIView {
+    private weak var itemLayer: ItemLayer?
+    private var copyDurationLayer: SimpleLayer?
+    
+    private var durationLayerBottomLeftPosition: CGPoint?
+    
+    init(itemLayer: ItemLayer?) {
+        self.itemLayer = itemLayer
+        
+        super.init(frame: CGRect())
+        
+        if let itemLayer {
+            self.layer.contents = itemLayer.contents
+            self.layer.contentsRect = itemLayer.contentsRect
+            
+            if let durationLayer = itemLayer.durationLayer {
+                let copyDurationLayer = SimpleLayer()
+                copyDurationLayer.contents = durationLayer.contents
+                copyDurationLayer.contentsRect = durationLayer.contentsRect
+                copyDurationLayer.contentsGravity = durationLayer.contentsGravity
+                copyDurationLayer.contentsScale = durationLayer.contentsScale
+                copyDurationLayer.frame = durationLayer.frame
+                self.layer.addSublayer(copyDurationLayer)
+                self.copyDurationLayer = copyDurationLayer
+                
+                self.durationLayerBottomLeftPosition = CGPoint(x: itemLayer.bounds.width - durationLayer.frame.maxX, y: itemLayer.bounds.height - durationLayer.frame.maxY)
+            }
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(state: StoryContainerScreen.TransitionState, transition: Transition) {
+        let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+        
+        if let copyDurationLayer = self.copyDurationLayer, let durationLayerBottomLeftPosition = self.durationLayerBottomLeftPosition {
+            transition.setFrame(layer: copyDurationLayer, frame: CGRect(origin: CGPoint(x: size.width - durationLayerBottomLeftPosition.x - copyDurationLayer.bounds.width, y: size.height - durationLayerBottomLeftPosition.y - copyDurationLayer.bounds.height), size: copyDurationLayer.bounds.size))
+        }
+    }
+}
+
 private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     let context: AccountContext
     let chatLocation: ChatLocation
@@ -485,8 +528,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     var chatPresentationData: ChatPresentationData
     var checkNodeTheme: CheckNodeTheme
 
+    var itemInteraction: VisualMediaItemInteraction?
     var loadHoleImpl: ((SparseItemGrid.HoleAnchor, SparseItemGrid.HoleLocation) -> Signal<Never, NoError>)?
-    var onTapImpl: ((VisualMediaItem) -> Void)?
+    var onTapImpl: ((VisualMediaItem, CALayer, CGPoint) -> Void)?
     var onTagTapImpl: (() -> Void)?
     var didScrollImpl: (() -> Void)?
     var coveringInsetOffsetUpdatedImpl: ((ContainedViewLayoutTransition) -> Void)?
@@ -671,8 +715,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                 layer.updateDuration(duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
             }
             
-            //TODO:selection
-            layer.updateSelection(theme: self.checkNodeTheme, isSelected: nil, animated: false)
+            var isSelected: Bool?
+            if let selectedIds = self.itemInteraction?.selectedIds {
+                isSelected = selectedIds.contains(story.id)
+            }
+            layer.updateSelection(theme: self.checkNodeTheme, isSelected: isSelected, animated: false)
             
             layer.bind(item: item)
         }
@@ -698,11 +745,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         }
     }
 
-    func onTap(item: SparseItemGrid.Item) {
+    func onTap(item: SparseItemGrid.Item, itemLayer: CALayer, point: CGPoint) {
         guard let item = item as? VisualMediaItem else {
             return
         }
-        self.onTapImpl?(item)
+        self.onTapImpl?(item, itemLayer, point)
     }
 
     func onTagTap() {
@@ -756,6 +803,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let context: AccountContext
     private let peerId: PeerId
     private let chatLocation: ChatLocation
+    private let isSaved: Bool
     private let isArchive: Bool
     public private(set) var contentType: ContentType
     private var contentTypePromise: ValuePromise<ContentType>
@@ -776,6 +824,30 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var _itemInteraction: VisualMediaItemInteraction?
     private var itemInteraction: VisualMediaItemInteraction {
         return self._itemInteraction!
+    }
+    
+    public var selectedIds: Set<Int32> {
+        return self.itemInteraction.selectedIds ?? Set()
+    }
+    private let selectedIdsPromise = ValuePromise<Set<Int32>>(Set())
+    public var updatedSelectedIds: Signal<Set<Int32>, NoError> {
+        return self.selectedIdsPromise.get()
+    }
+    
+    public var selectedItems: [Int32: EngineStoryItem] {
+        var result: [Int32: EngineStoryItem] = [:]
+        for id in self.selectedIds {
+            if let items = self.items {
+                for item in items.items {
+                    if let item = item as? VisualMediaItem {
+                        if item.story.id == id {
+                            result[id] = item.story
+                        }
+                    }
+                }
+            }
+        }
+        return result
     }
     
     private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
@@ -818,13 +890,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
-    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?) {
+    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
         self.peerId = peerId
         self.chatLocation = chatLocation
         self.contentType = contentType
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
         self.navigationController = navigationController
+        self.isSaved = isSaved
         self.isArchive = isArchive
 
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
@@ -840,7 +913,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             captureProtected: captureProtected
         )
 
-        self.listSource = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: self.isArchive)
+        self.listSource = listContext ?? PeerStoryListContext(account: context.account, peerId: peerId, isArchived: self.isArchive)
         self.calendarSource = nil
         
         super.init()
@@ -867,10 +940,18 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             return strongSelf.loadHole(anchor: hole, at: location)
         }
 
-        self.itemGridBinding.onTapImpl = { [weak self] item in
+        self.itemGridBinding.onTapImpl = { [weak self] item, itemLayer, point in
             guard let self else {
                 return
             }
+            
+            if let selectedIds = self.itemInteraction.selectedIds, let itemLayer = itemLayer as? ItemLayer, let selectionLayer = itemLayer.selectionLayer {
+                if selectionLayer.checkLayer.frame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                    self.itemInteraction.toggleSelection(item.story.id, !selectedIds.contains(item.story.id))
+                    return
+                }
+            }
+            
             //TODO:selection
             let listContext = PeerStoryListContentContextImpl(
                 context: self.context,
@@ -928,6 +1009,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             let itemRect = self.itemGrid.frameForItem(layer: foundItemLayer)
                             return StoryContainerScreen.TransitionOut(
                                 destinationView: self.view,
+                                transitionView: StoryContainerScreen.TransitionView(
+                                    makeView: { [weak foundItemLayer] in
+                                        return ItemTransitionView(itemLayer: foundItemLayer as? ItemLayer)
+                                    },
+                                    updateView: { view, state, transition in
+                                        (view as? ItemTransitionView)?.update(state: state, transition: transition)
+                                    }
+                                ),
                                 destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),
                                 destinationCornerRadius: 0.0,
                                 destinationIsAvatar: false,
@@ -938,6 +1027,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         return nil
                     }
                 )
+                
+                self.hiddenMediaDisposable?.dispose()
+                self.hiddenMediaDisposable = (storyContainerScreen.focusedItem
+                |> deliverOnMainQueue).start(next: { [weak self] itemId in
+                    guard let self else {
+                        return
+                    }
+                    if let itemId {
+                        self.itemInteraction.hiddenMedia = Set([itemId.id])
+                    } else {
+                        self.itemInteraction.hiddenMedia = Set()
+                    }
+                    self.updateHiddenItems()
+                })
+                
                 navigationController.pushViewController(storyContainerScreen)
             })
         }
@@ -1043,14 +1147,26 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 let _ = self
             },
             toggleSelection: { [weak self] id, value in
-                guard let self else {
+                guard let self, let itemInteraction = self._itemInteraction else {
                     return
                 }
-                let _ = self
+                if var selectedIds = itemInteraction.selectedIds {
+                    if value {
+                        selectedIds.insert(id)
+                    } else {
+                        selectedIds.remove(id)
+                    }
+                    itemInteraction.selectedIds = selectedIds
+                    self.selectedIdsPromise.set(selectedIds)
+                    self.updateSelectedItems(animated: true)
+                }
             }
         )
         //TODO:selection
-        //self.itemInteraction.selectedItemIds =
+        if isArchive {
+            self._itemInteraction?.selectedIds = Set()
+        }
+        self.itemGridBinding.itemInteraction = self._itemInteraction
 
         self.contextGestureContainerNode.isGestureEnabled = true
         self.contextGestureContainerNode.addSubnode(self.itemGrid)
@@ -1136,6 +1252,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
 
             strongSelf.itemGrid.cancelGestures()
         }
+        
+        self.statusPromise.set(.single(PeerInfoStatusData(text: "", isActivity: false, key: .stories)))
 
         /*self.storedStateDisposable = (visualMediaStoredState(engine: context.engine, peerId: peerId, messageTag: self.stateTag)
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -1385,6 +1503,24 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 return
             }
             
+            let title: String
+            if state.totalCount == 0 {
+                title = ""
+            } else if state.totalCount == 1 {
+                if self.isSaved {
+                    title = "1 saved story"
+                } else {
+                    title = "1 story"
+                }
+            } else {
+                if self.isSaved {
+                    title = "\(state.totalCount) saved stories"
+                } else {
+                    title = "\(state.totalCount) stories"
+                }
+            }
+            self.statusPromise.set(.single(PeerInfoStatusData(text: title, isActivity: false, key: .stories)))
+            
             let timezoneOffset = Int32(TimeZone.current.secondsFromGMT())
 
             var mappedItems: [SparseItemGrid.Item] = []
@@ -1402,6 +1538,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
             totalCount = state.totalCount
             totalCount = max(mappedItems.count, totalCount)
+            
+            if totalCount == 0 {
+                totalCount = 100
+            }
 
             Queue.mainQueue().async { [weak self] in
                 guard let strongSelf = self else {
@@ -1626,65 +1766,62 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
     }
     
+    public func clearSelection() {
+        self.itemInteraction.selectedIds = Set()
+        self.selectedIdsPromise.set(Set())
+        self.updateSelectedItems(animated: true)
+    }
+    
     public func updateSelectedMessages(animated: Bool) {
-        /*switch self.contentType {
-        case .files, .music, .voiceAndVideoMessages:
-            self.itemGrid.forEachVisibleItem { item in
-                guard let itemView = item.view as? ItemView, let (size, topInset, sideInset, bottomInset, _, _, _, _) = self.currentParams else {
-                    return
-                }
-                if let item = itemView.item {
-                    itemView.bind(
-                        item: item,
-                        presentationData: self.itemGridBinding.chatPresentationData,
-                        context: self.itemGridBinding.context,
-                        chatLocation: self.itemGridBinding.chatLocation,
-                        interaction: self.itemGridBinding.listItemInteraction,
-                        isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
-                        size: CGSize(width: size.width, height: itemView.bounds.height),
-                        insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset)
-                    )
-                }
+    }
+    
+    private func updateSelectedItems(animated: Bool) {
+        self.itemGrid.forEachVisibleItem { item in
+            guard let itemLayer = item.layer as? ItemLayer, let item = itemLayer.item else {
+                return
             }
-        case .photo, .video, .photoOrVideo, .gifs:
-            self.itemGrid.forEachVisibleItem { item in
-                guard let itemLayer = item.layer as? ItemLayer, let item = itemLayer.item else {
-                    return
-                }
-                itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id), animated: animated)
-            }
+            itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: self.itemInteraction.selectedIds?.contains(item.story.id), animated: animated)
+        }
 
-            let isSelecting = self.chatControllerInteraction.selectionState != nil
-            self.itemGrid.pinchEnabled = !isSelecting
-            
-            if isSelecting {
-                if self.gridSelectionGesture == nil {
-                    let selectionGesture = MediaPickerGridSelectionGesture<EngineMessage.Id>()
-                    selectionGesture.delegate = self
-                    selectionGesture.sideInset = 44.0
-                    selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
-                        self?.itemGrid.isScrollEnabled = isEnabled
-                    }
-                    selectionGesture.itemAt = { [weak self] point in
-                        if let strongSelf = self, let itemLayer = strongSelf.itemGrid.item(at: point)?.layer as? ItemLayer, let messageId = itemLayer.item?.message.id {
-                            return (messageId, strongSelf.chatControllerInteraction.selectionState?.selectedIds.contains(messageId) ?? false)
-                        } else {
-                            return nil
-                        }
-                    }
-                    selectionGesture.updateSelection = { [weak self] messageId, selected in
-                        if let strongSelf = self {
-                            strongSelf.chatControllerInteraction.toggleMessagesSelection([messageId], selected)
-                        }
-                    }
-                    self.itemGrid.view.addGestureRecognizer(selectionGesture)
-                    self.gridSelectionGesture = selectionGesture
+        /*let isSelecting = self.chatControllerInteraction.selectionState != nil
+        self.itemGrid.pinchEnabled = !isSelecting
+        
+        if isSelecting {
+            if self.gridSelectionGesture == nil {
+                let selectionGesture = MediaPickerGridSelectionGesture<EngineMessage.Id>()
+                selectionGesture.delegate = self
+                selectionGesture.sideInset = 44.0
+                selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
+                    self?.itemGrid.isScrollEnabled = isEnabled
                 }
-            } else if let gridSelectionGesture = self.gridSelectionGesture {
-                self.itemGrid.view.removeGestureRecognizer(gridSelectionGesture)
-                self.gridSelectionGesture = nil
+                selectionGesture.itemAt = { [weak self] point in
+                    if let strongSelf = self, let itemLayer = strongSelf.itemGrid.item(at: point)?.layer as? ItemLayer, let messageId = itemLayer.item?.message.id {
+                        return (messageId, strongSelf.chatControllerInteraction.selectionState?.selectedIds.contains(messageId) ?? false)
+                    } else {
+                        return nil
+                    }
+                }
+                selectionGesture.updateSelection = { [weak self] messageId, selected in
+                    if let strongSelf = self {
+                        strongSelf.chatControllerInteraction.toggleMessagesSelection([messageId], selected)
+                    }
+                }
+                self.itemGrid.view.addGestureRecognizer(selectionGesture)
+                self.gridSelectionGesture = selectionGesture
             }
+        } else if let gridSelectionGesture = self.gridSelectionGesture {
+            self.itemGrid.view.removeGestureRecognizer(gridSelectionGesture)
+            self.gridSelectionGesture = nil
         }*/
+    }
+    
+    private func updateHiddenItems() {
+        self.itemGrid.forEachVisibleItem { item in
+            guard let itemLayer = item.layer as? ItemLayer, let item = itemLayer.item else {
+                return
+            }
+            itemLayer.isHidden = self.itemInteraction.hiddenMedia.contains(item.story.id)
+        }
     }
     
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
@@ -1704,8 +1841,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
             
             let fixedItemAspect: CGFloat? = 9.0 / 16.0
+            
+            let gridTopInset = topInset
          
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: gridTopInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, fixedItemAspect: fixedItemAspect, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
         }
     }
 

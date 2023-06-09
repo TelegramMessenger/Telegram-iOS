@@ -87,6 +87,15 @@ func messageContentToUpload(accountPeerId: PeerId, network: Network, postbox: Po
         return .immediate(.content(PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil, cacheReferenceKey: nil)), .text)
     } else if let contextResult = contextResult {
         return .immediate(.content(PendingMessageUploadedContentAndReuploadInfo(content: .chatContextResult(contextResult), reuploadInfo: nil, cacheReferenceKey: nil)), .text)
+    } else if let media = media.first as? TelegramMediaStory {
+        //Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>
+        return .signal(postbox.transaction { transaction -> PendingMessageUploadedContentResult in
+            guard let inputUser = transaction.getPeer(media.storyId.peerId).flatMap(apiInputUser) else {
+                return .progress(0.0)
+            }
+            return .content(PendingMessageUploadedContentAndReuploadInfo(content: .media(.inputMediaStory(userId: inputUser, id: media.storyId.id), ""), reuploadInfo: nil, cacheReferenceKey: nil))
+        }
+        |> castError(PendingMessageUploadError.self), .text)
     } else if let media = media.first, let mediaResult = mediaContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, forceReupload: forceReupload, isGrouped: isGrouped, passFetchProgress: false, peerId: peerId, media: media, text: text, autoremoveMessageAttribute: autoremoveMessageAttribute, autoclearMessageAttribute: autoclearMessageAttribute, messageId: messageId, attributes: attributes) {
         return .signal(mediaResult, .media)
     } else {

@@ -203,6 +203,20 @@ private func locallyGeneratedMessageTimestampsFromUpdateGroups(_ groups: [Update
     return messageTimestamps
 }
 
+private func associatedStoredStories(_ groups: [UpdateGroup]) -> [StoryId: UpdatesStoredStory] {
+    var storedStories: [StoryId: UpdatesStoredStory] = [:]
+    storedStories.removeAll()
+    
+    return storedStories
+}
+
+private func associatedStoredStories(_ difference: Api.updates.Difference) -> [StoryId: UpdatesStoredStory] {
+    var storedStories: [StoryId: UpdatesStoredStory] = [:]
+    storedStories.removeAll()
+    
+    return storedStories
+}
+
 private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
     
@@ -421,7 +435,7 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
     return messageTimestamps
 }
 
-func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
+func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]], storedStories: [StoryId: UpdatesStoredStory]) -> AccountMutableState {
     var peers: [PeerId: Peer] = [:]
     var channelStates: [PeerId: AccountStateChannelState] = [:]
     
@@ -515,7 +529,7 @@ func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, a
         }
     }
     
-    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedReplyMessageIds: referencedReplyMessageIds, initialReferencedGeneralMessageIds: referencedGeneralMessageIds, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedReplyMessageIds: referencedReplyMessageIds, initialReferencedGeneralMessageIds: referencedGeneralMessageIds, initialStoredMessages: storedMessages, initialStoredStories: storedStories, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
     return state
 }
 
@@ -526,7 +540,7 @@ func initialStateWithUpdateGroups(postbox: Postbox, groups: [UpdateGroup]) -> Si
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
         let peerIdsRequiringLocalChatState = peerIdsRequiringLocalChatStateFromUpdateGroups(groups)
         
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups), storedStories: associatedStoredStories(groups))
     }
 }
 
@@ -536,7 +550,7 @@ func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Differ
         let activeChannelIds = activeChannelsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
         let peerIdsRequiringLocalChatState = peerIdsRequiringLocalChatStateFromDifference(difference)
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference), storedStories: associatedStoredStories(difference))
     }
 }
 
@@ -1701,9 +1715,12 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
         |> mapToSignal { finalState in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                return resolveMissingPeerChatInfos(network: network, state: resultingState)
-                |> map { resultingState, resolveError -> AccountFinalState in
-                    return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError || resolveError, incomplete: missingUpdates, missingUpdatesFromChannels: Set(), discard: resolveError)
+                return resolveAssociatedStories(postbox: postbox, network: network, state: finalState)
+                |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
+                    return resolveMissingPeerChatInfos(network: network, state: resultingState)
+                    |> map { resultingState, resolveError -> AccountFinalState in
+                        return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError || resolveError, incomplete: missingUpdates, missingUpdatesFromChannels: Set(), discard: resolveError)
+                    }
                 }
             }
         }
@@ -2056,6 +2073,20 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
     }
 }
 
+func resolveAssociatedStories(postbox: Postbox, network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+    return postbox.transaction { transaction -> Signal<AccountMutableState, NoError> in
+        return .single(state)
+    }
+    |> switchToLatest
+}
+
+func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, messages: [StoreMessage], result: T) -> Signal<T, NoError> {
+    return postbox.transaction { transaction -> Signal<T, NoError> in
+        return .single(result)
+    }
+    |> switchToLatest
+}
+
 func extractEmojiFileIds(message: StoreMessage, fileIds: inout Set<Int64>) {
     for attribute in message.attributes {
         if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -2384,10 +2415,13 @@ func pollChannelOnce(accountPeerId: PeerId, postbox: Postbox, network: Network, 
                 peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
             }
         }
-        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialStoredStories: [:], initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
         return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Int32, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
+            |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
+                return resolveAssociatedStories(postbox: postbox, network: network, state: finalState)
+            }
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerChatInfos(network: network, state: resultingState)
                 |> map { resultingState, _ -> AccountFinalState in
@@ -2438,10 +2472,13 @@ public func standalonePollChannelOnce(accountPeerId: PeerId, postbox: Postbox, n
                 peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
             }
         }
-        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialStoredStories: [:], initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
         return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Never, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
+            |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
+                return resolveAssociatedStories(postbox: postbox, network: network, state: finalState)
+            }
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerChatInfos(network: network, state: resultingState)
                 |> map { resultingState, _ -> AccountFinalState in
@@ -2650,7 +2687,7 @@ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, pe
             // TODO: delete messages later than top
             return resolveAssociatedMessages(postbox: postbox, network: network, state: updatedState)
             |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
-                return .single(resultingState)
+                return resolveAssociatedStories(postbox: postbox, network: network, state: updatedState)
             }
         }
     }
@@ -2799,8 +2836,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 }
                 
                 return resolveForumThreads(postbox: postbox, network: network, state: updatedState)
-                |> map { updatedState -> (AccountMutableState, Bool, Int32?) in
-                    return (updatedState, true, apiTimeout)
+                |> mapToSignal { updatedState in
+                    return resolveAssociatedStories(postbox: postbox, network: network, state: updatedState)
+                    |> map { updatedState -> (AccountMutableState, Bool, Int32?) in
+                        return (updatedState, true, apiTimeout)
+                    }
                 }
             case let .channelDifferenceEmpty(_, pts, timeout):
                 var updatedState = state
@@ -4351,10 +4391,6 @@ func replayFinalState(
                     }
                 }
                 
-                var filteredSubscriptionsOpaqueState: String?
-                if let state = transaction.getSubscriptionsStoriesState(key: .filtered)?.get(Stories.SubscriptionsState.self) {
-                    filteredSubscriptionsOpaqueState = state.opaqueState
-                }
                 var appliedMaxReadId: Int32?
                 if let currentState = transaction.getPeerStoryState(peerId: peerId)?.get(Stories.PeerState.self) {
                     if let appliedMaxReadIdValue = appliedMaxReadId {
@@ -4366,7 +4402,6 @@ func replayFinalState(
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
                 transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
-                    subscriptionsOpaqueState: filteredSubscriptionsOpaqueState,
                     maxReadId: appliedMaxReadId ?? 0
                 )))
                 
@@ -4381,12 +4416,7 @@ func replayFinalState(
                     appliedMaxReadId = max(appliedMaxReadId, currentState.maxReadId)
                 }
                 
-                var filteredSubscriptionsOpaqueState: String?
-                if let state = transaction.getSubscriptionsStoriesState(key: .filtered)?.get(Stories.SubscriptionsState.self) {
-                    filteredSubscriptionsOpaqueState = state.opaqueState
-                }
                 transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
-                    subscriptionsOpaqueState: filteredSubscriptionsOpaqueState,
                     maxReadId: appliedMaxReadId
                 )))
             

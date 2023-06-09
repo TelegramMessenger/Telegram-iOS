@@ -195,6 +195,7 @@ private var declaredEncodables: Void = {
     declareEncodable(MediaSpoilerMessageAttribute.self, f: { MediaSpoilerMessageAttribute(decoder: $0) })
     declareEncodable(TranslationMessageAttribute.self, f: { TranslationMessageAttribute(decoder: $0) })
     declareEncodable(SynchronizeAutosaveItemOperation.self, f: { SynchronizeAutosaveItemOperation(decoder: $0) })
+    declareEncodable(TelegramMediaStory.self, f: { TelegramMediaStory(decoder: $0) })
     return
 }()
 

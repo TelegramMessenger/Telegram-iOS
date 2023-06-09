@@ -862,23 +862,7 @@ public extension TelegramEngine {
         }
         
         public func refreshStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
-            return _internal_getStoriesById(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peerId: peerId, ids: ids)
-            |> mapToSignal { result -> Signal<Never, NoError> in
-                return self.account.postbox.transaction { transaction -> Void in
-                    var currentItems = transaction.getStoryItems(peerId: peerId)
-                    for i in 0 ..< currentItems.count {
-                        if let updatedItem = result.first(where: { $0.id == currentItems[i].id }) {
-                            if case .item = updatedItem {
-                                if let entry = CodableEntry(updatedItem) {
-                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id)
-                                }
-                            }
-                        }
-                    }
-                    transaction.setStoryItems(peerId: peerId, items: currentItems)
-                }
-                |> ignoreValues
-            }
+            return _internal_refreshStories(account: self.account, peerId: peerId, ids: ids)
         }
         
         public func refreshStoryViews(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {
@@ -926,16 +910,16 @@ public extension TelegramEngine {
             return _internal_editStory(account: self.account, media: media, id: id, text: text, entities: entities, privacy: privacy)
         }
         
-        public func deleteStory(id: Int32) -> Signal<Never, NoError> {
-            return _internal_deleteStory(account: self.account, id: id)
+        public func deleteStories(ids: [Int32]) -> Signal<Never, NoError> {
+            return _internal_deleteStories(account: self.account, ids: ids)
         }
         
-        public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int32) -> Signal<Never, NoError> {
-            return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id)
+        public func markStoryAsSeen(peerId: EnginePeer.Id, id: Int32, asPinned: Bool) -> Signal<Never, NoError> {
+            return _internal_markStoryAsSeen(account: self.account, peerId: peerId, id: id, asPinned: asPinned)
         }
         
-        public func updateStoryIsPinned(id: Int32, isPinned: Bool) -> Signal<Never, NoError> {
-            return _internal_updateStoryIsPinned(account: self.account, id: id, isPinned: isPinned)
+        public func updateStoriesArePinned(ids: [Int32: EngineStoryItem], isPinned: Bool) -> Signal<Never, NoError> {
+            return _internal_updateStoriesArePinned(account: self.account, ids: ids, isPinned: isPinned)
         }
         
         public func getStoryViewList(account: Account, id: Int32, offsetTimestamp: Int32?, offsetPeerId: PeerId?, limit: Int) -> Signal<StoryViewList?, NoError> {

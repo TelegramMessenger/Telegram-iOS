@@ -117,6 +117,8 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private let button: HighlightTrackingButtonNode
     
+    public var disableAnimations: Bool = false
+    
     var manualLayout: Bool = false
     private var validLayout: (CGSize, CGRect)?
     
@@ -356,7 +358,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 if !self.updateStatus() {
                     if updated {
                         if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: .animated(duration: 0.2, curve: .easeInOut))
+                            let _ = self.updateLayout(size: size, clearBounds: clearBounds, transition: self.disableAnimations ? .immediate : .animated(duration: 0.2, curve: .easeInOut))
                         }
                     }
                 }

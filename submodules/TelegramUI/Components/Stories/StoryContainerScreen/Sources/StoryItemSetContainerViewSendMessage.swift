@@ -276,6 +276,9 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
+        guard let controller = component.controller() else {
+            return
+        }
         let focusedItem = component.slice.item
         guard let peerId = focusedItem.peerId else {
             return
@@ -285,21 +288,18 @@ final class StoryItemSetContainerSendMessage {
         case .like:
             return
         case .share:
-            let _ = (component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id)
-            |> deliverOnMainQueue).start(next: { [weak view] link in
-                guard let view, let link, let component = view.component, let controller = component.controller() else {
-                    return
-                }
-                let shareController = ShareController(
-                    context: component.context,
-                    subject: .url(link),
-                    externalShare: false,
-                    immediateExternalShare: false,
-                    updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
-                    component.context.sharedContext.presentationData)
-                )
-                controller.present(shareController, in: .window(.root))
-            })
+            /*let linkPromise = Promise<String?, NoError>()
+            linkPromise.set(component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))*/
+            
+            let shareController = ShareController(
+                context: component.context,
+                subject: .media(AnyMediaReference.standalone(media: TelegramMediaStory(storyId: StoryId(peerId: peerId, id: focusedItem.storyItem.id)))),
+                externalShare: false,
+                immediateExternalShare: false,
+                updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
+                component.context.sharedContext.presentationData)
+            )
+            controller.present(shareController, in: .window(.root))
         }
     }
     

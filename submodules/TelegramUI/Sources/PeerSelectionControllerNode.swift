@@ -1291,7 +1291,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     func scrollToTop() {
         if self.mainContainerNode?.supernode != nil {
-            self.mainContainerNode?.scrollToTop()
+            self.mainContainerNode?.scrollToTop(animated: true)
         } else if self.chatListNode?.supernode != nil {
             self.chatListNode?.scrollToPosition(.top)
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {

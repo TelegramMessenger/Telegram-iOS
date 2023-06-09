@@ -9359,3 +9359,5 @@ Sorry for the inconvenience.";
 "Conversation.OpenLink" = "OPEN LINK";
 
 "Paint.Flip" = "Flip";
+
+"Message.ForwardedStoryShort" = "Forwarded Story\nFrom: %@";

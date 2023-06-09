@@ -129,8 +129,11 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
         if referencedReplyIds.isEmpty && referencedGeneralIds.isEmpty {
             return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages, reactions: [], result: Void())
             |> mapToSignal { _ -> Signal<T, NoError> in
-                return postbox.transaction { transaction -> T in
-                    return f(transaction, [], [])
+                return resolveAssociatedStories(postbox: postbox, source: source, messages: storeMessages, result: Void())
+                |> mapToSignal { _ -> Signal<T, NoError> in
+                    return postbox.transaction { transaction -> T in
+                        return f(transaction, [], [])
+                    }
                 }
             }
         } else {
@@ -224,8 +227,11 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                 
                 return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages + additionalMessages, reactions: [], result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
-                    return postbox.transaction { transaction -> T in
-                        return f(transaction, additionalPeers, additionalMessages)
+                    return resolveAssociatedStories(postbox: postbox, source: source, messages: storeMessages + additionalMessages, result: Void())
+                    |> mapToSignal { _ -> Signal<T, NoError> in
+                        return postbox.transaction { transaction -> T in
+                            return f(transaction, additionalPeers, additionalMessages)
+                        }
                     }
                 }
             }

@@ -780,12 +780,6 @@ public final class ManagedAudioSession {
                     managedAudioSessionLog("ManagedAudioSession resetting options")
                     try AVAudioSession.sharedInstance().setCategory(nativeCategory, options: options)
                 }
-                /*if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                    try AVAudioSession.sharedInstance().setCategory(nativeCategory, mode: mode, policy: .default, options: options)
-                } else {
-                    AVAudioSession.sharedInstance().perform(NSSelectorFromString("setCategory:error:"), with: nativeCategory)
-                    try AVAudioSession.sharedInstance().setMode(mode)
-                }*/
             } catch let error {
                 managedAudioSessionLog("ManagedAudioSession setup error \(error)")
             }
