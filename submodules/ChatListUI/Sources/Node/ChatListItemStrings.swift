@@ -295,6 +295,9 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = "📊 \(poll.text)"
                     case let dice as TelegramMediaDice:
                         messageText = dice.emoji
+                    case _ as TelegramMediaStory:
+                        //TODO:localize
+                        messageText = "Story"
                     default:
                         break
                 }

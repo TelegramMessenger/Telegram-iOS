@@ -53,7 +53,7 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
         
         switch peerId.namespace {
             case Namespaces.Peer.CloudUser:
-                if let updated = updated as? TelegramUser, let storiesHidden = updated.storiesHidden {
+                if let updated = updated as? TelegramUser, let previous = previous as? TelegramUser, let storiesHidden = updated.storiesHidden, storiesHidden != previous.storiesHidden {
                     if storiesHidden {
                         if transaction.storySubscriptionsContains(key: .filtered, peerId: updated.id) {
                             var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)

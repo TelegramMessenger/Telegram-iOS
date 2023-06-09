@@ -3309,16 +3309,16 @@ public final class ChatListNode: ListView {
         }
     }
     
-    public func scrollToPosition(_ position: ChatListNodeScrollPosition) {
+    public func scrollToPosition(_ position: ChatListNodeScrollPosition, animated: Bool = true) {
         if let list = self.chatListView?.originalList {
             if !list.hasLater {
-                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: animated, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
-                let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(0.0), animated: true, filter: self.chatListFilter)
+                let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(0.0), animated: animated, filter: self.chatListFilter)
                 self.setChatListLocation(location)
             }
         } else {
-            let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(0.0), animated: true, filter: self.chatListFilter)
+            let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(0.0), animated: animated, filter: self.chatListFilter)
             self.setChatListLocation(location)
         }
     }

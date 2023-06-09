@@ -316,6 +316,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             guard let strongSelf = self else {
                 return
             }
+            
+            if "".isEmpty {
+                strongSelf.scrollToStories()
+                return
+            }
+            
             if strongSelf.chatListDisplayNode.searchDisplayController != nil {
                 strongSelf.deactivateSearch(animated: true)
             } else {
@@ -2494,7 +2500,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public func scrollToStories() {
-        
+        self.chatListDisplayNode.scrollToStories()
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

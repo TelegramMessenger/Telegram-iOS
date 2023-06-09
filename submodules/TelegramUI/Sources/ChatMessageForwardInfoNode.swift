@@ -91,10 +91,10 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer?, _ authorName: String?, _ psaType: String?, _ constrainedSize: CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer?, _ authorName: String?, _ psaType: String?, _ isStory: Bool, _ constrainedSize: CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode) {
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         
-        return { presentationData, strings, type, peer, authorName, psaType, constrainedSize in
+        return { presentationData, strings, type, peer, authorName, psaType, isStory, constrainedSize in
             let fontSize = floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)
             let prefixFont = Font.regular(fontSize)
             let peerFont = Font.medium(fontSize)
@@ -148,7 +148,12 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                         }
                     } else {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                        completeSourceString = strings.Message_ForwardedMessageShort(peerString)
+                        
+                        if isStory {
+                            completeSourceString = strings.Message_ForwardedStoryShort(peerString)
+                        } else {
+                            completeSourceString = strings.Message_ForwardedMessageShort(peerString)
+                        }
                     }
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)

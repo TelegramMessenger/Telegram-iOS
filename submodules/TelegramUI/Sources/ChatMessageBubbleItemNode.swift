@@ -127,6 +127,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     messageWithCaptionToAdd = (message, itemAttributes)
                 }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+            } else if let _ = media as? TelegramMediaStory {
+                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
+                    messageWithCaptionToAdd = (message, itemAttributes)
+                }
+                result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
@@ -1121,7 +1126,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         threadInfoLayout: (ChatMessageThreadInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode),
-        forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
+        forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, Bool, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, WallpaperBackgroundNode?, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
         reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
@@ -1706,7 +1711,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         } else if let backgroundHiding, case .always = backgroundHiding {
             initialDisplayHeader = false
         } else {
-            if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil && replyStory == nil {
+            var hasForwardLikeContent = false
+            if firstMessage.forwardInfo != nil {
+                hasForwardLikeContent = true
+            } else if firstMessage.media.contains(where: { $0 is TelegramMediaStory }) {
+                hasForwardLikeContent = true
+            }
+            
+            if inlineBotNameString == nil && (ignoreForward || !hasForwardLikeContent) && replyMessage == nil && replyStory == nil {
                 if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader && !ignoreNameHiding {
                     if let author = firstMessage.author as? TelegramChannel, case .group = author.info, author.id == firstMessage.id.peerId, !incoming {
                     } else {
@@ -1771,6 +1783,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 displayHeader = true
             }
             if firstMessage.forwardInfo != nil {
+                displayHeader = true
+            }
+            if firstMessage.media.contains(where: { $0 is TelegramMediaStory }) {
                 displayHeader = true
             }
             if replyMessage != nil || replyStory != nil {
@@ -1997,7 +2012,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         forwardAuthorSignature = forwardInfo.authorSignature
                     }
                 }
-                let sizeAndApply = forwardInfoLayout(item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, forwardPsaType, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                let sizeAndApply = forwardInfoLayout(item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, forwardPsaType, false, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = (sizeAndApply.0, { width in sizeAndApply.1(width) })
+                
+                forwardInfoOriginY = headerSize.height
+                headerSize.width = max(headerSize.width, forwardInfoSizeApply.0.width + bubbleWidthInsets)
+                headerSize.height += forwardInfoSizeApply.0.height
+            } else if let storyMedia = firstMessage.media.first(where: { $0 is TelegramMediaStory }) as? TelegramMediaStory {
+                let _ = storyMedia
+                if headerSize.height.isZero {
+                    headerSize.height += 5.0
+                }
+                
+                forwardSource = firstMessage.peers[storyMedia.storyId.peerId]
+                
+                let sizeAndApply = forwardInfoLayout(item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, nil, nil, true, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                 forwardInfoSizeApply = (sizeAndApply.0, { width in sizeAndApply.1(width) })
                 
                 forwardInfoOriginY = headerSize.height

@@ -381,9 +381,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaDice(value, emoticon):
             return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil)
         case let .messageMediaStory(userId, id):
-            let _ = userId
-            let _ = id
-            return (nil, nil, nil, nil)
+            return (TelegramMediaStory(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id)), nil, nil, nil)
         }
     }
     

@@ -31,6 +31,8 @@ import ChatTitleView
 import AppBundle
 import AvatarVideoNode
 import PeerInfoVisualMediaPaneNode
+import AvatarStoryIndicatorComponent
+import ComponentDisplayAdapters
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -393,6 +395,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     let containerNode: ContextControllerSourceNode
     
     let avatarNode: AvatarNode
+    private(set) var avatarStoryView: ComponentView<Empty>?
     fileprivate var videoNode: UniversalVideoNode?
     fileprivate var markupNode: AvatarVideoNode?
     fileprivate var iconView: ComponentView<Empty>?
@@ -417,6 +420,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     private let playbackStartDisposable = MetaDisposable()
     
+    var hasUnseenStories: Bool?
+    
     init(context: AccountContext) {
         self.context = context
         self.containerNode = ContextControllerSourceNode()
@@ -433,6 +438,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.avatarNode.view.addGestureRecognizer(tapGestureRecognizer)
+        
+        self.updateStoryView(transition: .immediate)
        
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self else {
@@ -446,6 +453,38 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     deinit {
         self.playbackStartDisposable.dispose()
+    }
+    
+    func updateStoryView(transition: ContainedViewLayoutTransition) {
+        if let hasUnseenStories = self.hasUnseenStories {
+            let avatarStoryView: ComponentView<Empty>
+            if let current = self.avatarStoryView {
+                avatarStoryView = current
+            } else {
+                avatarStoryView = ComponentView()
+                self.avatarStoryView = avatarStoryView
+            }
+            
+            let _ = avatarStoryView.update(
+                transition: Transition(transition),
+                component: AnyComponent(AvatarStoryIndicatorComponent(
+                    hasUnseen: hasUnseenStories
+                )),
+                environment: {},
+                containerSize: self.avatarNode.bounds.size
+            )
+            if let avatarStoryComponentView = avatarStoryView.view {
+                if avatarStoryComponentView.superview == nil {
+                    self.containerNode.view.insertSubview(avatarStoryComponentView, at: 0)
+                }
+                avatarStoryComponentView.frame = self.avatarNode.frame
+            }
+        } else {
+            if let avatarStoryView = self.avatarStoryView {
+                self.avatarStoryView = nil
+                avatarStoryView.view?.removeFromSuperview()
+            }
+        }
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {

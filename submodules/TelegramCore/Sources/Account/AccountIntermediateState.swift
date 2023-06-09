@@ -177,6 +177,12 @@ struct ReferencedReplyMessageIds {
     }
 }
 
+enum UpdatesStoredStory {
+    case item(Stories.Item)
+    case placeholder(Stories.Placeholder)
+    case deleted
+}
+
 struct AccountMutableState {
     let initialState: AccountInitialState
     let branchOperationIndex: Int
@@ -195,6 +201,7 @@ struct AccountMutableState {
     var readInboxMaxIds: [PeerId: MessageId]
     var namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]]
     var updatedOutgoingUniqueMessageIds: [Int64: Int32]
+    var storedStories: [StoryId: UpdatesStoredStory]
     
     var resetForumTopicLists: [PeerId: StateResetForumTopics] = [:]
     
@@ -213,7 +220,7 @@ struct AccountMutableState {
     
     var authorizationListUpdated: Bool = false
     
-    init(initialState: AccountInitialState, initialPeers: [PeerId: Peer], initialReferencedReplyMessageIds: ReferencedReplyMessageIds, initialReferencedGeneralMessageIds: Set<MessageId>, initialStoredMessages: Set<MessageId>, initialReadInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
+    init(initialState: AccountInitialState, initialPeers: [PeerId: Peer], initialReferencedReplyMessageIds: ReferencedReplyMessageIds, initialReferencedGeneralMessageIds: Set<MessageId>, initialStoredMessages: Set<MessageId>, initialStoredStories: [StoryId: UpdatesStoredStory], initialReadInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
         self.initialState = initialState
         self.state = initialState.state
         self.peers = initialPeers
@@ -221,6 +228,7 @@ struct AccountMutableState {
         self.referencedReplyMessageIds = initialReferencedReplyMessageIds
         self.referencedGeneralMessageIds = initialReferencedGeneralMessageIds
         self.storedMessages = initialStoredMessages
+        self.storedStories = initialStoredStories
         self.readInboxMaxIds = initialReadInboxMaxIds
         self.channelStates = initialState.channelStates
         self.peerChatInfos = initialState.peerChatInfos
@@ -230,7 +238,7 @@ struct AccountMutableState {
         self.updatedOutgoingUniqueMessageIds = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], apiChats: [PeerId: Api.Chat], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], apiChats: [PeerId: Api.Chat], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, storedStories: [StoryId: UpdatesStoredStory], readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
@@ -240,6 +248,7 @@ struct AccountMutableState {
         self.referencedReplyMessageIds = referencedReplyMessageIds
         self.referencedGeneralMessageIds = referencedGeneralMessageIds
         self.storedMessages = storedMessages
+        self.storedStories = storedStories
         self.peerChatInfos = peerChatInfos
         self.readInboxMaxIds = readInboxMaxIds
         self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
@@ -251,12 +260,16 @@ struct AccountMutableState {
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, apiChats: self.apiChats, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedReplyMessageIds: self.referencedReplyMessageIds, referencedGeneralMessageIds: self.referencedGeneralMessageIds, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, branchOperationIndex: self.operations.count)
+        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, apiChats: self.apiChats, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedReplyMessageIds: self.referencedReplyMessageIds, referencedGeneralMessageIds: self.referencedGeneralMessageIds, storedMessages: self.storedMessages, storedStories: self.storedStories, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: AccountMutableState) {
         self.referencedReplyMessageIds.formUnion(other.referencedReplyMessageIds)
         self.referencedGeneralMessageIds.formUnion(other.referencedGeneralMessageIds)
+        
+        for (id, story) in other.storedStories {
+            self.storedStories[id] = story
+        }
         
         for i in other.branchOperationIndex ..< other.operations.count {
             self.addOperation(other.operations[i])

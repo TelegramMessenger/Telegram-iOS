@@ -9357,3 +9357,5 @@ Sorry for the inconvenience.";
 "Privacy.Bio.NeverShareWith.Title" = "Never Share With";
 
 "Conversation.OpenLink" = "OPEN LINK";
+
+"Message.ForwardedStoryShort" = "Forwarded Story\nFrom: %@";

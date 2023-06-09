@@ -3919,6 +3919,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.expiringStoryListState = state
+                if state.items.isEmpty {
+                    self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = nil
+                } else {
+                    self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = state.hasUnseen
+                }
+                self.headerNode.avatarListNode.avatarContainerNode.updateStoryView(transition: .immediate)
             })
         }
     }
