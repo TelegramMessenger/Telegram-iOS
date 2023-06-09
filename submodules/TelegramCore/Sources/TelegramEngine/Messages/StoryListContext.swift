@@ -485,7 +485,7 @@ public final class PeerStoryListContext {
                 return (peerReference, items, Int(cached.totalCount))
             }
             |> deliverOn(self.queue)).start(next: { [weak self] peerReference, items, totalCount in
-                guard let self else {
+                guard let `self` = self else {
                     return
                 }
                 
@@ -853,7 +853,7 @@ public final class PeerExpiringStoryListContext {
                 PostboxViewKey.storyItems(peerId: peerId)
             ])
             |> deliverOn(self.queue)).start(next: { [weak self] views in
-                guard let self else {
+                guard let `self` = self else {
                     return
                 }
                 guard let stateView = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView else {
@@ -907,10 +907,10 @@ public final class PeerExpiringStoryListContext {
                     )
                 }
                 |> deliverOn(self.queue)).start(next: { [weak self] state in
-                    guard let self else {
+                    guard let `self` = self else {
                         return
                     }
-                    guard let state else {
+                    guard let state = state else {
                         return
                     }
                     self.statePromise.set(.single(state))
@@ -934,7 +934,7 @@ public final class PeerExpiringStoryListContext {
                 return transaction.getPeer(peerId).flatMap(apiInputUser)
             }
             |> mapToSignal { inputUser -> Signal<Never, NoError> in
-                guard let inputUser else {
+                guard let inputUser = inputUser else {
                     return .complete()
                 }
                 return account.network.request(Api.functions.stories.getUserStories(userId: inputUser))
