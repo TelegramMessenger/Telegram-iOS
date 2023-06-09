@@ -1007,12 +1007,34 @@ public final class PeerExpiringStoryListContext {
     public enum Item: Equatable {
         case item(EngineStoryItem)
         case placeholder(id: Int32, timestamp: Int32, expirationTimestamp: Int32)
+        
+        public var id: Int32 {
+            switch self {
+            case let .item(item):
+                return item.id
+            case let .placeholder(id, _, _):
+                return id
+            }
+        }
+        
+        public var timestamp: Int32 {
+            switch self {
+            case let .item(item):
+                return item.timestamp
+            case let .placeholder(_, timestamp, _):
+                return timestamp
+            }
+        }
     }
     
     public final class State: Equatable {
         public let items: [Item]
         public let isCached: Bool
         public let maxReadId: Int32
+        
+        public var hasUnseen: Bool {
+            return self.items.contains(where: { $0.id > self.maxReadId })
+        }
         
         public init(items: [Item], isCached: Bool, maxReadId: Int32) {
             self.items = items

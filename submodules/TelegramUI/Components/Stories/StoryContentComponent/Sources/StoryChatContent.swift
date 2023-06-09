@@ -350,7 +350,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             let singlePeerListContext = PeerExpiringStoryListContext(account: context.account, peerId: focusedPeerId)
             self.singlePeerListContext = singlePeerListContext
             self.storySubscriptionsDisposable = (combineLatest(
-                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: focusedPeerId))
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: focusedPeerId)),
                 singlePeerListContext.state
             )
             |> deliverOnMainQueue).start(next: { [weak self] peer, state in
