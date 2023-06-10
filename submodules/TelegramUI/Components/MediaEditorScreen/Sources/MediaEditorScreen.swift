@@ -647,11 +647,13 @@ final class MediaEditorScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(VideoScrubberComponent(
                         context: component.context,
+                        generationTimestamp: playerState.generationTimestamp,
                         duration: playerState.duration,
                         startPosition: playerState.timeRange?.lowerBound ?? 0.0,
                         endPosition: playerState.timeRange?.upperBound ?? min(playerState.duration, storyMaxVideoDuration),
                         position: playerState.position,
                         maxDuration: storyMaxVideoDuration,
+                        isPlaying: playerState.isPlaying,
                         frames: playerState.frames,
                         framesUpdateTimestamp: playerState.framesUpdateTimestamp,
                         trimUpdated: { [weak mediaEditor] start, end, updatedEnd, done in
@@ -893,7 +895,7 @@ final class MediaEditorScreenComponent: Component {
             if let saveButtonView = self.saveButton.view {
                 if saveButtonView.superview == nil {
                     saveButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                    saveButtonView.layer.shadowRadius = 3.0
+                    saveButtonView.layer.shadowRadius = 2.0
                     saveButtonView.layer.shadowColor = UIColor.black.cgColor
                     saveButtonView.layer.shadowOpacity = 0.35
                     self.addSubview(saveButtonView)
@@ -941,7 +943,7 @@ final class MediaEditorScreenComponent: Component {
                 if let muteButtonView = self.muteButton.view {
                     if muteButtonView.superview == nil {
                         muteButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                        muteButtonView.layer.shadowRadius = 3.0
+                        muteButtonView.layer.shadowRadius = 2.0
                         muteButtonView.layer.shadowColor = UIColor.black.cgColor
                         muteButtonView.layer.shadowOpacity = 0.35
                         self.addSubview(muteButtonView)
@@ -979,7 +981,7 @@ final class MediaEditorScreenComponent: Component {
                 if let settingsButtonView = self.settingsButton.view {
                     if settingsButtonView.superview == nil {
                         settingsButtonView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
-                        settingsButtonView.layer.shadowRadius = 3.0
+                        settingsButtonView.layer.shadowRadius = 2.0
                         settingsButtonView.layer.shadowColor = UIColor.black.cgColor
                         settingsButtonView.layer.shadowOpacity = 0.35
                         //self.addSubview(settingsButtonView)
@@ -2644,7 +2646,7 @@ public final class MediaEditorScreen: ViewController {
                         let path = draftPath() + "/\(Int64.random(in: .min ... .max)).jpg"
                         if let data = image.jpegData(compressionQuality: 0.87) {
                             try? data.write(to: URL(fileURLWithPath: path))
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, values: values, privacy: privacy)
+                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, values: values, caption: NSAttributedString(), privacy: privacy)
                             if let id {
                                 saveStorySource(engine: self.context.engine, item: draft, id: id)
                             } else {
@@ -2658,7 +2660,7 @@ public final class MediaEditorScreen: ViewController {
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
                         let path = draftPath() + "/\(Int64.random(in: .min ... .max)).mp4"
                         try? FileManager.default.moveItem(atPath: videoPath, toPath: path)
-                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, values: values, privacy: privacy)
+                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, values: values, caption: NSAttributedString(), privacy: privacy)
                         if let id {
                             saveStorySource(engine: self.context.engine, item: draft, id: id)
                         } else {

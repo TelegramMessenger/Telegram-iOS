@@ -11,9 +11,11 @@ import TelegramPresentationData
 import FastBlur
 
 public struct MediaEditorPlayerState {
+    public let generationTimestamp: Double
     public let duration: Double
     public let timeRange: Range<Double>?
     public let position: Double
+    public let isPlaying: Bool
     public let frames: [UIImage]
     public let framesCount: Int
     public let framesUpdateTimestamp: Double
@@ -107,12 +109,12 @@ public final class MediaEditor {
     }
         
     private let playerPromise = Promise<AVPlayer?>()
-    private var playerPlaybackState: (Double, Double, Bool) = (0.0, 0.0, false) {
+    private var playerPlaybackState: (Double, Double, Bool, Bool) = (0.0, 0.0, false, false) {
         didSet {
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
-    private let playerPlaybackStatePromise = Promise<(Double, Double, Bool)>((0.0, 0.0, false))
+    private let playerPlaybackStatePromise = Promise<(Double, Double, Bool, Bool)>((0.0, 0.0, false, false))
     
     public var onFirstDisplay: () -> Void = {}
     
@@ -122,12 +124,14 @@ public final class MediaEditor {
             if let self, let asset = player?.currentItem?.asset {
                 return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get(), self.videoFrames(asset: asset, count: framesCount))
                 |> map { values, durationAndPosition, framesAndUpdateTimestamp in
-                    let (duration, position, hasAudio) = durationAndPosition
+                    let (duration, position, isPlaying, hasAudio) = durationAndPosition
                     let (frames, framesUpdateTimestamp) = framesAndUpdateTimestamp
                     return MediaEditorPlayerState(
+                        generationTimestamp: CACurrentMediaTime(),
                         duration: duration,
                         timeRange: values.videoTrimRange,
                         position: position,
+                        isPlaying: isPlaying,
                         frames: frames,
                         framesCount: framesCount,
                         framesUpdateTimestamp: framesUpdateTimestamp,
@@ -409,7 +413,7 @@ public final class MediaEditor {
                         if let audioTracks = player.currentItem?.asset.tracks(withMediaType: .audio) {
                             hasAudio = !audioTracks.isEmpty
                         }
-                        self.playerPlaybackState = (duration, time.seconds, hasAudio)
+                        self.playerPlaybackState = (duration, time.seconds, player.rate > 0.0, hasAudio)
                     }
                     self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil, using: { [weak self] notification in
                         if let self {

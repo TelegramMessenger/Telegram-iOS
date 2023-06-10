@@ -17,6 +17,7 @@ import ComponentDisplayAdapters
 import LottieAnimationComponent
 import ViewControllerComponent
 import BlurredBackgroundComponent
+import MultilineTextComponent
 import ContextUI
 import ChatEntityKeyboardInputNode
 import EntityKeyboard
@@ -1676,6 +1677,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         .position(CGPoint(x: context.availableSize.width / 2.0 + (isFilled != nil ? 46.0 : 0.0), y: environment.safeInsets.top + 31.0))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
+                        .shadow(component.sourceHint == .storyEditor ? Shadow(color: UIColor(rgb: 0x000000, alpha: 0.35), radius: 2.0, offset: .zero) : nil)
                     )
                 }
             }
@@ -1774,6 +1776,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: topInset))
                 .scale(isEditingText ? 0.01 : 1.0)
                 .opacity(isEditingText || !controlsAreVisible ? 0.0 : 1.0)
+                .shadow(component.sourceHint == .storyEditor ? Shadow(color: UIColor(rgb: 0x000000, alpha: 0.35), radius: 2.0, offset: .zero) : nil)
             )
             
             
@@ -1794,12 +1797,17 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: topInset))
                 .scale(state.drawingViewState.canRedo && !isEditingText ? 1.0 : 0.01)
                 .opacity(state.drawingViewState.canRedo && !isEditingText && controlsAreVisible ? 1.0 : 0.0)
+                .shadow(component.sourceHint == .storyEditor ? Shadow(color: UIColor(rgb: 0x000000, alpha: 0.35), radius: 2.0, offset: .zero) : nil)
             )
             
             let clearAllButton = clearAllButton.update(
                 component: Button(
                     content: AnyComponent(
-                        Text(text: strings.Paint_Clear, font: Font.regular(17.0), color: .white)
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: strings.Paint_Clear, font: Font.regular(17.0), textColor: .white)),
+                            textShadowColor: component.sourceHint == .storyEditor ? UIColor(rgb: 0x000000, alpha: 0.35) : nil,
+                            textShadowBlur: 2.0
+                        )
                     ),
                     isEnabled: state.drawingViewState.canClear,
                     action: {

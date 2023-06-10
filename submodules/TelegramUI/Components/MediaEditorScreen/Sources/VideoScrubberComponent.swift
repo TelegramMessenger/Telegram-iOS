@@ -41,11 +41,13 @@ final class VideoScrubberComponent: Component {
     typealias EnvironmentType = Empty
     
     let context: AccountContext
+    let generationTimestamp: Double
     let duration: Double
     let startPosition: Double
     let endPosition: Double
     let position: Double
     let maxDuration: Double
+    let isPlaying: Bool
     let frames: [UIImage]
     let framesUpdateTimestamp: Double
     let trimUpdated: (Double, Double, Bool, Bool) -> Void
@@ -53,22 +55,26 @@ final class VideoScrubberComponent: Component {
     
     init(
         context: AccountContext,
+        generationTimestamp: Double,
         duration: Double,
         startPosition: Double,
         endPosition: Double,
         position: Double,
         maxDuration: Double,
+        isPlaying: Bool,
         frames: [UIImage],
         framesUpdateTimestamp: Double,
         trimUpdated: @escaping (Double, Double, Bool, Bool) -> Void,
         positionUpdated: @escaping (Double, Bool) -> Void
     ) {
         self.context = context
+        self.generationTimestamp = generationTimestamp
         self.duration = duration
         self.startPosition = startPosition
         self.endPosition = endPosition
         self.position = position
         self.maxDuration = maxDuration
+        self.isPlaying = isPlaying
         self.frames = frames
         self.framesUpdateTimestamp = framesUpdateTimestamp
         self.trimUpdated = trimUpdated
@@ -77,6 +83,9 @@ final class VideoScrubberComponent: Component {
     
     static func ==(lhs: VideoScrubberComponent, rhs: VideoScrubberComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.generationTimestamp != rhs.generationTimestamp {
             return false
         }
         if lhs.duration != rhs.duration {
@@ -92,6 +101,9 @@ final class VideoScrubberComponent: Component {
             return false
         }
         if lhs.maxDuration != rhs.maxDuration {
+            return false
+        }
+        if lhs.isPlaying != rhs.isPlaying {
             return false
         }
         if lhs.framesUpdateTimestamp != rhs.framesUpdateTimestamp {
@@ -114,6 +126,13 @@ final class VideoScrubberComponent: Component {
         
         private var component: VideoScrubberComponent?
         private weak var state: EmptyComponentState?
+        private var scrubberSize: CGSize?
+        
+        private var isPanningTrimHandle = false
+        private var isPanningPositionHandle = false
+        
+        private var displayLink: SharedDisplayLinkDriver.Link?
+        private var positionAnimation: (start: Double, from: Double, to: Double)?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -134,17 +153,19 @@ final class VideoScrubberComponent: Component {
                 context.addPath(innerPath.cgPath)
                 context.fillPath()
                 
+                context.setBlendMode(.clear)
                 let holeSize = CGSize(width: 2.0, height: 11.0)
                 let holePath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 5.0 - UIScreenPixel, y: (size.height - holeSize.height) / 2.0), size: holeSize), cornerRadius: holeSize.width / 2.0)
                 context.addPath(holePath.cgPath)
                 context.fillPath()
             })?.withRenderingMode(.alwaysTemplate)
             
-            let positionImage = generateImage(CGSize(width: 2.0, height: 42.0), rotatedContext: { size, context in
+            let positionImage = generateImage(CGSize(width: handleWidth, height: 50.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))
                 context.setFillColor(UIColor.white.cgColor)
+                context.setShadow(offset: .zero, blur: 2.0, color: UIColor(rgb: 0x000000, alpha: 0.55).cgColor)
                 
-                let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: 2.0, height: 42.0)), cornerRadius: 1.0)
+                let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 6.0, y: 4.0), size: CGSize(width: 2.0, height: 42.0)), cornerRadius: 1.0)
                 context.addPath(path.cgPath)
                 context.fillPath()
             })
@@ -189,20 +210,28 @@ final class VideoScrubberComponent: Component {
             self.leftHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleLeftHandlePan(_:))))
             self.rightHandleView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleRightHandlePan(_:))))
             self.cursorView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePositionHandlePan(_:))))
+            
+            self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+                self?.updateCursorPosition()
+            }
+            self.displayLink?.isPaused = true
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
-        private var isPanningHandle = false
+        deinit {
+            self.displayLink?.invalidate()
+        }
+        
         @objc private func handleLeftHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let component = self.component else {
                 return
             }
             let location = gestureRecognizer.location(in: self)
             let start = handleWidth / 2.0
-            let end = self.frame.width - handleWidth
+            let end = self.frame.width - handleWidth / 2.0
             let length = end - start
             let fraction = (location.x - start) / length
             
@@ -219,13 +248,13 @@ final class VideoScrubberComponent: Component {
             var transition: Transition = .immediate
             switch gestureRecognizer.state {
             case .began, .changed:
-                self.isPanningHandle = true
+                self.isPanningTrimHandle = true
                 component.trimUpdated(startValue, endValue, false, false)
                 if case .began = gestureRecognizer.state {
                     transition = .easeInOut(duration: 0.25)
                 }
             case .ended, .cancelled:
-                self.isPanningHandle = false
+                self.isPanningTrimHandle = false
                 component.trimUpdated(startValue, endValue, false, true)
                 transition = .easeInOut(duration: 0.25)
             default:
@@ -240,7 +269,7 @@ final class VideoScrubberComponent: Component {
             }
             let location = gestureRecognizer.location(in: self)
             let start = handleWidth / 2.0
-            let end = self.frame.width - handleWidth
+            let end = self.frame.width - handleWidth / 2.0
             let length = end - start
             let fraction = (location.x - start) / length
            
@@ -257,13 +286,13 @@ final class VideoScrubberComponent: Component {
             var transition: Transition = .immediate
             switch gestureRecognizer.state {
             case .began, .changed:
-                self.isPanningHandle = true
+                self.isPanningTrimHandle = true
                 component.trimUpdated(startValue, endValue, true, false)
                 if case .began = gestureRecognizer.state {
                     transition = .easeInOut(duration: 0.25)
                 }
             case .ended, .cancelled:
-                self.isPanningHandle = false
+                self.isPanningTrimHandle = false
                 component.trimUpdated(startValue, endValue, true, true)
                 transition = .easeInOut(duration: 0.25)
             default:
@@ -273,10 +302,59 @@ final class VideoScrubberComponent: Component {
         }
         
         @objc private func handlePositionHandlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-            guard let _ = self.component else {
+            guard let component = self.component else {
                 return
             }
-            //let location = gestureRecognizer.location(in: self)
+            let location = gestureRecognizer.location(in: self)
+            let start = handleWidth
+            let end = self.frame.width - handleWidth
+            let length = end - start
+            let fraction = (location.x - start) / length
+            
+            let position = max(component.startPosition, min(component.endPosition, component.duration * fraction))
+            let transition: Transition = .immediate
+            switch gestureRecognizer.state {
+            case .began, .changed:
+                self.isPanningPositionHandle = true
+                component.positionUpdated(position, false)
+            case .ended, .cancelled:
+                self.isPanningPositionHandle = false
+                component.positionUpdated(position, true)
+            default:
+                break
+            }
+            self.state?.updated(transition: transition)
+        }
+        
+        private func cursorFrame(size: CGSize, position: Double, duration : Double) -> CGRect {
+            let cursorPadding: CGFloat = 8.0
+            let cursorPositionFraction = duration > 0.0 ? position / duration : 0.0
+            let cursorPosition = floorToScreenPixels(handleWidth + handleWidth / 2.0 - cursorPadding + (size.width - handleWidth * 3.0 + cursorPadding * 2.0) * cursorPositionFraction)
+            var cursorFrame = CGRect(origin: CGPoint(x: cursorPosition - handleWidth / 2.0, y: -5.0 - UIScreenPixel), size: CGSize(width: handleWidth, height: 50.0))
+            cursorFrame.origin.x = max(self.leftHandleView.frame.maxX - cursorPadding, cursorFrame.origin.x)
+            cursorFrame.origin.x = min(self.rightHandleView.frame.minX + cursorPadding, cursorFrame.origin.x)
+            return cursorFrame
+        }
+        
+        private func updateCursorPosition() {
+            guard let component = self.component, let scrubberSize = self.scrubberSize else {
+                return
+            }
+            let timestamp = CACurrentMediaTime()
+            
+            let updatedPosition: Double
+            if let (start, from, to) = self.positionAnimation {
+                let duration = to - from
+                let fraction = duration > 0.0 ? (timestamp - start) / duration : 0.0
+                updatedPosition = max(component.startPosition, min(component.endPosition, from + (to - from) * fraction))
+                if fraction >= 1.0 {
+                    self.positionAnimation = (timestamp, component.startPosition, component.endPosition)
+                }
+            } else {
+                let advance = component.isPlaying ? timestamp - component.generationTimestamp : 0.0
+                updatedPosition = max(component.startPosition, min(component.endPosition, component.position + advance))
+            }
+            self.cursorView.frame = cursorFrame(size: scrubberSize, position: updatedPosition, duration: component.duration)
         }
                 
         func update(component: VideoScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -285,6 +363,8 @@ final class VideoScrubberComponent: Component {
             self.state = state
             
             let scrubberSize = CGSize(width: availableSize.width, height: scrubberHeight)
+            self.scrubberSize = scrubberSize
+            
             let bounds = CGRect(origin: .zero, size: scrubberSize)
             
             if component.framesUpdateTimestamp != previousFramesUpdateTimestamp {
@@ -316,7 +396,7 @@ final class VideoScrubberComponent: Component {
                 }
             }
             
-            let trimColor = self.isPanningHandle ? UIColor(rgb: 0xf8d74a) : .white
+            let trimColor = self.isPanningTrimHandle ? UIColor(rgb: 0xf8d74a) : .white
             transition.setTintColor(view: self.leftHandleView, color: trimColor)
             transition.setTintColor(view: self.rightHandleView, color: trimColor)
             transition.setTintColor(view: self.borderView, color: trimColor)
@@ -333,6 +413,19 @@ final class VideoScrubberComponent: Component {
             
             let rightHandleFrame = CGRect(origin: CGPoint(x: max(leftHandleFrame.maxX, rightHandlePosition - handleWidth / 2.0), y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
             transition.setFrame(view: self.rightHandleView, frame: rightHandleFrame)
+                        
+            if self.isPanningPositionHandle || !component.isPlaying {
+                self.positionAnimation = nil
+                self.displayLink?.isPaused = true
+                transition.setFrame(view: self.cursorView, frame: cursorFrame(size: scrubberSize, position: component.position, duration: component.duration))
+            } else {
+                if self.positionAnimation == nil {
+                    self.positionAnimation = (CACurrentMediaTime(), component.position, component.endPosition)
+                }
+                self.displayLink?.isPaused = false
+                self.updateCursorPosition()
+            }
+            transition.setAlpha(view: self.cursorView, alpha: self.isPanningTrimHandle ? 0.0 : 1.0)
             
             let borderFrame = CGRect(origin: CGPoint(x: leftHandleFrame.maxX, y: 0.0), size: CGSize(width: rightHandleFrame.minX - leftHandleFrame.maxX, height: scrubberSize.height))
             transition.setFrame(view: self.borderView, frame: borderFrame)

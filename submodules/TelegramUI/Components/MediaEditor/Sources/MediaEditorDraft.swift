@@ -23,6 +23,8 @@ public final class MediaEditorDraft: Codable, Equatable {
         case dimensionsWidth
         case dimensionsHeight
         case values
+        case caption
+        case privacy
     }
     
     public let path: String
@@ -30,14 +32,16 @@ public final class MediaEditorDraft: Codable, Equatable {
     public let thumbnail: UIImage
     public let dimensions: PixelDimensions
     public let values: MediaEditorValues
+    public let caption: NSAttributedString
     public let privacy: MediaEditorResultPrivacy?
         
-    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, values: MediaEditorValues, privacy: MediaEditorResultPrivacy?) {
+    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?) {
         self.path = path
         self.isVideo = isVideo
         self.thumbnail = thumbnail
         self.dimensions = dimensions
         self.values = values
+        self.caption = caption
         self.privacy = privacy
     }
     
@@ -62,6 +66,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             fatalError()
         }
+        self.caption = NSAttributedString()
         self.privacy = nil
     }
     

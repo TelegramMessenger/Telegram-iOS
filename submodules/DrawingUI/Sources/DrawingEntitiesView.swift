@@ -178,6 +178,11 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         return entities
     }
     
+    public var hasEntities: Bool {
+        let entities = self.entities.filter { !($0 is DrawingMediaEntity) }
+        return !entities.isEmpty
+    }
+    
     private var initialEntitiesData: Data?
     public func setup(withEntitiesData entitiesData: Data?) {
         self.clear()

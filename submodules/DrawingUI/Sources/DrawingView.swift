@@ -895,7 +895,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         self.stateUpdated(NavigationState(
             canUndo: !self.undoStack.isEmpty,
             canRedo: !self.redoStack.isEmpty,
-            canClear: !self.undoStack.isEmpty || self.hasOpaqueData || !(self.entitiesView?.entities.isEmpty ?? true),
+            canClear: !self.undoStack.isEmpty || self.hasOpaqueData || (self.entitiesView?.hasEntities ?? false),
             canZoomOut: self.zoomScale > 1.0 + .ulpOfOne,
             isDrawing: self.isDrawing
         ))
