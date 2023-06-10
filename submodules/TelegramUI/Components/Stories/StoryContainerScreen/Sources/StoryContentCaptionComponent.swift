@@ -6,9 +6,21 @@ import MultilineTextComponent
 
 final class StoryContentCaptionComponent: Component {
     final class ExternalState {
-        fileprivate(set) var expandFraction: CGFloat = 0.0
+        fileprivate(set) var isExpanded: Bool = false
         
         init() {
+        }
+    }
+    
+    final class TransitionHint {
+        enum Kind {
+            case isExpandedUpdated
+        }
+        
+        let kind: Kind
+        
+        init(kind: Kind) {
+            self.kind = kind
         }
     }
     
@@ -81,6 +93,9 @@ final class StoryContentCaptionComponent: Component {
             self.addSubview(self.scrollViewContainer)
             
             self.scrollViewContainer.mask = self.scrollMaskContainer
+            
+            let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            self.addGestureRecognizer(tapRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -101,10 +116,24 @@ final class StoryContentCaptionComponent: Component {
             return nil
         }
         
+        @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+            }
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
             }
+        }
+        
+        func expand(transition: Transition) {
+            self.ignoreScrolling = true
+            transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: max(0.0, self.scrollView.contentSize.height - self.scrollView.bounds.height)), size: self.scrollView.bounds.size))
+            self.ignoreScrolling = false
+            
+            self.updateScrolling(transition: transition)
         }
         
         func collapse(transition: Transition) {
@@ -132,11 +161,14 @@ final class StoryContentCaptionComponent: Component {
             if self.scrollView.contentSize.height < self.scrollView.bounds.height + expandDistance {
                 expandFraction = 0.0
             }
-            if component.externalState.expandFraction != expandFraction {
-                component.externalState.expandFraction = expandFraction
+            
+            let isExpanded = expandFraction > 0.0
+            
+            if component.externalState.isExpanded != isExpanded {
+                component.externalState.isExpanded = isExpanded
                 
                 if !self.ignoreExternalState {
-                    self.state?.updated(transition: transition)
+                    self.state?.updated(transition: transition.withUserData(TransitionHint(kind: .isExpandedUpdated)))
                 }
             }
         }

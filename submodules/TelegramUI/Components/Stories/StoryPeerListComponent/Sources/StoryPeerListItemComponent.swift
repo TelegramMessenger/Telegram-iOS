@@ -12,6 +12,7 @@ import AvatarNode
 import ContextUI
 import AsyncDisplayKit
 import StoryContainerScreen
+import MultilineTextComponent
 
 private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, radius: CGFloat) -> (point1Angle: CGFloat, point2Angle: CGFloat)? {
     let distanceVector = CGPoint(x: otherCenter.x - center.x, y: otherCenter.y - center.y)
@@ -704,7 +705,10 @@ public final class StoryPeerListItemComponent: Component {
             
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: titleString, font: Font.regular(11.0), color: component.theme.list.itemPrimaryTextColor)),
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: titleString, font: Font.regular(11.0), textColor: component.theme.list.itemPrimaryTextColor)),
+                    maximumNumberOfLines: 1
+                )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width + 4.0, height: 100.0)
             )

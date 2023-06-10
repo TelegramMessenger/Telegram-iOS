@@ -35,6 +35,7 @@ import Postbox
 
 final class StoryItemSetContainerSendMessage {
     weak var attachmentController: AttachmentController?
+    weak var shareController: ShareController?
     
     var audioRecorderValue: ManagedAudioRecorder?
     var audioRecorder = Promise<ManagedAudioRecorder?>()
@@ -295,6 +296,18 @@ final class StoryItemSetContainerSendMessage {
             updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
             component.context.sharedContext.presentationData)
         )
+        
+        self.shareController = shareController
+        view.updateIsProgressPaused()
+        
+        shareController.dismissed = { [weak self, weak view] _ in
+            guard let self, let view else {
+                return
+            }
+            self.shareController = nil
+            view.updateIsProgressPaused()
+        }
+        
         controller.present(shareController, in: .window(.root))
     }
     
@@ -436,23 +449,25 @@ final class StoryItemSetContainerSendMessage {
                         initialButton = .gift*/
                     }
                     
-                    for bot in attachMenuBots.reversed() {
-                        var peerType = peerType
-                        if bot.peer.id == peer.id {
-                            peerType.insert(.sameBot)
-                            peerType.remove(.bot)
+                    if !"".isEmpty {
+                        for bot in attachMenuBots.reversed() {
+                            var peerType = peerType
+                            if bot.peer.id == peer.id {
+                                peerType.insert(.sameBot)
+                                peerType.remove(.bot)
+                            }
+                            let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
+                            if !bot.peerTypes.intersection(peerType).isEmpty {
+                                buttons.insert(button, at: 1)
+                                
+                                /*if case let .bot(botId, _, _) = subject {
+                                 if initialButton == nil && bot.peer.id == botId {
+                                 initialButton = button
+                                 }
+                                 }*/
+                            }
+                            allButtons.insert(button, at: 1)
                         }
-                        let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
-                        if !bot.peerTypes.intersection(peerType).isEmpty {
-                            buttons.insert(button, at: 1)
-                            
-                            /*if case let .bot(botId, _, _) = subject {
-                                if initialButton == nil && bot.peer.id == botId {
-                                    initialButton = button
-                                }
-                            }*/
-                        }
-                        allButtons.insert(button, at: 1)
                     }
                     
                     return (buttons, allButtons, initialButton)

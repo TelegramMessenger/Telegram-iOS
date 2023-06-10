@@ -190,6 +190,9 @@ private final class StoryContainerScreenComponent: Component {
                 if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
                     return []
                 }
+                if !itemSetComponentView.allowsInteractiveGestures() {
+                    return []
+                }
                 return [.left, .right]
             })
             self.addGestureRecognizer(horizontalPanRecognizer)
@@ -199,6 +202,9 @@ private final class StoryContainerScreenComponent: Component {
                     return []
                 }
                 if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
+                    return []
+                }
+                if !itemSetComponentView.allowsInteractiveGestures() {
                     return []
                 }
                 
