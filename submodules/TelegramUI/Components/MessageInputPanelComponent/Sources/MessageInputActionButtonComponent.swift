@@ -15,6 +15,8 @@ private extension MessageInputActionButtonComponent.Mode {
             return "Chat/Context Menu/Delete"
         case .attach:
             return "Chat/Input/Text/IconAttachment"
+        case .forward:
+            return "Chat/Input/Text/IconForward"
         default:
             return nil
         }
@@ -30,6 +32,7 @@ public final class MessageInputActionButtonComponent: Component {
         case videoInput
         case delete
         case attach
+        case forward
     }
     
     public enum Action {
@@ -270,7 +273,7 @@ public final class MessageInputActionButtonComponent: Component {
             switch component.mode {
             case .none:
                 break
-            case .send, .apply, .attach, .delete:
+            case .send, .apply, .attach, .delete, .forward:
                 sendAlpha = 1.0
             case .videoInput, .voiceInput:
                 microphoneAlpha = 1.0
@@ -300,7 +303,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

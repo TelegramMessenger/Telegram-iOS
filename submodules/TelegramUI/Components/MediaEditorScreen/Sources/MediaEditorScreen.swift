@@ -741,13 +741,13 @@ final class MediaEditorScreenComponent: Component {
                     stopAndPreviewMediaRecording: nil,
                     discardMediaRecordingPreview: nil,
                     attachmentAction: nil,
-                    reactionAction: nil,
                     timeoutAction: { [weak self] view in
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
                         controller.presentTimeoutSetup(sourceView: view)
                     },
+                    forwardAction: nil,
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,

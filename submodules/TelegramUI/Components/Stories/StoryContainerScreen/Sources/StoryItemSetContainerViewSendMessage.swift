@@ -272,7 +272,7 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    func performInlineAction(view: StoryItemSetContainerComponent.View, item: StoryActionsComponent.Item) {
+    func performShareAction(view: StoryItemSetContainerComponent.View) {
         guard let component = view.component else {
             return
         }
@@ -284,23 +284,18 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         
-        switch item.kind {
-        case .like:
-            return
-        case .share:
-            /*let linkPromise = Promise<String?, NoError>()
-            linkPromise.set(component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))*/
-            
-            let shareController = ShareController(
-                context: component.context,
-                subject: .media(AnyMediaReference.standalone(media: TelegramMediaStory(storyId: StoryId(peerId: peerId, id: focusedItem.storyItem.id)))),
-                externalShare: false,
-                immediateExternalShare: false,
-                updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
-                component.context.sharedContext.presentationData)
-            )
-            controller.present(shareController, in: .window(.root))
-        }
+        /*let linkPromise = Promise<String?, NoError>()
+        linkPromise.set(component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))*/
+        
+        let shareController = ShareController(
+            context: component.context,
+            subject: .media(AnyMediaReference.standalone(media: TelegramMediaStory(storyId: StoryId(peerId: peerId, id: focusedItem.storyItem.id)))),
+            externalShare: false,
+            immediateExternalShare: false,
+            updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
+            component.context.sharedContext.presentationData)
+        )
+        controller.present(shareController, in: .window(.root))
     }
     
     private func clearInputText(view: StoryItemSetContainerComponent.View) {

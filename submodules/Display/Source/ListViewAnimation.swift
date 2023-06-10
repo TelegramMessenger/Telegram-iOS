@@ -222,3 +222,8 @@ public func listViewAnimationDurationAndCurve(transition: ContainedViewLayoutTra
             }
     }
 }
+
+public func scrollingRubberBandingOffset(offset: CGFloat, bandingStart: CGFloat, range: CGFloat, coefficient: CGFloat = 0.4) -> CGFloat {
+    let bandedOffset = offset - bandingStart
+    return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
+}

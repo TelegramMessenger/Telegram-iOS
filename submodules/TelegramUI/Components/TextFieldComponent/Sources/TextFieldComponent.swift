@@ -126,6 +126,10 @@ public final class TextFieldComponent: Component {
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
         }
         
+        public func activateInput() {
+            self.textView.becomeFirstResponder()
+        }
+        
         func update(component: TextFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state

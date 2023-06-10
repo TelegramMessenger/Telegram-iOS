@@ -37,8 +37,8 @@ public final class MessageInputPanelComponent: Component {
     public let stopAndPreviewMediaRecording: (() -> Void)?
     public let discardMediaRecordingPreview: (() -> Void)?
     public let attachmentAction: (() -> Void)?
-    public let reactionAction: ((UIView) -> Void)?
     public let timeoutAction: ((UIView) -> Void)?
+    public let forwardAction: (() -> Void)?
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
     public let isRecordingLocked: Bool
@@ -64,8 +64,8 @@ public final class MessageInputPanelComponent: Component {
         stopAndPreviewMediaRecording: (() -> Void)?,
         discardMediaRecordingPreview: (() -> Void)?,
         attachmentAction: (() -> Void)?,
-        reactionAction: ((UIView) -> Void)?,
         timeoutAction: ((UIView) -> Void)?,
+        forwardAction: (() -> Void)?,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
         isRecordingLocked: Bool,
@@ -90,8 +90,8 @@ public final class MessageInputPanelComponent: Component {
         self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
         self.discardMediaRecordingPreview = discardMediaRecordingPreview
         self.attachmentAction = attachmentAction
-        self.reactionAction = reactionAction
         self.timeoutAction = timeoutAction
+        self.forwardAction = forwardAction
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
         self.isRecordingLocked = isRecordingLocked
@@ -150,6 +150,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        if (lhs.forwardAction == nil) != (rhs.forwardAction == nil) {
             return false
         }
         return true
@@ -235,6 +238,12 @@ public final class MessageInputPanelComponent: Component {
         public func clearSendMessageInput() {
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
                 textFieldView.setText(string: "")
+            }
+        }
+        
+        public func activateInput() {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                textFieldView.activateInput()
             }
         }
         
@@ -520,7 +529,13 @@ public final class MessageInputPanelComponent: Component {
                 if hasMediaEditing {
                     inputActionButtonMode = .send
                 } else {
-                    inputActionButtonMode = self.textFieldExternalState.hasText ? .send : (self.currentMediaInputIsVoice ? .voiceInput : .videoInput)
+                    if self.textFieldExternalState.hasText {
+                        inputActionButtonMode = .send
+                    } else if !self.textFieldExternalState.isEditing && component.forwardAction != nil {
+                        inputActionButtonMode = .forward
+                    } else {
+                        inputActionButtonMode = self.currentMediaInputIsVoice ? .voiceInput : .videoInput
+                    }
                 }
             }
             let inputActionButtonSize = self.inputActionButton.update(
@@ -546,10 +561,14 @@ public final class MessageInputPanelComponent: Component {
                             }
                         case .apply:
                             if case .up = action {
-                                self.component?.sendMessageAction()
+                                component.sendMessageAction()
                             }
                         case .voiceInput, .videoInput:
                             component.setMediaRecordingActive?(action == .down, mode == .videoInput, sendAction)
+                        case .forward:
+                            if case .up = action {
+                                component.forwardAction?()
+                            }
                         default:
                             break
                         }
@@ -636,39 +655,6 @@ public final class MessageInputPanelComponent: Component {
                     transition.setScale(view: stickerButtonView, scale: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.1 : 1.0)
                     
                     fieldIconNextX -= stickerButtonSize.width + 2.0
-                }
-            }
-            
-            if let reactionAction = component.reactionAction {
-                let reactionButtonSize = self.reactionButton.update(
-                    transition: transition,
-                    component: AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Chat/Input/Text/AccessoryIconReaction",
-                            tintColor: .white
-                        )),
-                        action: { [weak self] in
-                            guard let self, let reactionButtonView = self.reactionButton.view else {
-                                return
-                            }
-                            reactionAction(reactionButtonView)
-                        }
-                    ).minSize(CGSize(width: 32.0, height: 32.0))),
-                    environment: {},
-                    containerSize: CGSize(width: 32.0, height: 32.0)
-                )
-                if let reactionButtonView = self.reactionButton.view {
-                    if reactionButtonView.superview == nil {
-                        self.addSubview(reactionButtonView)
-                    }
-                    let reactionIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - reactionButtonSize.width, y: fieldBackgroundFrame.minY + 1.0 + floor((fieldBackgroundFrame.height - reactionButtonSize.height) * 0.5)), size: reactionButtonSize)
-                    transition.setPosition(view: reactionButtonView, position: reactionIconFrame.center)
-                    transition.setBounds(view: reactionButtonView, bounds: CGRect(origin: CGPoint(), size: reactionIconFrame.size))
-                    
-                    transition.setAlpha(view: reactionButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing || self.textFieldExternalState.isEditing) ? 0.0 : 1.0)
-                    transition.setScale(view: reactionButtonView, scale: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing || self.textFieldExternalState.isEditing) ? 0.1 : 1.0)
-                    
-                    fieldIconNextX -= reactionButtonSize.width + 2.0
                 }
             }
             

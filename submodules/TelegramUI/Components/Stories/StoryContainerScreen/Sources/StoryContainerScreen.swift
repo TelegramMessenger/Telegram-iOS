@@ -165,7 +165,7 @@ private final class StoryContainerScreenComponent: Component {
         private var visibleItemSetViews: [EnginePeer.Id: ItemSetView] = [:]
         
         private var itemSetPanState: ItemSetPanState?
-        private var dismissPanState: ItemSetPanState?
+        private var verticalPanState: ItemSetPanState?
         private var isHoldingTouch: Bool = false
         
         private var isAnimatingOut: Bool = false
@@ -345,21 +345,27 @@ private final class StoryContainerScreenComponent: Component {
         @objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
             case .began:
-                self.dismissPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
+                self.verticalPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
                 self.state?.updated(transition: .immediate)
             case .changed:
                 let translation = recognizer.translation(in: self)
-                self.dismissPanState = ItemSetPanState(fraction: max(0.0, min(1.0, translation.y / self.bounds.height)), didBegin: true)
+                self.verticalPanState = ItemSetPanState(fraction: max(-1.0, min(1.0, translation.y / self.bounds.height)), didBegin: true)
                 self.state?.updated(transition: .immediate)
             case .cancelled, .ended:
                 let translation = recognizer.translation(in: self)
                 let velocity = recognizer.velocity(in: self)
                 
-                self.dismissPanState = nil
+                self.verticalPanState = nil
                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                 
                 if translation.y > 100.0 || velocity.y > 10.0 {
                     self.environment?.controller()?.dismiss()
+                } else if translation.y < -100.0 || velocity.y < -40.0 {
+                    if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
+                        if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                            itemSetComponentView.activateInput()
+                        }
+                    }
                 }
             default:
                 break
@@ -470,7 +476,7 @@ private final class StoryContainerScreenComponent: Component {
                     focusedItemPromise.set(.single(nil))
                 })
             } else {
-                self.dismissPanState = ItemSetPanState(fraction: 1.0, didBegin: true)
+                self.verticalPanState = ItemSetPanState(fraction: 1.0, didBegin: true)
                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                 
                 let focusedItemPromise = self.component?.focusedItemPromise
@@ -570,7 +576,7 @@ private final class StoryContainerScreenComponent: Component {
             if self.itemSetPanState != nil {
                 isProgressPaused = true
             }
-            if self.dismissPanState != nil {
+            if self.verticalPanState != nil {
                 isProgressPaused = true
             }
             if self.isAnimatingOut {
@@ -583,10 +589,14 @@ private final class StoryContainerScreenComponent: Component {
             var dismissPanOffset: CGFloat = 0.0
             var dismissPanScale: CGFloat = 1.0
             var dismissAlphaScale: CGFloat = 1.0
-            if let dismissPanState = self.dismissPanState {
-                dismissPanOffset = dismissPanState.fraction * availableSize.height
-                dismissPanScale = 1.0 * (1.0 - dismissPanState.fraction) + 0.6 * dismissPanState.fraction
-                dismissAlphaScale = 1.0 * (1.0 - dismissPanState.fraction) + 0.2 * dismissPanState.fraction
+            var verticalPanFraction: CGFloat = 0.0
+            if let verticalPanState = self.verticalPanState {
+                let dismissFraction = max(0.0, verticalPanState.fraction)
+                verticalPanFraction = max(0.0, min(1.0, -verticalPanState.fraction))
+                
+                dismissPanOffset = dismissFraction * availableSize.height
+                dismissPanScale = 1.0 * (1.0 - dismissFraction) + 0.6 * dismissFraction
+                dismissAlphaScale = 1.0 * (1.0 - dismissFraction) + 0.2 * dismissFraction
             }
             
             transition.setAlpha(layer: self.backgroundLayer, alpha: max(0.5, dismissAlphaScale))
@@ -685,6 +695,7 @@ private final class StoryContainerScreenComponent: Component {
                                 hideUI: i == focusedIndex && self.itemSetPanState?.didBegin == false,
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
                                 isPanning: self.itemSetPanState?.didBegin == true,
+                                verticalPanFraction: verticalPanFraction,
                                 presentController: { [weak self] c in
                                     guard let self, let environment = self.environment else {
                                         return
