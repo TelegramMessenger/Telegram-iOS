@@ -361,6 +361,11 @@ final class VideoScrubberComponent: Component {
             
             return scrubberSize
         }
+        
+        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            let hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
+            return self.bounds.inset(by: hitTestSlop).contains(point)
+        }
     }
 
     public func makeView() -> View {
