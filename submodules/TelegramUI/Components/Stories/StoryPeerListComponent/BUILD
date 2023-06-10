@@ -21,6 +21,7 @@ swift_library(
         "//submodules/AvatarNode",
         "//submodules/ContextUI",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
+        "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

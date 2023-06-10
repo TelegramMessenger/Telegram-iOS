@@ -109,7 +109,11 @@ final class MediaNavigationStripComponent: Component {
                     itemWidth = idealItemWidth
                 }
                 
-                let globalWidth: CGFloat = CGFloat(component.count) * itemWidth + CGFloat(component.count - 1) * spacing
+                var globalWidth: CGFloat = CGFloat(component.count) * itemWidth + CGFloat(component.count - 1) * spacing
+                if globalWidth > availableSize.width && globalWidth <= availableSize.width + 1.0 {
+                    globalWidth = availableSize.width
+                }
+                
                 let globalFocusedFrame = CGRect(origin: CGPoint(x: CGFloat(component.index) * (itemWidth + spacing), y: 0.0), size: CGSize(width: itemWidth, height: itemHeight))
                 var globalOffset: CGFloat = floor(globalFocusedFrame.midX - availableSize.width * 0.5)
                 if globalOffset > globalWidth - availableSize.width {

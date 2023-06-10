@@ -405,6 +405,13 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         
+        func allowsInteractiveGestures() -> Bool {
+            if self.displayViewList {
+                return false
+            }
+            return true
+        }
+        
         func rewindCurrentItem() {
             guard let component = self.component else {
                 return
@@ -431,7 +438,7 @@ public final class StoryItemSetContainerComponent: Component {
                 } else if self.displayViewList {
                     self.displayViewList = false
                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                } else if let captionItem = self.captionItem, captionItem.externalState.expandFraction > 0.0 {
+                } else if let captionItem = self.captionItem, captionItem.externalState.isExpanded {
                     if let captionItemView = captionItem.view.view as? StoryContentCaptionComponent.View {
                         captionItemView.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                     }
@@ -479,7 +486,13 @@ public final class StoryItemSetContainerComponent: Component {
             if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
                 return true
             }
-            if let captionItem = self.captionItem, captionItem.externalState.expandFraction > 0.0 {
+            if self.sendMessageContext.attachmentController != nil {
+                return true
+            }
+            if self.sendMessageContext.shareController != nil {
+                return true
+            }
+            if let captionItem = self.captionItem, captionItem.externalState.isExpanded {
                 return true
             }
             return false
@@ -1727,8 +1740,12 @@ public final class StoryItemSetContainerComponent: Component {
             transition.setAlpha(layer: self.bottomContentGradientLayer, alpha: 0.0)
             
             var normalDimAlpha: CGFloat = 0.0
+            var forceDimAnimation = false
             if let captionItem = self.captionItem {
-                normalDimAlpha = captionItem.externalState.expandFraction
+                normalDimAlpha = captionItem.externalState.isExpanded ? 1.0 : 0.0
+                if transition.animation.isImmediate && transition.userData(StoryContentCaptionComponent.TransitionHint.self)?.kind == .isExpandedUpdated {
+                    forceDimAnimation = true
+                }
             }
             var dimAlpha: CGFloat = (inputPanelIsOverlay || self.inputPanelExternalState.isEditing) ? 1.0 : normalDimAlpha
             if component.hideUI || self.displayViewList {
@@ -1736,7 +1753,12 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             transition.setFrame(layer: self.contentDimLayer, frame: CGRect(origin: CGPoint(), size: contentFrame.size))
-            transition.setAlpha(layer: self.contentDimLayer, alpha: dimAlpha)
+            
+            if transition.animation.isImmediate && forceDimAnimation && self.contentDimLayer.opacity != Float(dimAlpha) {
+                Transition(animation: .curve(duration: 0.25, curve: .easeInOut)).setAlpha(layer: self.contentDimLayer, alpha: dimAlpha)
+            } else {
+                transition.setAlpha(layer: self.contentDimLayer, alpha: dimAlpha)
+            }
             
             self.ignoreScrolling = true
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
