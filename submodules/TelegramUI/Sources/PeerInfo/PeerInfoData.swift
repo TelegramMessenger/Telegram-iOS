@@ -1183,8 +1183,10 @@ func peerInfoHeaderActionButtons(peer: Peer?, isSecretChat: Bool, isContact: Boo
 func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFromChat: Bool, isExpanded: Bool, videoCallsEnabled: Bool, isSecretChat: Bool, isContact: Bool, threadInfo: EngineMessageHistoryThread.Info?) -> [PeerInfoHeaderButtonKey] {
     var result: [PeerInfoHeaderButtonKey] = []
     if let user = peer as? TelegramUser {
-        if !isOpenedFromChat && isContact {
-            result.append(.message)
+        if !isOpenedFromChat {
+            if isContact || user.botInfo != nil {
+                result.append(.message)
+            }
         }
         var callsAvailable = false
         var videoCallsAvailable = false

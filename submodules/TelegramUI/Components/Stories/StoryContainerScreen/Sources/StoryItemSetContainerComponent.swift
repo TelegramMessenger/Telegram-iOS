@@ -476,6 +476,9 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let inputView = self.inputPanel.view, let inputViewHitTest = inputView.hitTest(self.convert(point, to: inputView), with: event) {
+                return inputViewHitTest
+            }
             return super.hitTest(point, with: event)
         }
         
