@@ -878,6 +878,7 @@ public class CameraScreen: ViewController {
             self.effectivePreviewView.addGestureRecognizer(pinchGestureRecognizer)
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+            panGestureRecognizer.maximumNumberOfTouches = 1
             self.effectivePreviewView.addGestureRecognizer(panGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))

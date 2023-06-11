@@ -702,7 +702,7 @@ final class MediaEditorScreenComponent: Component {
                 case 86400:
                     timeoutValue = "24"
                 case 172800:
-                    timeoutValue = "2d"
+                    timeoutValue = "48"
                 default:
                     timeoutValue = "24"
                 }
@@ -1640,8 +1640,10 @@ public final class MediaEditorScreen: ViewController {
             
             self.mediaEditor?.onFirstDisplay = { [weak self] in
                 if let self, let transitionInView = self.transitionInView  {
-                    transitionInView.removeFromSuperview()
                     self.transitionInView = nil
+                    transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
+                        transitionInView?.removeFromSuperview()
+                    })
                 }
             }
         }
@@ -2502,7 +2504,7 @@ public final class MediaEditorScreen: ViewController {
                 
                 updateTimeout(86400, false)
             })))
-            items.append(.action(ContextMenuActionItem(text: "2 Days", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: "48 Hours", icon: { theme in
                 return currentValue == 86400 * 2 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
             }, action: { _, a in
                 a(.default)
