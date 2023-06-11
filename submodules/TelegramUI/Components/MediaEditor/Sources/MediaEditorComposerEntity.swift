@@ -12,7 +12,7 @@ import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
 
-func composerEntityForDrawingEntity(account: Account, entity: DrawingEntity, colorSpace: CGColorSpace) -> MediaEditorComposerEntity? {
+func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, colorSpace: CGColorSpace) -> [MediaEditorComposerEntity] {
     if let entity = entity as? DrawingStickerEntity {
         let content: MediaEditorComposerStickerEntity.Content
         switch entity.content {
@@ -21,19 +21,26 @@ func composerEntityForDrawingEntity(account: Account, entity: DrawingEntity, col
         case let .image(image):
             content = .image(image)
         }
-        return MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace)
+        return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
         if let entity = entity as? DrawingBubbleEntity {
-            return MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)
+            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]
         } else if let entity = entity as? DrawingSimpleShapeEntity {
-            return MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)
+            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: 1.0, rotation: entity.rotation, baseSize: entity.size, mirrored: false)]
         } else if let entity = entity as? DrawingVectorEntity {
-            return MediaEditorComposerStaticEntity(image: image, position: CGPoint(x: entity.drawingSize.width * 0.5, y: entity.drawingSize.height * 0.5), scale: 1.0, rotation: 0.0, baseSize: entity.drawingSize, mirrored: false)
+            return [MediaEditorComposerStaticEntity(image: image, position: CGPoint(x: entity.drawingSize.width * 0.5, y: entity.drawingSize.height * 0.5), scale: 1.0, rotation: 0.0, baseSize: entity.drawingSize, mirrored: false)]
         } else if let entity = entity as? DrawingTextEntity {
-            return MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, mirrored: false)
+            var entities: [MediaEditorComposerEntity] = []
+            entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: nil, mirrored: false))
+            if let renderSubEntities = entity.renderSubEntities {
+                for subEntity in renderSubEntities {
+                    entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: subEntity, colorSpace: colorSpace))
+                }
+            }
+            return entities
         }
     }
-    return nil
+    return []
 }
 
 private class MediaEditorComposerStaticEntity: MediaEditorComposerEntity {

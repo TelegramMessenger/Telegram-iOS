@@ -75,7 +75,11 @@ final class MediaEditorComposer {
             self.drawingImage = nil
         }
         
-        self.entities = values.entities.map { $0.entity } .compactMap { composerEntityForDrawingEntity(account: account, entity: $0, colorSpace: colorSpace) }
+        var entities: [MediaEditorComposerEntity] = []
+        for entity in values.entities {
+            entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: entity.entity, colorSpace: colorSpace))
+        }
+        self.entities = entities
         
         self.device = MTLCreateSystemDefaultDevice()
         if let device = self.device {
@@ -182,7 +186,11 @@ public func makeEditorImageComposition(account: Account, inputImage: UIImage, di
         drawingImage = image.transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
     }
     
-    let entities: [MediaEditorComposerEntity] = values.entities.map { $0.entity }.compactMap { composerEntityForDrawingEntity(account: account, entity: $0, colorSpace: colorSpace) }
+    var entities: [MediaEditorComposerEntity] = []
+    for entity in values.entities {
+        entities.append(contentsOf: composerEntitiesForDrawingEntity(account: account, entity: entity.entity, colorSpace: colorSpace))
+    }
+    
     makeEditorImageFrameComposition(inputImage: inputImage, gradientImage: gradientImage, drawingImage: drawingImage, dimensions: dimensions, values: values, entities: entities, time: time, completion: { ciImage in
         if let ciImage {
             let context = CIContext(options: [.workingColorSpace : NSNull()])

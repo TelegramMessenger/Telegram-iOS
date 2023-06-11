@@ -479,7 +479,7 @@ public final class MediaEditorVideoExport {
             return false
         }
         
-        let duration: Double = 3.0
+        let duration: Double = 5.0
         let frameRate: Double = Double(self.configuration.frameRate)
         var position: CMTime = CMTime(value: 0, timescale: Int32(self.configuration.frameRate))
         
@@ -493,6 +493,9 @@ public final class MediaEditorVideoExport {
                 return false
             }
             self.pauseDispatchGroup.wait()
+            
+            let progress = (position - .zero).seconds / duration
+            self.statusValue = .progress(Float(progress))
             composer.processImage(inputImage: image, pool: writer.pixelBufferPool, time: position, completion: { pixelBuffer, timestamp in
                 if let pixelBuffer {
                     if !writer.appendPixelBuffer(pixelBuffer, at: timestamp) {

@@ -639,7 +639,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
             let entity = DrawingStickerEntity(content: .file(file))
-            entity.referenceDrawingSize = CGSize(width: itemSize * 2.5, height: itemSize * 2.5)
+            entity.referenceDrawingSize = CGSize(width: itemSize * 4.0, height: itemSize * 4.0)
             entity.scale = scale
             entity.position = textPosition.offsetBy(
                 dx: (emojiTextPosition.x * cos(rotation) + emojiTextPosition.y * sin(rotation)) * scale,
