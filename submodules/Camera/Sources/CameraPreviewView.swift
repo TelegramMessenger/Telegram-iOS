@@ -39,7 +39,7 @@ public class CameraSimplePreviewView: UIView {
             |> filter { $0 }
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] _ in
-                UIView.animate(withDuration: 0.3) {
+                UIView.animate(withDuration: 0.3, delay: 0.15) {
                     self?.placeholderView.alpha = 0.0
                 }
             })
