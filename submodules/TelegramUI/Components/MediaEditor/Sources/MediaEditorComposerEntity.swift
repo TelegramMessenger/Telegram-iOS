@@ -197,19 +197,10 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 tintColor = .white
             }
             
-            self.disposables.add((self.frameSource.get()
-            |> take(1)
-            |> deliverOn(self.queue)).start(next: { [weak self] frameSource in
+            let processFrame: (Double, Int, (Int) -> AnimatedStickerFrame?) -> Void = { [weak self] duration, frameCount, takeFrame in
                 guard let strongSelf = self else {
-                    completion(nil)
                     return
                 }
-                
-                guard let frameSource, let duration = strongSelf.totalDuration, let frameCount = strongSelf.frameCount else {
-                    completion(nil)
-                    return
-                }
-                                                
                 let relativeTime = currentTime - floor(currentTime / duration) * duration
                 var t = relativeTime / duration
                 t = max(0.0, t)
@@ -233,12 +224,8 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         delta = max(1, frameIndex - previousFrameIndex)
                     }
                     
-                    var frame: AnimatedStickerFrame?
-                    frameSource.syncWith { frameSource in
-                        for i in 0 ..< delta {
-                            frame = frameSource.takeFrame(draw: i == delta - 1)
-                        }
-                    }
+                    let frame = takeFrame(delta)
+                    
                     if let frame {
                         var imagePixelBuffer: CVPixelBuffer?
                         if let pixelBuffer = strongSelf.imagePixelBuffer {
@@ -273,7 +260,57 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 } else {
                     completion(strongSelf.image)
                 }
-            }))
+            }
+            
+            if self.isVideo {
+                self.disposables.add((self.videoFrameSource.get()
+                |> take(1)
+                |> deliverOn(self.queue)).start(next: { [weak self] frameSource in
+                    guard let strongSelf = self else {
+                        completion(nil)
+                        return
+                    }
+                    
+                    guard let frameSource, let duration = strongSelf.totalDuration, let frameCount = strongSelf.frameCount else {
+                        completion(nil)
+                        return
+                    }
+                    
+                    processFrame(duration, frameCount, { delta in
+                        var frame: AnimatedStickerFrame?
+                        frameSource.syncWith { frameSource in
+                            for i in 0 ..< delta {
+                                frame = frameSource.takeFrame(draw: i == delta - 1)
+                            }
+                        }
+                        return frame
+                    })
+                }))
+            } else {
+                self.disposables.add((self.frameSource.get()
+                |> take(1)
+                |> deliverOn(self.queue)).start(next: { [weak self] frameSource in
+                    guard let strongSelf = self else {
+                        completion(nil)
+                        return
+                    }
+                    
+                    guard let frameSource, let duration = strongSelf.totalDuration, let frameCount = strongSelf.frameCount else {
+                        completion(nil)
+                        return
+                    }
+                    
+                    processFrame(duration, frameCount, { delta in
+                        var frame: AnimatedStickerFrame?
+                        frameSource.syncWith { frameSource in
+                            for i in 0 ..< delta {
+                                frame = frameSource.takeFrame(draw: i == delta - 1)
+                            }
+                        }
+                        return frame
+                    })
+                }))
+            }
         } else {
             var image: CIImage?
             if let cachedImage = self.image {

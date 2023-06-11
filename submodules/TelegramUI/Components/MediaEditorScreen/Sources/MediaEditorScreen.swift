@@ -2059,6 +2059,9 @@ public final class MediaEditorScreen: ViewController {
                                         if let self, let file {
                                             let stickerEntity = DrawingStickerEntity(content: .file(file))
                                             self.interaction?.insertEntity(stickerEntity)
+                                            
+                                            self.controller?.isSavingAvailable = true
+                                            self.controller?.requestLayout(transition: .immediate)
                                         }
                                     }
                                     self.controller?.present(controller, in: .current)
@@ -2066,6 +2069,9 @@ public final class MediaEditorScreen: ViewController {
                                 case .text:
                                     let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
                                     self.interaction?.insertEntity(textEntity)
+                                    
+                                    self.controller?.isSavingAvailable = true
+                                    self.controller?.requestLayout(transition: .immediate)
                                     return
                                 case .drawing:
                                     self.interaction?.deactivate()
