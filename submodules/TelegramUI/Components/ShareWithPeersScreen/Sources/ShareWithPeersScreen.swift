@@ -233,6 +233,7 @@ final class ShareWithPeersScreenComponent: Component {
         private var visibleItems: [AnyHashable: ComponentView<Empty>] = [:]
         
         private var ignoreScrolling: Bool = false
+        private var isDismissed: Bool = false
         
         private var selectedPeers: [EnginePeer.Id] = []
         private var selectedCategories = Set<CategoryId>()
@@ -681,6 +682,8 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
+            self.isDismissed = true
+            
             if let controller = self.environment?.controller() {
                 controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
             }
@@ -704,6 +707,9 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         func update(component: ShareWithPeersScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+            guard !self.isDismissed else {
+                return availableSize
+            }
             let animationHint = transition.userData(AnimationHint.self)
             
             var contentTransition = transition
@@ -938,47 +944,6 @@ final class ShareWithPeersScreenComponent: Component {
                 transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
             }
             navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
-            
-//            let navigationRightButtonSize = self.navigationRightButton.update(
-//                transition: transition,
-//                component: AnyComponent(Button(
-//                    content: AnyComponent(Text(text: "Done", font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.accentTextColor)),
-//                    action: { [weak self] in
-//                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
-//                            return
-//                        }
-//                        
-//                        let base: EngineStoryPrivacy.Base
-//                        if self.selectedCategories.contains(.everyone) {
-//                            base = .everyone
-//                        } else if self.selectedCategories.contains(.closeFriends) {
-//                            base = .closeFriends
-//                        } else if self.selectedCategories.contains(.contacts) {
-//                            base = .contacts
-//                        } else if self.selectedCategories.contains(.selectedContacts) {
-//                            base = .nobody
-//                        } else {
-//                            base = .nobody
-//                        }
-//                        
-//                        component.completion(EngineStoryPrivacy(
-//                            base: base,
-//                            additionallyIncludePeers: self.selectedPeers
-//                        ))
-//                        controller.dismiss()
-//                    }
-//                ).minSize(CGSize(width: navigationHeight, height: navigationHeight))),
-//                environment: {},
-//                containerSize: CGSize(width: availableSize.width, height: navigationHeight)
-//            )
-//            let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - navigationSideInset - navigationRightButtonSize.width, y: floor((navigationHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
-//            if let navigationRightButtonView = self.navigationRightButton.view {
-//                if navigationRightButtonView.superview == nil {
-//                    self.navigationContainerView.addSubview(navigationRightButtonView)
-//                }
-//                transition.setFrame(view: navigationRightButtonView, frame: navigationRightButtonFrame)
-//            }
-//            navigationButtonsWidth += navigationRightButtonSize.width + navigationSideInset
             
             let title: String
             switch component.stateContext.subject {
@@ -1236,7 +1201,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     }
                     
                     var peers: [EnginePeer] = []
-                    peers = chatList.items.filter { !self.initialPeerIds.contains($0.renderedPeer.peerId) }.reversed().compactMap { $0.renderedPeer.peer }
+                    peers = chatList.items.filter { !self.initialPeerIds.contains($0.renderedPeer.peerId) && $0.renderedPeer.peerId != context.account.peerId }.reversed().compactMap { $0.renderedPeer.peer }
                     peers.insert(contentsOf: selectedPeers, at: 0)
                     
                     let state = State(
@@ -1276,7 +1241,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     }
                     
                     var peers: [EnginePeer] = []
-                    peers = contactList.peers.filter { !self.initialPeerIds.contains($0.id) }.sorted(by: { lhs, rhs in
+                    peers = contactList.peers.filter { !self.initialPeerIds.contains($0.id) && $0.id != context.account.peerId }.sorted(by: { lhs, rhs in
                         let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
                         if result == .orderedSame {
                             return lhs.id < rhs.id
@@ -1304,7 +1269,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     }
                     
                     let state = State(
-                        peers: peers,
+                        peers: peers.filter { $0.id != context.account.peerId },
                         presences: presences
                     )
                     self.stateValue = state

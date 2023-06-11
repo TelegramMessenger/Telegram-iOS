@@ -20,10 +20,11 @@ class CameraInput {
     }
     
     private func configureVideoInput(for session: AVCaptureSession, device: AVCaptureDevice) {
+        if let currentVideoInput = self.videoInput {
+            session.removeInput(currentVideoInput)
+            self.videoInput = nil
+        }
         if let videoInput = try? AVCaptureDeviceInput(device: device) {
-            if let currentVideoInput = self.videoInput {
-                session.removeInput(currentVideoInput)
-            }
             self.videoInput = videoInput
             if session.canAddInput(videoInput) {
                 session.addInput(videoInput)
@@ -32,8 +33,9 @@ class CameraInput {
     }
     
     private func configureAudioInput(for session: AVCaptureSession, device: AVCaptureDevice) {
-        guard self.audioInput == nil else {
-            return
+        if let currentAudioInput = self.audioInput {
+            session.removeInput(currentAudioInput)
+            self.audioInput = nil
         }
         if let audioInput = try? AVCaptureDeviceInput(device: device) {
             self.audioInput = audioInput

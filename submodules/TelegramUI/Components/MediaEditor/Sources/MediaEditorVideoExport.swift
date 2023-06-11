@@ -63,6 +63,7 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         var videoSettings = configuration.videoSettings
         if var compressionSettings = videoSettings[AVVideoCompressionPropertiesKey] as? [String: Any] {
             compressionSettings[AVVideoExpectedSourceFrameRateKey] = sourceFrameRate
+//            compressionSettings[AVVideoMaxKeyFrameIntervalKey] = sourceFrameRate
             videoSettings[AVVideoCompressionPropertiesKey] = compressionSettings
         }
         

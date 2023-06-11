@@ -1607,7 +1607,8 @@ public final class MediaEditorScreen: ViewController {
             if entitiesHitTestResult is DrawingMediaEntityView {
                 entitiesHitTestResult = nil
             }
-            if entitiesHitTestResult == nil {
+            let selectionHitTestResult = self.selectionContainerView.hitTest(self.view.convert(location, to: self.selectionContainerView), with: nil)
+            if entitiesHitTestResult == nil && selectionHitTestResult == nil {
                 if self.entitiesView.hasSelection {
                     self.entitiesView.selectEntity(nil)
                     self.view.endEditing(true)

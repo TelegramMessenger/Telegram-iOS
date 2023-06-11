@@ -1039,7 +1039,7 @@ private let hasHEVCHardwareEncoder: Bool = {
 public func recommendedVideoExportConfiguration(values: MediaEditorValues, forceFullHd: Bool = false, frameRate: Float) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any]
     let codecType: AVVideoCodecType
-    
+        
     if hasHEVCHardwareEncoder {
         codecType = AVVideoCodecType.hevc
         compressionProperties = [

@@ -1293,6 +1293,10 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             }
             
+            var additionalBottomInset: CGFloat = 0.0
+            if component.sourceHint == .storyEditor {
+                additionalBottomInset = max(0.0, previewBottomInset - environment.safeInsets.bottom - 49.0)
+            }
 
             let rightButtonPosition = rightEdge - 24.0
             var offsetX: CGFloat = leftEdge + 24.0
@@ -1327,7 +1331,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch1Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch1Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch1Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0)
@@ -1355,7 +1359,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch2Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch2Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch2Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.025)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.025)
@@ -1383,7 +1387,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch3Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch3Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch3Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.05)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.05)
@@ -1411,7 +1415,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch4Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch4Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch4Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.075)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.075)
@@ -1439,7 +1443,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch5Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch5Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch5Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.1)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.1)
@@ -1468,7 +1472,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch6Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch6Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch6Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.125)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.125)
@@ -1496,7 +1500,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch7Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.15)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.15)
@@ -1524,7 +1528,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(swatch8Button
-                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0))
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0 - additionalBottomInset))
                 .appear(Transition.Appear { _, view, transition in
                     transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.175)
                     transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.175)
@@ -1566,7 +1570,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(tools
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - tools.size.height / 2.0 - 78.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - tools.size.height / 2.0 - 78.0 - additionalBottomInset))
                     .appear(Transition.Appear({ _, view, transition in
                         if let view = view as? ToolsComponent.View, !transition.animation.isImmediate {
                             view.animateIn(completion: {})
@@ -1870,7 +1874,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .scale(isEditingText ? 1.0 : 0.01)
                 .opacity(isEditingText ? 1.0 : 0.0)
             )
-                        
+                                    
             var color: DrawingColor?
             if let entity = state.selectedEntity, presetColors.contains(entity.color) {
                 color = nil
@@ -1910,7 +1914,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(colorButton
-                .position(CGPoint(x: leftEdge + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
+                .position(CGPoint(x: leftEdge + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0 - additionalBottomInset))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
                 .opacity(controlsAreVisible ? 1.0 : 0.0)
@@ -1959,7 +1963,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: .immediate
             )
             context.add(addButton
-                .position(CGPoint(x: rightEdge - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
+                .position(CGPoint(x: rightEdge - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0 - additionalBottomInset))
                 .appear(.default(scale: true))
                 .disappear(.default(scale: true))
                 .cornerRadius(12.0)
