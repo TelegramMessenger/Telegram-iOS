@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import MultilineTextComponent
 
 extension CameraMode {
     var title: String {
@@ -150,6 +151,86 @@ final class ModeComponent: Component {
             transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: availableSize.width / 2.0 - selectedCenter, y: 0.0), size: totalSize))
             
             return CGSize(width: availableSize.width, height: buttonSize.height)
+        }
+    }
+    
+    func makeView() -> View {
+        return View()
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
+final class HintLabelComponent: Component {
+    let text: String
+    
+    init(
+        text: String
+    ) {
+        self.text = text
+    }
+    
+    static func ==(lhs: HintLabelComponent, rhs: HintLabelComponent) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private var component: HintLabelComponent?
+        private var componentView = ComponentView<Empty>()
+        
+        init() {
+            super.init(frame: CGRect())
+        }
+        
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+            
+        func update(component: HintLabelComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            let previousComponent = self.component
+            self.component = component
+            
+            if let previousText = previousComponent?.text, !previousText.isEmpty && previousText != component.text {
+                if let componentView = self.componentView.view, let snapshotView = componentView.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = componentView.frame
+                    self.addSubview(snapshotView)
+                    snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+                
+                self.componentView.view?.removeFromSuperview()
+                self.componentView = ComponentView<Empty>()
+            }
+            
+            let textSize = self.componentView.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.text.uppercased(), font: Font.with(size: 14.0, design: .camera, weight: .semibold), textColor: .white)),
+                        horizontalAlignment: .center
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            if let view = self.componentView.view {
+                if view.superview == nil {
+                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.addSubview(view)
+                }
+                
+                view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - textSize.width) / 2.0), y: 0.0), size: textSize)
+            }
+            
+            return CGSize(width: availableSize.width, height: textSize.height)
         }
     }
     
