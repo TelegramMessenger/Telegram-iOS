@@ -113,7 +113,7 @@ public enum NotificationExceptionMode : Equatable {
                     case .default:
                         break
                     default:
-                        values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: .default, messageSound: sound, displayPreviews: .default), peer: peer, date: Date().timeIntervalSince1970)
+                        values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: .default, messageSound: sound, displayPreviews: .default, storiesMuted: nil), peer: peer, date: Date().timeIntervalSince1970)
                 }
             }
             return values
@@ -149,7 +149,7 @@ public enum NotificationExceptionMode : Equatable {
                     case .default:
                         break
                     default:
-                        values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: .default, displayPreviews: .default), peer: peer, date: Date().timeIntervalSince1970)
+                        values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: muteState, messageSound: .default, displayPreviews: .default, storiesMuted: nil), peer: peer, date: Date().timeIntervalSince1970)
                 }
             }
             return values
@@ -201,7 +201,7 @@ public enum NotificationExceptionMode : Equatable {
                 case .default:
                     break
                 default:
-                    values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: displayPreviews), peer: peer, date: Date().timeIntervalSince1970)
+                    values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: displayPreviews, storiesMuted: nil), peer: peer, date: Date().timeIntervalSince1970)
                 }
             }
             return values

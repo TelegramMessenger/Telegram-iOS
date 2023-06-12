@@ -744,7 +744,7 @@ public extension Api {
         case messageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String, extendedMedia: Api.MessageExtendedMedia?)
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
-        case messageMediaStory(userId: Int64, id: Int32)
+        case messageMediaStory(flags: Int32, userId: Int64, id: Int32, story: Api.StoryItem?)
         case messageMediaUnsupported
         case messageMediaVenue(geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
         case messageMediaWebPage(webpage: Api.WebPage)
@@ -834,12 +834,14 @@ public extension Api {
                     poll.serialize(buffer, true)
                     results.serialize(buffer, true)
                     break
-                case .messageMediaStory(let userId, let id):
+                case .messageMediaStory(let flags, let userId, let id, let story):
                     if boxed {
-                        buffer.appendInt32(-946147823)
+                        buffer.appendInt32(-877523576)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {story!.serialize(buffer, true)}
                     break
                 case .messageMediaUnsupported:
                     if boxed {
@@ -889,8 +891,8 @@ public extension Api {
                 return ("messageMediaPhoto", [("flags", flags as Any), ("photo", photo as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .messageMediaPoll(let poll, let results):
                 return ("messageMediaPoll", [("poll", poll as Any), ("results", results as Any)])
-                case .messageMediaStory(let userId, let id):
-                return ("messageMediaStory", [("userId", userId as Any), ("id", id as Any)])
+                case .messageMediaStory(let flags, let userId, let id, let story):
+                return ("messageMediaStory", [("flags", flags as Any), ("userId", userId as Any), ("id", id as Any), ("story", story as Any)])
                 case .messageMediaUnsupported:
                 return ("messageMediaUnsupported", [])
                 case .messageMediaVenue(let geo, let title, let address, let provider, let venueId, let venueType):
@@ -1092,14 +1094,22 @@ public extension Api {
             }
         }
         public static func parse_messageMediaStory(_ reader: BufferReader) -> MessageMedia? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Api.StoryItem?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.StoryItem
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageMedia.messageMediaStory(userId: _1!, id: _2!)
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageMedia.messageMediaStory(flags: _1!, userId: _2!, id: _3!, story: _4)
             }
             else {
                 return nil

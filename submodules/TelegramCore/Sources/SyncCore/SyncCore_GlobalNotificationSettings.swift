@@ -4,15 +4,17 @@ public struct MessageNotificationSettings: Codable, Equatable {
     public var enabled: Bool
     public var displayPreviews: Bool
     public var sound: PeerMessageSound
+    public var storiesMuted: Bool?
     
     public static var defaultSettings: MessageNotificationSettings {
-        return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: defaultCloudPeerNotificationSound)
+        return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: defaultCloudPeerNotificationSound, storiesMuted: nil)
     }
     
-    public init(enabled: Bool, displayPreviews: Bool, sound: PeerMessageSound) {
+    public init(enabled: Bool, displayPreviews: Bool, sound: PeerMessageSound, storiesMuted: Bool?) {
         self.enabled = enabled
         self.displayPreviews = displayPreviews
         self.sound = sound
+        self.storiesMuted = storiesMuted
     }
     
     public init(from decoder: Decoder) throws {
@@ -22,6 +24,8 @@ public struct MessageNotificationSettings: Codable, Equatable {
         self.displayPreviews = ((try? container.decode(Int32.self, forKey: "p")) ?? 0) != 0
 
         self.sound = try PeerMessageSound.decodeInline(container)
+        
+        self.storiesMuted = try? container.decodeIfPresent(Bool.self, forKey: "st")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -30,6 +34,7 @@ public struct MessageNotificationSettings: Codable, Equatable {
         try container.encode((self.enabled ? 1 : 0) as Int32, forKey: "e")
         try container.encode((self.displayPreviews ? 1 : 0) as Int32, forKey: "p")
         try self.sound.encodeInline(&container)
+        try container.encodeIfPresent(self.storiesMuted, forKey: "st")
     }
 }
 
