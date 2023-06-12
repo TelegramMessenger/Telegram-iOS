@@ -252,22 +252,22 @@ final class MediaEditorScreenComponent: Component {
                 view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
             }
             
-            var delay: Double = 0.0
-            for button in buttons {
-                if let view = button.view {
-                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
-                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: delay)
-                    delay += 0.05
-                }
-            }
-                        
             if let view = self.doneButton.view {
                 view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
             }
             
             if case .camera = source {
+                var delay: Double = 0.0
+                for button in buttons {
+                    if let view = button.view {
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
+                        view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: delay)
+                        delay += 0.05
+                    }
+                }
+                
                 if let view = self.saveButton.view {
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
@@ -900,10 +900,10 @@ final class MediaEditorScreenComponent: Component {
                     saveButtonView.layer.shadowOpacity = 0.35
                     self.addSubview(saveButtonView)
                 }
-                
+
                 let saveButtonAlpha = component.isSavingAvailable ? 1.0 : 0.3
                 saveButtonView.isUserInteractionEnabled = component.isSavingAvailable
-                
+
                 transition.setPosition(view: saveButtonView, position: saveButtonFrame.center)
                 transition.setBounds(view: saveButtonView, bounds: CGRect(origin: .zero, size: saveButtonFrame.size))
                 transition.setScale(view: saveButtonView, scale: displayTopButtons ? 1.0 : 0.01)

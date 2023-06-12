@@ -29,10 +29,7 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
     private weak var player: AVPlayer?
     private weak var playerItem: AVPlayerItem?
     private var playerItemOutput: AVPlayerItemVideoOutput?
-    
-    private var playerItemStatusObservation: NSKeyValueObservation?
-    private var playerItemObservation: NSKeyValueObservation?
-    
+        
     private var displayLink: CADisplayLink?
     
     private let device: MTLDevice?
@@ -57,24 +54,12 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
         
         super.init()
         
-        self.playerItemObservation = player.observe(\.currentItem, options: [.initial, .new], changeHandler: { [weak self] (player, change) in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.updatePlayerItem(player.currentItem)
-        })
+        self.updatePlayerItem(player.currentItem)
     }
-    
-    deinit {
-        self.playerItemObservation?.invalidate()
-        self.playerItemStatusObservation?.invalidate()
-    }
-    
+        
     func invalidate() {
         self.playerItemOutput?.setDelegate(nil, queue: nil)
         self.playerItemOutput = nil
-        self.playerItemObservation?.invalidate()
-        self.playerItemStatusObservation?.invalidate()
         self.displayLink?.invalidate()
         self.displayLink = nil
     }
@@ -88,18 +73,9 @@ final class VideoTextureSource: NSObject, TextureSource, AVPlayerItemOutputPullD
             }
         }
         self.playerItemOutput = nil
-        self.playerItemStatusObservation?.invalidate()
-        self.playerItemStatusObservation = nil
         
         self.playerItem = playerItem
-        self.playerItemStatusObservation = self.playerItem?.observe(\.status, options: [.initial, .new], changeHandler: { [weak self] item, change in
-            guard let strongSelf = self else {
-                return
-            }
-            if strongSelf.playerItem == item, item.status == .readyToPlay {
-                strongSelf.handleReadyToPlay()
-            }
-        })
+        self.handleReadyToPlay()
     }
     
     private func handleReadyToPlay() {
