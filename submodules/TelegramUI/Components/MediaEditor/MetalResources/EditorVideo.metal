@@ -22,10 +22,11 @@ float sRGB_nonLinearNormToLinear(float normV)
 
 static inline
 float4 sRGB_gamma_decode(const float4 rgba) {
-  rgba.r = sRGB_nonLinearNormToLinear(rgba.r);
-  rgba.g = sRGB_nonLinearNormToLinear(rgba.g);
-  rgba.b = sRGB_nonLinearNormToLinear(rgba.b);
-  return rgba;
+  float4 tmp = rgba;
+  tmp.r = sRGB_nonLinearNormToLinear(rgba.r);
+  tmp.g = sRGB_nonLinearNormToLinear(rgba.g);
+  tmp.b = sRGB_nonLinearNormToLinear(rgba.b);
+  return tmp;
 }
 
 static inline float4 BT709_decode(const float Y, const float Cb, const float Cr) {
