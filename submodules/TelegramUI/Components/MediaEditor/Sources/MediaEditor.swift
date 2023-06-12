@@ -305,7 +305,7 @@ public final class MediaEditor {
                 
                 let playerItem = AVPlayerItem(asset: asset)
                 let player = AVPlayer(playerItem: playerItem)
-                
+                player.automaticallyWaitsToMinimizeStalling = false
                 if let transitionImage {
                     let colors = mediaEditorGetGradientColors(from: transitionImage)
                     subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
@@ -348,6 +348,7 @@ public final class MediaEditor {
                                 if let asset {
                                     let playerItem = AVPlayerItem(asset: asset)
                                     let player = AVPlayer(playerItem: playerItem)
+                                    player.automaticallyWaitsToMinimizeStalling = false
                                     subscriber.putNext((VideoTextureSource(player: player, renderTarget: renderTarget), nil, player, colors.0, colors.1))
                                     subscriber.putCompletion()
                                 }
@@ -422,7 +423,7 @@ public final class MediaEditor {
                             self.player?.play()
                         }
                     })
-                    self.player?.play()
+                    player.playImmediately(atRate: 1.0)
                     self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
                 }
             }

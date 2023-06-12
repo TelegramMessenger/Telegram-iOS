@@ -221,7 +221,7 @@ final class MediaEditorRenderer: TextureConsumer {
                 
                 if let onNextRender = self.onNextRender {
                     self.onNextRender = nil
-                    Queue.mainQueue().async {
+                    Queue.mainQueue().after(0.016) {
                         onNextRender()
                     }
                 }

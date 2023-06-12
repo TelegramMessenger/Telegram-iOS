@@ -88,15 +88,18 @@ public enum EnginePeer: Equatable {
         public var muteState: MuteState
         public var messageSound: MessageSound
         public var displayPreviews: DisplayPreviews
+        public var storiesMuted: Bool?
 
         public init(
             muteState: MuteState,
             messageSound: MessageSound,
-            displayPreviews: DisplayPreviews
+            displayPreviews: DisplayPreviews,
+            storiesMuted: Bool?
         ) {
             self.muteState = muteState
             self.messageSound = messageSound
             self.displayPreviews = displayPreviews
+            self.storiesMuted = storiesMuted
         }
     }
     
@@ -216,11 +219,13 @@ public struct EngineGlobalNotificationSettings: Equatable {
         public var enabled: Bool
         public var displayPreviews: Bool
         public var sound: EnginePeer.NotificationSettings.MessageSound
+        public var storiesMuted: Bool
         
-        public init(enabled: Bool, displayPreviews: Bool, sound: EnginePeer.NotificationSettings.MessageSound) {
+        public init(enabled: Bool, displayPreviews: Bool, sound: EnginePeer.NotificationSettings.MessageSound, storiesMuted: Bool) {
             self.enabled = enabled
             self.displayPreviews = displayPreviews
             self.sound = sound
+            self.storiesMuted = storiesMuted
         }
     }
     
@@ -327,7 +332,8 @@ public extension EnginePeer.NotificationSettings {
         self.init(
             muteState: MuteState(notificationSettings.muteState),
             messageSound: MessageSound(notificationSettings.messageSound),
-            displayPreviews: DisplayPreviews(notificationSettings.displayPreviews)
+            displayPreviews: DisplayPreviews(notificationSettings.displayPreviews),
+            storiesMuted: notificationSettings.storiesMuted
         )
     }
 
@@ -335,7 +341,8 @@ public extension EnginePeer.NotificationSettings {
         return TelegramPeerNotificationSettings(
             muteState: self.muteState._asMuteState(),
             messageSound: self.messageSound._asMessageSound(),
-            displayPreviews: self.displayPreviews._asDisplayPreviews()
+            displayPreviews: self.displayPreviews._asDisplayPreviews(),
+            storiesMuted: self.storiesMuted
         )
     }
 }
@@ -594,7 +601,8 @@ public extension EngineGlobalNotificationSettings.CategorySettings {
         self.init(
             enabled: categorySettings.enabled,
             displayPreviews: categorySettings.displayPreviews,
-            sound: EnginePeer.NotificationSettings.MessageSound(categorySettings.sound)
+            sound: EnginePeer.NotificationSettings.MessageSound(categorySettings.sound),
+            storiesMuted: categorySettings.storiesMuted ?? false
         )
     }
     
@@ -602,7 +610,8 @@ public extension EngineGlobalNotificationSettings.CategorySettings {
         return MessageNotificationSettings(
             enabled: self.enabled,
             displayPreviews: self.displayPreviews,
-            sound: self.sound._asMessageSound()
+            sound: self.sound._asMessageSound(),
+            storiesMuted: self.storiesMuted
         )
     }
 }

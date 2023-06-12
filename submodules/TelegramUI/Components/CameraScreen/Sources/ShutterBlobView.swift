@@ -3,6 +3,7 @@ import Metal
 import MetalKit
 import ComponentFlow
 import Display
+import MetalImageView
 
 private final class PropertyAnimation<T: Interpolatable> {
     let from: T
@@ -63,6 +64,7 @@ private final class AnimatableProperty<T: Interpolatable> {
     }
     
     func tick(timestamp: Double) -> Bool {
+        
         guard let animation = self.animation, case let .curve(duration, curve) = animation.animation else {
             return false
         }
@@ -73,8 +75,7 @@ private final class AnimatableProperty<T: Interpolatable> {
         case .easeInOut:
             t = listViewAnimationCurveEaseInOut(t)
         case .spring:
-            t = listViewAnimationCurveEaseInOut(t)
-            //t = listViewAnimationCurveSystem(t)
+            t = lookupSpringValue(t)
         case let .custom(x1, y1, x2, y2):
             t = bezierPoint(CGFloat(x1), CGFloat(y1), CGFloat(x2), CGFloat(y2), t)
         }
@@ -88,7 +89,69 @@ private final class AnimatableProperty<T: Interpolatable> {
     }
 }
 
-final class ShutterBlobView: MTKView, MTKViewDelegate {
+private func lookupSpringValue(_ t: CGFloat) -> CGFloat {
+    let table: [(CGFloat, CGFloat)] = [
+        (0.0, 0.0),
+        (0.0625, 0.1123005598783493),
+        (0.125, 0.31598418951034546),
+        (0.1875, 0.5103585720062256),
+        (0.25, 0.6650152802467346),
+        (0.3125, 0.777747631072998),
+        (0.375, 0.8557760119438171),
+        (0.4375, 0.9079672694206238),
+        (0.5, 0.942038357257843),
+        (0.5625, 0.9638798832893372),
+        (0.625, 0.9776856303215027),
+        (0.6875, 0.9863143563270569),
+        (0.75, 0.991658091545105),
+        (0.8125, 0.9949421286582947),
+        (0.875, 0.9969474077224731),
+        (0.9375, 0.9981651306152344),
+        (1.0, 1.0)
+    ]
+    
+    for i in 0 ..< table.count - 2 {
+        let lhs = table[i]
+        let rhs = table[i + 1]
+        
+        if t >= lhs.0 && t <= rhs.0 {
+            let fraction = (t - lhs.0) / (rhs.0 - lhs.0)
+            let value = lhs.1 + fraction * (rhs.1 - lhs.1)
+            return value
+        }
+    }
+    return 1.0
+//    print("---start---")
+//    for i in 0 ..< 16 {
+//        let j = Double(i) * 1.0 / 16.0
+//        print("\(j) \(listViewAnimationCurveSystem(j))")
+//    }
+//    print("---end---")
+}
+
+private class ShutterBlobLayer: MetalImageLayer {
+    override public init() {
+        super.init()
+        
+        self.renderer.imageUpdated = { [weak self] image in
+            self?.contents = image
+        }
+    }
+    
+    override public init(layer: Any) {
+        super.init()
+        
+        if let layer = layer as? ShutterBlobLayer {
+            self.contents = layer.contents
+        }
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+final class ShutterBlobView: UIView {
     enum BlobState {
         case generic
         case video
@@ -147,7 +210,6 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
     
     private let commandQueue: MTLCommandQueue
     private let drawPassthroughPipelineState: MTLRenderPipelineState
-    private var viewportDimensions = CGSize(width: 1, height: 1)
     
     private var displayLink: SharedDisplayLinkDriver.Link?
     
@@ -162,6 +224,10 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
     
     private(set) var state: BlobState = .generic
 
+    static override var layerClass: AnyClass {
+        return ShutterBlobLayer.self
+    }
+    
     public init?(test: Bool) {
         let mainBundle = Bundle(for: ShutterBlobView.self)
         
@@ -207,16 +273,12 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         
         self.drawPassthroughPipelineState = try! device.makeRenderPipelineState(descriptor: pipelineStateDescriptor)
   
-        super.init(frame: CGRect(), device: device)
+        super.init(frame: CGRect())
+        
+        (self.layer as! ShutterBlobLayer).renderer.device = device
         
         self.isOpaque = false
         self.backgroundColor = .clear
-
-        self.colorPixelFormat = .bgra8Unorm
-        self.framebufferOnly = true
-        
-        self.isPaused = true
-        self.delegate = self
         
         self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
             self?.tick()
@@ -230,10 +292,6 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
 
     deinit {
         self.displayLink?.invalidate()
-    }
-    
-    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        self.viewportDimensions = size
     }
     
     func updateState(_ state: BlobState, transition: Transition = .immediate) {
@@ -297,40 +355,56 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         self.draw()
     }
 
-    override public func draw(_ rect: CGRect) {
-        self.redraw(drawable: self.currentDrawable!)
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        self.tick()
     }
-
-    private func redraw(drawable: MTLDrawable) {
-        guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
+    
+    private func getNextDrawable(layer: MetalImageLayer, drawableSize: CGSize) -> MetalImageLayer.Drawable? {
+        layer.renderer.drawableSize = drawableSize
+        return layer.renderer.nextDrawable()
+    }
+    
+    func draw() {
+        guard let layer = self.layer as? MetalImageLayer else {
+            return
+        }
+        self.updateAnimations()
+        
+        let drawableSize = CGSize(width: self.bounds.width * UIScreen.main.scale, height: self.bounds.height * UIScreen.main.scale)
+        
+        guard let drawable = self.getNextDrawable(layer: layer, drawableSize: drawableSize) else {
             return
         }
 
-        let renderPassDescriptor = self.currentRenderPassDescriptor!
+        let renderPassDescriptor = MTLRenderPassDescriptor()
+        renderPassDescriptor.colorAttachments[0].texture = drawable.texture
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0.0)
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+        
+        guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
+            return
+        }
         
         guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
             return
         }
         
-        let viewportDimensions = self.viewportDimensions
-        renderEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: viewportDimensions.width, height: viewportDimensions.height, znear: -1.0, zfar: 1.0))
+        renderEncoder.setViewport(MTLViewport(originX: 0.0, originY: 0.0, width: drawableSize.width, height: drawableSize.height, znear: -1.0, zfar: 1.0))
         renderEncoder.setRenderPipelineState(self.drawPassthroughPipelineState)
         
-        let w = Float(1)
-        let h = Float(1)
         var vertices: [Float] = [
-            w,  -h,
-            -w,  -h,
-            -w,   h,
-            w,  -h,
-            -w,   h,
-            w,   h
+             1,  -1,
+            -1,  -1,
+            -1,   1,
+             1,  -1,
+            -1,   1,
+             1,   1
         ]
         renderEncoder.setVertexBytes(&vertices, length: 4 * vertices.count, index: 0)
         
-        var resolution = simd_uint2(UInt32(viewportDimensions.width), UInt32(viewportDimensions.height))
+        var resolution = simd_uint2(UInt32(drawableSize.width), UInt32(drawableSize.height))
         renderEncoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
         
         var primaryParameters = simd_float4(
@@ -340,7 +414,7 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
             Float(self.primaryCornerRadius.presentationValue)
         )
         renderEncoder.setFragmentBytes(&primaryParameters, length: MemoryLayout<simd_float4>.size, index: 1)
-        
+
         var secondaryParameters = simd_float3(
             Float(self.secondarySize.presentationValue),
             Float(self.secondaryOffset.presentationValue),
@@ -350,17 +424,17 @@ final class ShutterBlobView: MTKView, MTKViewDelegate {
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)
         renderEncoder.endEncoding()
 
-        commandBuffer.present(drawable)
+        
+        var storedDrawable: MetalImageLayer.Drawable? = drawable
+        commandBuffer.addCompletedHandler { _ in
+            DispatchQueue.main.async {
+                autoreleasepool {
+                    storedDrawable?.present(completion: {})
+                    storedDrawable = nil
+                }
+            }
+        }
+        
         commandBuffer.commit()
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        self.tick()
-    }
-    
-    func draw(in view: MTKView) {
-        
     }
 }

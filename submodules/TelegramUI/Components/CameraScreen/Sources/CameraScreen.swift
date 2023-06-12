@@ -148,6 +148,7 @@ private final class CameraScreenComponent: CombinedComponent {
         
         var cameraState = CameraState(mode: .photo, position: .unspecified, flashMode: .off, flashModeDidChange: false, recording: .none, duration: 0.0)
         var swipeHint: CaptureControlsComponent.SwipeHint = .none
+        var isTransitioning = false
         
         private let hapticFeedback = HapticFeedback()
         
@@ -267,6 +268,12 @@ private final class CameraScreenComponent: CombinedComponent {
                     self.completion.invoke(.single(.video(path, transitionImage, PixelDimensions(width: 1080, height: 1920))))
                 }
             }))
+            self.isTransitioning = true
+            Queue.mainQueue().after(0.8, {
+                self.isTransitioning = false
+                self.updated(transition: .immediate)
+            })
+            
             self.updated(transition: .spring(duration: 0.4))
         }
         
@@ -290,7 +297,7 @@ private final class CameraScreenComponent: CombinedComponent {
         let zoomControl = Child(ZoomComponent.self)
         let flashButton = Child(CameraButton.self)
         let modeControl = Child(ModeComponent.self)
-        let hintLabel = Child(MultilineTextComponent.self)
+        let hintLabel = Child(HintLabelComponent.self)
         
         let timeBackground = Child(RoundedRectangle.self)
         let timeLabel = Child(MultilineTextComponent.self)
@@ -308,7 +315,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 state?.updateCameraMode(mode)
             })
             
-            if case .none = state.cameraState.recording {
+            if case .none = state.cameraState.recording, !state.isTransitioning {
                 let cancelButton = cancelButton.update(
                     component: CameraButton(
                         content: AnyComponentWithIdentity(
@@ -420,17 +427,21 @@ private final class CameraScreenComponent: CombinedComponent {
             }
             
             let shutterState: ShutterButtonState
-            switch state.cameraState.recording {
-            case .handsFree:
-                shutterState = .stopRecording
-            case .holding:
-                shutterState = .holdRecording(progress: min(1.0, Float(state.cameraState.duration / 60.0)))
-            case .none:
-                switch state.cameraState.mode {
-                case .photo:
-                    shutterState = .generic
-                case .video:
-                    shutterState = .video
+            if state.isTransitioning {
+                shutterState = .transition
+            } else {
+                switch state.cameraState.recording {
+                case .handsFree:
+                    shutterState = .stopRecording
+                case .holding:
+                    shutterState = .holdRecording(progress: min(1.0, Float(state.cameraState.duration / 60.0)))
+                case .none:
+                    switch state.cameraState.mode {
+                    case .photo:
+                        shutterState = .generic
+                    case .video:
+                        shutterState = .video
+                    }
                 }
             }
             
@@ -505,7 +516,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 isVideoRecording = true
             }
             
-            if isVideoRecording {
+            if isVideoRecording && !state.isTransitioning {
                 let duration = Int(state.cameraState.duration)
                 let durationString =  String(format: "%02d:%02d", (duration / 60) % 60, duration % 60)
                 let timeLabel = timeLabel.update(
@@ -541,7 +552,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     let hintText: String?
                     switch state.swipeHint {
                     case .none:
-                        hintText = nil
+                        hintText = " "
                     case .zoom:
                         hintText = "Swipe up to zoom"
                     case .lock:
@@ -553,10 +564,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     }
                     if let hintText {
                         let hintLabel = hintLabel.update(
-                            component: MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: hintText.uppercased(), font: Font.with(size: 14.0, design: .camera, weight: .semibold), textColor: .white)),
-                                horizontalAlignment: .center
-                            ),
+                            component: HintLabelComponent(text: hintText),
                             availableSize: availableSize,
                             transition: .immediate
                         )
@@ -569,7 +577,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }
             
-            if case .none = state.cameraState.recording {
+            if case .none = state.cameraState.recording, !state.isTransitioning {
                 let modeControl = modeControl.update(
                     component: ModeComponent(
                         availableModes: [.photo, .video],
@@ -878,6 +886,7 @@ public class CameraScreen: ViewController {
             self.effectivePreviewView.addGestureRecognizer(pinchGestureRecognizer)
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+            panGestureRecognizer.maximumNumberOfTouches = 1
             self.effectivePreviewView.addGestureRecognizer(panGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))

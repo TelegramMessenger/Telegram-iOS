@@ -4,6 +4,31 @@
 
 using namespace metal;
 
+static inline
+float sRGB_nonLinearNormToLinear(float normV)
+{
+  if (normV <= 0.04045f) {
+    normV *= (1.0f / 12.92f);
+  } else {
+    const float a = 0.055f;
+    const float gamma = 2.4f;
+    //const float gamma = 1.0f / (1.0f / 2.4f);
+    normV = (normV + a) * (1.0f / (1.0f + a));
+    normV = pow(normV, gamma);
+  }
+  
+  return normV;
+}
+
+static inline
+float4 sRGB_gamma_decode(const float4 rgba) {
+  float4 tmp = rgba;
+  tmp.r = sRGB_nonLinearNormToLinear(rgba.r);
+  tmp.g = sRGB_nonLinearNormToLinear(rgba.g);
+  tmp.b = sRGB_nonLinearNormToLinear(rgba.b);
+  return tmp;
+}
+
 static inline float4 BT709_decode(const float Y, const float Cb, const float Cr) {
     float Yn = Y;
 
@@ -13,8 +38,8 @@ static inline float4 BT709_decode(const float Y, const float Cb, const float Cr)
     float3 YCbCr = float3(Yn, Cbn, Crn);
 
     const float3x3 kColorConversion709 = float3x3(float3(1.0, 1.0, 1.0),
-                                                  float3(0.0f, -0.1873, 1.8556),
-                                                  float3(1.5748, -0.4681, 0.0));
+                                                  float3(0.0f, -0.18732, 1.8556),
+                                                  float3(1.5748, -0.46812, 0.0));
 
     float3 rgb = kColorConversion709 * YCbCr;
 
@@ -22,7 +47,6 @@ static inline float4 BT709_decode(const float Y, const float Cb, const float Cr)
 
     return float4(rgb.r, rgb.g, rgb.b, 1.0f);
 }
-
 
 fragment float4 bt709ToRGBFragmentShader(RasterizerData in [[stage_in]],
                                           texture2d<half, access::sample>  inYTexture  [[texture(0)]],
@@ -38,5 +62,7 @@ fragment float4 bt709ToRGBFragmentShader(RasterizerData in [[stage_in]],
     float Cr = float(uvSamples[1]);
 
     float4 pixel = BT709_decode(Y, Cb, Cr);
+    pixel = sRGB_gamma_decode(pixel);
+    pixel.rgb = pow(pixel.rgb, 1.0 / 2.2);
     return pixel;
 }

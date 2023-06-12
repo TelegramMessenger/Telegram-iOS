@@ -6,7 +6,7 @@ import TelegramApi
 extension TelegramPeerNotificationSettings {
     convenience init(apiSettings: Api.PeerNotifySettings) {
         switch apiSettings {
-        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound, storiesMuted):
             let sound: Api.NotificationSound?
             #if os(iOS)
             sound = iosSound
@@ -34,7 +34,13 @@ extension TelegramPeerNotificationSettings {
             } else {
                 displayPreviews = .default
             }
-            self.init(muteState: muteState, messageSound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault), displayPreviews: displayPreviews)
+            
+            var storiesMutedValue: Bool?
+            if let storiesMuted = storiesMuted {
+                storiesMutedValue = storiesMuted == .boolTrue
+            }
+            
+            self.init(muteState: muteState, messageSound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault), displayPreviews: displayPreviews, storiesMuted: storiesMutedValue)
         }
     }
 }

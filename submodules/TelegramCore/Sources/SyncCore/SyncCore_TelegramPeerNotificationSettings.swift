@@ -392,9 +392,10 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, C
     public let muteState: PeerMuteState
     public let messageSound: PeerMessageSound
     public let displayPreviews: PeerNotificationDisplayPreviews
+    public let storiesMuted: Bool?
     
     public static var defaultSettings: TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: .default)
+        return TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: .default, storiesMuted: nil)
     }
     
     public func isRemovedFromTotalUnreadCount(`default`: Bool) -> Bool {
@@ -416,16 +417,18 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, C
         }
     }
     
-    public init(muteState: PeerMuteState, messageSound: PeerMessageSound, displayPreviews: PeerNotificationDisplayPreviews) {
+    public init(muteState: PeerMuteState, messageSound: PeerMessageSound, displayPreviews: PeerNotificationDisplayPreviews, storiesMuted: Bool?) {
         self.muteState = muteState
         self.messageSound = messageSound
         self.displayPreviews = displayPreviews
+        self.storiesMuted = storiesMuted
     }
     
     public init(decoder: PostboxDecoder) {
         self.muteState = PeerMuteState.decodeInline(decoder)
         self.messageSound = PeerMessageSound.decodeInline(decoder)
         self.displayPreviews = PeerNotificationDisplayPreviews.decodeInline(decoder)
+        self.storiesMuted = decoder.decodeOptionalBoolForKey("stm")
     }
     
     public init(from decoder: Decoder) throws {
@@ -434,6 +437,7 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, C
         self.muteState = try container.decode(PeerMuteState.self, forKey: "muteState")
         self.messageSound = try container.decode(PeerMessageSound.self, forKey: "messageSound")
         self.displayPreviews = try container.decode(PeerNotificationDisplayPreviews.self, forKey: "displayPreviews")
+        self.storiesMuted = try? container.decodeIfPresent(Bool.self, forKey: "stm")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -442,12 +446,18 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, C
         try container.encode(self.muteState, forKey: "muteState")
         try container.encode(self.messageSound, forKey: "messageSound")
         try container.encode(self.displayPreviews, forKey: "displayPreviews")
+        try container.encodeIfPresent(self.storiesMuted, forKey: "stm")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         self.muteState.encodeInline(encoder)
         self.messageSound.encodeInline(encoder)
         self.displayPreviews.encodeInline(encoder)
+        if let storiesMuted = self.storiesMuted {
+            encoder.encodeBool(storiesMuted, forKey: "stm")
+        } else {
+            encoder.encodeNil(forKey: "stm")
+        }
     }
     
     public func isEqual(to: PeerNotificationSettings) -> Bool {
@@ -459,18 +469,22 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, C
     }
     
     public func withUpdatedMuteState(_ muteState: PeerMuteState) -> TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: muteState, messageSound: self.messageSound, displayPreviews: self.displayPreviews)
+        return TelegramPeerNotificationSettings(muteState: muteState, messageSound: self.messageSound, displayPreviews: self.displayPreviews, storiesMuted: self.storiesMuted)
     }
     
     public func withUpdatedMessageSound(_ messageSound: PeerMessageSound) -> TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: messageSound, displayPreviews: self.displayPreviews)
+        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: messageSound, displayPreviews: self.displayPreviews, storiesMuted: self.storiesMuted)
     }
     
     public func withUpdatedDisplayPreviews(_ displayPreviews: PeerNotificationDisplayPreviews) -> TelegramPeerNotificationSettings {
-        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: self.messageSound, displayPreviews: displayPreviews)
+        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: self.messageSound, displayPreviews: displayPreviews, storiesMuted: self.storiesMuted)
+    }
+    
+    public func withUpdatedStoriesMuted(_ storiesMuted: Bool?) -> TelegramPeerNotificationSettings {
+        return TelegramPeerNotificationSettings(muteState: self.muteState, messageSound: self.messageSound, displayPreviews: self.displayPreviews, storiesMuted: storiesMuted)
     }
     
     public static func ==(lhs: TelegramPeerNotificationSettings, rhs: TelegramPeerNotificationSettings) -> Bool {
-        return lhs.muteState == rhs.muteState && lhs.messageSound == rhs.messageSound && lhs.displayPreviews == rhs.displayPreviews
+        return lhs.muteState == rhs.muteState && lhs.messageSound == rhs.messageSound && lhs.displayPreviews == rhs.displayPreviews && lhs.storiesMuted == rhs.storiesMuted
     }
 }

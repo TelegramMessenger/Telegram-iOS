@@ -252,22 +252,22 @@ final class MediaEditorScreenComponent: Component {
                 view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
             }
             
-            var delay: Double = 0.0
-            for button in buttons {
-                if let view = button.view {
-                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
-                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: delay)
-                    delay += 0.05
-                }
-            }
-                        
             if let view = self.doneButton.view {
                 view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
             }
             
             if case .camera = source {
+                var delay: Double = 0.0
+                for button in buttons {
+                    if let view = button.view {
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
+                        view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: delay)
+                        delay += 0.05
+                    }
+                }
+                
                 if let view = self.saveButton.view {
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
@@ -702,7 +702,7 @@ final class MediaEditorScreenComponent: Component {
                 case 86400:
                     timeoutValue = "24"
                 case 172800:
-                    timeoutValue = "2d"
+                    timeoutValue = "48"
                 default:
                     timeoutValue = "24"
                 }
@@ -900,10 +900,10 @@ final class MediaEditorScreenComponent: Component {
                     saveButtonView.layer.shadowOpacity = 0.35
                     self.addSubview(saveButtonView)
                 }
-                
+
                 let saveButtonAlpha = component.isSavingAvailable ? 1.0 : 0.3
                 saveButtonView.isUserInteractionEnabled = component.isSavingAvailable
-                
+
                 transition.setPosition(view: saveButtonView, position: saveButtonFrame.center)
                 transition.setBounds(view: saveButtonView, bounds: CGRect(origin: .zero, size: saveButtonFrame.size))
                 transition.setScale(view: saveButtonView, scale: displayTopButtons ? 1.0 : 0.01)
@@ -1640,8 +1640,10 @@ public final class MediaEditorScreen: ViewController {
             
             self.mediaEditor?.onFirstDisplay = { [weak self] in
                 if let self, let transitionInView = self.transitionInView  {
-                    transitionInView.removeFromSuperview()
                     self.transitionInView = nil
+                    transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
+                        transitionInView?.removeFromSuperview()
+                    })
                 }
             }
         }
@@ -2059,6 +2061,9 @@ public final class MediaEditorScreen: ViewController {
                                         if let self, let file {
                                             let stickerEntity = DrawingStickerEntity(content: .file(file))
                                             self.interaction?.insertEntity(stickerEntity)
+                                            
+                                            self.controller?.isSavingAvailable = true
+                                            self.controller?.requestLayout(transition: .immediate)
                                         }
                                     }
                                     self.controller?.present(controller, in: .current)
@@ -2066,6 +2071,9 @@ public final class MediaEditorScreen: ViewController {
                                 case .text:
                                     let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
                                     self.interaction?.insertEntity(textEntity)
+                                    
+                                    self.controller?.isSavingAvailable = true
+                                    self.controller?.requestLayout(transition: .immediate)
                                     return
                                 case .drawing:
                                     self.interaction?.deactivate()
@@ -2496,7 +2504,7 @@ public final class MediaEditorScreen: ViewController {
                 
                 updateTimeout(86400, false)
             })))
-            items.append(.action(ContextMenuActionItem(text: "2 Days", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: "48 Hours", icon: { theme in
                 return currentValue == 86400 * 2 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
             }, action: { _, a in
                 a(.default)

@@ -11,6 +11,7 @@ enum ShutterButtonState: Equatable {
     case video
     case stopRecording
     case holdRecording(progress: Float)
+    case transition
 }
 
 private let maximumShutterSize = CGSize(width: 96.0, height: 96.0)
@@ -141,6 +142,12 @@ private final class ShutterButtonContentComponent: Component {
                 innerCornerRadius = innerSize.height / 2.0
                 ringSize = CGSize(width: 92.0, height: 92.0)
                 recordingProgress = progress
+            case .transition:
+                innerColor = videoRedColor
+                innerSize = CGSize(width: 60.0, height: 60.0)
+                innerCornerRadius = innerSize.height / 2.0
+                ringSize = CGSize(width: 68.0, height: 68.0)
+                recordingProgress = 0.0
             }
             
             self.ringLayer.fillColor = UIColor.clear.cgColor
@@ -573,6 +580,7 @@ final class CaptureControlsComponent: Component {
             let buttonSideInset: CGFloat = 28.0
             //let buttonMaxOffset: CGFloat = 100.0
             
+            var isTransitioning = false
             var isRecording = false
             var isHolding = false
             if case .stopRecording = component.shutterState {
@@ -580,6 +588,8 @@ final class CaptureControlsComponent: Component {
             } else if case .holdRecording = component.shutterState {
                 isRecording = true
                 isHolding = true
+            } else if case .transition = component.shutterState {
+                isTransitioning = true
             }
                         
             let galleryButtonSize = self.galleryButtonView.update(
@@ -615,8 +625,8 @@ final class CaptureControlsComponent: Component {
                 transition.setBounds(view: galleryButtonView, bounds: CGRect(origin: .zero, size: galleryButtonFrame.size))
                 transition.setPosition(view: galleryButtonView, position: galleryButtonFrame.center)
                 
-                transition.setScale(view: galleryButtonView, scale: isRecording ? 0.1 : 1.0)
-                transition.setAlpha(view: galleryButtonView, alpha: isRecording ? 0.0 : 1.0)
+                transition.setScale(view: galleryButtonView, scale: isRecording || isTransitioning ? 0.1 : 1.0)
+                transition.setAlpha(view: galleryButtonView, alpha: isRecording || isTransitioning ? 0.0 : 1.0)
             }
             
             let _ = self.lockView.update(
@@ -678,13 +688,16 @@ final class CaptureControlsComponent: Component {
                 }
                 transition.setBounds(view: flipButtonView, bounds: CGRect(origin: .zero, size: flipButtonFrame.size))
                 transition.setPosition(view: flipButtonView, position: flipButtonFrame.center)
+                
+                transition.setScale(view: flipButtonView, scale: isTransitioning ? 0.01 : 1.0)
+                transition.setAlpha(view: flipButtonView, alpha: isTransitioning ? 0.0 : 1.0)
             }
             
             var blobState: ShutterBlobView.BlobState
             switch component.shutterState {
             case .generic:
                 blobState = .generic
-            case .video:
+            case .video, .transition:
                 blobState = .video
             case .stopRecording:
                 blobState = .stopVideo
@@ -732,6 +745,8 @@ final class CaptureControlsComponent: Component {
                 }
                 transition.setBounds(view: shutterButtonView, bounds: CGRect(origin: .zero, size: shutterButtonFrame.size))
                 transition.setPosition(view: shutterButtonView, position: shutterButtonFrame.center)
+                transition.setScale(view: shutterButtonView, scale: isTransitioning ? 0.01 : 1.0)
+                transition.setAlpha(view: shutterButtonView, alpha: isTransitioning ? 0.0 : 1.0)
             }
             
             let guideSpacing: CGFloat = 9.0

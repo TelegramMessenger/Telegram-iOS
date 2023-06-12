@@ -132,7 +132,7 @@ final class VideoScrubberComponent: Component {
         private var isPanningPositionHandle = false
         
         private var displayLink: SharedDisplayLinkDriver.Link?
-        private var positionAnimation: (start: Double, from: Double, to: Double)?
+        private var positionAnimation: (start: Double, from: Double, to: Double, ended: Bool)?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -343,12 +343,12 @@ final class VideoScrubberComponent: Component {
             let timestamp = CACurrentMediaTime()
             
             let updatedPosition: Double
-            if let (start, from, to) = self.positionAnimation {
+            if let (start, from, to, _) = self.positionAnimation {
                 let duration = to - from
                 let fraction = duration > 0.0 ? (timestamp - start) / duration : 0.0
                 updatedPosition = max(component.startPosition, min(component.endPosition, from + (to - from) * fraction))
                 if fraction >= 1.0 {
-                    self.positionAnimation = (timestamp, component.startPosition, component.endPosition)
+                    self.positionAnimation = (start, from, to, true)
                 }
             } else {
                 let advance = component.isPlaying ? timestamp - component.generationTimestamp : 0.0
@@ -419,8 +419,12 @@ final class VideoScrubberComponent: Component {
                 self.displayLink?.isPaused = true
                 transition.setFrame(view: self.cursorView, frame: cursorFrame(size: scrubberSize, position: component.position, duration: component.duration))
             } else {
-                if self.positionAnimation == nil {
-                    self.positionAnimation = (CACurrentMediaTime(), component.position, component.endPosition)
+                if let (_, _, end, ended) = self.positionAnimation {
+                    if ended, component.position >= component.startPosition && component.position < end - 1.0 {
+                        self.positionAnimation = (CACurrentMediaTime(), component.position, component.endPosition, false)
+                    }
+                } else {
+                    self.positionAnimation = (CACurrentMediaTime(), component.position, component.endPosition, false)
                 }
                 self.displayLink?.isPaused = false
                 self.updateCursorPosition()
