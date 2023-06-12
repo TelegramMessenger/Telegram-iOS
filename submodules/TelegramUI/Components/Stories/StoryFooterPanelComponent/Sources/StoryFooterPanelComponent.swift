@@ -12,6 +12,7 @@ import MoreHeaderButton
 public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext
     public let storyItem: EngineStoryItem?
+    public let expandFraction: CGFloat
     public let expandViewStats: () -> Void
     public let deleteAction: () -> Void
     public let moreAction: (UIView, ContextGesture?) -> Void
@@ -19,6 +20,7 @@ public final class StoryFooterPanelComponent: Component {
     public init(
         context: AccountContext,
         storyItem: EngineStoryItem?,
+        expandFraction: CGFloat,
         expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void
@@ -26,6 +28,7 @@ public final class StoryFooterPanelComponent: Component {
         self.context = context
         self.storyItem = storyItem
         self.expandViewStats = expandViewStats
+        self.expandFraction = expandFraction
         self.deleteAction = deleteAction
         self.moreAction = moreAction
     }
@@ -37,12 +40,16 @@ public final class StoryFooterPanelComponent: Component {
         if lhs.storyItem != rhs.storyItem {
             return false
         }
+        if lhs.expandFraction != rhs.expandFraction {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
         private let viewStatsButton: HighlightableButton
         private let viewStatsText = ComponentView<Empty>()
+        private let viewStatsExpandedText = ComponentView<Empty>()
         private let deleteButton = ComponentView<Empty>()
         private var moreButton: MoreHeaderButton?
         
@@ -98,6 +105,8 @@ public final class StoryFooterPanelComponent: Component {
             
             let avatarsNodeFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - avatarsSize.height) * 0.5)), size: avatarsSize)
             self.avatarsNode.frame = avatarsNodeFrame
+            //transition.setScale(view: self.avatarsNode.view, scale: CGFloat(1.0).interpolate(to: 0.001, amount: component.expandFraction))
+            transition.setAlpha(view: self.avatarsNode.view, alpha: pow(1.0 - component.expandFraction, 1.0))
             if !avatarsSize.width.isZero {
                 leftOffset = avatarsNodeFrame.maxX + avatarSpacing
             }
@@ -124,18 +133,45 @@ public final class StoryFooterPanelComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: size.height)
             )
-            let viewStatsTextFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - viewStatsTextSize.height) * 0.5)), size: viewStatsTextSize)
+            let viewStatsExpandedTextSize = self.viewStatsExpandedText.update(
+                transition: .immediate,
+                component: AnyComponent(Text(text: viewsText, font: Font.semibold(17.0), color: .white)),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: size.height)
+            )
+            
+            let viewStatsCollapsedFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - viewStatsTextSize.height) * 0.5)), size: viewStatsTextSize)
+            let viewStatsExpandedFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - viewStatsExpandedTextSize.width) * 0.5), y: floor((size.height - viewStatsExpandedTextSize.height) * 0.5)), size: viewStatsExpandedTextSize)
+            let viewStatsCurrentFrame = viewStatsCollapsedFrame.interpolate(to: viewStatsExpandedFrame, amount: component.expandFraction)
+            
+            let viewStatsTextCenter = viewStatsCollapsedFrame.center.interpolate(to: viewStatsExpandedFrame.center, amount: component.expandFraction)
+            
+            let viewStatsTextFrame = viewStatsCollapsedFrame.size.centered(around: viewStatsTextCenter)
             if let viewStatsTextView = self.viewStatsText.view {
                 if viewStatsTextView.superview == nil {
-                    viewStatsTextView.layer.anchorPoint = CGPoint()
                     viewStatsTextView.isUserInteractionEnabled = false
                     self.viewStatsButton.addSubview(viewStatsTextView)
                 }
-                transition.setPosition(view: viewStatsTextView, position: viewStatsTextFrame.origin)
+                transition.setPosition(view: viewStatsTextView, position: viewStatsTextFrame.center)
                 transition.setBounds(view: viewStatsTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsTextFrame.size))
+                transition.setAlpha(view: viewStatsTextView, alpha: pow(1.0 - component.expandFraction, 1.2))
+                transition.setScale(view: viewStatsTextView, scale: viewStatsCurrentFrame.width / viewStatsTextFrame.width)
+            }
+            
+            let viewStatsExpandedTextFrame = viewStatsExpandedFrame.size.centered(around: viewStatsTextCenter)
+            if let viewStatsExpandedTextView = self.viewStatsExpandedText.view {
+                if viewStatsExpandedTextView.superview == nil {
+                    viewStatsExpandedTextView.isUserInteractionEnabled = false
+                    self.viewStatsButton.addSubview(viewStatsExpandedTextView)
+                }
+                transition.setPosition(view: viewStatsExpandedTextView, position: viewStatsExpandedTextFrame.center)
+                transition.setBounds(view: viewStatsExpandedTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsExpandedTextFrame.size))
+                transition.setAlpha(view: viewStatsExpandedTextView, alpha: pow(component.expandFraction, 1.2))
+                transition.setScale(view: viewStatsExpandedTextView, scale: viewStatsCurrentFrame.width / viewStatsExpandedTextFrame.width)
             }
             
             transition.setFrame(view: self.viewStatsButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: viewStatsTextFrame.maxX, height: viewStatsTextFrame.maxY + 8.0)))
+            self.viewStatsButton.isUserInteractionEnabled = component.expandFraction == 0.0
             
             var rightContentOffset: CGFloat = availableSize.width - 12.0
             
@@ -162,6 +198,8 @@ public final class StoryFooterPanelComponent: Component {
                 }
                 transition.setFrame(view: deleteButtonView, frame: CGRect(origin: CGPoint(x: rightContentOffset - deleteButtonSize.width, y: floor((size.height - deleteButtonSize.height) * 0.5)), size: deleteButtonSize))
                 rightContentOffset -= deleteButtonSize.width + 8.0
+                
+                transition.setAlpha(view: deleteButtonView, alpha: pow(1.0 - component.expandFraction, 1.0))
             }
             
             let moreButton: MoreHeaderButton
@@ -197,6 +235,7 @@ public final class StoryFooterPanelComponent: Component {
             let buttonSize = CGSize(width: 32.0, height: 44.0)
             moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: .white)))
             transition.setFrame(view: moreButton.view, frame: CGRect(origin: CGPoint(x: rightContentOffset - buttonSize.width, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize))
+            transition.setAlpha(view: moreButton.view, alpha: pow(1.0 - component.expandFraction, 1.0))
             
             return size
         }

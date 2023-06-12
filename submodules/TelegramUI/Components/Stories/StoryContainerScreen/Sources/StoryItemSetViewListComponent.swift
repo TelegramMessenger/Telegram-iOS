@@ -29,6 +29,9 @@ final class StoryItemSetViewListComponent: Component {
     let storyItem: EngineStoryItem
     let outerExpansionFraction: CGFloat
     let close: () -> Void
+    let expandViewStats: () -> Void
+    let deleteAction: () -> Void
+    let moreAction: (UIView, ContextGesture?) -> Void
     
     init(
         externalState: ExternalState,
@@ -38,7 +41,10 @@ final class StoryItemSetViewListComponent: Component {
         safeInsets: UIEdgeInsets,
         storyItem: EngineStoryItem,
         outerExpansionFraction: CGFloat,
-        close: @escaping () -> Void
+        close: @escaping () -> Void,
+        expandViewStats: @escaping () -> Void,
+        deleteAction: @escaping () -> Void,
+        moreAction: @escaping (UIView, ContextGesture?) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -48,6 +54,9 @@ final class StoryItemSetViewListComponent: Component {
         self.storyItem = storyItem
         self.outerExpansionFraction = outerExpansionFraction
         self.close = close
+        self.expandViewStats = expandViewStats
+        self.deleteAction = deleteAction
+        self.moreAction = moreAction
     }
 
     static func ==(lhs: StoryItemSetViewListComponent, rhs: StoryItemSetViewListComponent) -> Bool {
@@ -284,6 +293,11 @@ final class StoryItemSetViewListComponent: Component {
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let navigationPanelView = self.navigationPanel.view {
+                if let result = navigationPanelView.hitTest(self.convert(point, to: navigationPanelView), with: event) {
+                    return result
+                }
+            }
             if !self.backgroundView.frame.contains(point) {
                 return nil
             }
@@ -478,7 +492,7 @@ final class StoryItemSetViewListComponent: Component {
             self.component = component
             self.state = state
             
-            let minimizedHeight = min(availableSize.height, 488.0)
+            let minimizedHeight = min(availableSize.height, 500.0)
             
             if themeUpdated {
                 self.backgroundView.backgroundColor = component.theme.rootController.navigationBar.blurredBackgroundColor
@@ -512,7 +526,7 @@ final class StoryItemSetViewListComponent: Component {
             let sideInset: CGFloat = 16.0
             
             let navigationHeight: CGFloat = 56.0
-            let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - minimizedHeight), size: CGSize(width: availableSize.width, height: navigationHeight))
+            let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - minimizedHeight + 12.0), size: CGSize(width: availableSize.width, height: navigationHeight))
             transition.setFrame(view: self.navigationBarBackground, frame: navigationBarFrame)
             self.navigationBarBackground.update(size: navigationBarFrame.size, cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
             
@@ -540,29 +554,41 @@ final class StoryItemSetViewListComponent: Component {
                 transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
             }
             
+            let expansionOffset = availableSize.height - self.navigationBarBackground.frame.minY
+            
+            var dismissOffsetY: CGFloat = 0.0
+            if let dismissPanState = self.dismissPanState {
+                dismissOffsetY = -dismissPanState.accumulatedOffset
+            }
+            
+            dismissOffsetY -= (1.0 - component.outerExpansionFraction) * expansionOffset
+            
+            let dismissFraction: CGFloat = 1.0 - max(0.0, min(1.0, -dismissOffsetY / expansionOffset))
+            
             let navigationPanelSize = self.navigationPanel.update(
                 transition: transition,
                 component: AnyComponent(StoryFooterPanelComponent(
                     context: component.context,
                     storyItem: component.storyItem,
+                    expandFraction: dismissFraction,
                     expandViewStats: { [weak self] in
-                        guard let self else {
+                        guard let self, let component = self.component else {
                             return
                         }
-                        let _ = self
+                        component.expandViewStats()
                     },
                     deleteAction: { [weak self] in
                         guard let self, let component = self.component else {
                             return
                         }
-                        let _ = component
+                        component.deleteAction()
                     },
                     moreAction: { [weak self] sourceView, gesture in
                         guard let self, let component = self.component else {
                             return
                         }
                         
-                        let _ = component
+                        component.moreAction(sourceView, gesture)
                     }
                 )),
                 environment: {},
@@ -573,20 +599,11 @@ final class StoryItemSetViewListComponent: Component {
                     self.addSubview(navigationPanelView)
                 }
                 
-                let expandedNavigationPanelFrame = CGRect(origin: navigationBarFrame.origin, size: navigationPanelSize)
-                let collapsedNavigationPanelFrame = CGRect(origin: CGPoint(x: navigationBarFrame.minX, y: availableSize.height - navigationPanelSize.height), size: navigationPanelSize)
+                let expandedNavigationPanelFrame = CGRect(origin: CGPoint(x: navigationBarFrame.minX, y: navigationBarFrame.minY + 4.0), size: navigationPanelSize)
+                let collapsedNavigationPanelFrame = CGRect(origin: CGPoint(x: navigationBarFrame.minX, y: navigationBarFrame.minY - navigationPanelSize.height - component.safeInsets.bottom - 1.0), size: navigationPanelSize)
                 
-                transition.setFrame(view: navigationPanelView, frame: collapsedNavigationPanelFrame.interpolate(to: expandedNavigationPanelFrame, amount: component.outerExpansionFraction))
+                transition.setFrame(view: navigationPanelView, frame: collapsedNavigationPanelFrame.interpolate(to: expandedNavigationPanelFrame, amount: dismissFraction))
             }
-            
-            /*let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) * 0.5), y: navigationBarFrame.minY + floor((navigationBarFrame.height - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
-            if let navigationTitleView = self.navigationTitle.view {
-                if navigationTitleView.superview == nil {
-                    self.addSubview(navigationTitleView)
-                }
-                transition.setPosition(view: navigationTitleView, position: navigationTitleFrame.center)
-                transition.setBounds(view: navigationTitleView, bounds: CGRect(origin: CGPoint(), size: navigationTitleFrame.size))
-            }*/
             
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height)))
             
@@ -662,19 +679,13 @@ final class StoryItemSetViewListComponent: Component {
             
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
-
-            var dismissOffsetY: CGFloat = 0.0
-            if let dismissPanState = self.dismissPanState {
-                dismissOffsetY = -dismissPanState.accumulatedOffset
-            }
-            
-            let expansionOffset = availableSize.height - self.navigationBarBackground.frame.minY
-            dismissOffsetY -= (1.0 - component.outerExpansionFraction) * expansionOffset
             
             transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: dismissOffsetY))
             
             component.externalState.minimizedHeight = minimizedHeight
-            component.externalState.effectiveHeight = min(minimizedHeight, max(0.0, minimizedHeight + dismissOffsetY))
+            
+            let effectiveHeight: CGFloat = minimizedHeight * dismissFraction + (1.0 - dismissFraction) * (60.0 + component.safeInsets.bottom + 1.0)
+            component.externalState.effectiveHeight = min(minimizedHeight, max(0.0, effectiveHeight))
             
             return availableSize
         }
