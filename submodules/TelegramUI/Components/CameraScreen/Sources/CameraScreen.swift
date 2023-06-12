@@ -709,6 +709,8 @@ public class CameraScreen: ViewController {
         fileprivate let simplePreviewView: CameraSimplePreviewView?
         fileprivate let previewBlurView: BlurView
         private var previewSnapshotView: UIView?
+        fileprivate let previewFrameLeftDimView: UIView
+        fileprivate let previewFrameRightDimView: UIView
         fileprivate let transitionDimView: UIView
         fileprivate let transitionCornersView: UIImageView
         fileprivate let camera: Camera
@@ -785,6 +787,14 @@ public class CameraScreen: ViewController {
                 }
             }
             
+            self.previewFrameLeftDimView = UIView()
+            self.previewFrameLeftDimView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
+            self.previewFrameLeftDimView.isHidden = true
+            
+            self.previewFrameRightDimView = UIView()
+            self.previewFrameRightDimView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
+            self.previewFrameRightDimView.isHidden = true
+            
             self.transitionDimView = UIView()
             self.transitionDimView.backgroundColor = UIColor(rgb: 0x000000)
             self.transitionDimView.isUserInteractionEnabled = false
@@ -801,6 +811,8 @@ public class CameraScreen: ViewController {
             self.containerView.addSubview(self.previewContainerView)
             self.previewContainerView.addSubview(self.effectivePreviewView)
             self.previewContainerView.addSubview(self.previewBlurView)
+            self.previewContainerView.addSubview(self.previewFrameLeftDimView)
+            self.previewContainerView.addSubview(self.previewFrameRightDimView)
             self.containerView.addSubview(self.transitionDimView)
             self.view.addSubview(self.transitionCornersView)
             
@@ -1156,7 +1168,19 @@ public class CameraScreen: ViewController {
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
             
-            let previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+            let isTablet: Bool
+            if case .regular = layout.metrics.widthClass {
+                isTablet = true
+            } else {
+                isTablet = false
+            }
+            
+            let previewSize: CGSize
+            if isTablet {
+                previewSize = CGSize(width: floorToScreenPixels(layout.size.height / 1.77778), height: layout.size.height)
+            } else {
+                previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+            }
             let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
             let bottomInset = layout.size.height - previewSize.height - topInset
             
@@ -1231,11 +1255,25 @@ public class CameraScreen: ViewController {
             
             transition.setFrame(view: self.transitionDimView, frame: CGRect(origin: .zero, size: layout.size))
             
+            let previewFrame: CGRect
+            let viewfinderFrame: CGRect
+            if isTablet {
+                previewFrame = CGRect(origin: .zero, size: layout.size)
+                viewfinderFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
+            } else {
+                previewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: previewSize)
+                viewfinderFrame = previewFrame
+            }
             
-            let previewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: previewSize)
             transition.setFrame(view: self.previewContainerView, frame: previewFrame)
             transition.setFrame(view: self.effectivePreviewView, frame: CGRect(origin: .zero, size: previewFrame.size))
             transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewFrame.size))
+                        
+            self.previewFrameLeftDimView.isHidden = !isTablet
+            transition.setFrame(view: self.previewFrameLeftDimView, frame: CGRect(origin: .zero, size: CGSize(width: viewfinderFrame.minX, height: viewfinderFrame.height)))
+            
+            self.previewFrameRightDimView.isHidden = !isTablet
+            transition.setFrame(view: self.previewFrameRightDimView, frame: CGRect(origin: CGPoint(x: viewfinderFrame.maxX, y: 0.0), size: CGSize(width: viewfinderFrame.minX + 1.0, height: viewfinderFrame.height)))
             
             let screenCornerRadius = layout.deviceMetrics.screenCornerRadius
             if screenCornerRadius > 0.0, self.transitionCornersView.image == nil {
@@ -1249,6 +1287,7 @@ public class CameraScreen: ViewController {
                     context.fillPath()
                 })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(screenCornerRadius))
             }
+            self.transitionCornersView.isHidden = isTablet
         
             transition.setPosition(view: self.transitionCornersView, position: CGPoint(x: layout.size.width + screenCornerRadius / 2.0, y: layout.size.height / 2.0))
             transition.setBounds(view: self.transitionCornersView, bounds: CGRect(origin: .zero, size: CGSize(width: screenCornerRadius, height: layout.size.height)))
@@ -1289,6 +1328,8 @@ public class CameraScreen: ViewController {
     private var audioSessionDisposable: Disposable?
     
     private let hapticFeedback = HapticFeedback()
+    
+    private var validLayout: ContainerViewLayout?
     
     public init(
         context: AccountContext,
@@ -1498,6 +1539,8 @@ public class CameraScreen: ViewController {
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
+        
         super.containerLayoutUpdated(layout, transition: transition)
 
         if !self.isDismissed {
