@@ -273,7 +273,7 @@ final class VideoInputPass: DefaultRenderPass {
             textureDescriptor.textureType = .type2D
             textureDescriptor.width = outputWidth
             textureDescriptor.height = outputHeight
-            textureDescriptor.pixelFormat = .bgra8Unorm
+            textureDescriptor.pixelFormat = self.pixelFormat
             textureDescriptor.storageMode = .private
             textureDescriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
             if let texture = device.makeTexture(descriptor: textureDescriptor) {

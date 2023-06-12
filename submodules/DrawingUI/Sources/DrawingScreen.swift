@@ -1200,6 +1200,11 @@ private final class DrawingScreenComponent: CombinedComponent {
                 .opacity(controlsAreVisible ? 1.0 : 0.0)
             )
             
+            var additionalBottomInset: CGFloat = 0.0
+            if component.sourceHint == .storyEditor {
+                additionalBottomInset = max(0.0, previewBottomInset - environment.safeInsets.bottom - 49.0)
+            }
+            
             if let textEntity = state.selectedEntity as? DrawingTextEntity {
                 let textSettings = textSettings.update(
                     component: TextSettingsComponent(
@@ -1277,7 +1282,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(textSettings
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 89.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 89.0 - additionalBottomInset))
                     .appear(Transition.Appear({ _, view, transition in
                         if let view = view as? TextSettingsComponent.View, !transition.animation.isImmediate {
                             view.animateIn()
@@ -1293,11 +1298,6 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             }
             
-            var additionalBottomInset: CGFloat = 0.0
-            if component.sourceHint == .storyEditor {
-                additionalBottomInset = max(0.0, previewBottomInset - environment.safeInsets.bottom - 49.0)
-            }
-
             let rightButtonPosition = rightEdge - 24.0
             var offsetX: CGFloat = leftEdge + 24.0
             let delta: CGFloat = (rightButtonPosition - offsetX) / 7.0
