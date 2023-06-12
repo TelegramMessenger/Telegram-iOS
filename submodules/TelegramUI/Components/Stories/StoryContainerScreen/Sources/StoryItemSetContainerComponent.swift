@@ -728,9 +728,10 @@ public final class StoryItemSetContainerComponent: Component {
                     to: CGPoint(x: 0.0, y: self.bounds.height - self.contentContainerView.frame.maxY),
                     duration: 0.3,
                     timingFunction: kCAMediaTimingFunctionSpring,
+                    removeOnCompletion: false,
                     additive: true
                 )
-                viewListView.layer.animateAlpha(from: 0.0, to: viewListView.alpha, duration: 0.28)
+                viewListView.layer.animateAlpha(from: viewListView.alpha, to: 0.0, duration: 0.28, removeOnCompletion: false)
             }
             if let captionItemView = self.captionItem?.view.view {
                 captionItemView.layer.animatePosition(
