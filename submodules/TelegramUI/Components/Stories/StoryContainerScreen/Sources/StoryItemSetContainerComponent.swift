@@ -1006,10 +1006,7 @@ public final class StoryItemSetContainerComponent: Component {
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
             )
             
-            var currentItem: StoryContentItem?
-            currentItem = component.slice.item
-            
-            let footerPanelSize = self.footerPanel.update(
+            /*let footerPanelSize = self.footerPanel.update(
                 transition: transition,
                 component: AnyComponent(StoryFooterPanelComponent(
                     context: component.context,
@@ -1239,7 +1236,7 @@ public final class StoryItemSetContainerComponent: Component {
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 200.0)
-            )
+            )*/
             
             let bottomContentInsetWithoutInput = bottomContentInset
             var viewListInset: CGFloat = 0.0
@@ -1260,7 +1257,7 @@ public final class StoryItemSetContainerComponent: Component {
                 inputPanelIsOverlay = true
             }
             
-            if self.displayViewList {
+            if component.slice.peer.id == component.context.account.peerId {
                 let viewList: ViewList
                 var viewListTransition = transition
                 if let current = self.viewList {
@@ -1273,6 +1270,7 @@ public final class StoryItemSetContainerComponent: Component {
                     self.viewList = viewList
                 }
                 
+                viewList.view.parentState = state
                 let viewListSize = viewList.view.update(
                     transition: viewListTransition,
                     component: AnyComponent(StoryItemSetViewListComponent(
@@ -1282,6 +1280,7 @@ public final class StoryItemSetContainerComponent: Component {
                         strings: component.strings,
                         safeInsets: component.safeInsets,
                         storyItem: component.slice.item.storyItem,
+                        outerExpansionFraction: component.verticalPanFraction,
                         close: { [weak self] in
                             guard let self else {
                                 return
@@ -1294,7 +1293,7 @@ public final class StoryItemSetContainerComponent: Component {
                     containerSize: availableSize
                 )
                 let viewListFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - viewListSize.height), size: viewListSize)
-                if let viewListView = viewList.view.view {
+                if let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
                     var animateIn = false
                     if viewListView.superview == nil {
                         self.addSubview(viewListView)
@@ -1303,15 +1302,15 @@ public final class StoryItemSetContainerComponent: Component {
                     viewListTransition.setFrame(view: viewListView, frame: viewListFrame)
                     
                     if animateIn, !transition.animation.isImmediate {
-                        transition.animatePosition(view: viewListView, from: CGPoint(x: 0.0, y: viewListFrame.height), to: CGPoint(), additive: true)
+                        viewListView.animateIn(transition: transition)
                     }
                 }
-                viewListInset = viewListFrame.height
+                viewListInset = viewList.externalState.effectiveHeight
                 inputPanelBottomInset = viewListInset
             } else if let viewList = self.viewList {
                 self.viewList = nil
-                if let viewListView = viewList.view.view {
-                    transition.setPosition(view: viewListView, position: CGPoint(x: viewListView.center.x, y: availableSize.height + viewListView.bounds.height * 0.5), completion: { [weak viewListView] _ in
+                if let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View {
+                    viewListView.animateOut(transition: transition, completion: { [weak viewListView] in
                         viewListView?.removeFromSuperview()
                     })
                 }
@@ -1320,12 +1319,8 @@ public final class StoryItemSetContainerComponent: Component {
             let contentDefaultBottomInset: CGFloat = bottomContentInset
             let contentSize = CGSize(width: availableSize.width, height: availableSize.height - component.containerInsets.top - contentDefaultBottomInset)
             
-            let contentVisualBottomInset: CGFloat
-            if self.displayViewList {
-                contentVisualBottomInset = viewListInset + 12.0
-            } else {
-                contentVisualBottomInset = contentDefaultBottomInset
-            }
+            let contentVisualBottomInset: CGFloat = max(contentDefaultBottomInset, viewListInset)
+            
             let contentVisualHeight = availableSize.height - component.containerInsets.top - contentVisualBottomInset
             let contentVisualScale = contentVisualHeight / contentSize.height
             
@@ -1721,7 +1716,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
-            var footerPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - footerPanelSize.height), size: footerPanelSize)
+            /*var footerPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - footerPanelSize.height), size: footerPanelSize)
             var footerPanelAlpha: CGFloat = (focusedItem?.isMy == true && !self.displayViewList) ? 1.0 : 0.0
             if case .regular = component.metrics.widthClass {
                 footerPanelAlpha *= component.visibilityFraction
@@ -1735,7 +1730,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 transition.setFrame(view: footerPanelView, frame: footerPanelFrame)
                 transition.setAlpha(view: footerPanelView, alpha: footerPanelAlpha)
-            }
+            }*/
             
             let bottomGradientHeight = inputPanelSize.height + 32.0
             transition.setFrame(layer: self.bottomContentGradientLayer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: availableSize.height - component.inputHeight - bottomGradientHeight), size: CGSize(width: contentFrame.width, height: bottomGradientHeight)))

@@ -10,9 +10,13 @@ import AccountContext
 import SwiftSignalKit
 import TelegramStringFormatting
 import ShimmerEffect
+import StoryFooterPanelComponent
 
 final class StoryItemSetViewListComponent: Component {
     final class ExternalState {
+        fileprivate(set) var minimizedHeight: CGFloat = 0.0
+        fileprivate(set) var effectiveHeight: CGFloat = 0.0
+        
         init() {
         }
     }
@@ -23,6 +27,7 @@ final class StoryItemSetViewListComponent: Component {
     let strings: PresentationStrings
     let safeInsets: UIEdgeInsets
     let storyItem: EngineStoryItem
+    let outerExpansionFraction: CGFloat
     let close: () -> Void
     
     init(
@@ -32,6 +37,7 @@ final class StoryItemSetViewListComponent: Component {
         strings: PresentationStrings,
         safeInsets: UIEdgeInsets,
         storyItem: EngineStoryItem,
+        outerExpansionFraction: CGFloat,
         close: @escaping () -> Void
     ) {
         self.externalState = externalState
@@ -40,6 +46,7 @@ final class StoryItemSetViewListComponent: Component {
         self.strings = strings
         self.safeInsets = safeInsets
         self.storyItem = storyItem
+        self.outerExpansionFraction = outerExpansionFraction
         self.close = close
     }
 
@@ -54,6 +61,9 @@ final class StoryItemSetViewListComponent: Component {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        if lhs.outerExpansionFraction != rhs.outerExpansionFraction {
             return false
         }
         return true
@@ -110,11 +120,30 @@ final class StoryItemSetViewListComponent: Component {
             return true
         }
     }
+    
+    private final class PanState {
+        var startContentOffsetY: CGFloat = 0.0
+        var fraction: CGFloat = 0.0
+        var accumulatedOffset: CGFloat = 0.0
+        
+        init() {
+            
+        }
+    }
+    
+    private final class EventCycleState {
+        var ignoreScrolling: Bool = false
+        
+        init() {
+        }
+    }
 
-    final class View: UIView, UIScrollViewDelegate {
+    final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         private let navigationBarBackground: BlurredBackgroundView
         private let navigationSeparator: SimpleLayer
-        private let navigationTitle = ComponentView<Empty>()
+        
+        private let navigationPanel = ComponentView<Empty>()
+        
         private let navigationLeftButton = ComponentView<Empty>()
         
         private let backgroundView: UIView
@@ -138,6 +167,9 @@ final class StoryItemSetViewListComponent: Component {
         private var viewListState: EngineStoryViewListContext.State?
         private var requestedLoadMoreToken: EngineStoryViewListContext.LoadMoreToken?
         
+        private var dismissPanState: PanState?
+        private var eventCycleState: EventCycleState?
+        
         override init(frame: CGRect) {
             self.navigationBarBackground = BlurredBackgroundView(color: .clear, enableBlur: true)
             self.navigationSeparator = SimpleLayer()
@@ -153,12 +185,18 @@ final class StoryItemSetViewListComponent: Component {
             self.scrollView.indicatorStyle = .white
 
             super.init(frame: frame)
+            
+            self.scrollView.delegate = self
 
             self.addSubview(self.backgroundView)
             self.addSubview(self.scrollView)
             
             self.addSubview(self.navigationBarBackground)
             self.layer.addSublayer(self.navigationSeparator)
+            
+            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+            panRecognizer.delegate = self
+            self.addGestureRecognizer(panRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -169,13 +207,123 @@ final class StoryItemSetViewListComponent: Component {
             self.viewListDisposable?.dispose()
         }
         
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return true
+        }
+        
+        @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+            switch recognizer.state {
+            case .began, .changed:
+                if case .began = recognizer.state {
+                    let dismissPanState = PanState()
+                    dismissPanState.startContentOffsetY = 0.0
+                    self.dismissPanState = dismissPanState
+                }
+                
+                if let dismissPanState = self.dismissPanState {
+                    let relativeTranslationY = recognizer.translation(in: self).y - dismissPanState.startContentOffsetY
+                    let overflowY = self.scrollView.contentOffset.y - relativeTranslationY
+                    
+                    dismissPanState.accumulatedOffset += -overflowY
+                    dismissPanState.accumulatedOffset = max(0.0, dismissPanState.accumulatedOffset)
+                    
+                    if dismissPanState.accumulatedOffset > 0.0 {
+                        self.scrollView.contentOffset = CGPoint()
+                        
+                        let eventCycleState = EventCycleState()
+                        eventCycleState.ignoreScrolling = true
+                        self.eventCycleState = eventCycleState
+                        
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.eventCycleState = nil
+                        }
+                    }
+                    
+                    dismissPanState.startContentOffsetY = recognizer.translation(in: self).y
+                    
+                    self.state?.updated(transition: .immediate)
+                }
+            case .cancelled, .ended:
+                if let dismissPanState = self.dismissPanState {
+                    self.dismissPanState = nil
+                    
+                    let relativeTranslationY = recognizer.translation(in: self).y - dismissPanState.startContentOffsetY
+                    let overflowY = self.scrollView.contentOffset.y - relativeTranslationY
+                    
+                    dismissPanState.accumulatedOffset += -overflowY
+                    dismissPanState.accumulatedOffset = max(0.0, dismissPanState.accumulatedOffset)
+                    
+                    if dismissPanState.accumulatedOffset > 0.0 {
+                        self.scrollView.contentOffset = CGPoint()
+                        
+                        let eventCycleState = EventCycleState()
+                        eventCycleState.ignoreScrolling = true
+                        self.eventCycleState = eventCycleState
+                        
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.eventCycleState = nil
+                        }
+                    }
+                    
+                    let velocityY = recognizer.velocity(in: self).y
+                    if dismissPanState.accumulatedOffset > 150.0 || (dismissPanState.accumulatedOffset > 0.0 && velocityY > 300.0) {
+                        self.component?.close()
+                    } else {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if !self.backgroundView.frame.contains(point) {
+                return nil
+            }
+            
             return super.hitTest(point, with: event)
+        }
+        
+        func animateIn(transition: Transition) {
+            let offset = self.bounds.height - self.navigationBarBackground.frame.minY
+            Transition.immediate.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset))
+            transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: 0.0))
+        }
+        
+        func animateOut(transition: Transition, completion: @escaping () -> Void) {
+            let offset = self.bounds.height - self.navigationBarBackground.frame.minY
+            transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -offset), completion: { _ in
+                completion()
+            })
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
+                if let eventCycleState = self.eventCycleState {
+                    if eventCycleState.ignoreScrolling {
+                        self.ignoreScrolling = true
+                        scrollView.contentOffset = CGPoint()
+                        self.ignoreScrolling = false
+                        return
+                    }
+                }
+                
                 self.updateScrolling(transition: .immediate)
+            }
+        }
+        
+        func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+            if let eventCycleState = self.eventCycleState {
+                if eventCycleState.ignoreScrolling {
+                    targetContentOffset.pointee.y = 0.0
+                }
             }
         }
         
@@ -315,7 +463,7 @@ final class StoryItemSetViewListComponent: Component {
                 self.visiblePlaceholderViews.removeValue(forKey: id)
             }
             
-            if let viewList = self.viewList, let viewListState = self.viewListState, visibleBounds.maxY >= self.scrollView.contentSize.height - 200.0 {
+            if let viewList = self.viewList, let viewListState = self.viewListState, viewListState.loadMoreToken != nil, visibleBounds.maxY >= self.scrollView.contentSize.height - 200.0 {
                 if self.requestedLoadMoreToken != viewListState.loadMoreToken {
                     self.requestedLoadMoreToken = viewListState.loadMoreToken
                     viewList.loadMore()
@@ -330,7 +478,7 @@ final class StoryItemSetViewListComponent: Component {
             self.component = component
             self.state = state
             
-            let size = CGSize(width: availableSize.width, height: min(availableSize.height, 500.0))
+            let minimizedHeight = min(availableSize.height, 488.0)
             
             if themeUpdated {
                 self.backgroundView.backgroundColor = component.theme.rootController.navigationBar.blurredBackgroundColor
@@ -364,11 +512,11 @@ final class StoryItemSetViewListComponent: Component {
             let sideInset: CGFloat = 16.0
             
             let navigationHeight: CGFloat = 56.0
-            let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: navigationHeight))
+            let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - minimizedHeight), size: CGSize(width: availableSize.width, height: navigationHeight))
             transition.setFrame(view: self.navigationBarBackground, frame: navigationBarFrame)
             self.navigationBarBackground.update(size: navigationBarFrame.size, cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
             
-            transition.setFrame(layer: self.navigationSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: size.width, height: UIScreenPixel)))
+            transition.setFrame(layer: self.navigationSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             
             let navigationLeftButtonSize = self.navigationLeftButton.update(
                 transition: transition,
@@ -384,7 +532,7 @@ final class StoryItemSetViewListComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 100.0)
             )
-            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: navigationLeftButtonSize)
+            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: navigationBarFrame.minY), size: navigationLeftButtonSize)
             if let navigationLeftButtonView = self.navigationLeftButton.view {
                 if navigationLeftButtonView.superview == nil {
                     self.addSubview(navigationLeftButtonView)
@@ -392,36 +540,55 @@ final class StoryItemSetViewListComponent: Component {
                 transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
             }
             
-            let titleText: String
-            
-            let viewCount = self.viewListState?.totalCount ?? component.storyItem.views?.seenCount
-            if let viewCount {
-                if viewCount == 1 {
-                    titleText = "1 View"
-                } else {
-                    titleText = "\(viewCount) Views"
-                }
-            } else {
-                titleText = "No Views"
-            }
-            let navigationTitleSize = self.navigationTitle.update(
-                transition: .immediate,
-                component: AnyComponent(Text(
-                    text: titleText, font: Font.semibold(17.0), color: component.theme.rootController.navigationBar.primaryTextColor
+            let navigationPanelSize = self.navigationPanel.update(
+                transition: transition,
+                component: AnyComponent(StoryFooterPanelComponent(
+                    context: component.context,
+                    storyItem: component.storyItem,
+                    expandViewStats: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        let _ = self
+                    },
+                    deleteAction: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        let _ = component
+                    },
+                    moreAction: { [weak self] sourceView, gesture in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        let _ = component
+                    }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: navigationHeight)
+                containerSize: CGSize(width: availableSize.width, height: 200.0)
             )
-            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((size.width - navigationTitleSize.width) * 0.5), y: floor((navigationBarFrame.height - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
+            if let navigationPanelView = self.navigationPanel.view {
+                if navigationPanelView.superview == nil {
+                    self.addSubview(navigationPanelView)
+                }
+                
+                let expandedNavigationPanelFrame = CGRect(origin: navigationBarFrame.origin, size: navigationPanelSize)
+                let collapsedNavigationPanelFrame = CGRect(origin: CGPoint(x: navigationBarFrame.minX, y: availableSize.height - navigationPanelSize.height), size: navigationPanelSize)
+                
+                transition.setFrame(view: navigationPanelView, frame: collapsedNavigationPanelFrame.interpolate(to: expandedNavigationPanelFrame, amount: component.outerExpansionFraction))
+            }
+            
+            /*let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) * 0.5), y: navigationBarFrame.minY + floor((navigationBarFrame.height - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     self.addSubview(navigationTitleView)
                 }
                 transition.setPosition(view: navigationTitleView, position: navigationTitleFrame.center)
                 transition.setBounds(view: navigationTitleView, bounds: CGRect(origin: CGPoint(), size: navigationTitleFrame.size))
-            }
+            }*/
             
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: size.width, height: size.height - navigationBarFrame.maxY)))
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height)))
             
             let measureItemSize = self.measureItem.update(
                 transition: .immediate,
@@ -439,7 +606,7 @@ final class StoryItemSetViewListComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: size.width, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width, height: 1000.0)
             )
             
             if self.placeholderImage == nil || themeUpdated {
@@ -467,9 +634,9 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             let itemLayout = ItemLayout(
-                containerSize: size,
+                containerSize: CGSize(width: availableSize.width, height: minimizedHeight),
                 bottomInset: component.safeInsets.bottom,
-                topInset: 0.0,
+                topInset: navigationHeight,
                 sideInset: sideInset,
                 itemHeight: measureItemSize.height,
                 itemCount: self.viewListState?.items.count ?? 0
@@ -480,8 +647,8 @@ final class StoryItemSetViewListComponent: Component {
             
             self.ignoreScrolling = true
             
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
-            let scrollContentInsets = UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: 0.0, right: 0.0)
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.minY), size: CGSize(width: availableSize.width, height: minimizedHeight)))
+            let scrollContentInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             let scrollIndicatorInsets = UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: component.safeInsets.bottom, right: 0.0)
             if self.scrollView.contentInset != scrollContentInsets {
                 self.scrollView.contentInset = scrollContentInsets
@@ -495,8 +662,21 @@ final class StoryItemSetViewListComponent: Component {
             
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
+
+            var dismissOffsetY: CGFloat = 0.0
+            if let dismissPanState = self.dismissPanState {
+                dismissOffsetY = -dismissPanState.accumulatedOffset
+            }
             
-            return size
+            let expansionOffset = availableSize.height - self.navigationBarBackground.frame.minY
+            dismissOffsetY -= (1.0 - component.outerExpansionFraction) * expansionOffset
+            
+            transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: dismissOffsetY))
+            
+            component.externalState.minimizedHeight = minimizedHeight
+            component.externalState.effectiveHeight = min(minimizedHeight, max(0.0, minimizedHeight + dismissOffsetY))
+            
+            return availableSize
         }
     }
 

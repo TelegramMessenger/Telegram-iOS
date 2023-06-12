@@ -1312,6 +1312,9 @@ public final class EngineStoryViewListContext {
         }
         
         func loadMore() {
+            if !self.state.canLoadMore {
+                return
+            }
             if self.isLoadingMore {
                 return
             }
