@@ -1704,6 +1704,7 @@ public final class MediaEditorScreen: ViewController {
             }
             self.isDismissed = true
             controller.statusBar.statusBarStyle = .Ignore
+            self.isUserInteractionEnabled = false
             
             let previousDimAlpha = self.backgroundDimView.alpha
             self.backgroundDimView.alpha = 0.0

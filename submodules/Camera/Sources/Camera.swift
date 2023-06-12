@@ -76,10 +76,11 @@ private final class CameraContext {
             self.output.configureVideoStabilization()
         }
         
-        self.output.processSampleBuffer = { [weak self] pixelBuffer, connection in
+        self.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
             guard let self else {
                 return
             }
+            self.previewNode?.enqueue(sampleBuffer)
             
             let timestamp = CACurrentMediaTime()
             if timestamp > self.lastSnapshotTimestamp + 2.5 {

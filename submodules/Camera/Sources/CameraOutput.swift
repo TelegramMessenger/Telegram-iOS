@@ -61,7 +61,7 @@ final class CameraOutput: NSObject {
     var activeFilter: CameraFilter?
     var faceLandmarks: Bool = false
     
-    var processSampleBuffer: ((CVImageBuffer, AVCaptureConnection) -> Void)?
+    var processSampleBuffer: ((CMSampleBuffer, CVImageBuffer, AVCaptureConnection) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
     var processFaceLandmarks: (([VNFaceObservation]) -> Void)?
     
@@ -233,7 +233,7 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
         }
         
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-            self.processSampleBuffer?(videoPixelBuffer, connection)
+            self.processSampleBuffer?(sampleBuffer, videoPixelBuffer, connection)
         }
         
 //        let finalSampleBuffer: CMSampleBuffer = sampleBuffer
