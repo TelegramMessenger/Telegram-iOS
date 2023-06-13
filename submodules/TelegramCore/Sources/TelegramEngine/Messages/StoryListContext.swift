@@ -676,7 +676,7 @@ public final class PeerStoryListContext {
                                 switch update {
                                 case let .deleted(peerId, id):
                                     if self.peerId == peerId {
-                                        if let index = self.stateValue.items.firstIndex(where: { $0.id == id }) {
+                                        if let index = (finalUpdatedState ?? self.stateValue).items.firstIndex(where: { $0.id == id }) {
                                             var updatedState = finalUpdatedState ?? self.stateValue
                                             updatedState.items.remove(at: index)
                                             updatedState.totalCount = max(0, updatedState.totalCount - 1)
@@ -685,7 +685,7 @@ public final class PeerStoryListContext {
                                     }
                                 case let .added(peerId, item):
                                     if self.peerId == peerId {
-                                        if let index = self.stateValue.items.firstIndex(where: { $0.id == item.id }) {
+                                        if let index = (finalUpdatedState ?? self.stateValue).items.firstIndex(where: { $0.id == item.id }) {
                                             if !self.isArchived {
                                                 if case let .item(item) = item {
                                                     if item.isPinned {
