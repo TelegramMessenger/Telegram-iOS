@@ -1497,7 +1497,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 a(.default)
                             })))
                             
-                            if component.slice.item.storyItem.isPublic {
+                            if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
                                 items.append(.action(ContextMenuActionItem(text: "Copy link", icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                 }, action: { [weak self] _, a in

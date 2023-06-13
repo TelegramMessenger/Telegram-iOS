@@ -503,6 +503,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     isImage = true
                 } else if let _ = media as? WallpaperPreviewMedia {
                     isImage = true
+                } else if let _ = media as? TelegramMediaStory {
+                    isImage = true
                 }
             }
 
@@ -677,6 +679,20 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     if case let .file(_, _, _, _, isTheme, _) = wallpaper.content, isTheme {
                         skipStandardStatus = true
                     }
+                } else if let story = media as? TelegramMediaStory {
+                    var media: Media?
+                    if let storyValue = message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(item) = storyValue {
+                        media = item.media
+                    }
+                    
+                    var automaticDownload = false
+                    if let media {
+                        automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: media)
+                    }
+                    
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, associatedData, attributes, story, imageDateAndStatus, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, associatedData.automaticDownloadPeerId, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode, controllerInteraction.presentationContext)
+                    initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
+                    refineContentImageLayout = refineLayout
                 }
             }
             

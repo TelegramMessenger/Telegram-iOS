@@ -1254,6 +1254,8 @@ public final class AccountViewTracker {
                                     for media in message.media {
                                         if let storyMedia = media as? TelegramMediaStory {
                                             result.insert(storyMedia.storyId)
+                                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content)  = webpage.content, let story = content.story {
+                                            result.insert(story.storyId)
                                         }
                                     }
                                 }

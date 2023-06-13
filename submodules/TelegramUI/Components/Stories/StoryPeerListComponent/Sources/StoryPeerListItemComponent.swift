@@ -635,14 +635,18 @@ public final class StoryPeerListItemComponent: Component {
             
             self.indicatorShapeLayer.lineWidth = indicatorLineWidth
             
-            if hadUnseen != component.hasUnseen || hadProgress != (component.ringAnimation != nil) {
+            if hadUnseen != component.hasUnseen || themeUpdated || hadProgress != (component.ringAnimation != nil) {
                 let locations: [CGFloat] = [0.0, 1.0]
                 let colors: [CGColor]
                 
                 if component.hasUnseen || component.ringAnimation != nil {
                     colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
                 } else {
-                    colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                    if component.theme.overallDarkAppearance {
+                        colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
+                    } else {
+                        colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                    }
                 }
                 
                 self.indicatorColorLayer.locations = locations.map { $0 as NSNumber }

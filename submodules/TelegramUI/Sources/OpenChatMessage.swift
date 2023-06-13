@@ -26,30 +26,37 @@ import StoryContainerScreen
 import StoryContentComponent
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
+    var story: TelegramMediaStory?
     for media in params.message.media {
         if let media = media as? TelegramMediaStory {
-            let navigationController = params.navigationController
-            let context = params.context
-            let storyContent = SingleStoryContentContextImpl(context: params.context, storyId: media.storyId)
-            let _ = (storyContent.state
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
-                let transitionIn: StoryContainerScreen.TransitionIn? = nil
-                
-                let storyContainerScreen = StoryContainerScreen(
-                    context: context,
-                    content: storyContent,
-                    transitionIn: transitionIn,
-                    transitionOut: { _, _ in
-                        let transitionOut: StoryContainerScreen.TransitionOut? = nil
-                        
-                        return transitionOut
-                    }
-                )
-                navigationController?.pushViewController(storyContainerScreen)
-            })
-            return true
+            story = media
+        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.story != nil {
+            story = content.story
         }
+    }
+    
+    if let story {
+        let navigationController = params.navigationController
+        let context = params.context
+        let storyContent = SingleStoryContentContextImpl(context: params.context, storyId: story.storyId)
+        let _ = (storyContent.state
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+            let transitionIn: StoryContainerScreen.TransitionIn? = nil
+            
+            let storyContainerScreen = StoryContainerScreen(
+                context: context,
+                content: storyContent,
+                transitionIn: transitionIn,
+                transitionOut: { _, _ in
+                    let transitionOut: StoryContainerScreen.TransitionOut? = nil
+                    
+                    return transitionOut
+                }
+            )
+            navigationController?.pushViewController(storyContainerScreen)
+        })
+        return true
     }
     
     if let mediaData = chatMessageGalleryControllerData(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, message: params.message, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, source: params.gallerySource, synchronousLoad: false, actionInteraction: params.actionInteraction) {

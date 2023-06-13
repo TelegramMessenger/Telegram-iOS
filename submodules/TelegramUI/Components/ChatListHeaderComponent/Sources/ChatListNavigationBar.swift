@@ -198,7 +198,7 @@ public final class ChatListNavigationBar: Component {
         
         public func applyScroll(offset: CGFloat, allowAvatarsExpansion: Bool, forceUpdate: Bool = false, transition: Transition) {
             if self.currentAllowAvatarsExpansion != allowAvatarsExpansion, allowAvatarsExpansion {
-                self.addStoriesUnlockedAnimation(duration: 0.3)
+                self.addStoriesUnlockedAnimation(duration: 0.3, animateScrollUnlocked: false)
             }
             
             let transition = transition
@@ -501,13 +501,13 @@ public final class ChatListNavigationBar: Component {
             }
             
             if storiesUnlockedUpdated, case let .curve(duration, _) = transition.animation {
-                self.addStoriesUnlockedAnimation(duration: duration)
+                self.addStoriesUnlockedAnimation(duration: duration, animateScrollUnlocked: true)
             }
             
             return size
         }
         
-        private func addStoriesUnlockedAnimation(duration: Double) {
+        private func addStoriesUnlockedAnimation(duration: Double, animateScrollUnlocked: Bool) {
             guard let component = self.component else {
                 return
             }
@@ -528,7 +528,9 @@ public final class ChatListNavigationBar: Component {
                 
                 let t = listViewAnimationCurveSystem(value)
                 self.applyScrollFraction = t
-                self.applyScrollUnlockedFraction = storiesUnlocked ? t : (1.0 - t)
+                if animateScrollUnlocked {
+                    self.applyScrollUnlockedFraction = storiesUnlocked ? t : (1.0 - t)
+                }
                 
                 if let rawScrollOffset = self.rawScrollOffset {
                     self.hasDeferredScrollOffset = true

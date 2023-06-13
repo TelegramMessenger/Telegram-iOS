@@ -438,8 +438,6 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.avatarNode.view.addGestureRecognizer(tapGestureRecognizer)
-        
-        self.updateStoryView(transition: .immediate)
        
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self else {
@@ -455,7 +453,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         self.playbackStartDisposable.dispose()
     }
     
-    func updateStoryView(transition: ContainedViewLayoutTransition) {
+    func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
         if let hasUnseenStories = self.hasUnseenStories {
             let avatarStoryView: ComponentView<Empty>
             if let current = self.avatarStoryView {
@@ -468,7 +466,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             let _ = avatarStoryView.update(
                 transition: Transition(transition),
                 component: AnyComponent(AvatarStoryIndicatorComponent(
-                    hasUnseen: hasUnseenStories
+                    hasUnseen: hasUnseenStories,
+                    isDarkTheme: theme.overallDarkAppearance
                 )),
                 environment: {},
                 containerSize: self.avatarNode.bounds.size
@@ -783,6 +782,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.updateStoryView(transition: .immediate, theme: theme)
     }
 }
 
@@ -1161,6 +1162,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
     var animateOverlaysFadeIn: (() -> Void)?
+    var openStories: (() -> Void)?
     
     init(context: AccountContext, readyWhenGalleryLoads: Bool, isSettings: Bool) {
         self.isSettings = isSettings
@@ -1249,6 +1251,13 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
                 return
             }
             strongSelf.animateOverlaysFadeIn?()
+        }
+        
+        self.listContainerNode.openStories = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openStories?()
         }
     }
     
@@ -1591,7 +1600,7 @@ struct PeerInfoHeaderNavigationButtonSpec: Equatable {
     let isForExpandedView: Bool
 }
 
-final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
+final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
     private var presentationData: PresentationData?
     private(set) var leftButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
     private(set) var rightButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
