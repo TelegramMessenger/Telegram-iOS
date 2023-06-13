@@ -298,7 +298,7 @@ public final class ChatListNavigationBar: Component {
                     storiesUnlockedOffsetFraction = 1.0
                 } else {
                     storiesOffsetFraction = 1.0 - (clippedStoriesOverscrollOffset / defaultStoriesOffsetDistance)
-                    storiesUnlockedOffsetFraction = 0.0
+                    storiesUnlockedOffsetFraction = 1.0
                 }
             } else {
                 storiesOffsetFraction = 1.0
@@ -514,10 +514,10 @@ public final class ChatListNavigationBar: Component {
             self.applyScrollFractionAnimator?.invalidate()
             self.applyScrollFractionAnimator = nil
             
+            let storiesUnlocked = component.storiesUnlocked
+            
             self.storiesOffsetStartFraction = self.storiesOffsetFraction
             self.storiesUnlockedStartFraction = self.storiesUnlockedFraction
-            
-            let storiesUnlocked = component.storiesUnlocked
             
             self.applyScrollFraction = 0.0
             self.applyScrollUnlockedFraction = 0.0

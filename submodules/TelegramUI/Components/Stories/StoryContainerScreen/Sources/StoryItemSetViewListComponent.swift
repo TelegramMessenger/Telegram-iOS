@@ -295,10 +295,17 @@ final class StoryItemSetViewListComponent: Component {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             if let navigationPanelView = self.navigationPanel.view {
                 if let result = navigationPanelView.hitTest(self.convert(point, to: navigationPanelView), with: event) {
+                    if result !== navigationPanelView {
+                        return result
+                    }
+                }
+            }
+            if let navigationLeftButtonView = self.navigationLeftButton.view {
+                if let result = navigationLeftButtonView.hitTest(self.convert(point, to: navigationLeftButtonView), with: event) {
                     return result
                 }
             }
-            if !self.backgroundView.frame.contains(point) {
+            if !self.backgroundView.frame.contains(point) && !self.navigationBarBackground.frame.contains(point) {
                 return nil
             }
             

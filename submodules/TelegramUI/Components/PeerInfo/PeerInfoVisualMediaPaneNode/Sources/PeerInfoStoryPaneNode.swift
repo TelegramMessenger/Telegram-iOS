@@ -1547,12 +1547,20 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 guard let strongSelf = self else {
                     return
                 }
+                
+                var headerText: String?
+                if strongSelf.isArchive {
+                    //TODO:localize
+                    headerText = "Only you can see archived stories unless you choose to save them to your profile."
+                }
 
                 let items = SparseItemGrid.Items(
                     items: mappedItems,
                     holeAnchors: mappedHoles,
                     count: totalCount,
-                    itemBinding: strongSelf.itemGridBinding
+                    itemBinding: strongSelf.itemGridBinding,
+                    headerText: headerText,
+                    snapTopInset: false
                 )
 
                 let currentSynchronous = synchronous && firstTime
