@@ -217,7 +217,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (image, flags)
                     }
                 } else if let story = mainMedia as? TelegramMediaStory {
-                    mediaAndFlags = (story, [])
+                    mediaAndFlags = (story, [.preferMediaBeforeText])
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
                         var colors: [UInt32] = []
@@ -325,6 +325,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             actionTitle = item.presentationData.strings.Conversation_OpenBotApp
                         case "telegram_chatlist":
                             actionTitle = item.presentationData.strings.Conversation_OpenChatFolder
+                        case "telegram_story":
+                            actionTitle = "Open Story"
                         default:
                             break
                     }
