@@ -662,6 +662,8 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                         }
                     }
                     
+                    flags |= 1 << 3
+                    
                     return account.network.request(Api.functions.stories.sendStory(
                         flags: flags,
                         media: inputMedia,
