@@ -340,9 +340,9 @@ final class StoryItemContentComponent: Component {
             var messageMedia: EngineMedia?
             switch component.item.media {
             case let .image(image):
-                    messageMedia = .image(image)
+                messageMedia = .image(image)
             case let .file(file):
-                    messageMedia = .file(file)
+                messageMedia = .file(file)
             default:
                 break
             }

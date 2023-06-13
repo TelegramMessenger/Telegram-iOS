@@ -2136,6 +2136,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.associatedStories[story.storyId] == nil {
                                     storiesRequiredValidation = true
                                 }
+                            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let story = content.story {
+                                if message.associatedStories[story.storyId] == nil {
+                                    storiesRequiredValidation = true
+                                }
                             }
                         }
                         if contentRequiredValidation {

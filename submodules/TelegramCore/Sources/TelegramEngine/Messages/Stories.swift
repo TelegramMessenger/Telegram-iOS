@@ -662,6 +662,8 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                         }
                     }
                     
+                    flags |= 1 << 3
+                    
                     return account.network.request(Api.functions.stories.sendStory(
                         flags: flags,
                         media: inputMedia,
@@ -1312,6 +1314,9 @@ public final class EngineStoryViewListContext {
         }
         
         func loadMore() {
+            if !self.state.canLoadMore {
+                return
+            }
             if self.isLoadingMore {
                 return
             }

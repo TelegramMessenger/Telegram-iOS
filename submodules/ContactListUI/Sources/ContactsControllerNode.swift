@@ -435,7 +435,7 @@ final class ContactsControllerNode: ASDisplayNode {
         }
         
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.applyScroll(offset: offset, transition: Transition(transition))
+            navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: true, transition: Transition(transition))
         }
     }
     

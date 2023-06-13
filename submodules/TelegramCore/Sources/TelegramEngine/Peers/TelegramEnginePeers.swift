@@ -246,6 +246,11 @@ public extension TelegramEngine {
         public func togglePeerMuted(peerId: PeerId, threadId: Int64?) -> Signal<Void, NoError> {
             return _internal_togglePeerMuted(account: self.account, peerId: peerId, threadId: threadId)
         }
+        
+        public func togglePeerStoriesMuted(peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+            return _internal_togglePeerStoriesMuted(account: self.account, peerId: peerId)
+            |> ignoreValues
+        }
 
         public func updatePeerMuteSetting(peerId: PeerId, threadId: Int64?, muteInterval: Int32?) -> Signal<Void, NoError> {
             return _internal_updatePeerMuteSetting(account: self.account, peerId: peerId, threadId: threadId, muteInterval: muteInterval)

@@ -142,6 +142,7 @@ public final class ChatListNavigationBar: Component {
         
         private var currentLayout: CurrentLayout?
         private var rawScrollOffset: CGFloat?
+        private var currentAllowAvatarsExpansion: Bool = false
         public private(set) var clippedScrollOffset: CGFloat?
         
         public var deferScrollApplication: Bool = false
@@ -191,14 +192,19 @@ public final class ChatListNavigationBar: Component {
         
         public func applyCurrentScroll(transition: Transition) {
             if let rawScrollOffset = self.rawScrollOffset, self.hasDeferredScrollOffset {
-                self.applyScroll(offset: rawScrollOffset, transition: transition)
+                self.applyScroll(offset: rawScrollOffset, allowAvatarsExpansion: self.currentAllowAvatarsExpansion, transition: transition)
             }
         }
         
-        public func applyScroll(offset: CGFloat, forceUpdate: Bool = false, transition: Transition) {
+        public func applyScroll(offset: CGFloat, allowAvatarsExpansion: Bool, forceUpdate: Bool = false, transition: Transition) {
+            if self.currentAllowAvatarsExpansion != allowAvatarsExpansion, allowAvatarsExpansion {
+                self.addStoriesUnlockedAnimation(duration: 0.3, animateScrollUnlocked: false)
+            }
+            
             let transition = transition
             
             self.rawScrollOffset = offset
+            self.currentAllowAvatarsExpansion = allowAvatarsExpansion
             
             if self.deferScrollApplication && !forceUpdate {
                 self.hasDeferredScrollOffset = true
@@ -286,7 +292,7 @@ public final class ChatListNavigationBar: Component {
             let clippedStoriesOffset = max(0.0, min(clippedScrollOffset, defaultStoriesOffsetDistance))
             var storiesOffsetFraction: CGFloat
             var storiesUnlockedOffsetFraction: CGFloat
-            if !component.isSearchActive, component.secondaryTransition == 0.0, let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
+            if !component.isSearchActive, component.secondaryTransition == 0.0, let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty, allowAvatarsExpansion {
                 if component.storiesUnlocked {
                     storiesOffsetFraction = clippedStoriesOffset / defaultStoriesOffsetDistance
                     storiesUnlockedOffsetFraction = 1.0
@@ -490,44 +496,53 @@ public final class ChatListNavigationBar: Component {
             
             if uploadProgressUpdated {
                 if let rawScrollOffset = self.rawScrollOffset {
-                    self.applyScroll(offset: rawScrollOffset, forceUpdate: true, transition: transition)
+                    self.applyScroll(offset: rawScrollOffset, allowAvatarsExpansion: self.currentAllowAvatarsExpansion, forceUpdate: true, transition: transition)
                 }
             }
             
             if storiesUnlockedUpdated, case let .curve(duration, _) = transition.animation {
-                self.applyScrollFractionAnimator?.invalidate()
-                self.applyScrollFractionAnimator = nil
-                
-                self.storiesOffsetStartFraction = self.storiesOffsetFraction
-                self.storiesUnlockedStartFraction = self.storiesUnlockedFraction
-                
-                let storiesUnlocked = component.storiesUnlocked
-                
-                self.applyScrollFraction = 0.0
-                self.applyScrollUnlockedFraction = 0.0
-                self.applyScrollFractionAnimator = DisplayLinkAnimator(duration: duration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
-                    guard let self else {
-                        return
-                    }
-                    
-                    let t = listViewAnimationCurveSystem(value)
-                    self.applyScrollFraction = t
-                    self.applyScrollUnlockedFraction = storiesUnlocked ? t : (1.0 - t)
-                    
-                    if let rawScrollOffset = self.rawScrollOffset {
-                        self.hasDeferredScrollOffset = true
-                        self.applyScroll(offset: rawScrollOffset, transition: transition)
-                    }
-                }, completion: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.applyScrollFractionAnimator?.invalidate()
-                    self.applyScrollFractionAnimator = nil
-                })
+                self.addStoriesUnlockedAnimation(duration: duration, animateScrollUnlocked: true)
             }
             
             return size
+        }
+        
+        private func addStoriesUnlockedAnimation(duration: Double, animateScrollUnlocked: Bool) {
+            guard let component = self.component else {
+                return
+            }
+            self.applyScrollFractionAnimator?.invalidate()
+            self.applyScrollFractionAnimator = nil
+            
+            self.storiesOffsetStartFraction = self.storiesOffsetFraction
+            self.storiesUnlockedStartFraction = self.storiesUnlockedFraction
+            
+            let storiesUnlocked = component.storiesUnlocked
+            
+            self.applyScrollFraction = 0.0
+            self.applyScrollUnlockedFraction = 0.0
+            self.applyScrollFractionAnimator = DisplayLinkAnimator(duration: duration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                
+                let t = listViewAnimationCurveSystem(value)
+                self.applyScrollFraction = t
+                if animateScrollUnlocked {
+                    self.applyScrollUnlockedFraction = storiesUnlocked ? t : (1.0 - t)
+                }
+                
+                if let rawScrollOffset = self.rawScrollOffset {
+                    self.hasDeferredScrollOffset = true
+                    self.applyScroll(offset: rawScrollOffset, allowAvatarsExpansion: self.currentAllowAvatarsExpansion, transition: .immediate)
+                }
+            }, completion: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.applyScrollFractionAnimator?.invalidate()
+                self.applyScrollFractionAnimator = nil
+            })
         }
     }
     

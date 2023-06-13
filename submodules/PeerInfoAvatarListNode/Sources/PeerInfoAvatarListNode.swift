@@ -16,6 +16,9 @@ import RadialStatusNode
 import TelegramUIPreferences
 import AvatarNode
 import AvatarVideoNode
+import ComponentFlow
+import ComponentDisplayAdapters
+import StorySetIndicatorComponent
 
 private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
     private var currentInHierarchy = false
@@ -577,6 +580,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let topShadowNode: ASImageNode
     public let bottomShadowNode: ASImageNode
     
+    public var storyParams: (peer: EnginePeer, items: [EngineStoryItem], count: Int, hasUnseen: Bool)?
+    private var expandedStorySetIndicator: ComponentView<Empty>?
+    
     public let contentNode: ASDisplayNode
     let leftHighlightNode: ASDisplayNode
     let rightHighlightNode: ASDisplayNode
@@ -611,6 +617,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private var ignoreNextProfilePhotoUpdate = false
     public var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
     public var currentIndexUpdated: (() -> Void)?
+    
+    public var openStories: (() -> Void)?
     
     public let isReady = Promise<Bool>()
     private var didSetReady = false
@@ -914,6 +922,12 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.isExpanded, let expandedStorySetIndicatorView = self.expandedStorySetIndicator?.view {
+            if let result = expandedStorySetIndicatorView.hitTest(self.view.convert(point, to: expandedStorySetIndicatorView), with: event) {
+                return result
+            }
+        }
+        
         return super.hitTest(point, with: event)
     }
     
@@ -1228,6 +1242,45 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             }))
         }
         self.updateItems(size: size, transition: transition, stripTransition: transition)
+        
+        if let storyParams = self.storyParams {
+            var indicatorTransition = Transition(transition)
+            let expandedStorySetIndicator: ComponentView<Empty>
+            if let current = self.expandedStorySetIndicator {
+                expandedStorySetIndicator = current
+            } else {
+                indicatorTransition = .immediate
+                expandedStorySetIndicator = ComponentView()
+                self.expandedStorySetIndicator = expandedStorySetIndicator
+            }
+            
+            let expandedStorySetSize = expandedStorySetIndicator.update(
+                transition: indicatorTransition,
+                component: AnyComponent(StorySetIndicatorComponent(
+                    context: self.context,
+                    peer: storyParams.peer,
+                    items: storyParams.items,
+                    hasUnseen: storyParams.hasUnseen,
+                    totalCount: storyParams.count,
+                    theme: defaultDarkPresentationTheme,
+                    action: { [weak self] in
+                        self?.openStories?()
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: 300.0, height: 100.0)
+            )
+            let expandedStorySetFrame = CGRect(origin: CGPoint(x: floor((size.width - expandedStorySetSize.width) * 0.5), y: 10.0), size: expandedStorySetSize)
+            if let expandedStorySetIndicatorView = expandedStorySetIndicator.view {
+                if expandedStorySetIndicatorView.superview == nil {
+                    self.stripContainerNode.view.addSubview(expandedStorySetIndicatorView)
+                }
+                indicatorTransition.setFrame(view: expandedStorySetIndicatorView, frame: expandedStorySetFrame)
+            }
+        } else if let expandedStorySetIndicator = self.expandedStorySetIndicator {
+            self.expandedStorySetIndicator = nil
+            expandedStorySetIndicator.view?.removeFromSuperview()
+        }
     }
     
     private func updateStrips(size: CGSize, itemsAdded: Bool, stripTransition: ContainedViewLayoutTransition) {

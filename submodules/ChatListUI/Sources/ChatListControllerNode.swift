@@ -1957,8 +1957,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             offset = 0.0
         }
         
+        var allowAvatarsExpansion: Bool = true
+        if !self.mainContainerNode.currentItemNode.startedScrollingAtUpperBound && !self.mainContainerNode.storiesUnlocked {
+            allowAvatarsExpansion = false
+        }
+        
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.applyScroll(offset: offset, transition: Transition(transition))
+            navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: allowAvatarsExpansion, transition: Transition(transition))
         }
     }
     
@@ -2209,7 +2214,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     func willScrollToTop() {
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.applyScroll(offset: 0.0, transition: Transition(animation: .curve(duration: 0.3, curve: .slide)))
+            navigationBarComponentView.applyScroll(offset: 0.0, allowAvatarsExpansion: false, transition: Transition(animation: .curve(duration: 0.3, curve: .slide)))
         }
     }
     

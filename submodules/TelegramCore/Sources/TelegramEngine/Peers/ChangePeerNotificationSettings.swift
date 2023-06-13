@@ -62,6 +62,36 @@ func _internal_togglePeerMuted(account: Account, peerId: PeerId, threadId: Int64
     }
 }
 
+func _internal_togglePeerStoriesMuted(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        guard let peer = transaction.getPeer(peerId) else {
+            return
+        }
+        
+        var notificationPeerId = peerId
+        if let associatedPeerId = peer.associatedPeerId {
+            notificationPeerId = associatedPeerId
+        }
+        
+        let currentSettings = transaction.getPeerNotificationSettings(id: notificationPeerId) as? TelegramPeerNotificationSettings
+        let previousSettings: TelegramPeerNotificationSettings
+        if let currentSettings = currentSettings {
+            previousSettings = currentSettings
+        } else {
+            previousSettings = TelegramPeerNotificationSettings.defaultSettings
+        }
+        
+        let updatedSettings: TelegramPeerNotificationSettings
+        if let previousStoriesMuted = previousSettings.storiesMuted {
+            updatedSettings = previousSettings.withUpdatedStoriesMuted(!previousStoriesMuted)
+        } else {
+            updatedSettings = previousSettings.withUpdatedStoriesMuted(true)
+        }
+        
+        transaction.updatePendingPeerNotificationSettings(peerId: notificationPeerId, settings: updatedSettings)
+    }
+}
+
 func _internal_updatePeerMuteSetting(account: Account, peerId: PeerId, threadId: Int64?, muteInterval: Int32?) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
         _internal_updatePeerMuteSetting(account: account, transaction: transaction, peerId: peerId, threadId: threadId, muteInterval: muteInterval)

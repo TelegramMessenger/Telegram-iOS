@@ -3044,54 +3044,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             
-            if !gallery, let expiringStoryList = strongSelf.expiringStoryList, let expiringStoryListState = strongSelf.expiringStoryListState, !expiringStoryListState.items.isEmpty {
-                let _ = expiringStoryList
-                let storyContent = StoryContentContextImpl(context: strongSelf.context, includeHidden: false, focusedPeerId: strongSelf.peerId, singlePeer: true)
-                let _ = (storyContent.state
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { storyContentState in
-                    guard let self else {
-                        return
-                    }
-                    var transitionIn: StoryContainerScreen.TransitionIn?
-                    transitionIn = nil
-                    
-                    let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.view
-                    transitionIn = StoryContainerScreen.TransitionIn(
-                        sourceView: transitionView,
-                        sourceRect: transitionView.bounds,
-                        sourceCornerRadius: transitionView.bounds.height * 0.5
-                    )
-                    
-                    self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
-                    
-                    let storyContainerScreen = StoryContainerScreen(
-                        context: self.context,
-                        content: storyContent,
-                        transitionIn: transitionIn,
-                        transitionOut: { [weak self] peerId, _ in
-                            guard let self else {
-                                return nil
-                            }
-                            
-                            let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.view
-                            return StoryContainerScreen.TransitionOut(
-                                destinationView: transitionView,
-                                transitionView: nil,
-                                destinationRect: transitionView.bounds,
-                                destinationCornerRadius: transitionView.bounds.height * 0.5,
-                                destinationIsAvatar: true,
-                                completed: { [weak self] in
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
-                                }
-                            )
-                        }
-                    )
-                    self.controller?.push(storyContainerScreen)
-                })
+            if !gallery, let expiringStoryListState = strongSelf.expiringStoryListState, !expiringStoryListState.items.isEmpty {
+                strongSelf.openStories(fromAvatar: true)
                 
                 return
             }
@@ -3913,18 +3867,40 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         } else if peerId.namespace == Namespaces.Peer.CloudUser {
             let expiringStoryList = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
             self.expiringStoryList = expiringStoryList
-            self.expiringStoryListDisposable = (expiringStoryList.state
-            |> deliverOnMainQueue).start(next: { [weak self] state in
-                guard let self else {
+            self.expiringStoryListDisposable = (combineLatest(queue: .mainQueue(),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+                expiringStoryList.state
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] peer, state in
+                guard let self, let peer else {
                     return
                 }
                 self.expiringStoryListState = state
                 if state.items.isEmpty {
                     self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = nil
+                    self.headerNode.avatarListNode.listContainerNode.storyParams = nil
                 } else {
                     self.headerNode.avatarListNode.avatarContainerNode.hasUnseenStories = state.hasUnseen
+                    self.headerNode.avatarListNode.listContainerNode.storyParams = (peer, state.items.prefix(3).compactMap { item -> EngineStoryItem? in
+                        switch item {
+                        case let .item(item):
+                            return item
+                        case .placeholder:
+                            return nil
+                        }
+                    }, state.items.count, state.hasUnseen)
                 }
-                self.headerNode.avatarListNode.avatarContainerNode.updateStoryView(transition: .immediate)
+                
+                self.requestLayout(animated: false)
+                
+                if self.headerNode.avatarListNode.openStories == nil {
+                    self.headerNode.avatarListNode.openStories = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.openStories(fromAvatar: false)
+                    }
+                }
             })
         }
     }
@@ -4113,6 +4089,64 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     @objc private func editingCancelPressed() {
         self.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
+    }
+    
+    private func openStories(fromAvatar: Bool) {
+        if let expiringStoryList = self.expiringStoryList, let expiringStoryListState = self.expiringStoryListState, !expiringStoryListState.items.isEmpty {
+            let _ = expiringStoryList
+            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: self.peerId, singlePeer: true)
+            let _ = (storyContent.state
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
+                guard let self else {
+                    return
+                }
+                var transitionIn: StoryContainerScreen.TransitionIn?
+                
+                if fromAvatar {
+                    let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.view
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: transitionView,
+                        sourceRect: transitionView.bounds,
+                        sourceCornerRadius: transitionView.bounds.height * 0.5
+                    )
+                }
+                
+                self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: self.context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { [weak self] peerId, _ in
+                        guard let self else {
+                            return nil
+                        }
+                        if !fromAvatar {
+                            return nil
+                        }
+                        
+                        let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.view
+                        return StoryContainerScreen.TransitionOut(
+                            destinationView: transitionView,
+                            transitionView: nil,
+                            destinationRect: transitionView.bounds,
+                            destinationCornerRadius: transitionView.bounds.height * 0.5,
+                            destinationIsAvatar: true,
+                            completed: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
+                            }
+                        )
+                    }
+                )
+                self.controller?.push(storyContainerScreen)
+            })
+            
+            return
+        }
     }
     
     private func openMessage(id: MessageId) -> Bool {

@@ -164,12 +164,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 switch type {
                     case .instagram, .twitter:
                         if automaticPlayback {
-                            mainMedia = webpage.file ?? webpage.image
+                            mainMedia = webpage.story ?? webpage.file ?? webpage.image
                         } else {
-                            mainMedia = webpage.image ?? webpage.file
+                            mainMedia = webpage.story ?? webpage.image ?? webpage.file
                         }
                     default:
-                        mainMedia = webpage.file ?? webpage.image
+                        mainMedia = webpage.story ?? webpage.file ?? webpage.image
                 }
                 
                 let themeMimeType = "application/x-tgtheme-ios"
@@ -216,6 +216,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         mediaAndFlags = (image, flags)
                     }
+                } else if let story = mainMedia as? TelegramMediaStory {
+                    mediaAndFlags = (story, [])
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
                         var colors: [UInt32] = []
@@ -338,7 +340,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 for media in item.message.media {
                     switch media {
-                    case _ as TelegramMediaImage, _ as TelegramMediaFile:
+                    case _ as TelegramMediaImage, _ as TelegramMediaFile, _ as TelegramMediaStory:
                         mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                     default:
                         break

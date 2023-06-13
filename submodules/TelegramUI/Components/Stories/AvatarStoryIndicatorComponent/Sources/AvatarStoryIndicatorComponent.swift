@@ -6,15 +6,21 @@ import TelegramPresentationData
 
 public final class AvatarStoryIndicatorComponent: Component {
     public let hasUnseen: Bool
+    public let isDarkTheme: Bool
     
     public init(
-        hasUnseen: Bool
+        hasUnseen: Bool,
+        isDarkTheme: Bool
     ) {
         self.hasUnseen = hasUnseen
+        self.isDarkTheme = isDarkTheme
     }
     
     public static func ==(lhs: AvatarStoryIndicatorComponent, rhs: AvatarStoryIndicatorComponent) -> Bool {
         if lhs.hasUnseen != rhs.hasUnseen {
+            return false
+        }
+        if lhs.isDarkTheme != rhs.isDarkTheme {
             return false
         }
         return true
@@ -69,7 +75,11 @@ public final class AvatarStoryIndicatorComponent: Component {
                 if component.hasUnseen {
                     colors = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
                 } else {
-                    colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                    if component.isDarkTheme {
+                        colors = [UIColor(rgb: 0x48484A).cgColor, UIColor(rgb: 0x48484A).cgColor]
+                    } else {
+                        colors = [UIColor(rgb: 0xD8D8E1).cgColor, UIColor(rgb: 0xD8D8E1).cgColor]
+                    }
                 }
                 
                 let colorSpace = CGColorSpaceCreateDeviceRGB()

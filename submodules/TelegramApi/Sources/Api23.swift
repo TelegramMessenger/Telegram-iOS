@@ -187,11 +187,21 @@ public extension Api {
     }
 }
 public extension Api {
-    enum WebPageAttribute: TypeConstructorDescription {
+    indirect enum WebPageAttribute: TypeConstructorDescription {
+        case webPageAttributeStory(flags: Int32, userId: Int64, id: Int32, story: Api.StoryItem?)
         case webPageAttributeTheme(flags: Int32, documents: [Api.Document]?, settings: Api.ThemeSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .webPageAttributeStory(let flags, let userId, let id, let story):
+                    if boxed {
+                        buffer.appendInt32(-1818605967)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {story!.serialize(buffer, true)}
+                    break
                 case .webPageAttributeTheme(let flags, let documents, let settings):
                     if boxed {
                         buffer.appendInt32(1421174295)
@@ -209,11 +219,35 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .webPageAttributeStory(let flags, let userId, let id, let story):
+                return ("webPageAttributeStory", [("flags", flags as Any), ("userId", userId as Any), ("id", id as Any), ("story", story as Any)])
                 case .webPageAttributeTheme(let flags, let documents, let settings):
                 return ("webPageAttributeTheme", [("flags", flags as Any), ("documents", documents as Any), ("settings", settings as Any)])
     }
     }
     
+        public static func parse_webPageAttributeStory(_ reader: BufferReader) -> WebPageAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Api.StoryItem?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.StoryItem
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WebPageAttribute.webPageAttributeStory(flags: _1!, userId: _2!, id: _3!, story: _4)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_webPageAttributeTheme(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1288,46 +1322,6 @@ public extension Api.account {
         }
         public static func parse_themesNotModified(_ reader: BufferReader) -> Themes? {
             return Api.account.Themes.themesNotModified
-        }
-    
-    }
-}
-public extension Api.account {
-    enum TmpPassword: TypeConstructorDescription {
-        case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .tmpPassword(let tmpPassword, let validUntil):
-                    if boxed {
-                        buffer.appendInt32(-614138572)
-                    }
-                    serializeBytes(tmpPassword, buffer: buffer, boxed: false)
-                    serializeInt32(validUntil, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .tmpPassword(let tmpPassword, let validUntil):
-                return ("tmpPassword", [("tmpPassword", tmpPassword as Any), ("validUntil", validUntil as Any)])
-    }
-    }
-    
-        public static func parse_tmpPassword(_ reader: BufferReader) -> TmpPassword? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.TmpPassword.tmpPassword(tmpPassword: _1!, validUntil: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

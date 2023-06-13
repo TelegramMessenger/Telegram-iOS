@@ -374,6 +374,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoStoryGridScreen",
         "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
+        "//submodules/TelegramUI/Components/Stories/StorySetIndicatorComponent",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

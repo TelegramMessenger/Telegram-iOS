@@ -961,6 +961,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-350980120] = { return Api.WebPage.parse_webPageEmpty($0) }
     dict[1930545681] = { return Api.WebPage.parse_webPageNotModified($0) }
     dict[-981018084] = { return Api.WebPage.parse_webPagePending($0) }
+    dict[-1818605967] = { return Api.WebPageAttribute.parse_webPageAttributeStory($0) }
     dict[1421174295] = { return Api.WebPageAttribute.parse_webPageAttributeTheme($0) }
     dict[211046684] = { return Api.WebViewMessageSent.parse_webViewMessageSent($0) }
     dict[202659196] = { return Api.WebViewResult.parse_webViewResultUrl($0) }
