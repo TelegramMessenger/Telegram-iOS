@@ -1874,7 +1874,9 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                     items: mappedItems,
                     holeAnchors: mappedHoles,
                     count: list.totalCount,
-                    itemBinding: strongSelf.itemGridBinding
+                    itemBinding: strongSelf.itemGridBinding,
+                    headerText: nil,
+                    snapTopInset: true
                 )
 
                 let currentSynchronous = synchronous && firstTime
