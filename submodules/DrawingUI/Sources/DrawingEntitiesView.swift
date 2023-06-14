@@ -334,68 +334,68 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
         view.containerView = self
         
-//        let processSnap: (Bool, UIView) -> Void = { [weak self] snapped, snapView in
-//            guard let self else {
-//                return
-//            }
-//            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-//            if snapped {
-//                self.insertSubview(snapView, belowSubview: view)
-//                if snapView.alpha < 1.0 {
-//                    self.hapticFeedback.impact(.light)
-//                }
-//                transition.updateAlpha(layer: snapView.layer, alpha: 1.0)
-//            } else {
-//                transition.updateAlpha(layer: snapView.layer, alpha: 0.0)
-//            }
-//        }
-//
-//        view.onSnapUpdated = { [weak self, weak view] type, snapped in
-//            guard let self else {
-//                return
-//            }
-//            switch type {
-//            case .centerX:
-//                processSnap(snapped, self.xAxisView)
-//            case .centerY:
-//                processSnap(snapped, self.yAxisView)
-//            case .top:
-//                processSnap(snapped, self.topEdgeView)
-//                self.edgePreviewUpdated(snapped)
-//            case .left:
-//                processSnap(snapped, self.leftEdgeView)
-//                self.edgePreviewUpdated(snapped)
-//            case .right:
-//                processSnap(snapped, self.rightEdgeView)
-//                self.edgePreviewUpdated(snapped)
-//            case .bottom:
-//                processSnap(snapped, self.bottomEdgeView)
-//                self.edgePreviewUpdated(snapped)
-//            case let .rotation(angle):
-//                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-//                if let angle, let view {
-//                    self.layer.insertSublayer(self.angleLayer, below: view.layer)
-//                    self.angleLayer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
-//                    if self.angleLayer.opacity < 1.0 {
-//                        self.hapticFeedback.impact(.light)
-//                    }
-//                    transition.updateAlpha(layer: self.angleLayer, alpha: 1.0)
-//                } else {
-//                    transition.updateAlpha(layer: self.angleLayer, alpha: 0.0)
-//                }
-//            }
-//        }
-//        view.onPositionUpdated = { [weak self] position in
-//            if let self {
-//                self.angleLayer.position = position
-//            }
-//        }
-//        view.onInteractionUpdated = { [weak self] interacting in
-//            if let self {
-//                self.onInteractionUpdated(interacting)
-//            }
-//        }
-//
+        let processSnap: (Bool, UIView) -> Void = { [weak self] snapped, snapView in
+            guard let self else {
+                return
+            }
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            if snapped {
+                self.insertSubview(snapView, belowSubview: view)
+                if snapView.alpha < 1.0 {
+                    self.hapticFeedback.impact(.light)
+                }
+                transition.updateAlpha(layer: snapView.layer, alpha: 1.0)
+            } else {
+                transition.updateAlpha(layer: snapView.layer, alpha: 0.0)
+            }
+        }
+
+        view.onSnapUpdated = { [weak self, weak view] type, snapped in
+            guard let self else {
+                return
+            }
+            switch type {
+            case .centerX:
+                processSnap(snapped, self.xAxisView)
+            case .centerY:
+                processSnap(snapped, self.yAxisView)
+            case .top:
+                processSnap(snapped, self.topEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case .left:
+                processSnap(snapped, self.leftEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case .right:
+                processSnap(snapped, self.rightEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case .bottom:
+                processSnap(snapped, self.bottomEdgeView)
+                self.edgePreviewUpdated(snapped)
+            case let .rotation(angle):
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                if let angle, let view {
+                    self.layer.insertSublayer(self.angleLayer, below: view.layer)
+                    self.angleLayer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
+                    if self.angleLayer.opacity < 1.0 {
+                        self.hapticFeedback.impact(.light)
+                    }
+                    transition.updateAlpha(layer: self.angleLayer, alpha: 1.0)
+                } else {
+                    transition.updateAlpha(layer: self.angleLayer, alpha: 0.0)
+                }
+            }
+        }
+        view.onPositionUpdated = { [weak self] position in
+            if let self {
+                self.angleLayer.position = position
+            }
+        }
+        view.onInteractionUpdated = { [weak self] interacting in
+            if let self {
+                self.onInteractionUpdated(interacting)
+            }
+        }
+
         view.update()
         self.addSubview(view)
         

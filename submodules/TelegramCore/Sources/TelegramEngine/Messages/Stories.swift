@@ -989,6 +989,8 @@ extension Stories.StoredItem {
                             base = .contacts
                         case .privacyValueAllowCloseFriends:
                             base = .closeFriends
+                        case .privacyValueDisallowAll:
+                            base = .nobody
                         case let .privacyValueAllowUsers(users):
                             for id in users {
                                 additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
