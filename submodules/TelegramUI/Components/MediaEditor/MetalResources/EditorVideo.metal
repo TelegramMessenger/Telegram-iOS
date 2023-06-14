@@ -22,6 +22,7 @@ static inline float4 sRGBGammaDecode(const float4 rgba) {
     result.g = sRGBnonLinearNormToLinear(rgba.g);
     result.b = sRGBnonLinearNormToLinear(rgba.b);
     return rgba;
+}
 
 static inline float4 BT709Decode(const float Y, const float Cb, const float Cr) {
     float Yn = Y;
@@ -57,6 +58,6 @@ fragment float4 bt709ToRGBFragmentShader(RasterizerData in [[stage_in]],
 
     float4 pixel = BT709Decode(Y, Cb, Cr);
     pixel = sRGBGammaDecode(pixel);
-    pixel.rgb = pow(pixel.rgb, 1.0 / 2.2);
+    //pixel.rgb = pow(pixel.rgb, 1.0 / 2.2);
     return pixel;
 }

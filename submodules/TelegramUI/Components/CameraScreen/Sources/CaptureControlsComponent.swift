@@ -200,7 +200,7 @@ private final class ShutterButtonContentComponent: Component {
     }
 }
 
-private final class FlipButtonContentComponent: Component {
+final class FlipButtonContentComponent: Component {
     private let action: ActionSlot<Void>
     
     init(action: ActionSlot<Void>) {
@@ -277,6 +277,7 @@ final class CaptureControlsComponent: Component {
         case flip
     }
     
+    let isTablet: Bool
     let shutterState: ShutterButtonState
     let lastGalleryAsset: PHAsset?
     let tag: AnyObject?
@@ -291,6 +292,7 @@ final class CaptureControlsComponent: Component {
     let zoomUpdated: (CGFloat) -> Void
     
     init(
+        isTablet: Bool,
         shutterState: ShutterButtonState,
         lastGalleryAsset: PHAsset?,
         tag: AnyObject?,
@@ -304,6 +306,7 @@ final class CaptureControlsComponent: Component {
         swipeHintUpdated: @escaping (SwipeHint) -> Void,
         zoomUpdated: @escaping (CGFloat) -> Void
     ) {
+        self.isTablet = isTablet
         self.shutterState = shutterState
         self.lastGalleryAsset = lastGalleryAsset
         self.tag = tag
@@ -319,6 +322,9 @@ final class CaptureControlsComponent: Component {
     }
     
     static func ==(lhs: CaptureControlsComponent, rhs: CaptureControlsComponent) -> Bool {
+        if lhs.isTablet != rhs.isTablet {
+            return false
+        }
         if lhs.shutterState != rhs.shutterState {
             return false
         }

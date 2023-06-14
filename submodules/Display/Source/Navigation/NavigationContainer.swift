@@ -507,6 +507,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                     let displayNode = topTransition.previous.value.displayNode
                     displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak displayNode] _ in
                         displayNode?.removeFromSupernode()
+                        displayNode?.layer.removeAllAnimations()
                     })
                 } else {
                     topTransition.previous.value.setIgnoreAppearanceMethodInvocations(true)

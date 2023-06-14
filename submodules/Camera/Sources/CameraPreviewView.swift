@@ -26,12 +26,31 @@ public class CameraSimplePreviewView: UIView {
         }
     }
     
+    static func lastAdditionalStateImage() -> UIImage {
+        let imagePath = NSTemporaryDirectory() + "cameraImage2.jpg"
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: imagePath)), let image = UIImage(data: data) {
+            return image
+        } else {
+            return UIImage(bundleImageName: "Camera/SelfiePlaceholder")!
+        }
+    }
+    
+    static func saveAdditionalLastStateImage(_ image: UIImage) {
+        let imagePath = NSTemporaryDirectory() + "cameraImage2.jpg"
+        if let data = image.jpegData(compressionQuality: 0.6) {
+            try? data.write(to: URL(fileURLWithPath: imagePath))
+        }
+    }
+    
     private var previewingDisposable: Disposable?
     private let placeholderView = UIImageView()
-    public override init(frame: CGRect) {
+    public init(frame: CGRect, additional: Bool) {
         super.init(frame: frame)
         
-        self.placeholderView.image = CameraSimplePreviewView.lastStateImage()
+        self.videoPreviewLayer.videoGravity = .resizeAspectFill
+        
+        self.placeholderView.contentMode = .scaleAspectFill
+        self.placeholderView.image = additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
         self.addSubview(self.placeholderView)
         
         if #available(iOS 13.0, *) {
@@ -66,19 +85,27 @@ public class CameraSimplePreviewView: UIView {
         self.placeholderView.frame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
     }
     
+    private var _videoPreviewLayer: AVCaptureVideoPreviewLayer?
     var videoPreviewLayer: AVCaptureVideoPreviewLayer {
-        guard let layer = layer as? AVCaptureVideoPreviewLayer else {
+        if let layer = self._videoPreviewLayer {
+            return layer
+        }
+        guard let layer = self.layer as? AVCaptureVideoPreviewLayer else {
             fatalError()
         }
+        self._videoPreviewLayer = layer
         return layer
     }
     
-    var session: AVCaptureSession? {
-        get {
-            return self.videoPreviewLayer.session
-        }
-        set {
-            self.videoPreviewLayer.session = newValue
+    func invalidate() {
+        self.videoPreviewLayer.session = nil
+    }
+    
+    func setSession(_ session: AVCaptureSession, autoConnect: Bool) {
+        if autoConnect {
+            self.videoPreviewLayer.session = session
+        } else {
+            self.videoPreviewLayer.setSessionWithNoConnection(session)
         }
     }
     

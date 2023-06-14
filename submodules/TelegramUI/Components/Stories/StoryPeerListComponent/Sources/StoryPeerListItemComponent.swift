@@ -708,7 +708,7 @@ public final class StoryPeerListItemComponent: Component {
             }
             
             let titleSize = self.title.update(
-                transition: .immediate,
+                transition: titleTransition,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(string: titleString, font: Font.regular(11.0), textColor: component.theme.list.itemPrimaryTextColor)),
                     maximumNumberOfLines: 1
@@ -725,8 +725,8 @@ public final class StoryPeerListItemComponent: Component {
                 }
                 titleTransition.setPosition(view: titleView, position: titleFrame.center)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
-                transition.setScale(view: titleView, scale: effectiveScale)
-                transition.setAlpha(view: titleView, alpha: 1.0 - component.collapseFraction)
+                titleTransition.setScale(view: titleView, scale: effectiveScale)
+                titleTransition.setAlpha(view: titleView, alpha: 1.0 - component.collapseFraction)
             }
             
             if let ringAnimation = component.ringAnimation {

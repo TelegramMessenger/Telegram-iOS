@@ -261,10 +261,14 @@ final class MediaEditorScreenComponent: Component {
                 var delay: Double = 0.0
                 for button in buttons {
                     if let view = button.view {
-                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay)
-                        view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: delay)
-                        delay += 0.05
+                        view.alpha = 0.0
+                        Queue.mainQueue().after(delay, {
+                            view.alpha = 1.0
+                            view.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.0)
+                            view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
+                        })
+                        delay += 0.03
                     }
                 }
                 
@@ -928,8 +932,13 @@ final class MediaEditorScreenComponent: Component {
                         ),
                         action: { [weak self, weak state] in
                             if let self, let mediaEditor = self.component?.mediaEditor {
-                                mediaEditor.setVideoIsMuted(!mediaEditor.values.videoIsMuted)
+                                let isMuted = !mediaEditor.values.videoIsMuted
+                                mediaEditor.setVideoIsMuted(isMuted)
                                 state?.updated()
+                                
+                                if let controller = environment.controller() as? MediaEditorScreen {
+                                    controller.node.presentMutedTooltip()
+                                }
                             }
                         }
                     )),
@@ -1180,7 +1189,7 @@ public final class MediaEditorScreen: ViewController {
         
         private var isDisplayingTool = false
         private var isInteractingWithEntities = false
-        private var isEnhacing = false
+        private var isEnhancing = false
         private var isDismissing = false
         private var dismissOffset: CGFloat = 0.0
         private var isDismissed = false
@@ -1361,6 +1370,25 @@ public final class MediaEditorScreen: ViewController {
                 mediaEntity.scale = storyDimensions.width / fittedSize.width
             }
             self.entitiesView.add(mediaEntity, announce: false)
+            
+            if case let .image(_, _, additionalImage) = subject, let additionalImage {
+                let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
+                    let bounds = CGRect(origin: .zero, size: size)
+                    context.clear(bounds)
+                    context.addEllipse(in: bounds)
+                    context.clip()
+                    
+                    if let cgImage = additionalImage.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - additionalImage.size.width) / 2.0, y: (size.height - additionalImage.size.height) / 2.0), size: additionalImage.size))
+                    }
+                })
+                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage))
+                imageEntity.referenceDrawingSize = storyDimensions
+                imageEntity.scale = 1.49
+                imageEntity.mirrored = true
+                imageEntity.position = CGPoint(x: storyDimensions.width - 224.0, y: storyDimensions.height - 403.0)
+                self.entitiesView.add(imageEntity, announce: false)
+            }
             
             let initialPosition = mediaEntity.position
             let initialScale = mediaEntity.scale
@@ -1548,20 +1576,20 @@ public final class MediaEditorScreen: ViewController {
             let velocity = gestureRecognizer.velocity(in: self.view)
             switch gestureRecognizer.state {
             case .changed:
-                if abs(translation.y) > 10.0 && !self.isEnhacing && hasSwipeToDismiss {
+                if abs(translation.y) > 10.0 && !self.isEnhancing && hasSwipeToDismiss {
                     if !self.isDismissing {
                         self.isDismissing = true
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
                 } else if abs(translation.x) > 10.0 && !self.isDismissing {
-                    self.isEnhacing = true
+                    self.isEnhancing = true
                     controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                 }
                 
                 if self.isDismissing {
                     self.dismissOffset = translation.y
                     controller.requestLayout(transition: .immediate)
-                } else if self.isEnhacing {
+                } else if self.isEnhancing {
                     if let mediaEditor = self.mediaEditor {
                         let value = mediaEditor.getToolValue(.enhance) as? Float ?? 0.0
                         let delta = Float((translation.x / self.frame.width) * 1.5)
@@ -1581,8 +1609,10 @@ public final class MediaEditorScreen: ViewController {
                         controller.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                     }
                 } else {
-                    self.isEnhacing = false
-                    controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
+                    self.isEnhancing = false
+                    Queue.mainQueue().after(0.5) {
+                        controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
+                    }
                 }
             default:
                 break
@@ -1861,7 +1891,24 @@ public final class MediaEditorScreen: ViewController {
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "You can set who can view this story", location: .point(location, .top), displayDuration: .manual, inset: 16.0, shouldDismissOnTouch: { _ in
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "You can set who can view this story.", location: .point(location, .top), displayDuration: .manual, inset: 16.0, shouldDismissOnTouch: { _ in
+                return .ignore
+            })
+            self.controller?.present(tooltipController, in: .current)
+        }
+        
+        func presentMutedTooltip() {
+            guard let sourceView = self.componentHost.findTaggedView(tag: muteButtonTag) else {
+                return
+            }
+
+            let isMuted = self.mediaEditor?.values.videoIsMuted ?? false
+            
+            let parentFrame = self.view.convert(self.bounds, to: nil)
+            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
+            
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: isMuted ? "The story will have no sound." : "The story will have sound." , location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
             self.controller?.present(tooltipController, in: .current)
@@ -2187,7 +2234,7 @@ public final class MediaEditorScreen: ViewController {
                     self.previewContainerView.addSubview(toolValueView)
                 }
                 transition.setFrame(view: toolValueView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - toolValueSize.width) / 2.0), y: 88.0), size: toolValueSize))
-                transition.setAlpha(view: toolValueView, alpha: self.isEnhacing ? 1.0 : 0.0)
+                transition.setAlpha(view: toolValueView, alpha: self.isEnhancing ? 1.0 : 0.0)
             }
             
             transition.setFrame(view: self.backgroundDimView, frame: CGRect(origin: .zero, size: layout.size))
@@ -2225,14 +2272,14 @@ public final class MediaEditorScreen: ViewController {
     }
     
     public enum Subject {
-        case image(UIImage, PixelDimensions)
+        case image(UIImage, PixelDimensions, UIImage?)
         case video(String, UIImage?, PixelDimensions)
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
         
         var dimensions: PixelDimensions {
             switch self {
-            case let .image(_, dimensions), let .video(_, _, dimensions):
+            case let .image(_, dimensions, _), let .video(_, _, dimensions):
                 return dimensions
             case let .asset(asset):
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
@@ -2243,7 +2290,7 @@ public final class MediaEditorScreen: ViewController {
         
         var editorSubject: MediaEditor.Subject {
             switch self {
-            case let .image(image, dimensions):
+            case let .image(image, dimensions, _):
                 return .image(image, dimensions)
             case let .video(videoPath, transitionImage, dimensions):
                 return .video(videoPath, transitionImage, dimensions)
@@ -2256,7 +2303,7 @@ public final class MediaEditorScreen: ViewController {
         
         var mediaContent: DrawingMediaEntity.Content {
             switch self {
-            case let .image(image, dimensions):
+            case let .image(image, dimensions, _):
                 return .image(image, dimensions)
             case let .video(videoPath, _, dimensions):
                 return .video(videoPath, dimensions)
@@ -2618,7 +2665,7 @@ public final class MediaEditorScreen: ViewController {
         if saveDraft {
             self.saveDraft(id: nil)
         } else {
-//            if case let .draft(draft) = self.node.subject {
+//            if case let .draft(draft, _) = self.node.subject {
 //                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
 //            }
         }
@@ -2626,6 +2673,7 @@ public final class MediaEditorScreen: ViewController {
         if let mediaEditor = self.node.mediaEditor {
             mediaEditor.invalidate()
         }
+        self.node.entitiesView.invalidate()
         
         self.cancelled(saveDraft)
         
@@ -2680,7 +2728,7 @@ public final class MediaEditorScreen: ViewController {
                 }
                 
                 switch subject {
-                case let .image(image, dimensions):
+                case let .image(image, dimensions, _):
                     saveImageDraft(image, dimensions)
                 case let .video(path, _, dimensions):
                     saveVideoDraft(path, dimensions)
@@ -2726,6 +2774,7 @@ public final class MediaEditorScreen: ViewController {
         self.dismissAllTooltips()
         
         mediaEditor.invalidate()
+        self.node.entitiesView.invalidate()
         
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
@@ -2746,7 +2795,7 @@ public final class MediaEditorScreen: ViewController {
             let videoResult: Result.VideoResult
             let duration: Double
             switch subject {
-            case let .image(image, _):
+            case let .image(image, _, _):
                 let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
                 if let data = image.jpegData(compressionQuality: 0.85) {
                     try? data.write(to: URL(fileURLWithPath: tempImagePath))
@@ -2872,7 +2921,7 @@ public final class MediaEditorScreen: ViewController {
             case let .video(path, _, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .single(.video(asset))
-            case let .image(image, _):
+            case let .image(image, _, _):
                 exportSubject = .single(.image(image))
             case let .asset(asset):
                 exportSubject = Signal { subscriber in

@@ -1289,7 +1289,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void, editCategory: @escaping (EngineStoryPrivacy) -> Void, secondaryAction: @escaping () -> Void) {
+    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void, editCategory: @escaping (EngineStoryPrivacy) -> Void, secondaryAction: @escaping () -> Void = {}) {
         self.context = context
         
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []

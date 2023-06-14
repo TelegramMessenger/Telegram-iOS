@@ -286,6 +286,10 @@ final class MediaPickerGridItemNode: GridItemNode {
             if self.backgroundNode.supernode == nil {
                 self.insertSubnode(self.backgroundNode, at: 0)
             }
+        } else {
+            if self.draftNode.supernode != nil {
+                self.draftNode.removeFromSupernode()
+            }
         }
                 
         if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentMediaState!.1 != index {
@@ -314,6 +318,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         if stories {
             if self.backgroundNode.supernode == nil {
                 self.insertSubnode(self.backgroundNode, at: 0)
+            }
+        } else {
+            if self.draftNode.supernode != nil {
+                self.draftNode.removeFromSupernode()
             }
         }
         

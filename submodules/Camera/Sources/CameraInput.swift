@@ -1,10 +1,10 @@
 import AVFoundation
 
 class CameraInput {
-    private var videoInput: AVCaptureDeviceInput?
+    var videoInput: AVCaptureDeviceInput?
     private var audioInput: AVCaptureDeviceInput?
     
-    func configure(for session: AVCaptureSession, device: CameraDevice, audio: Bool) {
+    func configure(for session: CameraSession, device: CameraDevice, audio: Bool) {
         if let videoDevice = device.videoDevice {
             self.configureVideoInput(for: session, device: videoDevice)
         }
@@ -13,34 +13,34 @@ class CameraInput {
         }
     }
     
-    func invalidate(for session: AVCaptureSession) {
-        for input in session.inputs {
-            session.removeInput(input)
+    func invalidate(for session: CameraSession) {
+        for input in session.session.inputs {
+            session.session.removeInput(input)
         }
     }
     
-    private func configureVideoInput(for session: AVCaptureSession, device: AVCaptureDevice) {
+    private func configureVideoInput(for session: CameraSession, device: AVCaptureDevice) {
         if let currentVideoInput = self.videoInput {
-            session.removeInput(currentVideoInput)
+            session.session.removeInput(currentVideoInput)
             self.videoInput = nil
         }
         if let videoInput = try? AVCaptureDeviceInput(device: device) {
             self.videoInput = videoInput
-            if session.canAddInput(videoInput) {
-                session.addInput(videoInput)
+            if session.session.canAddInput(videoInput) {
+                session.session.addInputWithNoConnections(videoInput)
             }
         }
     }
     
-    private func configureAudioInput(for session: AVCaptureSession, device: AVCaptureDevice) {
+    private func configureAudioInput(for session: CameraSession, device: AVCaptureDevice) {
         if let currentAudioInput = self.audioInput {
-            session.removeInput(currentAudioInput)
+            session.session.removeInput(currentAudioInput)
             self.audioInput = nil
         }
         if let audioInput = try? AVCaptureDeviceInput(device: device) {
             self.audioInput = audioInput
-            if session.canAddInput(audioInput) {
-                session.addInput(audioInput)
+            if session.session.canAddInput(audioInput) {
+                session.session.addInput(audioInput)
             }
         }
     }

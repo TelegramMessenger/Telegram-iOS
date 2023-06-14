@@ -290,8 +290,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     switch value {
                     case .pendingImage:
                         return nil
-                    case let .image(image):
-                        return .image(image, PixelDimensions(image.size))
+                    case let .image(image, additionalImage):
+                        return .image(image, PixelDimensions(image.size), additionalImage)
                     case let .video(path, transitionImage, dimensions):
                         return .video(path, transitionImage, dimensions)
                     case let .asset(asset):

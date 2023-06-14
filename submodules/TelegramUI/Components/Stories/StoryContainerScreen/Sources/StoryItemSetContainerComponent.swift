@@ -19,6 +19,7 @@ import Postbox
 import AvatarNode
 import MediaEditorScreen
 import ImageCompression
+import ShareWithPeersScreen
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -239,6 +240,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         weak var actionSheet: ActionSheetController?
         weak var contextController: ContextController?
+        weak var privacyController: ShareWithPeersScreen?
         
         var component: StoryItemSetContainerComponent?
         weak var state: EmptyComponentState?
@@ -487,6 +489,12 @@ public final class StoryItemSetContainerComponent: Component {
                 return false
             }
             if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
+                return true
+            }
+            if self.privacyController != nil {
+                return true
+            }
+            if self.isEditingStory {
                 return true
             }
             if self.sendMessageContext.attachmentController != nil {
@@ -2055,12 +2063,41 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             component.externalState.derivedMediaSize = contentFrame.size
-            component.externalState.derivedBottomInset = availableSize.height - min(inputPanelFrame.minY, contentFrame.maxY)
+            if focusedItem?.isMy == true {
+                component.externalState.derivedBottomInset = availableSize.height - contentFrame.maxY
+            } else {
+                component.externalState.derivedBottomInset = availableSize.height - min(inputPanelFrame.minY, contentFrame.maxY)
+            }
             
             return contentSize
         }
         
         private func openItemPrivacySettings() {
+            guard let context = self.component?.context, let privacy = self.component?.slice.item.storyItem.privacy else {
+                return
+            }
+            
+            let stateContext = ShareWithPeersScreen.StateContext(context: context, subject: .stories)
+            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                let controller = ShareWithPeersScreen(
+                    context: context,
+                    initialPrivacy: privacy,
+                    stateContext: stateContext,
+                    completion: { [weak self] privacy in
+                        self?.updateIsProgressPaused()
+                    },
+                    editCategory: { privacy in
+                        
+                    }
+                )
+                self.component?.controller()?.push(controller)
+                
+                self.privacyController = controller
+                self.updateIsProgressPaused()
+            })
         }
         
         private func openStoryEditing() {

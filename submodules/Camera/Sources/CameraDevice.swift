@@ -29,7 +29,7 @@ final class CameraDevice {
     
     public private(set) var audioDevice: AVCaptureDevice? = nil
         
-    func configure(for session: AVCaptureSession, position: Camera.Position) {
+    func configure(for session: CameraSession, position: Camera.Position) {
         self.position = position
         if let videoDevice = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInDualCamera, .builtInWideAngleCamera, .builtInTelephotoCamera], mediaType: .video, position: position).devices.first {
             self.videoDevice = videoDevice
