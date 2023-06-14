@@ -1897,11 +1897,17 @@ public final class MediaEditorScreen: ViewController {
             self.controller?.present(tooltipController, in: .current)
         }
         
+        private weak var muteTooltip: ViewController?
         func presentMutedTooltip() {
             guard let sourceView = self.componentHost.findTaggedView(tag: muteButtonTag) else {
                 return
             }
 
+            if let muteTooltip = self.muteTooltip {
+                muteTooltip.dismiss()
+                self.muteTooltip = nil
+            }
+            
             let isMuted = self.mediaEditor?.values.videoIsMuted ?? false
             
             let parentFrame = self.view.convert(self.bounds, to: nil)
@@ -1911,6 +1917,7 @@ public final class MediaEditorScreen: ViewController {
             let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: isMuted ? "The story will have no sound." : "The story will have sound." , location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
             })
+            self.muteTooltip = tooltipController
             self.controller?.present(tooltipController, in: .current)
         }
         

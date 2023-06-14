@@ -7004,7 +7004,8 @@ public final class EmojiPagerContentComponent: Component {
         topicTitle: String? = nil,
         topicColor: Int32? = nil,
         hasSearch: Bool = true,
-        forceHasPremium: Bool = false
+        forceHasPremium: Bool = false,
+        premiumIfSavedMessages: Bool = true
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -7071,7 +7072,7 @@ public final class EmojiPagerContentComponent: Component {
         
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
-            forceHasPremium ? .single(true) : hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
+            forceHasPremium ? .single(true) : hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: premiumIfSavedMessages),
             context.account.viewTracker.featuredEmojiPacks(),
             availableReactions,
             searchCategories,

@@ -404,7 +404,8 @@ final class StoryItemSetViewListComponent: Component {
                         self.visibleItems[item.peer.id] = visibleItem
                     }
                     
-                    let dateText = humanReadableStringForTimestamp(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), timestamp: item.timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    let dateText = humanReadableStringForTimestamp(strings: component.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: item.timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
                         dateFormatString: { value in
                             return PresentationStrings.FormattedString(string: component.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
                         },

@@ -1820,7 +1820,8 @@ public final class StoryItemSetContainerComponent: Component {
                                 areUnicodeEmojiEnabled: false,
                                 areCustomEmojiEnabled: true,
                                 chatPeerId: component.context.account.peerId,
-                                selectedItems: Set()
+                                selectedItems: Set(),
+                                premiumIfSavedMessages: false
                             )
                         },
                         isExpandedUpdated: { [weak self] transition in
@@ -1896,43 +1897,63 @@ public final class StoryItemSetContainerComponent: Component {
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                             
                             if let centerAnimation = reaction.centerAnimation {
-                                /*let file = centerAnimation
+                                let file = centerAnimation
                                 
-                                var text = "."
-                                loop: for attribute in file.attributes {
-                                    switch attribute {
-                                    case let .CustomEmoji(_, _, displayText, _):
-                                        text = displayText
-                                        break loop
-                                    default:
-                                        break
+                                var text = ""
+                                var messageAttributes: [MessageAttribute] = []
+                                var inlineStickers: [MediaId : Media] = [:]
+                                switch reaction.value {
+                                case let .builtin(textValue):
+                                    text = textValue
+                                case .custom:
+                                    loop: for attribute in file.attributes {
+                                        switch attribute {
+                                        case let .CustomEmoji(_, _, displayText, _):
+                                            text = displayText
+                                            messageAttributes = [
+                                                TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< 1, type: .CustomEmoji(stickerPack: nil, fileId: centerAnimation.fileId.id))])
+                                            ]
+                                            inlineStickers = [centerAnimation.fileId: centerAnimation]
+                                            break loop
+                                        default:
+                                            break
+                                        }
                                     }
-                                }*/
+                                }
+  
                                 
                                 let message: EnqueueMessage = .message(
-                                    text: "",
-                                    attributes: [
-                                        //TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< 1, type: .CustomEmoji(stickerPack: nil, fileId: centerAnimation.fileId.id))])
-                                    ],
-                                    inlineStickers: [:],//[centerAnimation.fileId: centerAnimation],
-                                    mediaReference: AnyMediaReference.standalone(media: reaction.activateAnimation),
+                                    text: text,
+                                    attributes: messageAttributes,
+                                    inlineStickers: inlineStickers,
+                                    mediaReference: nil,
                                     replyToMessageId: nil,
                                     replyToStoryId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
                                     localGroupingKey: nil,
                                     correlationId: nil,
                                     bubbleUpEmojiOrStickersets: []
                                 )
-                                let _ = enqueueMessages(account: component.context.account, peerId: component.slice.peer.id, messages: [message]).start()
                                 
+                                let context = component.context
                                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                component.presentController(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .sticker(context: component.context, file: centerAnimation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: {
-                                    }),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ))
+                                let presentController = component.presentController
+                                let controller = component.controller
+                                let peer = component.slice.peer
+                                
+                                let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: [message])
+                                |> deliverOnMainQueue).start(next: { messageIds in
+                                    presentController(UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .sticker(context: context, file: centerAnimation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: {
+                                            if let messageId = messageIds.first, let messageId, let navigationController = controller()?.navigationController as? NavigationController {
+                                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: false, timecode: nil)))
+                                            }
+                                        }),
+                                        elevatedLayout: false,
+                                        animateInAsReplacement: false,
+                                        action: { _ in return false }
+                                    ))
+                                })
                             }
                         })
                     }
