@@ -758,8 +758,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     isVideo = isVideoValue
                     if discardReason != .busy && discardReason != .missed {
                         if let logName = callLogNameForId(id: id, account: context.account) {
+                            /*
                             let logsPath = callLogsPath(account: context.account)
                             let logPath = logsPath + "/" + logName
+                            */
                             let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
                             let end: String.Index
                             if logName.hasSuffix(".log.json") {
@@ -772,6 +774,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 callId = CallId(id: id, accessHash: accessHash)
                             }
                             
+                            /*
                             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Call_ShareStats, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
@@ -793,6 +796,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 }
                                 controllerInteraction.navigationController()?.pushViewController(controller)
                             })))
+                            */
                         }
                     }
                     break

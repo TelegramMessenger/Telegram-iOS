@@ -1397,7 +1397,9 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         }
 //        entries.append(.restorePurchases(presentationData.theme))
         
-        entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
+        if sharedContext.currentPtgSettings.with({ $0.isTestingEnvironment == true }) {
+            entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
+        }
         entries.append(.resetTranslationStates)
         
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
