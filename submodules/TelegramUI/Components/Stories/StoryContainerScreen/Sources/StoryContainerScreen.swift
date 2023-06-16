@@ -250,15 +250,27 @@ private final class StoryContainerScreenComponent: Component {
             return true
         }
         
-        private func beginHorizontalPan() {
-            self.layer.removeAnimation(forKey: "panState")
+        private func beginHorizontalPan(translation: CGPoint) {
+            if self.layer.animation(forKey: "panState") != nil {
+                self.layer.removeAnimation(forKey: "panState")
+            }
+            
+            let updateImmediately = abs(translation.x) > 0.0
             
             if let itemSetPanState = self.itemSetPanState, !itemSetPanState.didBegin {
                 self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                if !updateImmediately {
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                }
             } else {
                 self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
-                self.state?.updated(transition: .immediate)
+                if !updateImmediately {
+                    self.state?.updated(transition: .immediate)
+                }
+            }
+            
+            if updateImmediately {
+                self.updateHorizontalPan(translation: translation)
             }
         }
         
@@ -341,7 +353,7 @@ private final class StoryContainerScreenComponent: Component {
         @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
             switch recognizer.state {
             case .began:
-                self.beginHorizontalPan()
+                self.beginHorizontalPan(translation: recognizer.translation(in: self))
             case .changed:
                 self.updateHorizontalPan(translation: recognizer.translation(in: self))
             case .cancelled, .ended:
@@ -409,14 +421,14 @@ private final class StoryContainerScreenComponent: Component {
                     if stateValue.previousSlice == nil {
                             
                     } else {
-                        self.beginHorizontalPan()
+                        self.beginHorizontalPan(translation: CGPoint())
                         self.commitHorizontalPan(velocity: CGPoint(x: 100.0, y: 0.0))
                     }
                 } else if location.x > currentItemView.frame.maxX {
                     if stateValue.nextSlice == nil {
                         environment.controller()?.dismiss()
                     } else {
-                        self.beginHorizontalPan()
+                        self.beginHorizontalPan(translation: CGPoint())
                         self.commitHorizontalPan(velocity: CGPoint(x: -100.0, y: 0.0))
                     }
                 }
@@ -430,10 +442,8 @@ private final class StoryContainerScreenComponent: Component {
                 }
                 
                 if subview is ItemSetView {
-                    if self.itemSetPanState == nil {
-                        if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
-                            return result
-                        }
+                    if let result = subview.hitTest(self.convert(point, to: subview), with: event) {
+                        return result
                     }
                 } else {
                     if let result = subview.hitTest(self.convert(self.convert(point, to: subview), to: subview), with: event) {
@@ -738,7 +748,7 @@ private final class StoryContainerScreenComponent: Component {
                                             if stateValue.nextSlice == nil {
                                                 environment.controller()?.dismiss()
                                             } else {
-                                                self.beginHorizontalPan()
+                                                self.beginHorizontalPan(translation: CGPoint())
                                                 self.updateHorizontalPan(translation: CGPoint())
                                                 self.commitHorizontalPan(velocity: CGPoint(x: -100.0, y: 0.0))
                                             }
@@ -750,7 +760,7 @@ private final class StoryContainerScreenComponent: Component {
                                                     }
                                                 }
                                             } else {
-                                                self.beginHorizontalPan()
+                                                self.beginHorizontalPan(translation: CGPoint())
                                                 self.updateHorizontalPan(translation: CGPoint())
                                                 self.commitHorizontalPan(velocity: CGPoint(x: 100.0, y: 0.0))
                                             }
@@ -882,27 +892,29 @@ private final class StoryContainerScreenComponent: Component {
                             Transition.immediate.setTransform(view: itemSetComponentView, transform: faceTransform)
                             Transition.immediate.setTransform(layer: itemSetView.tintLayer, transform: faceTransform)
                             
-                            if let previousRotationFraction = itemSetView.rotationFraction {
+                            if let previousRotationFraction = itemSetView.rotationFraction, !itemSetTransition.animation.isImmediate {
                                 let fromT = previousRotationFraction
-                                let toT = panFraction
+                                let toT = panFraction + cubeAdditionalRotationFraction
                                 itemSetTransition.setTransformAsKeyframes(view: itemSetView, transform: { sourceT, isFinal in
                                     let t = fromT * (1.0 - sourceT) + toT * sourceT
-                                    if abs((t + cubeAdditionalRotationFraction) - 0.0) < 0.0001 {
-                                        if isFinal {
+                                    if isFinal {
+                                        if abs(t - 0.0) <= 0.0001 {
                                             return CATransform3DIdentity
                                         }
                                     }
                                     
-                                    return calculateCubeTransform(rotationFraction: t + cubeAdditionalRotationFraction, sideAngle: sideAngle, cubeSize: itemFrame.size)
+                                    return calculateCubeTransform(rotationFraction: t, sideAngle: sideAngle, cubeSize: itemFrame.size)
                                 })
                             } else {
-                                if panFraction == 0.0 {
-                                    itemSetTransition.setTransform(view: itemSetView, transform: CATransform3DIdentity)
+                                let updatedTransform: CATransform3D
+                                if abs(panFraction + cubeAdditionalRotationFraction) <= 0.0001 {
+                                    updatedTransform = CATransform3DIdentity
                                 } else {
-                                    itemSetTransition.setTransform(view: itemSetView, transform: calculateCubeTransform(rotationFraction: panFraction + cubeAdditionalRotationFraction, sideAngle: sideAngle, cubeSize: itemFrame.size))
+                                    updatedTransform = calculateCubeTransform(rotationFraction: panFraction + cubeAdditionalRotationFraction, sideAngle: sideAngle, cubeSize: itemFrame.size)
                                 }
+                                itemSetTransition.setTransform(view: itemSetView, transform: updatedTransform)
                             }
-                            itemSetView.rotationFraction = panFraction
+                            itemSetView.rotationFraction = panFraction + cubeAdditionalRotationFraction
                             
                             var alphaFraction = panFraction + cubeAdditionalRotationFraction
                             

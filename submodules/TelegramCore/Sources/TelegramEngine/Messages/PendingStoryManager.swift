@@ -185,7 +185,7 @@ final class PendingStoryManager {
             if let currentPendingItemContext = self.currentPendingItemContext, currentPendingItemContext.item.stableId == stableId {
                 next(currentPendingItemContext.progress)
             } else {
-                next(1.0)
+                next(0.0)
             }
             
             let queue = self.queue
