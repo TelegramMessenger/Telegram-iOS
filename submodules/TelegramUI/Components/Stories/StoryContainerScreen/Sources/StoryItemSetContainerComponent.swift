@@ -20,6 +20,7 @@ import AvatarNode
 import MediaEditorScreen
 import ImageCompression
 import ShareWithPeersScreen
+import PlainButtonComponent
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -37,6 +38,7 @@ public final class StoryItemSetContainerComponent: Component {
     
     public let context: AccountContext
     public let externalState: ExternalState
+    public let storyItemSharedState: StoryContentItem.SharedState
     public let slice: StoryContentContextState.FocusedSlice
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -59,6 +61,7 @@ public final class StoryItemSetContainerComponent: Component {
     public init(
         context: AccountContext,
         externalState: ExternalState,
+        storyItemSharedState: StoryContentItem.SharedState,
         slice: StoryContentContextState.FocusedSlice,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -80,6 +83,7 @@ public final class StoryItemSetContainerComponent: Component {
     ) {
         self.context = context
         self.externalState = externalState
+        self.storyItemSharedState = storyItemSharedState
         self.slice = slice
         self.theme = theme
         self.strings = strings
@@ -531,6 +535,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let itemEnvironment = StoryContentItem.Environment(
                 externalState: visibleItem.externalState,
+                sharedState: component.storyItemSharedState,
                 presentationProgressUpdated: { [weak self, weak visibleItem] progress, canSwitch in
                     guard let self = self, let component = self.component else {
                         return
@@ -667,11 +672,13 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 if let rightInfoView = self.rightInfoItem?.view.view {
-                    if transitionIn.sourceCornerRadius != 0.0 {
+                    if transitionIn.sourceIsAvatar {
                         let positionKeyframes: [CGPoint] = generateParabollicMotionKeyframes(from: CGPoint(x: innerSourceLocalFrame.center.x - rightInfoView.layer.position.x, y: innerSourceLocalFrame.center.y - rightInfoView.layer.position.y), to: CGPoint(), elevation: 0.0, duration: 0.3, curve: .spring, reverse: false)
                         rightInfoView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: 0.3, keyPath: "position", additive: true)
                         
                         rightInfoView.layer.animateScale(from: innerSourceLocalFrame.width / rightInfoView.bounds.width, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    } else {
+                        rightInfoView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                     }
                 }
                 
@@ -1553,6 +1560,12 @@ public final class StoryItemSetContainerComponent: Component {
                             self.contextController = contextController
                             self.updateIsProgressPaused()
                             controller.present(contextController, in: .window(.root))
+                        },
+                        openPeer: { [weak self] peer in
+                            guard let self else {
+                                return
+                            }
+                            self.navigateToPeer(peer: peer)
                         }
                     )),
                     environment: {},
@@ -1658,7 +1671,12 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let rightInfoItemSize = currentRightInfoItem.view.update(
                     transition: .immediate,
-                    component: currentRightInfoItem.component,
+                    component: AnyComponent(PlainButtonComponent(content: currentRightInfoItem.component, effectAlignment: .center, action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        self.navigateToPeer(peer: component.slice.peer)
+                    })),
                     environment: {},
                     containerSize: CGSize(width: 36.0, height: 36.0)
                 )
@@ -1762,13 +1780,15 @@ public final class StoryItemSetContainerComponent: Component {
                     containerSize: CGSize(width: availableSize.width, height: contentFrame.height)
                 )
                 captionItem.view.parentState = state
-                let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.maxY - captionSize.height), size: captionSize)
+                let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.height - captionSize.height), size: captionSize)
                 if let captionItemView = captionItem.view.view {
                     if captionItemView.superview == nil {
-                        self.addSubview(captionItemView)
+                        if self.contentContainerView.subviews.count >= 1 {
+                            self.contentContainerView.insertSubview(captionItemView, at: 1)
+                        }
                     }
                     captionItemTransition.setFrame(view: captionItemView, frame: captionFrame)
-                    captionItemTransition.setAlpha(view: captionItemView, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+                    captionItemTransition.setAlpha(view: captionItemView, alpha: (component.hideUI || self.displayViewList || self.inputPanelExternalState.isEditing) ? 0.0 : 1.0)
                 }
             }
             
@@ -2108,10 +2128,18 @@ public final class StoryItemSetContainerComponent: Component {
                     initialPrivacy: privacy,
                     stateContext: stateContext,
                     completion: { [weak self] privacy in
-                        self?.updateIsProgressPaused()
-                    },
-                    editCategory: { privacy in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
                         
+                        self.updateIsProgressPaused()
+                    },
+                    editCategory: { [weak self] privacy in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
                     }
                 )
                 self.component?.controller()?.push(controller)
@@ -2119,6 +2147,33 @@ public final class StoryItemSetContainerComponent: Component {
                 self.privacyController = controller
                 self.updateIsProgressPaused()
             })
+        }
+        
+        private func navigateToPeer(peer: EnginePeer) {
+            guard let component = self.component else {
+                return
+            }
+            guard let controller = component.controller() as? StoryContainerScreen else {
+                return
+            }
+            guard let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            
+            component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+                guard let controller, let navigationController else {
+                    return
+                }
+                var viewControllers = navigationController.viewControllers
+                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                    viewControllers.insert(chatController, at: index)
+                } else {
+                    viewControllers.append(chatController)
+                }
+                navigationController.setViewControllers(viewControllers, animated: animated)
+            }))
+            
+            controller.dismissWithoutTransitionOut()
         }
         
         private func openStoryEditing() {

@@ -828,6 +828,7 @@ public final class ChatListHeaderComponent: Component {
                         context: component.context,
                         theme: component.theme,
                         strings: component.strings,
+                        sideInset: component.sideInset,
                         includesHidden: component.storiesIncludeHidden,
                         storySubscriptions: storySubscriptions,
                         collapseFraction: 1.0 - component.storiesFraction,

@@ -912,6 +912,7 @@ public class Account {
     private var resetPeerHoleManagement: ((PeerId) -> Void)?
     
     public private(set) var pendingMessageManager: PendingMessageManager!
+    private(set) var pendingStoryManager: PendingStoryManager?
     public private(set) var pendingUpdateMessageManager: PendingUpdateMessageManager!
     private(set) var messageMediaPreuploadManager: MessageMediaPreuploadManager!
     private(set) var mediaReferenceRevalidationContext: MediaReferenceRevalidationContext!
@@ -1041,6 +1042,11 @@ public class Account {
         
         self.messageMediaPreuploadManager = MessageMediaPreuploadManager()
         self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, accountPeerId: peerId, auxiliaryMethods: auxiliaryMethods, stateManager: self.stateManager, localInputActivityManager: self.localInputActivityManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext)
+        if !supplementary {
+            self.pendingStoryManager = PendingStoryManager(postbox: postbox, network: network, accountPeerId: peerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.mediaReferenceRevalidationContext, auxiliaryMethods: self.auxiliaryMethods)
+        } else {
+            self.pendingStoryManager = nil
+        }
         self.pendingUpdateMessageManager = PendingUpdateMessageManager(postbox: postbox, network: network, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext)
         self.pendingPeerMediaUploadManager = PendingPeerMediaUploadManager(postbox: postbox, network: network, stateManager: self.stateManager, accountPeerId: self.peerId)
         
@@ -1155,6 +1161,7 @@ public class Account {
         let extractedExpr: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.pendingMessageManager.hasPendingMessages |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
+            (self.pendingStoryManager?.hasPending ?? .single(false)) |> map { hasPending in hasPending ? AccountRunningImportantTasks.pendingMessages : [] },
             self.pendingUpdateMessageManager.updatingMessageMedia |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
             self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
             self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },

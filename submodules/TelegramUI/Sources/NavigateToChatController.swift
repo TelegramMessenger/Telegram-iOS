@@ -157,9 +157,15 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 resolvedKeepStack = false
         }
         if resolvedKeepStack {
-            params.navigationController.pushViewController(controller, animated: params.animated, completion: {
-                params.completion(controller)
-            })
+            if let pushController = params.pushController {
+                pushController(controller, params.animated, {
+                    params.completion(controller)
+                })
+            } else {
+                params.navigationController.pushViewController(controller, animated: params.animated, completion: {
+                    params.completion(controller)
+                })
+            }
         } else {
             let viewControllers = params.navigationController.viewControllers.filter({ controller in
                 if controller is ForumCreateTopicScreen {

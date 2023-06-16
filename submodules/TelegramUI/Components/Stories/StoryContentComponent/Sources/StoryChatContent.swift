@@ -28,13 +28,14 @@ public final class StoryContentContextImpl: StoryContentContext {
         private var disposable: Disposable?
         private var loadDisposable: Disposable?
         
-        private let currentFocusedIdPromise = Promise<Int32?>()
+        private let currentFocusedIdUpdatedPromise = Promise<Void>()
         private var storedFocusedId: Int32?
+        private var currentMappedItems: [EngineStoryItem]?
         var currentFocusedId: Int32? {
             didSet {
                 if self.currentFocusedId != self.storedFocusedId {
                     self.storedFocusedId = self.currentFocusedId
-                    self.currentFocusedIdPromise.set(.single(self.currentFocusedId))
+                    self.currentFocusedIdUpdatedPromise.set(.single(Void()))
                 }
             }
         }
@@ -43,20 +44,25 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.context = context
             self.peerId = peerId
             
-            self.currentFocusedIdPromise.set(.single(initialFocusedId))
+            self.currentFocusedId = initialFocusedId
+            self.currentFocusedIdUpdatedPromise.set(.single(Void()))
             
+            var inputKeys: [PostboxViewKey] = [
+                PostboxViewKey.basicPeer(peerId),
+                PostboxViewKey.storiesState(key: .peer(peerId)),
+                PostboxViewKey.storyItems(peerId: peerId)
+            ]
+            if peerId == context.account.peerId {
+                inputKeys.append(PostboxViewKey.storiesState(key: .local))
+            }
             self.disposable = (combineLatest(queue: .mainQueue(),
-                self.currentFocusedIdPromise.get(),
+                self.currentFocusedIdUpdatedPromise.get(),
                 context.account.postbox.combinedView(
-                    keys: [
-                        PostboxViewKey.basicPeer(peerId),
-                        PostboxViewKey.storiesState(key: .peer(peerId)),
-                        PostboxViewKey.storyItems(peerId: peerId)
-                    ]
+                    keys: inputKeys
                 )
             )
-            |> mapToSignal { currentFocusedId, views -> Signal<(Int32?, CombinedView, [PeerId: Peer]), NoError> in
-                return context.account.postbox.transaction { transaction -> (Int32?, CombinedView, [PeerId: Peer]) in
+            |> mapToSignal { _, views -> Signal<(CombinedView, [PeerId: Peer]), NoError> in
+                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer]) in
                     var peers: [PeerId: Peer] = [:]
                     if let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView {
                         for item in itemsView.items {
@@ -71,10 +77,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                             }
                         }
                     }
-                    return (currentFocusedId, views, peers)
+                    return (views, peers)
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] currentFocusedId, views, peers in
+            |> deliverOnMainQueue).start(next: { [weak self] views, peers in
                 guard let self else {
                     return
                 }
@@ -84,7 +90,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 guard let stateView = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView else {
                     return
                 }
-                guard let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView else {
+                guard let peerStoryItemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView else {
                     return
                 }
                 guard let peer = peerView.peer.flatMap(EnginePeer.init) else {
@@ -92,86 +98,134 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 let state = stateView.value?.get(Stories.PeerState.self)
                 
+                var mappedItems: [EngineStoryItem] = peerStoryItemsView.items.compactMap { item -> EngineStoryItem? in
+                    guard case let .item(item) = item.value.get(Stories.StoredItem.self) else {
+                        return nil
+                    }
+                    guard let media = item.media else {
+                        return nil
+                    }
+                    return EngineStoryItem(
+                        id: item.id,
+                        timestamp: item.timestamp,
+                        expirationTimestamp: item.expirationTimestamp,
+                        media: EngineMedia(media),
+                        text: item.text,
+                        entities: item.entities,
+                        views: item.views.flatMap { views in
+                            return EngineStoryItem.Views(
+                                seenCount: views.seenCount,
+                                seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                    return peers[id].flatMap(EnginePeer.init)
+                                }
+                            )
+                        },
+                        privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                        isPinned: item.isPinned,
+                        isExpired: item.isExpired,
+                        isPublic: item.isPublic,
+                        isPending: false
+                    )
+                }
+                if peerId == context.account.peerId, let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
+                    for item in localState.items {
+                        mappedItems.append(EngineStoryItem(
+                            id: item.stableId,
+                            timestamp: item.timestamp,
+                            expirationTimestamp: Int32.max,
+                            media: EngineMedia(item.media),
+                            text: item.text,
+                            entities: item.entities,
+                            views: nil,
+                            privacy: item.privacy,
+                            isPinned: item.pin,
+                            isExpired: false,
+                            isPublic: false,
+                            isPending: true
+                        ))
+                    }
+                }
+                
+                let currentFocusedId = self.storedFocusedId
+                
                 var focusedIndex: Int?
                 if let currentFocusedId {
-                    focusedIndex = itemsView.items.firstIndex(where: { $0.id == currentFocusedId })
+                    focusedIndex = mappedItems.firstIndex(where: { $0.id == currentFocusedId })
+                    if focusedIndex == nil {
+                        if let currentMappedItems = self.currentMappedItems {
+                            if let previousIndex = currentMappedItems.firstIndex(where: { $0.id == currentFocusedId }) {
+                                if currentMappedItems[previousIndex].isPending {
+                                    if let updatedId = context.engine.messages.lookUpPendingStoryIdMapping(stableId: currentFocusedId) {
+                                        if let index = mappedItems.firstIndex(where: { $0.id == updatedId }) {
+                                            focusedIndex = index
+                                        }
+                                    }
+                                }
+                                
+                                if focusedIndex == nil && previousIndex != 0 {
+                                    for index in (0 ..< previousIndex).reversed() {
+                                        if let value = mappedItems.firstIndex(where: { $0.id == currentMappedItems[index].id }) {
+                                            focusedIndex = value
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 if focusedIndex == nil, let state {
                     if let storedFocusedId = self.storedFocusedId {
-                        focusedIndex = itemsView.items.firstIndex(where: { $0.id >= storedFocusedId })
+                        focusedIndex = mappedItems.firstIndex(where: { $0.id >= storedFocusedId })
+                    } else if let index = mappedItems.firstIndex(where: { $0.isPending }) {
+                        focusedIndex = index
                     } else {
-                        focusedIndex = itemsView.items.firstIndex(where: { $0.id > state.maxReadId })
+                        focusedIndex = mappedItems.firstIndex(where: { $0.id > state.maxReadId })
                     }
                 }
                 if focusedIndex == nil {
-                    if !itemsView.items.isEmpty {
+                    if !mappedItems.isEmpty {
                         focusedIndex = 0
                     }
                 }
                 
+                self.currentMappedItems = mappedItems
+                
                 if let focusedIndex {
-                    self.storedFocusedId = itemsView.items[focusedIndex].id
+                    self.storedFocusedId = mappedItems[focusedIndex].id
                     
                     var previousItemId: Int32?
                     var nextItemId: Int32?
                     
                     if focusedIndex != 0 {
-                        previousItemId = itemsView.items[focusedIndex - 1].id
+                        previousItemId = mappedItems[focusedIndex - 1].id
                     }
-                    if focusedIndex != itemsView.items.count - 1 {
-                        nextItemId = itemsView.items[focusedIndex + 1].id
+                    if focusedIndex != mappedItems.count - 1 {
+                        nextItemId = mappedItems[focusedIndex + 1].id
                     }
                     
                     var loadKeys: [StoryKey] = []
-                    for index in (focusedIndex - 2) ... (focusedIndex + 2) {
-                        if index >= 0 && index < itemsView.items.count {
-                            if let item = itemsView.items[index].value.get(Stories.StoredItem.self), case .placeholder = item {
-                                loadKeys.append(StoryKey(peerId: peerId, id: item.id))
+                    if let mappedFocusedIndex = peerStoryItemsView.items.firstIndex(where: { $0.id == mappedItems[focusedIndex].id }) {
+                        for index in (mappedFocusedIndex - 2) ... (mappedFocusedIndex + 2) {
+                            if index >= 0 && index < peerStoryItemsView.items.count {
+                                if let item = peerStoryItemsView.items[index].value.get(Stories.StoredItem.self), case .placeholder = item {
+                                    loadKeys.append(StoryKey(peerId: peerId, id: item.id))
+                                }
                             }
                         }
-                    }
-                    if !loadKeys.isEmpty {
-                        loadIds(loadKeys)
+                        if !loadKeys.isEmpty {
+                            loadIds(loadKeys)
+                        }
                     }
                     
-                    if let item = itemsView.items[focusedIndex].value.get(Stories.StoredItem.self), case let .item(item) = item, let media = item.media {
-                        let mappedItem = EngineStoryItem(
-                            id: item.id,
-                            timestamp: item.timestamp,
-                            expirationTimestamp: item.expirationTimestamp,
-                            media: EngineMedia(media),
-                            text: item.text,
-                            entities: item.entities,
-                            views: item.views.flatMap { views in
-                                return EngineStoryItem.Views(
-                                    seenCount: views.seenCount,
-                                    seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
-                                        return peers[id].flatMap(EnginePeer.init)
-                                    }
-                                )
-                            },
-                            privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
-                            isPinned: item.isPinned,
-                            isExpired: item.isExpired,
-                            isPublic: item.isPublic
-                        )
+                    do {
+                        let mappedItem = mappedItems[focusedIndex]
                         
                         var nextItems: [EngineStoryItem] = []
-                        for i in (focusedIndex + 1) ..< min(focusedIndex + 4, itemsView.items.count) {
-                            if let item = itemsView.items[i].value.get(Stories.StoredItem.self), case let .item(item) = item, let media = item.media {
-                                nextItems.append(EngineStoryItem(
-                                    id: item.id,
-                                    timestamp: item.timestamp,
-                                    expirationTimestamp: item.expirationTimestamp,
-                                    media: EngineMedia(media),
-                                    text: item.text,
-                                    entities: item.entities,
-                                    views: nil,
-                                    privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
-                                    isPinned: item.isPinned,
-                                    isExpired: item.isExpired,
-                                    isPublic: item.isPublic
-                                ))
+                        for i in (focusedIndex + 1) ..< min(focusedIndex + 4, mappedItems.count) {
+                            do {
+                                let item = mappedItems[i]
+                                nextItems.append(item)
                             }
                         }
                         
@@ -179,7 +233,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         self.sliceValue = StoryContentContextState.FocusedSlice(
                             peer: peer,
                             item: StoryContentItem(
-                                id: AnyHashable(item.id),
+                                id: AnyHashable(mappedItem.id),
                                 position: focusedIndex,
                                 component: AnyComponent(StoryItemContentComponent(
                                     context: context,
@@ -189,7 +243,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(
                                     context: context,
                                     peer: peer,
-                                    timestamp: item.timestamp
+                                    timestamp: mappedItem.timestamp
                                 )),
                                 rightInfoComponent: AnyComponent(StoryAvatarInfoComponent(
                                     context: context,
@@ -199,7 +253,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 storyItem: mappedItem,
                                 isMy: peerId == context.account.peerId
                             ),
-                            totalCount: itemsView.items.count,
+                            totalCount: mappedItems.count,
                             previousItemId: previousItemId,
                             nextItemId: nextItemId
                         )
@@ -840,14 +894,29 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
         
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId)),
-            context.account.postbox.transaction { transaction -> Stories.StoredItem? in
-                return transaction.getStory(id: storyId)?.get(Stories.StoredItem.self)
+            context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer]) in
+                guard let item = transaction.getStory(id: storyId)?.get(Stories.StoredItem.self) else {
+                    return (nil, [:])
+                }
+                var peers: [PeerId: Peer] = [:]
+                if case let .item(item) = item {
+                    if let views = item.views {
+                        for id in views.seenPeerIds {
+                            if let peer = transaction.getPeer(id) {
+                                peers[peer.id] = peer
+                            }
+                        }
+                    }
+                }
+                return (item, peers)
             }
         )
-        |> deliverOnMainQueue).start(next: { [weak self] peer, item in
+        |> deliverOnMainQueue).start(next: { [weak self] peer, itemAndPeers in
             guard let self else {
                 return
             }
+            
+            let (item, peers) = itemAndPeers
             
             if item == nil {
                 let storyKey = StoryKey(peerId: storyId.peerId, id: storyId.id)
@@ -870,14 +939,15 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                         return EngineStoryItem.Views(
                             seenCount: views.seenCount,
                             seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
-                                return nil
+                                return peers[id].flatMap(EnginePeer.init)
                             }
                         )
                     },
                     privacy: itemValue.privacy.flatMap(EngineStoryPrivacy.init),
                     isPinned: itemValue.isPinned,
                     isExpired: itemValue.isExpired,
-                    isPublic: itemValue.isPublic
+                    isPublic: itemValue.isPublic,
+                    isPending: false
                 )
                 
                 let stateValue = StoryContentContextState(

@@ -254,23 +254,6 @@ final class ContactsControllerNode: ASDisplayNode {
             self.controller?.requestLayout(transition: transition)
             //self.chatListDisplayNode.temporaryContentOffsetChangeTransition = nil
             
-            /*self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
-                var chatListState = chatListState
-                
-                var peersWithNewStories = Set<EnginePeer.Id>()
-                for item in storySubscriptions.items {
-                    if item.peer.id == self.context.account.peerId {
-                        continue
-                    }
-                    if item.hasUnseen {
-                        peersWithNewStories.insert(item.peer.id)
-                    }
-                }
-                chatListState.peersWithNewStories = peersWithNewStories
-                
-                return chatListState
-            }*/
-            
             self.storiesReady.set(.single(true))
         })
     }

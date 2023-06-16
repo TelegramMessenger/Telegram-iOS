@@ -115,6 +115,9 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode {
         self.videoNode.playOnceWithSound(playAndRecord: playAndRecord)
     }
     
+    func continueWithOverridingAmbientMode() {
+    }
+    
     func pause() {
         self.videoNode.pause()
     }

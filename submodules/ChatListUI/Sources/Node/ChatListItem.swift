@@ -26,6 +26,7 @@ import TextNodeWithEntities
 import ComponentFlow
 import EmojiStatusComponent
 import AvatarVideoNode
+import AvatarStoryIndicatorComponent
 
 public enum ChatListItemContent {
     public struct ThreadInfo: Equatable {
@@ -82,7 +83,7 @@ public enum ChatListItemContent {
         public var forumTopicData: EngineChatList.ForumTopicData?
         public var topForumTopicItems: [EngineChatList.ForumTopicData]
         public var autoremoveTimeout: Int32?
-        public var hasNewStories: Bool
+        public var storyState: Bool?
         
         public init(
             messages: [EngineMessage],
@@ -102,7 +103,7 @@ public enum ChatListItemContent {
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             autoremoveTimeout: Int32?,
-            hasNewStories: Bool
+            storyState: Bool?
         ) {
             self.messages = messages
             self.peer = peer
@@ -121,7 +122,7 @@ public enum ChatListItemContent {
             self.forumTopicData = forumTopicData
             self.topForumTopicItems = topForumTopicItems
             self.autoremoveTimeout = autoremoveTimeout
-            self.hasNewStories = hasNewStories
+            self.storyState = storyState
         }
     }
 
@@ -902,7 +903,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var avatarIconView: ComponentHostView<Empty>?
     var avatarIconComponent: EmojiStatusComponent?
     var avatarVideoNode: AvatarVideoNode?
-    var avatarStoryIndicatorNode: ASImageNode?
+    var avatarStoryIndicator: ComponentView<Empty>?
     
     private var inlineNavigationMarkLayer: SimpleLayer?
     
@@ -2746,9 +2747,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     
-                    var displayStoryIndicator = false
-                    if case let .peer(peerData) = item.content, peerData.hasNewStories {
-                        displayStoryIndicator = true
+                    var displayStoryIndicator: Bool?
+                    if case let .peer(peerData) = item.content {
+                        displayStoryIndicator = peerData.storyState
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
@@ -2763,7 +2764,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let storyIndicatorScale = avatarScale
-                    if displayStoryIndicator {
+                    if displayStoryIndicator != nil {
                         avatarScale *= (avatarFrame.width - 4.0 * 2.0) / avatarFrame.width
                     }
                     
@@ -2774,50 +2775,47 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.avatarNode.updateSize(size: avatarFrame.size)
                     strongSelf.updateVideoVisibility()
                     
-                    if displayStoryIndicator {
-                        let avatarStoryIndicatorNode: ASImageNode
-                        if let current = strongSelf.avatarStoryIndicatorNode {
-                            avatarStoryIndicatorNode = current
+                    if let displayStoryIndicator {
+                        var indicatorTransition = Transition(transition)
+                        let avatarStoryIndicator: ComponentView<Empty>
+                        if let current = strongSelf.avatarStoryIndicator {
+                            avatarStoryIndicator = current
                         } else {
-                            avatarStoryIndicatorNode = ASImageNode()
-                            strongSelf.avatarStoryIndicatorNode = avatarStoryIndicatorNode
-                            strongSelf.contextContainer.insertSubnode(avatarStoryIndicatorNode, belowSubnode: strongSelf.avatarContainerNode)
-                            
-                            avatarStoryIndicatorNode.isUserInteractionEnabled = true
-                            avatarStoryIndicatorNode.view.addGestureRecognizer(UITapGestureRecognizer(target: strongSelf, action: #selector(strongSelf.avatarStoryTapGesture(_:))))
+                            indicatorTransition = .immediate
+                            avatarStoryIndicator = ComponentView()
+                            strongSelf.avatarStoryIndicator = avatarStoryIndicator
                         }
-                        var updateImage = false
-                        if let image = avatarStoryIndicatorNode.image {
-                            if image.size != avatarFrame.size {
-                                updateImage = true
+                        
+                        var indicatorFrame = CGRect(origin: CGPoint(x: avatarFrame.minX + 4.0, y: avatarFrame.minY + 4.0), size: CGSize(width: avatarFrame.width - 4.0 - 4.0, height: avatarFrame.height - 4.0 - 4.0))
+                        indicatorFrame.origin.x -= (avatarFrame.width - avatarFrame.width * storyIndicatorScale) * 0.5
+                        
+                        let _ = avatarStoryIndicator.update(
+                            transition: indicatorTransition,
+                            component: AnyComponent(AvatarStoryIndicatorComponent(
+                                hasUnseen: displayStoryIndicator,
+                                isDarkTheme: item.presentationData.theme.overallDarkAppearance,
+                                activeLineWidth: 2.0,
+                                inactiveLineWidth: 1.0 + UIScreenPixel
+                            )),
+                            environment: {},
+                            containerSize: indicatorFrame.size
+                        )
+                        if let avatarStoryIndicatorView = avatarStoryIndicator.view {
+                            if avatarStoryIndicatorView.superview == nil {
+                                avatarStoryIndicatorView.isUserInteractionEnabled = true
+                                avatarStoryIndicatorView.addGestureRecognizer(UITapGestureRecognizer(target: strongSelf, action: #selector(strongSelf.avatarStoryTapGesture(_:))))
+                                
+                                strongSelf.contextContainer.view.insertSubview(avatarStoryIndicatorView, belowSubview: strongSelf.avatarContainerNode.view)
                             }
-                        } else {
-                            updateImage = true
+                            
+                            indicatorTransition.setPosition(view: avatarStoryIndicatorView, position: indicatorFrame.center)
+                            indicatorTransition.setBounds(view: avatarStoryIndicatorView, bounds: CGRect(origin: CGPoint(), size: indicatorFrame.size))
+                            indicatorTransition.setScale(view: avatarStoryIndicatorView, scale: storyIndicatorScale)
                         }
-                        if updateImage {
-                            avatarStoryIndicatorNode.image = generateImage(avatarFrame.size, rotatedContext: { size, context in
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                
-                                let lineWidth: CGFloat = 2.0
-                                context.setLineWidth(lineWidth)
-                                context.addEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
-                                context.replacePathWithStrokedPath()
-                                context.clip()
-                                
-                                var locations: [CGFloat] = [1.0, 0.0]
-                                let colors: [CGColor] = [UIColor(rgb: 0x34C76F).cgColor, UIColor(rgb: 0x3DA1FD).cgColor]
-                                
-                                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-                                
-                                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-                            })
-                        }
-                        transition.updateFrame(node: avatarStoryIndicatorNode, frame: CGRect(origin: CGPoint(x: avatarFrame.minX, y: avatarFrame.minY + (avatarFrame.height - avatarFrame.height * storyIndicatorScale) * 0.5), size: CGSize(width: avatarFrame.width * storyIndicatorScale, height: avatarFrame.height * storyIndicatorScale)))
                     } else {
-                        if let avatarStoryIndicatorNode = strongSelf.avatarStoryIndicatorNode {
-                            strongSelf.avatarStoryIndicatorNode = nil
-                            avatarStoryIndicatorNode.removeFromSupernode()
+                        if let avatarStoryIndicator = strongSelf.avatarStoryIndicator {
+                            strongSelf.avatarStoryIndicator = nil
+                            avatarStoryIndicator.view?.removeFromSuperview()
                         }
                     }
                     
@@ -3844,7 +3842,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
         }
         
-        if let avatarStoryIndicatorNode = self.avatarStoryIndicatorNode, let result = avatarStoryIndicatorNode.view.hitTest(self.view.convert(point, to: avatarStoryIndicatorNode.view), with: event) {
+        if let avatarStoryIndicatorView = self.avatarStoryIndicator?.view, let result = avatarStoryIndicatorView.hitTest(self.view.convert(point, to: avatarStoryIndicatorView), with: event) {
             return result
         }
         
@@ -3856,7 +3854,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             guard let item = self.item, case let .peer(peerData) = item.content else {
                 return
             }
-            item.interaction.openStories(peerData.peer.peerId)
+            item.interaction.openStories(peerData.peer.peerId, self)
         }
     }
 }

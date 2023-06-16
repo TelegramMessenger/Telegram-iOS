@@ -38,6 +38,12 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
         if let fromVideoThumbnail = fromFile.videoThumbnails.first, let toVideoThumbnail = toFile.videoThumbnails.first, fromVideoThumbnail.resource.id != toVideoThumbnail.resource.id {
             copyOrMoveResourceData(from: fromVideoThumbnail.resource, to: toVideoThumbnail.resource, mediaBox: postbox.mediaBox)
         }
+        let videoFirstFrameFromPath = postbox.mediaBox.cachedRepresentationCompletePath(fromFile.resource.id, keepDuration: .general, representationId: "first-frame")
+        let videoFirstFrameToPath = postbox.mediaBox.cachedRepresentationCompletePath(toFile.resource.id, keepDuration: .general, representationId: "first-frame")
+        if FileManager.default.fileExists(atPath: videoFirstFrameFromPath) {
+            let _ = try? FileManager.default.copyItem(atPath: videoFirstFrameFromPath, toPath: videoFirstFrameToPath)
+        }
+        
         if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
             copyOrMoveResourceData(from: fromFile.resource, to: toFile.resource, mediaBox: postbox.mediaBox)
         }

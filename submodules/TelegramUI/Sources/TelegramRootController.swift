@@ -348,8 +348,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 if let imageData = compressImageToJPEG(image, quality: 0.6) {
                                     switch privacy {
                                     case let .story(storyPrivacy, period, pin):
-                                        chatListController.updateStoryUploadProgress(0.0)
-                                        let _ = (self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
+                                        self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
+                                        
+                                        /*let _ = (self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
                                         |> deliverOnMainQueue).start(next: { [weak chatListController] result in
                                             if let chatListController {
                                                 switch result {
@@ -364,7 +365,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                                     }
                                                 }
                                             }
-                                        })
+                                        })*/
                                         Queue.mainQueue().justDispatch {
                                             commit({})
                                         }
@@ -420,7 +421,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                         commit({})
                                     }
                                 }
-                            case let .video(content, _, values, duration, dimensions, caption):
+                            case let .video(content, firstFrameImage, values, duration, dimensions, caption):
                                 let adjustments: VideoMediaResourceAdjustments
                                 if let valuesData = try? JSONEncoder().encode(values) {
                                     let data = MemoryBuffer(data: valuesData)
@@ -436,9 +437,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     case let .asset(localIdentifier):
                                         resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                     }
+                                    
+                                    let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
+                                    
                                     if case let .story(storyPrivacy, period, pin) = privacy {
-                                        chatListController.updateStoryUploadProgress(0.0)
-                                        let _ = (self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
+                                        self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
+                                        /*let _ = (self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
                                         |> deliverOnMainQueue).start(next: { [weak chatListController] result in
                                             if let chatListController {
                                                 switch result {
@@ -453,7 +457,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                                     }
                                                 }
                                             }
-                                        })
+                                        })*/
                                         Queue.mainQueue().justDispatch {
                                             commit({})
                                         }

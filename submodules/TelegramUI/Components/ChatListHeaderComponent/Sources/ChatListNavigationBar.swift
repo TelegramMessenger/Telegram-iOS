@@ -163,6 +163,8 @@ public final class ChatListNavigationBar: Component {
         private weak var disappearingTabsView: UIView?
         private var disappearingTabsViewSearch: Bool = false
         
+        private var currentHeaderComponent: ChatListHeaderComponent?
+        
         override public init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
             self.backgroundView.layer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
@@ -332,35 +334,37 @@ public final class ChatListNavigationBar: Component {
             self.storiesOffsetFraction = storiesOffsetFraction
             self.storiesUnlockedFraction = storiesUnlockedOffsetFraction
             
+            let headerComponent = ChatListHeaderComponent(
+                sideInset: component.sideInset + 16.0,
+                primaryContent: component.primaryContent,
+                secondaryContent: component.secondaryContent,
+                secondaryTransition: component.secondaryTransition,
+                networkStatus: nil,
+                storySubscriptions: component.storySubscriptions,
+                storiesIncludeHidden: component.storiesIncludeHidden,
+                storiesFraction: 1.0 - storiesOffsetFraction,
+                storiesUnlockedFraction: 1.0 - storiesUnlockedOffsetFraction,
+                uploadProgress: component.uploadProgress,
+                context: component.context,
+                theme: component.theme,
+                strings: component.strings,
+                openStatusSetup: { [weak self] sourceView in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.openStatusSetup(sourceView)
+                },
+                toggleIsLocked: { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    component.context.sharedContext.appLockContext.lock()
+                }
+            )
+            self.currentHeaderComponent = headerComponent
             let headerContentSize = self.headerContent.update(
                 transition: headerTransition,
-                component: AnyComponent(ChatListHeaderComponent(
-                    sideInset: component.sideInset + 16.0,
-                    primaryContent: component.primaryContent,
-                    secondaryContent: component.secondaryContent,
-                    secondaryTransition: component.secondaryTransition,
-                    networkStatus: nil,
-                    storySubscriptions: component.storySubscriptions,
-                    storiesIncludeHidden: component.storiesIncludeHidden,
-                    storiesFraction: 1.0 - storiesOffsetFraction,
-                    storiesUnlockedFraction: 1.0 - storiesUnlockedOffsetFraction,
-                    uploadProgress: component.uploadProgress,
-                    context: component.context,
-                    theme: component.theme,
-                    strings: component.strings,
-                    openStatusSetup: { [weak self] sourceView in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.openStatusSetup(sourceView)
-                    },
-                    toggleIsLocked: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.context.sharedContext.appLockContext.lock()
-                    }
-                )),
+                component: AnyComponent(headerComponent),
                 environment: {},
                 containerSize: CGSize(width: currentLayout.size.width, height: 44.0)
             )
@@ -436,6 +440,60 @@ public final class ChatListNavigationBar: Component {
                 }
                 
                 tabsNodeTransition.setFrameWithAdditivePosition(view: tabsNode.view, frame: tabsFrame.offsetBy(dx: 0.0, dy: component.tabsNodeIsSearch ? (-currentLayout.size.height + 2.0) : 0.0))
+            }
+        }
+        
+        public func updateStoryUploadProgress(storyUploadProgress: Float?) {
+            guard let component = self.component else {
+                return
+            }
+            if component.uploadProgress != storyUploadProgress {
+                self.component = ChatListNavigationBar(
+                    context: component.context,
+                    theme: component.theme,
+                    strings: component.strings,
+                    statusBarHeight: component.statusBarHeight,
+                    sideInset: component.sideInset,
+                    isSearchActive: component.isSearchActive,
+                    storiesUnlocked: component.storiesUnlocked,
+                    primaryContent: component.primaryContent,
+                    secondaryContent: component.secondaryContent,
+                    secondaryTransition: component.secondaryTransition,
+                    storySubscriptions: component.storySubscriptions,
+                    storiesIncludeHidden: component.storiesIncludeHidden,
+                    uploadProgress: storyUploadProgress,
+                    tabsNode: component.tabsNode,
+                    tabsNodeIsSearch: component.tabsNodeIsSearch,
+                    activateSearch: component.activateSearch,
+                    openStatusSetup: component.openStatusSetup
+                )
+                if let currentLayout = self.currentLayout, let headerComponent = self.currentHeaderComponent {
+                    let headerComponent = ChatListHeaderComponent(
+                        sideInset: headerComponent.sideInset,
+                        primaryContent: headerComponent.primaryContent,
+                        secondaryContent: headerComponent.secondaryContent,
+                        secondaryTransition: headerComponent.secondaryTransition,
+                        networkStatus: headerComponent.networkStatus,
+                        storySubscriptions: headerComponent.storySubscriptions,
+                        storiesIncludeHidden: headerComponent.storiesIncludeHidden,
+                        storiesFraction: headerComponent.storiesFraction,
+                        storiesUnlockedFraction: headerComponent.storiesUnlockedFraction,
+                        uploadProgress: storyUploadProgress,
+                        context: headerComponent.context,
+                        theme: headerComponent.theme,
+                        strings: headerComponent.strings,
+                        openStatusSetup: headerComponent.openStatusSetup,
+                        toggleIsLocked: headerComponent.toggleIsLocked
+                    )
+                    self.currentHeaderComponent = headerComponent
+                    
+                    let _ = self.headerContent.update(
+                        transition: .immediate,
+                        component: AnyComponent(headerComponent),
+                        environment: {},
+                        containerSize: CGSize(width: currentLayout.size.width, height: 44.0)
+                    )
+                }
             }
         }
         

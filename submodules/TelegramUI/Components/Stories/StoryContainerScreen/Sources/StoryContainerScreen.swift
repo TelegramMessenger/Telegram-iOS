@@ -162,6 +162,7 @@ private final class StoryContainerScreenComponent: Component {
         private let focusedItem = ValuePromise<StoryId?>(nil, ignoreRepeated: true)
         private var contentUpdatedDisposable: Disposable?
         
+        private let storyItemSharedState = StoryContentItem.SharedState()
         private var visibleItemSetViews: [EnginePeer.Id: ItemSetView] = [:]
         
         private var itemSetPanState: ItemSetPanState?
@@ -170,6 +171,8 @@ private final class StoryContainerScreenComponent: Component {
         
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
+        
+        var dismissWithoutTransitionOut: Bool = false
         
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
@@ -467,7 +470,7 @@ private final class StoryContainerScreenComponent: Component {
         func animateOut(completion: @escaping () -> Void) {
             self.isAnimatingOut = true
             
-            if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(slice.peer.id, slice.item.id) {
+            if !self.dismissWithoutTransitionOut, let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View, let transitionOut = component.transitionOut(slice.peer.id, slice.item.id) {
                 self.state?.updated(transition: .immediate)
                 
                 let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
@@ -482,12 +485,18 @@ private final class StoryContainerScreenComponent: Component {
                     focusedItemPromise.set(.single(nil))
                 })
             } else {
+                let transition: Transition
+                if self.dismissWithoutTransitionOut {
+                    transition = Transition(animation: .curve(duration: 0.5, curve: .spring))
+                } else {
+                    transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                }
+                
                 self.verticalPanState = ItemSetPanState(fraction: 1.0, didBegin: true)
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                self.state?.updated(transition: transition)
                 
                 let focusedItemPromise = self.component?.focusedItemPromise
                 
-                let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 transition.setAlpha(layer: self.backgroundLayer, alpha: 0.0, completion: { _ in
                     completion()
                     focusedItemPromise?.set(.single(nil))
@@ -690,6 +699,7 @@ private final class StoryContainerScreenComponent: Component {
                             component: AnyComponent(StoryItemSetContainerComponent(
                                 context: component.context,
                                 externalState: itemSetView.externalState,
+                                storyItemSharedState: self.storyItemSharedState,
                                 slice: slice,
                                 theme: environment.theme,
                                 strings: environment.strings,
@@ -989,15 +999,18 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         public weak var sourceView: UIView?
         public let sourceRect: CGRect
         public let sourceCornerRadius: CGFloat
+        public let sourceIsAvatar: Bool
         
         public init(
             sourceView: UIView,
             sourceRect: CGRect,
-            sourceCornerRadius: CGFloat
+            sourceCornerRadius: CGFloat,
+            sourceIsAvatar: Bool
         ) {
             self.sourceView = sourceView
             self.sourceRect = sourceRect
             self.sourceCornerRadius = sourceCornerRadius
+            self.sourceIsAvatar = sourceIsAvatar
         }
     }
     
@@ -1079,6 +1092,15 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
             componentView.animateIn()
         }
+    }
+    
+    func dismissWithoutTransitionOut() {
+        self.focusedItemPromise.set(.single(nil))
+        
+        if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
+            componentView.dismissWithoutTransitionOut = true
+        }
+        self.dismiss()
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {

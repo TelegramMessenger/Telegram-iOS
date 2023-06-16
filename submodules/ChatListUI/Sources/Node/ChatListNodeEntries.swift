@@ -111,7 +111,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var forumTopicData: EngineChatList.ForumTopicData?
         var topForumTopicItems: [EngineChatList.ForumTopicData]
         var revealed: Bool
-        var hasNewStories: Bool
+        var storyState: Bool?
         
         init(
             index: EngineChatList.Item.Index,
@@ -136,7 +136,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             revealed: Bool,
-            hasNewStories: Bool
+            storyState: Bool?
         ) {
             self.index = index
             self.presentationData = presentationData
@@ -160,7 +160,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.forumTopicData = forumTopicData
             self.topForumTopicItems = topForumTopicItems
             self.revealed = revealed
-            self.hasNewStories = hasNewStories
+            self.storyState = storyState
         }
         
         static func ==(lhs: PeerEntryData, rhs: PeerEntryData) -> Bool {
@@ -270,7 +270,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             if lhs.revealed != rhs.revealed {
                 return false
             }
-            if lhs.hasNewStories != rhs.hasNewStories {
+            if lhs.storyState != rhs.storyState {
                 return false
             }
             return true
@@ -639,7 +639,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             forumTopicData: entry.forumTopicData,
             topForumTopicItems: entry.topForumTopicItems,
             revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing),
-            hasNewStories: state.peersWithNewStories.contains(entry.renderedPeer.peerId)
+            storyState: state.peerStoryMapping[entry.renderedPeer.peerId]
         ))
         
         if let threadInfo, threadInfo.isHidden {
@@ -689,7 +689,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         forumTopicData: nil,
                         topForumTopicItems: [],
                         revealed: false,
-                        hasNewStories: false
+                        storyState: nil
                     )))
                     if foundPinningIndex != 0 {
                         foundPinningIndex -= 1
@@ -720,7 +720,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                 forumTopicData: nil,
                 topForumTopicItems: [],
                 revealed: false,
-                hasNewStories: false
+                storyState: nil
             )))
         } else {
             if !filteredAdditionalItemEntries.isEmpty {
@@ -771,7 +771,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         forumTopicData: item.item.forumTopicData,
                         topForumTopicItems: item.item.topForumTopicItems,
                         revealed: state.hiddenItemShouldBeTemporaryRevealed || state.editing,
-                        hasNewStories: false
+                        storyState: nil
                     )))
                     if pinningIndex != 0 {
                         pinningIndex -= 1

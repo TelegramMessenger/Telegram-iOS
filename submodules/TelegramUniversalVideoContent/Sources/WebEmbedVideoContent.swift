@@ -164,6 +164,9 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         }
     }
     
+    func continueWithOverridingAmbientMode() {
+    }
+    
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
     }
     

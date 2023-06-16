@@ -12,6 +12,13 @@ public final class StoryContentItem {
         }
     }
     
+    public final class SharedState {
+        public var useAmbientMode: Bool = true
+        
+        public init() {
+        }
+    }
+    
     open class View: UIView {
         open func setIsProgressPaused(_ isProgressPaused: Bool) {
         }
@@ -22,21 +29,27 @@ public final class StoryContentItem {
     
     public final class Environment: Equatable {
         public let externalState: ExternalState
+        public let sharedState: SharedState
         public let presentationProgressUpdated: (Double, Bool) -> Void
         public let markAsSeen: (StoryId) -> Void
         
         public init(
             externalState: ExternalState,
+            sharedState: SharedState,
             presentationProgressUpdated: @escaping (Double, Bool) -> Void,
             markAsSeen: @escaping (StoryId) -> Void
         ) {
             self.externalState = externalState
+            self.sharedState = sharedState
             self.presentationProgressUpdated = presentationProgressUpdated
             self.markAsSeen = markAsSeen
         }
         
         public static func ==(lhs: Environment, rhs: Environment) -> Bool {
             if lhs.externalState !== rhs.externalState {
+                return false
+            }
+            if lhs.sharedState !== rhs.sharedState {
                 return false
             }
             return true

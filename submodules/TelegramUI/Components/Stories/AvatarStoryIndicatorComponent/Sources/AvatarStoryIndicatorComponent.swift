@@ -7,13 +7,19 @@ import TelegramPresentationData
 public final class AvatarStoryIndicatorComponent: Component {
     public let hasUnseen: Bool
     public let isDarkTheme: Bool
+    public let activeLineWidth: CGFloat
+    public let inactiveLineWidth: CGFloat
     
     public init(
         hasUnseen: Bool,
-        isDarkTheme: Bool
+        isDarkTheme: Bool,
+        activeLineWidth: CGFloat,
+        inactiveLineWidth: CGFloat
     ) {
         self.hasUnseen = hasUnseen
         self.isDarkTheme = isDarkTheme
+        self.activeLineWidth = activeLineWidth
+        self.inactiveLineWidth = inactiveLineWidth
     }
     
     public static func ==(lhs: AvatarStoryIndicatorComponent, rhs: AvatarStoryIndicatorComponent) -> Bool {
@@ -21,6 +27,12 @@ public final class AvatarStoryIndicatorComponent: Component {
             return false
         }
         if lhs.isDarkTheme != rhs.isDarkTheme {
+            return false
+        }
+        if lhs.activeLineWidth != rhs.activeLineWidth {
+            return false
+        }
+        if lhs.inactiveLineWidth != rhs.inactiveLineWidth {
             return false
         }
         return true
@@ -50,23 +62,21 @@ public final class AvatarStoryIndicatorComponent: Component {
             
             let lineWidth: CGFloat
             let diameter: CGFloat
-            let outerInset: CGFloat
             
             if component.hasUnseen {
-                lineWidth = 3.0
-                outerInset = 3.0 + lineWidth
-                diameter = availableSize.width + outerInset * 2.0
+                lineWidth = component.activeLineWidth
             } else {
-                lineWidth = 2.0
-                outerInset = 3.0 + lineWidth
-                diameter = availableSize.width + outerInset * 2.0
+                lineWidth = component.inactiveLineWidth
             }
+            let maxOuterInset = component.activeLineWidth + component.activeLineWidth
+            diameter = availableSize.width + maxOuterInset * 2.0
+            let imageDiameter = availableSize.width + ceilToScreenPixels(maxOuterInset) * 2.0
             
-            self.indicatorView.image = generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
+            self.indicatorView.image = generateImage(CGSize(width: imageDiameter, height: imageDiameter), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
                 context.setLineWidth(lineWidth)
-                context.addEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+                context.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
                 context.replacePathWithStrokedPath()
                 context.clip()
                 
@@ -87,7 +97,7 @@ public final class AvatarStoryIndicatorComponent: Component {
                 
                 context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
             })
-            transition.setFrame(view: self.indicatorView, frame: CGRect(origin: CGPoint(), size: availableSize).insetBy(dx: -outerInset, dy: -outerInset))
+            transition.setFrame(view: self.indicatorView, frame: CGRect(origin: CGPoint(x: (availableSize.width - imageDiameter) * 0.5, y: (availableSize.height - imageDiameter) * 0.5), size: CGSize(width: imageDiameter, height: imageDiameter)))
             
             return availableSize
         }

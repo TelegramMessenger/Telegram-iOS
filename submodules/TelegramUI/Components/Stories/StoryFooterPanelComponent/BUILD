@@ -18,6 +18,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/TelegramCore",
         "//submodules/TelegramUI/Components/MoreHeaderButton",
+        "//submodules/SemanticStatusNode",
     ],
     visibility = [
         "//visibility:public",

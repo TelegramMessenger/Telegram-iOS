@@ -708,7 +708,7 @@ public final class StoryPeerListItemComponent: Component {
             }
             
             let titleSize = self.title.update(
-                transition: titleTransition,
+                transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(string: titleString, font: Font.regular(11.0), textColor: component.theme.list.itemPrimaryTextColor)),
                     maximumNumberOfLines: 1

@@ -902,12 +902,38 @@ public extension TelegramEngine {
             }
         }
         
-        public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
-            return _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, pin: pin, privacy: privacy, period: period, randomId: randomId)
+        public func uploadStory(media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) {
+            _internal_uploadStory(account: self.account, media: media, text: text, entities: entities, pin: pin, privacy: privacy, period: period, randomId: randomId)
+        }
+        
+        public func lookUpPendingStoryIdMapping(stableId: Int32) -> Int32? {
+            return self.account.pendingStoryManager?.lookUpPendingStoryIdMapping(stableId: stableId)
+        }
+        
+        public func allStoriesUploadProgress() -> Signal<Float?, NoError> {
+            guard let pendingStoryManager = self.account.pendingStoryManager else {
+                return .single(nil)
+            }
+            return pendingStoryManager.allStoriesUploadProgress
+        }
+        
+        public func storyUploadProgress(stableId: Int32) -> Signal<Float, NoError> {
+            guard let pendingStoryManager = self.account.pendingStoryManager else {
+                return .single(0.0)
+            }
+            return pendingStoryManager.storyUploadProgress(stableId: stableId)
+        }
+        
+        public func cancelStoryUpload(stableId: Int32) {
+            _internal_cancelStoryUpload(account: self.account, stableId: stableId)
         }
         
         public func editStory(media: EngineStoryInputMedia?, id: Int32, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
             return _internal_editStory(account: self.account, media: media, id: id, text: text, entities: entities, privacy: privacy)
+        }
+        
+        public func editStoryPrivacy(id: Int32, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
+            return _internal_editStoryPrivacy(account: self.account, id: id, privacy: privacy)
         }
         
         public func deleteStories(ids: [Int32]) -> Signal<Never, NoError> {
