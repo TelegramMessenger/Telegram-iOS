@@ -72,7 +72,7 @@
 "SecretPasscodeMenu.HideAllSecrets" = "Hide All Secrets";
 "SecretPasscodeStatus.SomeRevealed" = "Some secrets are revealed.";
 "SecretPasscodeStatus.AllHidden" = "All secrets are hidden.";
-"SecretPasscodeStatus.Revealed" = "⚡ Current state: secrets are revealed.";
+"SecretPasscodeStatus.Revealed" = "👁️ Current state: secrets are revealed.";
 "SecretPasscodeStatus.Hidden" = "🔒 Current state: secrets are hidden.";
 "SecretPasscode.SecretChatsSelectionTitle" = "Secret Chats";
 "SecretPasscode.SecretChatDeleted" = "Deleted";

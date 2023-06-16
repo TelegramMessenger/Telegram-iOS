@@ -106,7 +106,7 @@
 "SecretPasscodeMenu.HideAllSecrets" = "Скрыть все секреты";
 "SecretPasscodeStatus.SomeRevealed" = "Некоторые секреты открыты.";
 "SecretPasscodeStatus.AllHidden" = "Все секреты скрыты.";
-"SecretPasscodeStatus.Revealed" = "⚡ Текущее состояние: секреты открыты.";
+"SecretPasscodeStatus.Revealed" = "👁️ Текущее состояние: секреты открыты.";
 "SecretPasscodeStatus.Hidden" = "🔒 Текущее состояние: секреты скрыты.";
 "SecretPasscode.SecretChatsSelectionTitle" = "Секретные чаты";
 "SecretPasscode.SecretChatDeleted" = "Удален";
