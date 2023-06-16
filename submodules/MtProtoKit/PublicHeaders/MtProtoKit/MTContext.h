@@ -67,6 +67,12 @@
 @property (nonatomic, copy) MTSignal * _Nonnull (^ _Nullable fetchContextDatacenterPublicKeys)(MTContext * _Nonnull, NSInteger);
 @property (nonatomic, copy) MTSignal * _Nonnull(^ _Nullable isContextNetworkAccessAllowed)(MTContext * _Nonnull);
 
+@property (nonatomic, copy) void (^ _Nullable contextDatacenterAuthInfoUpdated)(MTContext * _Nonnull, NSInteger, MTDatacenterAuthInfo * _Nonnull, MTDatacenterAuthInfoSelector);
+@property (nonatomic, copy) void (^ _Nullable contextDatacenterAuthTokenUpdated)(MTContext * _Nonnull, NSInteger, id _Nullable);
+@property (nonatomic, copy) void (^ _Nullable contextDatacenterTransportSchemesUpdated)(MTContext * _Nonnull, NSInteger, bool);
+@property (nonatomic, copy) void (^ _Nullable contextDatacenterPublicKeysUpdated)(MTContext * _Nonnull, NSInteger, NSArray<NSDictionary *> * _Nonnull);
+@property (nonatomic, copy) void (^ _Nullable contextApiEnvironmentUpdated)(MTContext * _Nonnull, MTApiEnvironment * _Nonnull);
+
 @end
 
 @interface MTContext : NSObject

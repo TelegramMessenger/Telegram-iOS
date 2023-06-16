@@ -165,7 +165,36 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         _requiredAuthToken = requiredAuthToken;
         _authTokenMasterDatacenterId = authTokenMasterDatacenterId;
         
-        [_context addChangeListener:self];
+        __weak MTProto *weakSelf = self;
+        MTContextBlockChangeListener *changeListener = [[MTContextBlockChangeListener alloc] init];
+        
+        changeListener.contextDatacenterAuthInfoUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, MTDatacenterAuthInfo * _Nonnull authInfo, MTDatacenterAuthInfoSelector selector)
+        {
+            __strong MTProto *strongSelf = weakSelf;
+            [strongSelf contextDatacenterAuthInfoUpdated:context datacenterId:datacenterId authInfo:authInfo selector:selector];
+        };
+        changeListener.contextDatacenterAuthTokenUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, id _Nullable authToken)
+        {
+            __strong MTProto *strongSelf = weakSelf;
+            [strongSelf contextDatacenterAuthTokenUpdated:context datacenterId:datacenterId authToken:authToken];
+        };
+        changeListener.contextDatacenterTransportSchemesUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, bool shouldReset)
+        {
+            __strong MTProto *strongSelf = weakSelf;
+            [strongSelf contextDatacenterTransportSchemesUpdated:context datacenterId:datacenterId shouldReset:shouldReset];
+        };
+        changeListener.contextDatacenterPublicKeysUpdated = ^(MTContext * _Nonnull context, NSInteger datacenterId, NSArray<NSDictionary *> * _Nonnull publicKeys)
+        {
+            __strong MTProto *strongSelf = weakSelf;
+            [strongSelf contextDatacenterPublicKeysUpdated:context datacenterId:datacenterId publicKeys:publicKeys];
+        };
+        changeListener.contextApiEnvironmentUpdated = ^(MTContext * _Nonnull context, MTApiEnvironment * _Nonnull apiEnvironment)
+        {
+            __strong MTProto *strongSelf = weakSelf;
+            [strongSelf contextApiEnvironmentUpdated:context apiEnvironment:apiEnvironment];
+        };
+        
+        [_context addChangeListener:changeListener];
         
         _messageServices = [[NSMutableArray alloc] init];
         
