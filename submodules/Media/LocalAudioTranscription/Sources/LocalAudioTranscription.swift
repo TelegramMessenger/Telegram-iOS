@@ -80,7 +80,12 @@ public func transcribeAudio(path: String, locale: String, audioDuration: Int32) 
                             } else {
                                 print("transcribeAudio: locale: \(locale), error: \(String(describing: error))")
                                 
-                                subscriber.putError(error!)
+                                if !accumulatedString.isEmpty || !lastResultString.isEmpty {
+                                    subscriber.putNext(LocallyTranscribedAudio(text: accumulatedString + lastResultString + " ❌", isFinal: true))
+                                    subscriber.putCompletion()
+                                } else {
+                                    subscriber.putError(error!)
+                                }
                                 
                                 let _ = try? FileManager.default.removeItem(atPath: tempFilePath)
                             }
