@@ -422,7 +422,7 @@ public struct Transition {
                 delay: 0.0,
                 curve: curve,
                 removeOnCompletion: true,
-                additive: true,
+                additive: false,
                 completion: completion
             )
         }
@@ -497,21 +497,35 @@ public struct Transition {
     }
     
     public func setTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)? = nil) {
-        let t = layer.presentation()?.transform ?? layer.transform
-        if CATransform3DEqualToTransform(t, transform) {
-            if let animation = layer.animation(forKey: "transform") as? CABasicAnimation, let toValue = animation.toValue as? NSValue {
-                if CATransform3DEqualToTransform(toValue.caTransform3DValue, transform) {
-                    completion?(true)
-                    return
-                }
-            } else {
+        if let animation = layer.animation(forKey: "transform") as? CABasicAnimation, let toValue = animation.toValue as? NSValue {
+            if CATransform3DEqualToTransform(toValue.caTransform3DValue, transform) {
+                completion?(true)
+                return
+            }
+        } else if let animation = layer.animation(forKey: "transform") as? CAKeyframeAnimation, let toValue = animation.values?.last as? NSValue {
+            if CATransform3DEqualToTransform(toValue.caTransform3DValue, transform) {
                 completion?(true)
                 return
             }
         }
         
+        if CATransform3DEqualToTransform(layer.transform, transform) {
+            completion?(true)
+            return
+        }
+        
         switch self.animation {
         case .none:
+            if layer.animation(forKey: "transform") != nil {
+                if let animation = layer.animation(forKey: "transform") as? CAKeyframeAnimation, let toValue = animation.values?.last as? NSValue {
+                    if CATransform3DEqualToTransform(toValue.caTransform3DValue, transform) {
+                        completion?(true)
+                        return
+                    }
+                }
+                
+                layer.removeAnimation(forKey: "transform")
+            }
             layer.transform = transform
             completion?(true)
         case let .curve(duration, curve):
@@ -540,14 +554,19 @@ public struct Transition {
     public func setTransformAsKeyframes(layer: CALayer, transform: (CGFloat, Bool) -> CATransform3D, completion: ((Bool) -> Void)? = nil) {
         let finalTransform = transform(1.0, true)
         
-        let t = layer.presentation()?.transform ?? layer.transform
-        if CATransform3DEqualToTransform(t, finalTransform) {
+        let t = layer.transform
+        do {
             if let animation = layer.animation(forKey: "transform") as? CABasicAnimation, let toValue = animation.toValue as? NSValue {
                 if CATransform3DEqualToTransform(toValue.caTransform3DValue, finalTransform) {
                     completion?(true)
                     return
                 }
-            } else {
+            } else if let animation = layer.animation(forKey: "transform") as? CAKeyframeAnimation, let toValue = animation.values?.last as? NSValue {
+                if CATransform3DEqualToTransform(toValue.caTransform3DValue, finalTransform) {
+                    completion?(true)
+                    return
+                }
+            } else if CATransform3DEqualToTransform(t, finalTransform) {
                 completion?(true)
                 return
             }
@@ -555,6 +574,9 @@ public struct Transition {
         
         switch self.animation {
         case .none:
+            if layer.animation(forKey: "transform") != nil {
+                layer.removeAnimation(forKey: "transform")
+            }
             layer.transform = transform(1.0, true)
             completion?(true)
         case let .curve(duration, curve):

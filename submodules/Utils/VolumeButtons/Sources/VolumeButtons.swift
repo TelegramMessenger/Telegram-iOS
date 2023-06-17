@@ -5,12 +5,12 @@ import MediaPlayer
 
 import LegacyComponents
 
-class VolumeButtonsListener: NSObject {
+public class VolumeButtonsListener: NSObject {
     private let handler: PGCameraVolumeButtonHandler
     
     private var disposable: Disposable?
     
-    init(shouldBeActive: Signal<Bool, NoError>, valueChanged: @escaping () -> Void) {
+    public init(shouldBeActive: Signal<Bool, NoError>, valueChanged: @escaping () -> Void) {
         var impl: (() -> Void)?
         
         self.handler = PGCameraVolumeButtonHandler(upButtonPressedBlock: {

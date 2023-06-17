@@ -97,6 +97,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryContentComponent",
         "//submodules/TelegramUI/Components/Stories/StoryPeerListComponent",
         "//submodules/TelegramUI/Components/FullScreenEffectView",
+        "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
     ],
     visibility = [
         "//visibility:public",

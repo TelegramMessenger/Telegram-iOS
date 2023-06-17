@@ -1180,6 +1180,10 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             return (contentImageNode, contentImageNode.bounds, { [weak contentImageNode] in
                 return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
             })
+        } else if let contentImageNode = self.contentImageNode, let story = self.media as? TelegramMediaStory, story.isEqual(to: media) {
+            return (contentImageNode, contentImageNode.bounds, { [weak contentImageNode] in
+                return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
+            })
         }
         return nil
     }

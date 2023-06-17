@@ -7,6 +7,7 @@ public final class PlainButtonComponent: Component {
     public enum EffectAlignment {
         case left
         case right
+        case center
     }
     
     public let content: AnyComponent<Empty>
@@ -136,9 +137,18 @@ public final class PlainButtonComponent: Component {
                 contentTransition.setAlpha(view: contentView, alpha: contentAlpha)
             }
             
-            self.contentContainer.layer.anchorPoint = CGPoint(x: component.effectAlignment == .left ? 0.0 : 1.0, y: 0.5)
+            let anchorX: CGFloat
+            switch component.effectAlignment {
+            case .left:
+                anchorX = 0.0
+            case .center:
+                anchorX = 0.5
+            case .right:
+                anchorX = 1.0
+            }
+            self.contentContainer.layer.anchorPoint = CGPoint(x: anchorX, y: 0.5)
             transition.setBounds(view: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: size))
-            transition.setPosition(view: self.contentContainer, position: CGPoint(x: component.effectAlignment == .left ? 0.0 : size.width, y: size.height * 0.5))
+            transition.setPosition(view: self.contentContainer, position: CGPoint(x: size.width * anchorX, y: size.height * 0.5))
             
             return size
         }

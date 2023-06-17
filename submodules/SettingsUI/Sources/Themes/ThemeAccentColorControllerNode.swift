@@ -857,7 +857,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             gesture?.cancel()
         }, present: { _ in
         }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openChatFolderUpdates: {}, hideChatFolderUpdates: {
-        }, openStories: { _ in
+        }, openStories: { _, _ in
         })
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
 
@@ -923,7 +923,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     forumTopicData: nil,
                     topForumTopicItems: [],
                     autoremoveTimeout: nil,
-                    hasNewStories: false
+                    storyState: nil
                 )),
                 editing: false,
                 hasActiveRevealControls: false,

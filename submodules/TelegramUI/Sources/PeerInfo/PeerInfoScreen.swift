@@ -4108,7 +4108,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     transitionIn = StoryContainerScreen.TransitionIn(
                         sourceView: transitionView,
                         sourceRect: transitionView.bounds,
-                        sourceCornerRadius: transitionView.bounds.height * 0.5
+                        sourceCornerRadius: transitionView.bounds.height * 0.5,
+                        sourceIsAvatar: true
                     )
                 }
                 

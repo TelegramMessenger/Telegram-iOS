@@ -5,10 +5,10 @@ import TelegramApi
 
 public enum EngineStoryInputMedia {
     case image(dimensions: PixelDimensions, data: Data)
-    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource)
+    case video(dimensions: PixelDimensions, duration: Double, resource: TelegramMediaResource, firstFrameImageData: Data?)
 }
 
-public struct EngineStoryPrivacy: Equatable {
+public struct EngineStoryPrivacy: Codable, Equatable {
     public typealias Base = Stories.Item.Privacy.Base
     
     public var base: Base
@@ -66,11 +66,27 @@ public enum Stories {
                 case additionallyIncludePeers = "addPeers"
             }
             
-            public enum Base: Int32 {
+            public enum Base: Int32, Codable {
+                private enum CodingKeys: CodingKey {
+                    case value
+                }
+                
                 case everyone = 0
                 case contacts = 1
                 case closeFriends = 2
                 case nobody = 3
+                
+                public init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    
+                    self.init(rawValue: try container.decode(Int32.self, forKey: .value))!
+                }
+                
+                public func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    
+                    try container.encode(self.rawValue, forKey: .value)
+                }
             }
             
             public var base: Base
@@ -501,10 +517,7 @@ public enum StoryUploadResult {
     case completed(Int32?)
 }
 
-private func uploadedStoryContent(account: Account, media: EngineStoryInputMedia) -> (signal: Signal<PendingMessageUploadedContentResult?, NoError>, media: Media) {
-    let originalMedia: Media
-    let contentToUpload: MessageContentToUpload
-    
+private func prepareUploadStoryContent(account: Account, media: EngineStoryInputMedia) -> Media {
     switch media {
     case let .image(dimensions, data):
         let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
@@ -518,31 +531,21 @@ private func uploadedStoryContent(account: Account, media: EngineStoryInputMedia
             partialReference: nil,
             flags: []
         )
-        originalMedia = imageMedia
+        return imageMedia
+    case let .video(dimensions, duration, resource, firstFrameImageData):
+        var previewRepresentations: [TelegramMediaImageRepresentation] = []
+        if let firstFrameImageData = firstFrameImageData {
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            account.postbox.mediaBox.storeResourceData(resource.id, data: firstFrameImageData)
+            
+            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+        }
         
-        contentToUpload = messageContentToUpload(
-            accountPeerId: account.peerId,
-            network: account.network,
-            postbox: account.postbox,
-            auxiliaryMethods: account.auxiliaryMethods,
-            transformOutgoingMessageMedia: nil,
-            messageMediaPreuploadManager: account.messageMediaPreuploadManager,
-            revalidationContext: account.mediaReferenceRevalidationContext,
-            forceReupload: true,
-            isGrouped: false,
-            passFetchProgress: false,
-            peerId: account.peerId,
-            messageId: nil,
-            attributes: [],
-            text: "",
-            media: [imageMedia]
-        )
-    case let .video(dimensions, duration, resource):
         let fileMedia = TelegramMediaFile(
             fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: MediaId.Id.random(in: MediaId.Id.min ... MediaId.Id.max)),
             partialReference: nil,
             resource: resource,
-            previewRepresentations: [],
+            previewRepresentations: previewRepresentations,
             videoThumbnails: [],
             immediateThumbnailData: nil,
             mimeType: "video/mp4",
@@ -551,26 +554,32 @@ private func uploadedStoryContent(account: Account, media: EngineStoryInputMedia
                 TelegramMediaFileAttribute.Video(duration: duration, size: dimensions, flags: .supportsStreaming, preloadSize: nil)
             ]
         )
-        originalMedia = fileMedia
         
-        contentToUpload = messageContentToUpload(
-            accountPeerId: account.peerId,
-            network: account.network,
-            postbox: account.postbox,
-            auxiliaryMethods: account.auxiliaryMethods,
-            transformOutgoingMessageMedia: nil,
-            messageMediaPreuploadManager: account.messageMediaPreuploadManager,
-            revalidationContext: account.mediaReferenceRevalidationContext,
-            forceReupload: true,
-            isGrouped: false,
-            passFetchProgress: true,
-            peerId: account.peerId,
-            messageId: nil,
-            attributes: [],
-            text: "",
-            media: [fileMedia]
-        )
+        return fileMedia
     }
+}
+
+private func uploadedStoryContent(postbox: Postbox, network: Network, media: Media, accountPeerId: PeerId, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods) -> (signal: Signal<PendingMessageUploadedContentResult?, NoError>, media: Media) {
+    let originalMedia: Media = media
+    let contentToUpload: MessageContentToUpload
+    
+    contentToUpload = messageContentToUpload(
+        accountPeerId: accountPeerId,
+        network: network,
+        postbox: postbox,
+        auxiliaryMethods: auxiliaryMethods,
+        transformOutgoingMessageMedia: nil,
+        messageMediaPreuploadManager: messageMediaPreuploadManager,
+        revalidationContext: revalidationContext,
+        forceReupload: true,
+        isGrouped: false,
+        passFetchProgress: false,
+        peerId: accountPeerId,
+        messageId: nil,
+        attributes: [],
+        text: "",
+        media: [media]
+    )
         
     let contentSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>
     switch contentToUpload {
@@ -624,15 +633,82 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
     return privacyRules
 }
 
-func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
-    let (contentSignal, originalMedia) = uploadedStoryContent(account: account, media: media)
+func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) {
+    let inputMedia = prepareUploadStoryContent(account: account, media: media)
+    
+    let _ = (account.postbox.transaction { transaction in
+        var currentState: Stories.LocalState
+        if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
+            currentState = value
+        } else {
+            currentState = Stories.LocalState(items: [])
+        }
+        var stableId: Int32 = Int32.random(in: 2000000 ..< Int32.max)
+        while currentState.items.contains(where: { $0.stableId == stableId }) {
+            stableId = Int32.random(in: 2000000 ..< Int32.max)
+        }
+        currentState.items.append(Stories.PendingItem(
+            stableId: stableId,
+            timestamp: Int32(Date().timeIntervalSince1970),
+            media: inputMedia,
+            text: text,
+            entities: entities,
+            pin: pin,
+            privacy: privacy,
+            period: Int32(period),
+            randomId: randomId
+        ))
+        transaction.setLocalStoryState(state: CodableEntry(currentState))
+    }).start()
+}
+
+func _internal_cancelStoryUpload(account: Account, stableId: Int32) {
+    let _ = (account.postbox.transaction { transaction in
+        var currentState: Stories.LocalState
+        if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
+            currentState = value
+        } else {
+            currentState = Stories.LocalState(items: [])
+        }
+        if let index = currentState.items.firstIndex(where: { $0.stableId == stableId }) {
+            currentState.items.remove(at: index)
+            transaction.setLocalStoryState(state: CodableEntry(currentState))
+        }
+    }).start()
+}
+
+private struct PendingStoryIdMappingKey: Hashable {
+    var accountPeerId: PeerId
+    var stableId: Int32
+}
+
+private let pendingStoryIdMapping = Atomic<[PendingStoryIdMappingKey: Int32]>(value: [:])
+
+func _internal_lookUpPendingStoryIdMapping(accountPeerId: PeerId, stableId: Int32) -> Int32? {
+    return pendingStoryIdMapping.with { dict in
+        return dict[PendingStoryIdMappingKey(accountPeerId: accountPeerId, stableId: stableId)]
+    }
+}
+
+private func _internal_putPendingStoryIdMapping(accountPeerId: PeerId, stableId: Int32, id: Int32) {
+    let _ = pendingStoryIdMapping.modify { dict in
+        var dict = dict
+        
+        dict[PendingStoryIdMappingKey(accountPeerId: accountPeerId, stableId: stableId)] = id
+        
+        return dict
+    }
+}
+
+func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, stableId: Int32, media: Media, text: String, entities: [MessageTextEntity], pin: Bool, privacy: EngineStoryPrivacy, period: Int, randomId: Int64) -> Signal<StoryUploadResult, NoError> {
+    let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods)
     return contentSignal
     |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
         switch result {
         case let .progress(progress):
             return .single(.progress(progress))
         case let .content(content):
-            return account.postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
+            return postbox.transaction { transaction -> Signal<StoryUploadResult, NoError> in
                 let privacyRules = apiInputPrivacyRules(privacy: privacy, transaction: transaction)
                 switch content.content {
                 case let .media(inputMedia, _):
@@ -664,7 +740,7 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                     
                     flags |= 1 << 3
                     
-                    return account.network.request(Api.functions.stories.sendStory(
+                    return network.request(Api.functions.stories.sendStory(
                         flags: flags,
                         media: inputMedia,
                         caption: apiCaption,
@@ -678,27 +754,69 @@ func _internal_uploadStory(account: Account, media: EngineStoryInputMedia, text:
                         return .single(nil)
                     }
                     |> mapToSignal { updates -> Signal<StoryUploadResult, NoError> in
-                        var id: Int32?
-                        if let updates = updates {
-                            for update in updates.allUpdates {
-                                if case let .updateStory(_, story) = update {
-                                    switch story {
-                                    case let .storyItem(_, idValue, _, _, _, _, media, _, _):
-                                        id = idValue
-                                        let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
-                                        if let parsedMedia = parsedMedia {
-                                            applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
-                                        }
-                                    default:
-                                        break
-                                    }
-                                }
+                        return postbox.transaction { transaction -> StoryUploadResult in
+                            var currentState: Stories.LocalState
+                            if let value = transaction.getLocalStoryState()?.get(Stories.LocalState.self) {
+                                currentState = value
+                            } else {
+                                currentState = Stories.LocalState(items: [])
+                            }
+                            if let index = currentState.items.firstIndex(where: { $0.stableId == stableId }) {
+                                currentState.items.remove(at: index)
+                                transaction.setLocalStoryState(state: CodableEntry(currentState))
                             }
                             
-                            account.stateManager.addUpdates(updates)
+                            var id: Int32?
+                            if let updates = updates {
+                                for update in updates.allUpdates {
+                                    if case let .updateStory(_, story) = update {
+                                        switch story {
+                                        case let .storyItem(_, idValue, _, _, _, _, media, _, _):
+                                            if let parsedStory = Stories.StoredItem(apiStoryItem: story, peerId: accountPeerId, transaction: transaction) {
+                                                var items = transaction.getStoryItems(peerId: accountPeerId)
+                                                var updatedItems: [Stories.Item] = []
+                                                if items.firstIndex(where: { $0.id == id }) == nil, case let .item(item) = parsedStory {
+                                                    let updatedItem = Stories.Item(
+                                                        id: item.id,
+                                                        timestamp: item.timestamp,
+                                                        expirationTimestamp: item.expirationTimestamp,
+                                                        media: item.media,
+                                                        text: item.text,
+                                                        entities: item.entities,
+                                                        views: item.views,
+                                                        privacy: Stories.Item.Privacy(base: privacy.base, additionallyIncludePeers: privacy.additionallyIncludePeers),
+                                                        isPinned: item.isPinned,
+                                                        isExpired: item.isExpired,
+                                                        isPublic: item.isPublic
+                                                    )
+                                                    if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
+                                                        items.append(StoryItemsTableEntry(value: entry, id: item.id))
+                                                    }
+                                                    updatedItems.append(updatedItem)
+                                                }
+                                                transaction.setStoryItems(peerId: accountPeerId, items: items)
+                                            }
+                                            
+                                            id = idValue
+                                            let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, accountPeerId)
+                                            if let parsedMedia = parsedMedia {
+                                                applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: postbox, force: originalMedia is TelegramMediaFile && parsedMedia is TelegramMediaFile)
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    }
+                                }
+                                
+                                if let id = id {
+                                    _internal_putPendingStoryIdMapping(accountPeerId: accountPeerId, stableId: stableId, id: id)
+                                }
+                                
+                                stateManager.addUpdates(updates)
+                            }
+                            
+                            return .completed(id)
                         }
-                        
-                        return .single(.completed(id))
                     }
                 default:
                     return .complete()
@@ -715,7 +833,7 @@ func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: In
     let contentSignal: Signal<PendingMessageUploadedContentResult?, NoError>
     let originalMedia: Media?
     if let media = media {
-        (contentSignal, originalMedia) = uploadedStoryContent(account: account, media: media)
+        (contentSignal, originalMedia) = uploadedStoryContent(postbox: account.postbox, network: account.network, media: prepareUploadStoryContent(account: account, media: media), accountPeerId: account.peerId, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, auxiliaryMethods: account.auxiliaryMethods)
     } else {
         contentSignal = .single(nil)
         originalMedia = nil
@@ -800,6 +918,73 @@ func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: In
             }
         }
         |> switchToLatest
+    }
+}
+
+func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStoryPrivacy) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> [Api.InputPrivacyRule] in
+        let storyId = StoryId(peerId: account.peerId, id: id)
+        if let storyItem = transaction.getStory(id: storyId)?.get(Stories.StoredItem.self), case let .item(item) = storyItem {
+            let updatedItem = Stories.Item(
+                id: item.id,
+                timestamp: item.timestamp,
+                expirationTimestamp: item.expirationTimestamp,
+                media: item.media,
+                text: item.text,
+                entities: item.entities,
+                views: item.views,
+                privacy: Stories.Item.Privacy(base: privacy.base, additionallyIncludePeers: privacy.additionallyIncludePeers),
+                isPinned: item.isPinned,
+                isExpired: item.isExpired,
+                isPublic: item.isPublic
+            )
+            if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
+                transaction.setStory(id: storyId, value: entry)
+            }
+        }
+        
+        var items = transaction.getStoryItems(peerId: account.peerId)
+        var updatedItems: [Stories.Item] = []
+        if let index = items.firstIndex(where: { $0.id == id }), case let .item(item) = items[index].value.get(Stories.StoredItem.self) {
+            let updatedItem = Stories.Item(
+                id: item.id,
+                timestamp: item.timestamp,
+                expirationTimestamp: item.expirationTimestamp,
+                media: item.media,
+                text: item.text,
+                entities: item.entities,
+                views: item.views,
+                privacy: Stories.Item.Privacy(base: privacy.base, additionallyIncludePeers: privacy.additionallyIncludePeers),
+                isPinned: item.isPinned,
+                isExpired: item.isExpired,
+                isPublic: item.isPublic
+            )
+            if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
+                items[index] = StoryItemsTableEntry(value: entry, id: item.id)
+            }
+            
+            updatedItems.append(updatedItem)
+        }
+        transaction.setStoryItems(peerId: account.peerId, items: items)
+        
+        return apiInputPrivacyRules(privacy: privacy, transaction: transaction)
+    }
+    |> mapToSignal { inputRules -> Signal<Never, NoError> in
+        var flags: Int32 = 0
+        flags |= 1 << 2
+        
+        return account.network.request(Api.functions.stories.editStory(flags: flags, id: id, media: nil, caption: nil, entities: nil, privacyRules: inputRules))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates = updates {
+                account.stateManager.addUpdates(updates)
+            }
+            
+            return .complete()
+        }
     }
 }
 

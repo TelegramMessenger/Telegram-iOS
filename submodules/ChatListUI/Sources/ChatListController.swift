@@ -177,6 +177,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private(set) var storySubscriptions: EngineStorySubscriptions?
     
+    private var storyProgressDisposable: Disposable?
     private var storySubscriptionsDisposable: Disposable?
     private var preloadStorySubscriptionsDisposable: Disposable?
     private var preloadStoryResourceDisposables: [MediaResourceId: Disposable] = [:]
@@ -717,6 +718,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.powerSavingMonitoringDisposable?.dispose()
         self.storySubscriptionsDisposable?.dispose()
         self.preloadStorySubscriptionsDisposable?.dispose()
+        self.storyProgressDisposable?.dispose()
     }
     
     private func updateNavigationMetadata() {
@@ -1240,7 +1242,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        self.chatListDisplayNode.mainContainerNode.openStories = { [weak self] peerId in
+        self.chatListDisplayNode.mainContainerNode.openStories = { [weak self] peerId, itemNode in
             guard let self else {
                 return
             }
@@ -1249,16 +1251,43 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let _ = (storyContent.state
             |> filter { $0.slice != nil }
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
+            |> deliverOnMainQueue).start(next: { [weak self, weak itemNode] _ in
                 guard let self else {
                     return
+                }
+                
+                var transitionIn: StoryContainerScreen.TransitionIn?
+                if let itemNode = itemNode as? ChatListItemNode {
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: itemNode.avatarNode.view,
+                        sourceRect: itemNode.avatarNode.view.bounds,
+                        sourceCornerRadius: itemNode.avatarNode.view.bounds.height * 0.5,
+                        sourceIsAvatar: true
+                    )
+                    itemNode.avatarNode.isHidden = true
                 }
                 
                 let storyContainerScreen = StoryContainerScreen(
                     context: self.context,
                     content: storyContent,
-                    transitionIn: nil,
+                    transitionIn: transitionIn,
                     transitionOut: { _, _ in
+                        if let itemNode = itemNode as? ChatListItemNode {
+                            let rect = itemNode.avatarNode.view.convert(itemNode.avatarNode.view.bounds, to: itemNode.view)
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: itemNode.view,
+                                transitionView: nil,
+                                destinationRect: rect,
+                                destinationCornerRadius: rect.height * 0.5,
+                                destinationIsAvatar: true,
+                                completed: { [weak itemNode] in
+                                    guard let itemNode else {
+                                        return
+                                    }
+                                    itemNode.avatarNode.isHidden = false
+                                }
+                            )
+                        }
                         return nil
                     }
                 )
@@ -1760,21 +1789,26 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.chatListDisplayNode.mainContainerNode.currentItemNode.updateState { chatListState in
                     var chatListState = chatListState
                     
-                    var peersWithNewStories = Set<EnginePeer.Id>()
+                    var peerStoryMapping: [EnginePeer.Id: Bool] = [:]
                     for item in storySubscriptions.items {
                         if item.peer.id == self.context.account.peerId {
                             continue
                         }
-                        if item.hasUnseen {
-                            peersWithNewStories.insert(item.peer.id)
-                        }
+                        peerStoryMapping[item.peer.id] = item.hasUnseen
                     }
-                    chatListState.peersWithNewStories = peersWithNewStories
+                    chatListState.peerStoryMapping = peerStoryMapping
                     
                     return chatListState
                 }
                 
                 self.storiesReady.set(.single(true))
+            })
+            self.storyProgressDisposable = (self.context.engine.messages.allStoriesUploadProgress()
+            |> deliverOnMainQueue).start(next: { [weak self] progress in
+                guard let self else {
+                    return
+                }
+                self.updateStoryUploadProgress(progress)
             })
         }
     }
@@ -2345,7 +2379,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             transitionIn = StoryContainerScreen.TransitionIn(
                                 sourceView: transitionView,
                                 sourceRect: transitionView.bounds,
-                                sourceCornerRadius: transitionView.bounds.height * 0.5
+                                sourceCornerRadius: transitionView.bounds.height * 0.5,
+                                sourceIsAvatar: true
                             )
                         }
                     }
@@ -2506,9 +2541,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private(set) var storyUploadProgress: Float?
-    public func updateStoryUploadProgress(_ progress: Float?) {
+    private func updateStoryUploadProgress(_ progress: Float?) {
         self.storyUploadProgress = progress.flatMap { max(0.027, min(0.99, $0)) }
-        self.chatListDisplayNode.requestNavigationBarLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
+        
+        if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+            navigationBarView.updateStoryUploadProgress(storyUploadProgress: self.storyUploadProgress)
+        }
     }
     
     public func scrollToStories() {

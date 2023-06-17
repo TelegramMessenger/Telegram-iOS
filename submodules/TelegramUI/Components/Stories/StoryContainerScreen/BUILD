@@ -47,6 +47,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryFooterPanelComponent",
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
         "//submodules/TelegramUI/Components/MediaEditorScreen",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramPresentationData",
         "//submodules/ReactionSelectionNode",
         "//submodules/ContextUI",

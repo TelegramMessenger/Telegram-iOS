@@ -341,6 +341,17 @@ public final class MediaBox {
         return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)"
     }
     
+    public func cachedRepresentationCompletePath(_ id: MediaResourceId, keepDuration: CachedMediaRepresentationKeepDuration, representationId: String) -> String {
+        let cacheString: String
+        switch keepDuration {
+        case .general:
+            cacheString = "cache"
+        case .shortLived:
+            cacheString = "short-cache"
+        }
+        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representationId)"
+    }
+    
     public func shortLivedResourceCachePathPrefix(_ id: MediaResourceId) -> String {
         let cacheString = "short-cache"
         return "\(self.basePath)/\(cacheString)/\(fileNameForId(id))"

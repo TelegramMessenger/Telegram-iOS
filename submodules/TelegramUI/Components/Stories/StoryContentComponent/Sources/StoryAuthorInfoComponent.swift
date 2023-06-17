@@ -58,8 +58,16 @@ final class StoryAuthorInfoComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
 
-            let title = component.peer?.debugDisplayTitle ?? ""
-            let subtitle = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: component.timestamp).string
+            let title: String
+            if component.peer?.id == component.context.account.peerId {
+                //TODO:localize
+                title = "Your story"
+            } else {
+                title = component.peer?.debugDisplayTitle ?? ""
+            }
+            
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            let subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: component.timestamp, relativeTo: timestamp)
             
             let titleSize = self.title.update(
                 transition: .immediate,

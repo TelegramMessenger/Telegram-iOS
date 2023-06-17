@@ -8,6 +8,8 @@ import AnimatedAvatarSetNode
 import AccountContext
 import TelegramCore
 import MoreHeaderButton
+import SemanticStatusNode
+import SwiftSignalKit
 
 public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext
@@ -53,11 +55,18 @@ public final class StoryFooterPanelComponent: Component {
         private let deleteButton = ComponentView<Empty>()
         private var moreButton: MoreHeaderButton?
         
+        private var statusButton: HighlightableButton?
+        private var statusNode: SemanticStatusNode?
+        private var uploadingText: ComponentView<Empty>?
+        
         private let avatarsContext: AnimatedAvatarSetContext
         private let avatarsNode: AnimatedAvatarSetNode
         
         private var component: StoryFooterPanelComponent?
         private weak var state: EmptyComponentState?
+        
+        private var uploadProgress: Float = 0.0
+        private var uploadProgressDisposable: Disposable?
         
         override init(frame: CGRect) {
             self.viewStatsButton = HighlightableButton()
@@ -78,6 +87,10 @@ public final class StoryFooterPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.uploadProgressDisposable?.dispose()
+        }
+        
         @objc private func viewStatsPressed() {
             guard let component = self.component else {
                 return
@@ -85,7 +98,37 @@ public final class StoryFooterPanelComponent: Component {
             component.expandViewStats()
         }
         
+        @objc private func statusPressed() {
+            guard let component = self.component else {
+                return
+            }
+            guard let storyItem = component.storyItem else {
+                return
+            }
+            component.context.engine.messages.cancelStoryUpload(stableId: storyItem.id)
+        }
+        
         func update(component: StoryFooterPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            if self.component?.storyItem?.id != component.storyItem?.id || self.component?.storyItem?.isPending != component.storyItem?.isPending {
+                self.uploadProgressDisposable?.dispose()
+                self.uploadProgress = 0.0
+                
+                if let storyItem = component.storyItem, storyItem.isPending {
+                    var applyState = false
+                    self.uploadProgressDisposable = (component.context.engine.messages.storyUploadProgress(stableId: storyItem.id)
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        guard let self else {
+                            return
+                        }
+                        self.uploadProgress = progress
+                        if applyState {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    })
+                    applyState = true
+                }
+            }
+            
             self.component = component
             self.state = state
             
@@ -96,6 +139,84 @@ public final class StoryFooterPanelComponent: Component {
             
             let avatarSpacing: CGFloat = 18.0
             
+            let avatarsAlpha: CGFloat
+            let baseViewCountAlpha: CGFloat
+            if let storyItem = component.storyItem, storyItem.isPending {
+                baseViewCountAlpha = 0.0
+                
+                let statusButton: HighlightableButton
+                if let current = self.statusButton {
+                    statusButton = current
+                } else {
+                    statusButton = HighlightableButton()
+                    statusButton.addTarget(self, action: #selector(self.statusPressed), for: .touchUpInside)
+                    self.statusButton = statusButton
+                    self.addSubview(statusButton)
+                }
+                
+                let statusNode: SemanticStatusNode
+                if let current = self.statusNode {
+                    statusNode = current
+                } else {
+                    statusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white, image: nil, overlayForegroundNodeColor: nil, cutout: nil)
+                    self.statusNode = statusNode
+                    statusButton.addSubview(statusNode.view)
+                }
+                
+                let uploadingText: ComponentView<Empty>
+                if let current = self.uploadingText {
+                    uploadingText = current
+                } else {
+                    uploadingText = ComponentView()
+                    self.uploadingText = uploadingText
+                }
+                
+                var innerLeftOffset: CGFloat = 0.0
+                
+                let statusSize = CGSize(width: 36.0, height: 36.0)
+                statusNode.view.frame = CGRect(origin: CGPoint(x: innerLeftOffset, y: floor((size.height - statusSize.height) * 0.5)), size: statusSize)
+                innerLeftOffset += statusSize.width + 10.0
+                
+                statusNode.transitionToState(.progress(value: CGFloat(max(0.08, self.uploadProgress)), cancelEnabled: true, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0)))
+                
+                //TODO:localize
+                let uploadingTextSize = uploadingText.update(
+                    transition: .immediate,
+                    component: AnyComponent(Text(text: "Uploading...", font: Font.regular(15.0), color: .white)),
+                    environment: {},
+                    containerSize: CGSize(width: 200.0, height: 100.0)
+                )
+                let uploadingTextFrame = CGRect(origin: CGPoint(x: innerLeftOffset, y: floor((size.height - uploadingTextSize.height) * 0.5)), size: uploadingTextSize)
+                if let uploadingTextView = uploadingText.view {
+                    if uploadingTextView.superview == nil {
+                        statusButton.addSubview(uploadingTextView)
+                    }
+                    uploadingTextView.frame = uploadingTextFrame
+                }
+                innerLeftOffset += uploadingTextSize.width + 8.0
+                
+                transition.setFrame(view: statusButton, frame: CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: CGSize(width: innerLeftOffset, height: size.height)))
+                leftOffset += innerLeftOffset
+                
+                avatarsAlpha = 0.0
+            } else {
+                if let statusNode = self.statusNode {
+                    self.statusNode = nil
+                    statusNode.view.removeFromSuperview()
+                }
+                if let uploadingText = self.uploadingText {
+                    self.uploadingText = nil
+                    uploadingText.view?.removeFromSuperview()
+                }
+                if let statusButton = self.statusButton {
+                    self.statusButton = nil
+                    statusButton.removeFromSuperview()
+                }
+                
+                avatarsAlpha = pow(1.0 - component.expandFraction, 1.0)
+                baseViewCountAlpha = 1.0
+            }
+            
             var peers: [EnginePeer] = []
             if let seenPeers = component.storyItem?.views?.seenPeers {
                 peers = Array(seenPeers.prefix(3))
@@ -105,8 +226,7 @@ public final class StoryFooterPanelComponent: Component {
             
             let avatarsNodeFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - avatarsSize.height) * 0.5)), size: avatarsSize)
             self.avatarsNode.frame = avatarsNodeFrame
-            //transition.setScale(view: self.avatarsNode.view, scale: CGFloat(1.0).interpolate(to: 0.001, amount: component.expandFraction))
-            transition.setAlpha(view: self.avatarsNode.view, alpha: pow(1.0 - component.expandFraction, 1.0))
+            transition.setAlpha(view: self.avatarsNode.view, alpha: avatarsAlpha)
             if !avatarsSize.width.isZero {
                 leftOffset = avatarsNodeFrame.maxX + avatarSpacing
             }
@@ -154,7 +274,7 @@ public final class StoryFooterPanelComponent: Component {
                 }
                 transition.setPosition(view: viewStatsTextView, position: viewStatsTextFrame.center)
                 transition.setBounds(view: viewStatsTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsTextFrame.size))
-                transition.setAlpha(view: viewStatsTextView, alpha: pow(1.0 - component.expandFraction, 1.2))
+                transition.setAlpha(view: viewStatsTextView, alpha: pow(1.0 - component.expandFraction, 1.2) * baseViewCountAlpha)
                 transition.setScale(view: viewStatsTextView, scale: viewStatsCurrentFrame.width / viewStatsTextFrame.width)
             }
             
@@ -166,7 +286,7 @@ public final class StoryFooterPanelComponent: Component {
                 }
                 transition.setPosition(view: viewStatsExpandedTextView, position: viewStatsExpandedTextFrame.center)
                 transition.setBounds(view: viewStatsExpandedTextView, bounds: CGRect(origin: CGPoint(), size: viewStatsExpandedTextFrame.size))
-                transition.setAlpha(view: viewStatsExpandedTextView, alpha: pow(component.expandFraction, 1.2))
+                transition.setAlpha(view: viewStatsExpandedTextView, alpha: pow(component.expandFraction, 1.2) * baseViewCountAlpha)
                 transition.setScale(view: viewStatsExpandedTextView, scale: viewStatsCurrentFrame.width / viewStatsExpandedTextFrame.width)
             }
             
@@ -199,7 +319,7 @@ public final class StoryFooterPanelComponent: Component {
                 transition.setFrame(view: deleteButtonView, frame: CGRect(origin: CGPoint(x: rightContentOffset - deleteButtonSize.width, y: floor((size.height - deleteButtonSize.height) * 0.5)), size: deleteButtonSize))
                 rightContentOffset -= deleteButtonSize.width + 8.0
                 
-                transition.setAlpha(view: deleteButtonView, alpha: pow(1.0 - component.expandFraction, 1.0))
+                transition.setAlpha(view: deleteButtonView, alpha: pow(1.0 - component.expandFraction, 1.0) * baseViewCountAlpha)
             }
             
             let moreButton: MoreHeaderButton
@@ -235,7 +355,7 @@ public final class StoryFooterPanelComponent: Component {
             let buttonSize = CGSize(width: 32.0, height: 44.0)
             moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: .white)))
             transition.setFrame(view: moreButton.view, frame: CGRect(origin: CGPoint(x: rightContentOffset - buttonSize.width, y: floor((size.height - buttonSize.height) / 2.0)), size: buttonSize))
-            transition.setAlpha(view: moreButton.view, alpha: pow(1.0 - component.expandFraction, 1.0))
+            transition.setAlpha(view: moreButton.view, alpha: pow(1.0 - component.expandFraction, 1.0) * baseViewCountAlpha)
             
             return size
         }

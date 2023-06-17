@@ -32,6 +32,7 @@ final class StoryItemSetViewListComponent: Component {
     let expandViewStats: () -> Void
     let deleteAction: () -> Void
     let moreAction: (UIView, ContextGesture?) -> Void
+    let openPeer: (EnginePeer) -> Void
     
     init(
         externalState: ExternalState,
@@ -44,7 +45,8 @@ final class StoryItemSetViewListComponent: Component {
         close: @escaping () -> Void,
         expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
-        moreAction: @escaping (UIView, ContextGesture?) -> Void
+        moreAction: @escaping (UIView, ContextGesture?) -> Void,
+        openPeer: @escaping (EnginePeer) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -57,6 +59,7 @@ final class StoryItemSetViewListComponent: Component {
         self.expandViewStats = expandViewStats
         self.deleteAction = deleteAction
         self.moreAction = moreAction
+        self.openPeer = openPeer
     }
 
     static func ==(lhs: StoryItemSetViewListComponent, rhs: StoryItemSetViewListComponent) -> Bool {
@@ -432,8 +435,11 @@ final class StoryItemSetViewListComponent: Component {
                             subtitle: dateText,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1,
-                            action: { _ in
-                                
+                            action: { [weak self] peer in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.openPeer(peer)
                             }
                         )),
                         environment: {},

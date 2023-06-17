@@ -42,14 +42,67 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
         let _ = (storyContent.state
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
-            let transitionIn: StoryContainerScreen.TransitionIn? = nil
+            var transitionIn: StoryContainerScreen.TransitionIn? = nil
+            
+            var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+            selectedTransitionNode = params.transitionNode(params.message.id, story)
+            
+            if let selectedTransitionNode {
+                transitionIn = StoryContainerScreen.TransitionIn(
+                    sourceView: selectedTransitionNode.0.view,
+                    sourceRect: selectedTransitionNode.1,
+                    sourceCornerRadius: 0.0,
+                    sourceIsAvatar: false
+                )
+            }
+            
+            let hiddenMediaSource = params.context.sharedContext.mediaManager.galleryHiddenMediaManager.addSource(.single(GalleryHiddenMediaId.chat(params.context.account.id, params.message.id, story)))
             
             let storyContainerScreen = StoryContainerScreen(
                 context: context,
                 content: storyContent,
                 transitionIn: transitionIn,
                 transitionOut: { _, _ in
-                    let transitionOut: StoryContainerScreen.TransitionOut? = nil
+                    var transitionOut: StoryContainerScreen.TransitionOut? = nil
+                    
+                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+                    selectedTransitionNode = params.transitionNode(params.message.id, story)
+                    if let selectedTransitionNode {
+                        transitionOut = StoryContainerScreen.TransitionOut(
+                            destinationView: selectedTransitionNode.0.view,
+                            transitionView: StoryContainerScreen.TransitionView(
+                                makeView: {
+                                    let view = UIView()
+                                    if let transitionView = selectedTransitionNode.2().0 {
+                                        transitionView.layer.anchorPoint = CGPoint()
+                                        view.addSubview(transitionView)
+                                    }
+                                    return view
+                                },
+                                updateView: { view, state, transition in
+                                    guard let view = view.subviews.first else {
+                                        return
+                                    }
+                                    if state.progress == 0.0 {
+                                        view.frame = CGRect(origin: CGPoint(), size: state.sourceSize)
+                                    }
+                                    
+                                    let toScale = state.sourceSize.width / state.destinationSize.width
+                                    let fromScale: CGFloat = 1.0
+                                    let scale = toScale.interpolate(to: fromScale, amount: state.progress)
+                                    transition.setTransform(view: view, transform: CATransform3DMakeScale(scale, scale, 1.0))
+                                }
+                            ),
+                            destinationRect: selectedTransitionNode.1,
+                            destinationCornerRadius: 0.0,
+                            destinationIsAvatar: false,
+                            completed: {
+                                params.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaSource)
+                            }
+                        )
+                    } else {
+                        params.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaSource)
+                    }
                     
                     return transitionOut
                 }

@@ -41,6 +41,22 @@ final class StoryContentCaptionComponent: Component {
         }
         return true
     }
+    
+    private struct ItemLayout {
+        var containerSize: CGSize
+        var visibleTextHeight: CGFloat
+        var verticalInset: CGFloat
+        
+        init(
+            containerSize: CGSize,
+            visibleTextHeight: CGFloat,
+            verticalInset: CGFloat
+        ) {
+            self.containerSize = containerSize
+            self.visibleTextHeight = visibleTextHeight
+            self.verticalInset = verticalInset
+        }
+    }
 
     final class View: UIView, UIScrollViewDelegate {
         private let scrollViewContainer: UIView
@@ -51,15 +67,23 @@ final class StoryContentCaptionComponent: Component {
         private let scrollCenterMaskView: UIView
         private let scrollBottomMaskView: UIImageView
         
+        private let shadowGradientLayer: SimpleGradientLayer
+        private let shadowPlainLayer: SimpleLayer
+        
         private let text = ComponentView<Empty>()
 
         private var component: StoryContentCaptionComponent?
         private weak var state: EmptyComponentState?
         
+        private var itemLayout: ItemLayout?
+        
         private var ignoreScrolling: Bool = false
         private var ignoreExternalState: Bool = false
         
         override init(frame: CGRect) {
+            self.shadowGradientLayer = SimpleGradientLayer()
+            self.shadowPlainLayer = SimpleLayer()
+            
             self.scrollViewContainer = UIView()
             
             self.scrollView = UIScrollView()
@@ -87,6 +111,9 @@ final class StoryContentCaptionComponent: Component {
             self.scrollMaskContainer.addSubview(self.scrollBottomMaskView)
 
             super.init(frame: frame)
+            
+            self.layer.addSublayer(self.shadowGradientLayer)
+            self.layer.addSublayer(self.shadowPlainLayer)
 
             self.scrollViewContainer.addSubview(self.scrollView)
             self.scrollView.delegate = self
@@ -145,7 +172,7 @@ final class StoryContentCaptionComponent: Component {
         }
         
         private func updateScrolling(transition: Transition) {
-            guard let component = self.component else {
+            guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
             }
             
@@ -154,6 +181,11 @@ final class StoryContentCaptionComponent: Component {
             
             let edgeDistanceFraction = edgeDistance / 7.0
             transition.setAlpha(view: self.scrollFullMaskView, alpha: 1.0 - edgeDistanceFraction)
+            
+            let shadowOverflow: CGFloat = 26.0
+            let shadowFrame = CGRect(origin: CGPoint(x: 0.0, y:  -self.scrollView.contentOffset.y + itemLayout.containerSize.height - itemLayout.visibleTextHeight - itemLayout.verticalInset - shadowOverflow), size: CGSize(width: itemLayout.containerSize.width, height: itemLayout.visibleTextHeight + itemLayout.verticalInset + shadowOverflow))
+            transition.setFrame(layer: self.shadowGradientLayer, frame: shadowFrame)
+            transition.setFrame(layer: self.shadowPlainLayer, frame: CGRect(origin: CGPoint(x: shadowFrame.minX, y: shadowFrame.maxY), size: CGSize(width: shadowFrame.width, height: self.scrollView.contentSize.height + 1000.0)))
             
             let expandDistance: CGFloat = 50.0
             var expandFraction: CGFloat = self.scrollView.contentOffset.y / expandDistance
@@ -205,6 +237,12 @@ final class StoryContentCaptionComponent: Component {
                 textView.frame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: textSize)
             }
             
+            self.itemLayout = ItemLayout(
+                containerSize: availableSize,
+                visibleTextHeight: visibleTextHeight,
+                verticalInset: verticalInset
+            )
+            
             self.ignoreScrolling = true
             
             if self.scrollView.contentSize != scrollContentSize {
@@ -212,6 +250,28 @@ final class StoryContentCaptionComponent: Component {
             }
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
             transition.setFrame(view: self.scrollViewContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
+            
+            if self.shadowGradientLayer.colors == nil {
+                var locations: [NSNumber] = []
+                var colors: [CGColor] = []
+                let numStops = 10
+                let baseAlpha: CGFloat = 0.3
+                for i in 0 ..< numStops {
+                    let step = 1.0 - CGFloat(i) / CGFloat(numStops - 1)
+                    locations.append((1.0 - step) as NSNumber)
+                    let alphaStep: CGFloat = pow(step, 1.2)
+                    colors.append(UIColor.black.withAlphaComponent(alphaStep * baseAlpha).cgColor)
+                }
+                
+                self.shadowGradientLayer.startPoint = CGPoint(x: 0.0, y: 1.0)
+                self.shadowGradientLayer.endPoint = CGPoint(x: 0.0, y: 0.0)
+                
+                self.shadowGradientLayer.locations = locations
+                self.shadowGradientLayer.colors = colors
+                self.shadowGradientLayer.type = .axial
+                
+                self.shadowPlainLayer.backgroundColor = UIColor(white: 0.0, alpha: baseAlpha).cgColor
+            }
             
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)

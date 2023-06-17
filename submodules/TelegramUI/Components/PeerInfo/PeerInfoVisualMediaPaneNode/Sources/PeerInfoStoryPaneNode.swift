@@ -983,7 +983,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     transitionIn = StoryContainerScreen.TransitionIn(
                         sourceView: self.view,
                         sourceRect: self.itemGrid.view.convert(itemRect, to: self.view),
-                        sourceCornerRadius: 0.0
+                        sourceCornerRadius: 0.0,
+                        sourceIsAvatar: false
                     )
                 }
                 

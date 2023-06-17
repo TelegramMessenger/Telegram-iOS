@@ -12,6 +12,7 @@ import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import StoryContainerScreen
 import HierarchyTrackingLayer
+import VolumeButtons
 
 final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
@@ -93,6 +94,8 @@ final class StoryItemContentComponent: Component {
         private let imageNode: TransformImageNode
         private var videoNode: UniversalVideoNode?
         
+        private var volumeButtonsListener: VolumeButtonsListener?
+        
         private var currentMessageMedia: EngineMedia?
         private var fetchDisposable: Disposable?
         
@@ -141,7 +144,7 @@ final class StoryItemContentComponent: Component {
         }
         
         private func performActionAfterImageContentLoaded(update: Bool) {
-            guard let component = self.component, let currentMessageMedia = self.currentMessageMedia else {
+            guard let component = self.component, let environment = self.environment, let currentMessageMedia = self.currentMessageMedia else {
                 return
             }
             
@@ -160,6 +163,7 @@ final class StoryItemContentComponent: Component {
                             streamVideo: .story,
                             loopVideo: true,
                             enableSound: true,
+                            beginWithAmbientSound: environment.sharedState.useAmbientMode,
                             tempFilePath: nil,
                             captureProtected: false,
                             storeAfterDownload: nil
@@ -189,6 +193,19 @@ final class StoryItemContentComponent: Component {
                     if update {
                         self.state?.updated(transition: .immediate)
                     }
+                    
+                    if self.volumeButtonsListener == nil, let sharedState = self.environment?.sharedState, sharedState.useAmbientMode {
+                        self.volumeButtonsListener = VolumeButtonsListener(shouldBeActive: .single(true), valueChanged: { [weak self] in
+                            guard let self, let sharedState = self.environment?.sharedState, sharedState.useAmbientMode else {
+                                return
+                            }
+                            sharedState.useAmbientMode = false
+                            if let videoNode = self.videoNode {
+                                videoNode.continueWithOverridingAmbientMode()
+                            }
+                            self.volumeButtonsListener = nil
+                        })
+                    }
                 }
             }
         }
@@ -211,7 +228,14 @@ final class StoryItemContentComponent: Component {
         
         private func updateIsProgressPaused() {
             if let videoNode = self.videoNode {
-                if !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy {
+                var canPlay = !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
+                if let component = self.component {
+                    if component.item.isPending {
+                        canPlay = false
+                    }
+                }
+                
+                if canPlay {
                     videoNode.play()
                 } else {
                     videoNode.pause()
@@ -223,7 +247,12 @@ final class StoryItemContentComponent: Component {
         }
         
         private func updateProgressTimer() {
-            let needsTimer = !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
+            var needsTimer = !self.isProgressPaused && self.contentLoaded && self.hierarchyTrackingLayer.isInHierarchy
+            if let component = self.component {
+                if component.item.isPending {
+                    needsTimer = false
+                }
+            }
             
             if needsTimer {
                 if self.currentProgressTimer == nil {
@@ -245,8 +274,8 @@ final class StoryItemContentComponent: Component {
                                     }
                                 }
                                 
-                                #if DEBUG && false
-                                let currentProgressTimerLimit: Double = 1 * 60.0
+                                #if DEBUG && true
+                                let currentProgressTimerLimit: Double = 10.0
                                 #else
                                 let currentProgressTimerLimit: Double = 5.0
                                 #endif

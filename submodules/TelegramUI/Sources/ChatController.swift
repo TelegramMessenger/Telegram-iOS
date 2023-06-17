@@ -97,6 +97,7 @@ import LegacyInstantVideoController
 import StoryContainerScreen
 import StoryContentComponent
 import MoreHeaderButton
+import VolumeButtons
 
 #if DEBUG
 import os.signpost
@@ -4532,7 +4533,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 transitionIn = StoryContainerScreen.TransitionIn(
                                     sourceView: result,
                                     sourceRect: result.bounds,
-                                    sourceCornerRadius: 2.0
+                                    sourceCornerRadius: 2.0,
+                                    sourceIsAvatar: false
                                 )
                             }
                         }

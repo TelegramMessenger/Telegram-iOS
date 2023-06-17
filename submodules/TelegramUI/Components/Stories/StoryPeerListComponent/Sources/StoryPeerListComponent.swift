@@ -23,6 +23,7 @@ public final class StoryPeerListComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let sideInset: CGFloat
     public let includesHidden: Bool
     public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
@@ -36,6 +37,7 @@ public final class StoryPeerListComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        sideInset: CGFloat,
         includesHidden: Bool,
         storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
@@ -48,6 +50,7 @@ public final class StoryPeerListComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.sideInset = sideInset
         self.includesHidden = includesHidden
         self.storySubscriptions = storySubscriptions
         self.collapseFraction = collapseFraction
@@ -65,6 +68,9 @@ public final class StoryPeerListComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.sideInset != rhs.sideInset {
             return false
         }
         if lhs.includesHidden != rhs.includesHidden {
@@ -529,7 +535,7 @@ public final class StoryPeerListComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: availableSize,
-                containerInsets: UIEdgeInsets(top: 4.0, left: 10.0, bottom: 0.0, right: 10.0),
+                containerInsets: UIEdgeInsets(top: 4.0, left: component.sideInset - 4.0, bottom: 0.0, right: component.sideInset - 4.0),
                 itemSize: CGSize(width: 60.0, height: 77.0),
                 itemSpacing: 24.0,
                 itemCount: self.sortedItems.count

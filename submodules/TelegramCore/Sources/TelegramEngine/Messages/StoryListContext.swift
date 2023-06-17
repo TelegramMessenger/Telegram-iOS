@@ -42,8 +42,9 @@ public final class EngineStoryItem: Equatable {
     public let isPinned: Bool
     public let isExpired: Bool
     public let isPublic: Bool
+    public let isPending: Bool
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -55,6 +56,7 @@ public final class EngineStoryItem: Equatable {
         self.isPinned = isPinned
         self.isExpired = isExpired
         self.isPublic = isPublic
+        self.isPending = isPending
     }
     
     public static func ==(lhs: EngineStoryItem, rhs: EngineStoryItem) -> Bool {
@@ -89,6 +91,9 @@ public final class EngineStoryItem: Equatable {
             return false
         }
         if lhs.isPublic != rhs.isPublic {
+            return false
+        }
+        if lhs.isPending != rhs.isPending {
             return false
         }
         return true
@@ -474,7 +479,8 @@ public final class PeerStoryListContext {
                             privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
                             isPinned: item.isPinned,
                             isExpired: item.isExpired,
-                            isPublic: item.isPublic
+                            isPublic: item.isPublic,
+                            isPending: false
                         )
                         items.append(mappedItem)
                     }
@@ -578,7 +584,8 @@ public final class PeerStoryListContext {
                                             privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
                                             isPinned: item.isPinned,
                                             isExpired: item.isExpired,
-                                            isPublic: item.isPublic
+                                            isPublic: item.isPublic,
+                                            isPending: false
                                         )
                                         storyItems.append(mappedItem)
                                     }
@@ -709,7 +716,8 @@ public final class PeerStoryListContext {
                                                                 privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
                                                                 isPinned: item.isPinned,
                                                                 isExpired: item.isExpired,
-                                                                isPublic: item.isPublic
+                                                                isPublic: item.isPublic,
+                                                                isPending: false
                                                             )
                                                             finalUpdatedState = updatedState
                                                         }
@@ -745,7 +753,8 @@ public final class PeerStoryListContext {
                                                                 privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
                                                                 isPinned: item.isPinned,
                                                                 isExpired: item.isExpired,
-                                                                isPublic: item.isPublic
+                                                                isPublic: item.isPublic,
+                                                                isPending: false
                                                             ))
                                                             updatedState.items.sort(by: { lhs, rhs in
                                                                 return lhs.timestamp > rhs.timestamp
@@ -890,7 +899,8 @@ public final class PeerExpiringStoryListContext {
                                         privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
                                         isPinned: item.isPinned,
                                         isExpired: item.isExpired,
-                                        isPublic: item.isPublic
+                                        isPublic: item.isPublic,
+                                        isPending: false
                                     )
                                     items.append(.item(mappedItem))
                                 }

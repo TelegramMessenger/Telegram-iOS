@@ -25,10 +25,10 @@ public enum ManagedAudioSessionType: Equatable {
     
     var isPlay: Bool {
         switch self {
-            case .play, .playWithPossiblePortOverride:
-                return true
-            default:
-                return false
+        case .play, .ambient, .playWithPossiblePortOverride:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -186,7 +186,7 @@ public class ManagedAudioSessionControl {
     }
 }
 
-public final class ManagedAudioSession {
+public final class ManagedAudioSession: NSObject {
     public private(set) static var shared: ManagedAudioSession?
     
     private var nextId: Int32 = 0
@@ -211,6 +211,11 @@ public final class ManagedAudioSession {
     
     private let outputsToHeadphonesSubscribers = Bag<(Bool) -> Void>()
     
+    private let volumeUpDetectedPromise = Promise<Void>()
+    public var volumeUpDetected: Signal<Void, NoError> {
+        return self.volumeUpDetectedPromise.get()
+    }
+    
     private var availableOutputsValue: [AudioSessionOutput] = []
     private var currentOutputValue: AudioSessionOutput?
     
@@ -220,10 +225,12 @@ public final class ManagedAudioSession {
     private var isActiveValue: Bool = false
     private var callKitAudioSessionIsActive: Bool = false
     
-    public init() {
+    override public init() {
         self.queue = Queue()
         
         self.hasLoudspeaker = UIDevice.current.model == "iPhone"
+        
+        super.init()
         
         let queue = self.queue
         NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: AVAudioSession.sharedInstance(), queue: nil, using: { [weak self] _ in
@@ -263,6 +270,8 @@ public final class ManagedAudioSession {
             })
         })
         
+        AVAudioSession.sharedInstance().addObserver(self, forKeyPath: "outputVolume", options: [.new, .old], context: nil)
+        
         queue.async {
             self.isHeadsetPluggedInValue = self.isHeadsetPluggedIn()
             self.updateCurrentAudioRouteInfo()
@@ -273,6 +282,17 @@ public final class ManagedAudioSession {
     
     deinit {
         self.deactivateTimer?.invalidate()
+        AVAudioSession.sharedInstance().removeObserver(self, forKeyPath: "outputVolume")
+    }
+    
+    public override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        if keyPath == "outputVolume", let change {
+            if let oldValue = (change[.oldKey] as? NSNumber)?.doubleValue, let newValue = (change[.newKey] as? NSNumber)?.doubleValue {
+                if oldValue < newValue || newValue == 1.0 {
+                    self.volumeUpDetectedPromise.set(.single(Void()))
+                }
+            }
+        }
     }
     
     private func updateCurrentAudioRouteInfo() {

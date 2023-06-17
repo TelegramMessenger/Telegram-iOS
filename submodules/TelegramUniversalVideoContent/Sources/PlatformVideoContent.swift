@@ -430,6 +430,9 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
     }
     
+    func continueWithOverridingAmbientMode() {
+    }
+    
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
     }
     
