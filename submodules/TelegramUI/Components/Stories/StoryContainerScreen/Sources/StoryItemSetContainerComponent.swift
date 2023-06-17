@@ -36,6 +36,18 @@ public final class StoryItemSetContainerComponent: Component {
         case next
     }
     
+    public struct PinchState: Equatable {
+        var scale: CGFloat
+        var location: CGPoint
+        var offset: CGPoint
+        
+        init(scale: CGFloat, location: CGPoint, offset: CGPoint) {
+            self.scale = scale
+            self.location = location
+            self.offset = offset
+        }
+    }
+    
     public let context: AccountContext
     public let externalState: ExternalState
     public let storyItemSharedState: StoryContentItem.SharedState
@@ -51,6 +63,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let visibilityFraction: CGFloat
     public let isPanning: Bool
     public let verticalPanFraction: CGFloat
+    public let pinchState: PinchState?
     public let presentController: (ViewController) -> Void
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
@@ -74,6 +87,7 @@ public final class StoryItemSetContainerComponent: Component {
         visibilityFraction: CGFloat,
         isPanning: Bool,
         verticalPanFraction: CGFloat,
+        pinchState: PinchState?,
         presentController: @escaping (ViewController) -> Void,
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
@@ -96,6 +110,7 @@ public final class StoryItemSetContainerComponent: Component {
         self.visibilityFraction = visibilityFraction
         self.isPanning = isPanning
         self.verticalPanFraction = verticalPanFraction
+        self.pinchState = pinchState
         self.presentController = presentController
         self.close = close
         self.navigate = navigate
@@ -142,6 +157,9 @@ public final class StoryItemSetContainerComponent: Component {
             return false
         }
         if lhs.verticalPanFraction != rhs.verticalPanFraction {
+            return false
+        }
+        if lhs.pinchState != rhs.pinchState {
             return false
         }
         return true
@@ -491,6 +509,9 @@ public final class StoryItemSetContainerComponent: Component {
         private func isProgressPaused() -> Bool {
             guard let component = self.component else {
                 return false
+            }
+            if component.pinchState != nil {
+                return true
             }
             if self.inputPanelExternalState.isEditing || component.isProgressPaused || self.actionSheet != nil || self.contextController != nil || self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil || self.displayViewList {
                 return true
@@ -1359,7 +1380,7 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             actionSheet.setItemGroups([
                                 ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in
+                                    ActionSheetButtonItem(title: "Delete Story", color: .destructive, action: { [weak self, weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         
                                         guard let self, let component = self.component else {
@@ -1607,7 +1628,24 @@ public final class StoryItemSetContainerComponent: Component {
             
             transition.setPosition(view: self.contentContainerView, position: contentFrame.center)
             transition.setBounds(view: self.contentContainerView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))
-            transition.setScale(view: self.contentContainerView, scale: contentVisualScale)
+            
+            var transform = CATransform3DMakeScale(contentVisualScale, contentVisualScale, 1.0)
+            if let pinchState = component.pinchState {
+                let pinchOffset = CGPoint(
+                    x: pinchState.location.x - contentFrame.width / 2.0,
+                    y: pinchState.location.y - contentFrame.height / 2.0
+                )
+                transform = CATransform3DTranslate(
+                    transform,
+                    pinchState.offset.x - pinchOffset.x * (pinchState.scale - 1.0),
+                    pinchState.offset.y - pinchOffset.y * (pinchState.scale - 1.0),
+                    0.0
+                )
+                transform = CATransform3DScale(transform, pinchState.scale, pinchState.scale, 0.0)
+            }
+            transition.setTransform(view: self.contentContainerView, transform: transform)
+            
+            //transition.setScale(view: self.contentContainerView, scale: contentVisualScale)
             transition.setCornerRadius(layer: self.contentContainerView.layer, cornerRadius: 12.0 * (1.0 / contentVisualScale))
             
             if self.closeButtonIconView.image == nil {
@@ -1731,7 +1769,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.itemLayout = itemLayout
             
             let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
-            var inputPanelAlpha: CGFloat = focusedItem?.isMy == true ? 0.0 : 1.0
+            var inputPanelAlpha: CGFloat = focusedItem?.isMy == true || component.hideUI ? 0.0 : 1.0
             if case .regular = component.metrics.widthClass {
                 inputPanelAlpha *= component.visibilityFraction
             }

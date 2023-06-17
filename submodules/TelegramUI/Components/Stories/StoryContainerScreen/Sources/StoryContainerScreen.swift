@@ -151,6 +151,7 @@ private final class StoryContainerScreenComponent: Component {
         }
     }
     
+
     final class View: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         private var component: StoryContainerScreenComponent?
         private weak var state: EmptyComponentState?
@@ -165,6 +166,7 @@ private final class StoryContainerScreenComponent: Component {
         private let storyItemSharedState = StoryContentItem.SharedState()
         private var visibleItemSetViews: [EnginePeer.Id: ItemSetView] = [:]
         
+        private var itemSetPinchState: StoryItemSetContainerComponent.PinchState?
         private var itemSetPanState: ItemSetPanState?
         private var verticalPanState: ItemSetPanState?
         private var isHoldingTouch: Bool = false
@@ -225,6 +227,9 @@ private final class StoryContainerScreenComponent: Component {
                 self.state?.updated(transition: .immediate)
             }
             self.addGestureRecognizer(longPressRecognizer)
+            
+            let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchGesture(_:)))
+            self.addGestureRecognizer(pinchRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
             self.backgroundEffectView.addGestureRecognizer(tapGestureRecognizer)
@@ -432,6 +437,26 @@ private final class StoryContainerScreenComponent: Component {
                         self.commitHorizontalPan(velocity: CGPoint(x: -100.0, y: 0.0))
                     }
                 }
+            }
+        }
+        
+        @objc private func pinchGesture(_ recognizer: UIPinchGestureRecognizer) {
+            switch recognizer.state {
+            case .began, .changed:
+                let location = recognizer.location(in: self)
+                let scale = recognizer.scale
+                if let itemSetPinchState = self.itemSetPinchState {
+                    let offset = CGPoint(x: location.x - itemSetPinchState.location.x , y: location.y - itemSetPinchState.location.y)
+                    self.itemSetPinchState = StoryItemSetContainerComponent.PinchState(scale: scale, location: itemSetPinchState.location, offset: offset)
+                } else {
+                    self.itemSetPinchState = StoryItemSetContainerComponent.PinchState(scale: scale, location: location, offset: .zero)
+                }
+                self.state?.updated(transition: .immediate)
+            case .cancelled, .ended:
+                self.itemSetPinchState = nil
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            default:
+                break
             }
         }
         
@@ -703,7 +728,7 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetContainerInsets.bottom = floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)
                             itemSetContainerSafeInsets.bottom = 0.0
                         }
-                        
+                                                
                         let _ = itemSetView.view.update(
                             transition: itemSetTransition,
                             component: AnyComponent(StoryItemSetContainerComponent(
@@ -718,10 +743,11 @@ private final class StoryContainerScreenComponent: Component {
                                 inputHeight: environment.inputHeight,
                                 metrics: environment.metrics,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
-                                hideUI: i == focusedIndex && self.itemSetPanState?.didBegin == false,
+                                hideUI: (i == focusedIndex && (self.itemSetPanState?.didBegin == false || self.itemSetPinchState != nil)),
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),
                                 isPanning: self.itemSetPanState?.didBegin == true,
                                 verticalPanFraction: verticalPanFraction,
+                                pinchState: self.itemSetPinchState,
                                 presentController: { [weak self] c in
                                     guard let self, let environment = self.environment else {
                                         return

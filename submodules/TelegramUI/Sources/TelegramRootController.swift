@@ -255,7 +255,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         controller.view.endEditing(true)
         
         let context = self.context
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
