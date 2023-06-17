@@ -313,6 +313,9 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case textMention(EnginePeer.Id)
     case textUrl(String)
     case customEmoji(stickerPack: StickerPackReference?, fileId: Int64)
+    case strikethrough
+    case underline
+    case spoiler
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
@@ -334,6 +337,12 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
             let stickerPack = try container.decodeIfPresent(StickerPackReference.self, forKey: "s")
             let fileId = try container.decode(Int64.self, forKey: "f")
             self = .customEmoji(stickerPack: stickerPack, fileId: fileId)
+        case 6:
+            self = .strikethrough
+        case 7:
+            self = .underline
+        case 8:
+            self = .spoiler
         default:
             assertionFailure()
             self = .bold
@@ -359,6 +368,12 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
             try container.encode(5 as Int32, forKey: "t")
             try container.encodeIfPresent(stickerPack, forKey: "s")
             try container.encode(fileId, forKey: "f")
+        case .strikethrough:
+            try container.encode(6 as Int32, forKey: "t")
+        case .underline:
+            try container.encode(7 as Int32, forKey: "t")
+        case .spoiler:
+            try container.encode(8 as Int32, forKey: "t")
         }
     }
 }
@@ -426,6 +441,12 @@ public struct ChatTextInputStateText: Codable, Equatable {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .textUrl(value.url), range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: value.fileId), range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.strikethrough {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .strikethrough, range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.underline {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .underline, range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.spoiler {
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .spoiler, range: range.location ..< (range.location + range.length)))
                 }
             }
         })
@@ -464,6 +485,12 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case let .customEmoji(_, fileId):
                 result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case .strikethrough:
+                result.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case .underline:
+                result.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case .spoiler:
+                result.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             }
         }
         return result

@@ -27,6 +27,7 @@ import LocalMediaResources
 import ShareWithPeersScreen
 import ImageCompression
 import TextFormat
+import UndoUI
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -254,6 +255,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         controller.view.endEditing(true)
         
         let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
@@ -287,13 +289,25 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             completion: { result, resultTransition, dismissed in
                 let subject: Signal<MediaEditorScreen.Subject?, NoError> = result
                 |> map { value -> MediaEditorScreen.Subject? in
+                    func editorPIPPosition(_ position: CameraScreen.PIPPosition) -> MediaEditorScreen.PIPPosition {
+                        switch position {
+                        case .topLeft:
+                            return .topLeft
+                        case .topRight:
+                            return .topRight
+                        case .bottomLeft:
+                            return .bottomLeft
+                        case .bottomRight:
+                            return .bottomRight
+                        }
+                    }
                     switch value {
                     case .pendingImage:
                         return nil
-                    case let .image(image, additionalImage):
-                        return .image(image, PixelDimensions(image.size), additionalImage)
-                    case let .video(path, transitionImage, dimensions):
-                        return .video(path, transitionImage, dimensions)
+                    case let .image(image, additionalImage, pipPosition):
+                        return .image(image, PixelDimensions(image.size), additionalImage, editorPIPPosition(pipPosition))
+                    case let .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, pipPosition):
+                        return .video(path, transitionImage, additionalPath, additionalTransitionImage, dimensions, editorPIPPosition(pipPosition))
                     case let .asset(asset):
                         return .asset(asset)
                     case let .draft(draft):
@@ -362,6 +376,17 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                                     Queue.mainQueue().after(0.2) {
                                                         chatListController.updateStoryUploadProgress(nil)
                                                     }
+                                                    
+                                                    let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image, title: nil, text: "Story successfully uploaded", round: false, undoText: "View"), elevatedLayout: false, action: { action in
+                                                        switch action {
+                                                            case .undo:
+                                                                break
+                                                            default:
+                                                                break
+                                                        }
+                                                        return true
+                                                    })
+                                                    chatListController.present(undoOverlayController, in: .current)
                                                 }
                                             }
                                         })
@@ -420,7 +445,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                         commit({})
                                     }
                                 }
-                            case let .video(content, _, values, duration, dimensions, caption):
+                            case let .video(content, image, values, duration, dimensions, caption):
                                 let adjustments: VideoMediaResourceAdjustments
                                 if let valuesData = try? JSONEncoder().encode(values) {
                                     let data = MemoryBuffer(data: valuesData)
@@ -450,6 +475,19 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                                     }
                                                     Queue.mainQueue().after(0.2) {
                                                         chatListController.updateStoryUploadProgress(nil)
+                                                    }
+                                                    
+                                                    if let image {
+                                                        let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image, title: nil, text: "Story successfully uploaded", round: false, undoText: "View"), elevatedLayout: false, action: { action in
+                                                            switch action {
+                                                            case .undo:
+                                                                break
+                                                            default:
+                                                                break
+                                                            }
+                                                            return true
+                                                        })
+                                                        chatListController.present(undoOverlayController, in: .current)
                                                     }
                                                 }
                                             }

@@ -121,12 +121,6 @@ private func lookupSpringValue(_ t: CGFloat) -> CGFloat {
         }
     }
     return 1.0
-//    print("---start---")
-//    for i in 0 ..< 16 {
-//        let j = Double(i) * 1.0 / 16.0
-//        print("\(j) \(listViewAnimationCurveSystem(j))")
-//    }
-//    print("---end---")
 }
 
 private class ShutterBlobLayer: MetalImageLayer {
@@ -214,12 +208,14 @@ final class ShutterBlobView: UIView {
     private var displayLink: SharedDisplayLinkDriver.Link?
     
     private var primarySize = AnimatableProperty<CGFloat>(value: 0.63)
-    private var primaryOffset = AnimatableProperty<CGFloat>(value: 0.0)
+    private var primaryOffsetX = AnimatableProperty<CGFloat>(value: 0.0)
+    private var primaryOffsetY = AnimatableProperty<CGFloat>(value: 0.0)
     private var primaryRedness = AnimatableProperty<CGFloat>(value: 0.0)
     private var primaryCornerRadius = AnimatableProperty<CGFloat>(value: 0.63)
     
     private var secondarySize = AnimatableProperty<CGFloat>(value: 0.34)
-    private var secondaryOffset = AnimatableProperty<CGFloat>(value: 0.0)
+    private var secondaryOffsetX = AnimatableProperty<CGFloat>(value: 0.0)
+    private var secondaryOffsetY = AnimatableProperty<CGFloat>(value: 0.0)
     private var secondaryRedness = AnimatableProperty<CGFloat>(value: 0.0)
     
     private(set) var state: BlobState = .generic
@@ -309,22 +305,42 @@ final class ShutterBlobView: UIView {
         self.tick()
     }
     
-    func updatePrimaryOffset(_ offset: CGFloat, transition: Transition = .immediate) {
+    func updatePrimaryOffsetX(_ offset: CGFloat, transition: Transition = .immediate) {
         guard self.frame.height > 0.0 else {
             return
         }
         let mappedOffset = offset / self.frame.height * 2.0
-        self.primaryOffset.update(value: mappedOffset, transition: transition)
+        self.primaryOffsetX.update(value: mappedOffset, transition: transition)
         
         self.tick()
     }
     
-    func updateSecondaryOffset(_ offset: CGFloat, transition: Transition = .immediate) {
+    func updatePrimaryOffsetY(_ offset: CGFloat, transition: Transition = .immediate) {
+        guard self.frame.height > 0.0 else {
+            return
+        }
+        let mappedOffset = offset / self.frame.width * 2.0
+        self.primaryOffsetY.update(value: mappedOffset, transition: transition)
+        
+        self.tick()
+    }
+    
+    func updateSecondaryOffsetX(_ offset: CGFloat, transition: Transition = .immediate) {
         guard self.frame.height > 0.0 else {
             return
         }
         let mappedOffset = offset / self.frame.height * 2.0
-        self.secondaryOffset.update(value: mappedOffset, transition: transition)
+        self.secondaryOffsetX.update(value: mappedOffset, transition: transition)
+        
+        self.tick()
+    }
+    
+    func updateSecondaryOffsetY(_ offset: CGFloat, transition: Transition = .immediate) {
+        guard self.frame.height > 0.0 else {
+            return
+        }
+        let mappedOffset = offset / self.frame.width * 2.0
+        self.secondaryOffsetY.update(value: mappedOffset, transition: transition)
         
         self.tick()
     }
@@ -332,11 +348,13 @@ final class ShutterBlobView: UIView {
     private func updateAnimations() {
         let properties = [
             self.primarySize,
-            self.primaryOffset,
+            self.primaryOffsetX,
+            self.primaryOffsetY,
             self.primaryRedness,
             self.primaryCornerRadius,
             self.secondarySize,
-            self.secondaryOffset,
+            self.secondaryOffsetX,
+            self.secondaryOffsetY,
             self.secondaryRedness
         ]
         
@@ -407,20 +425,31 @@ final class ShutterBlobView: UIView {
         var resolution = simd_uint2(UInt32(drawableSize.width), UInt32(drawableSize.height))
         renderEncoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
         
-        var primaryParameters = simd_float4(
+        var primaryParameters = simd_float3(
             Float(self.primarySize.presentationValue),
-            Float(self.primaryOffset.presentationValue),
             Float(self.primaryRedness.presentationValue),
             Float(self.primaryCornerRadius.presentationValue)
         )
-        renderEncoder.setFragmentBytes(&primaryParameters, length: MemoryLayout<simd_float4>.size, index: 1)
+        renderEncoder.setFragmentBytes(&primaryParameters, length: MemoryLayout<simd_float3>.size, index: 1)
 
-        var secondaryParameters = simd_float3(
+        var primaryOffset = simd_float2(
+            Float(self.primaryOffsetX.presentationValue),
+            Float(self.primaryOffsetY.presentationValue)
+        )
+        renderEncoder.setFragmentBytes(&primaryOffset, length: MemoryLayout<simd_float2>.size, index: 2)
+        
+        var secondaryParameters = simd_float2(
             Float(self.secondarySize.presentationValue),
-            Float(self.secondaryOffset.presentationValue),
             Float(self.secondaryRedness.presentationValue)
         )
-        renderEncoder.setFragmentBytes(&secondaryParameters, length: MemoryLayout<simd_float3>.size, index: 2)
+        renderEncoder.setFragmentBytes(&secondaryParameters, length: MemoryLayout<simd_float4>.size, index: 3)
+        
+        var secondaryOffset = simd_float2(
+            Float(self.secondaryOffsetX.presentationValue),
+            Float(self.secondaryOffsetY.presentationValue)
+        )
+        renderEncoder.setFragmentBytes(&secondaryOffset, length: MemoryLayout<simd_float2>.size, index: 4)
+        
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)
         renderEncoder.endEncoding()
 

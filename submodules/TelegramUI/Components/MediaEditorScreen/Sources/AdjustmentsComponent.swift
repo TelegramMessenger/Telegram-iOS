@@ -386,3 +386,73 @@ final class AdjustmentsComponent: Component {
     }
 }
 
+final class AdjustmentsScreenComponent: Component {
+    typealias EnvironmentType = Empty
+    
+    let toggleUneditedPreview: (Bool) -> Void
+    
+    init(
+        toggleUneditedPreview: @escaping (Bool) -> Void
+    ) {
+        self.toggleUneditedPreview = toggleUneditedPreview
+    }
+    
+    static func ==(lhs: AdjustmentsScreenComponent, rhs: AdjustmentsScreenComponent) -> Bool {
+        return true
+    }
+        
+    final class View: UIView {
+        enum Field {
+            case blacks
+            case shadows
+            case midtones
+            case highlights
+            case whites
+        }
+        
+        private var component: AdjustmentsScreenComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            let longPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
+            longPressGestureRecognizer.minimumPressDuration = 0.05
+            self.addGestureRecognizer(longPressGestureRecognizer)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+                
+        @objc func handleLongPress(_ gestureRecognizer: UIPanGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            
+            switch gestureRecognizer.state {
+            case .began:
+                component.toggleUneditedPreview(true)
+            case .ended, .cancelled:
+                component.toggleUneditedPreview(false)
+            default:
+                break
+            }
+        }
+        
+        func update(component: AdjustmentsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            return availableSize
+        }
+    }
+
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}

@@ -321,7 +321,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             if setup {
                 text.referenceDrawingSize = self.size
                 text.width = floor(self.size.width * 0.9)
-                text.fontSize = 0.3
+                text.fontSize = 0.08
                 text.scale = zoomScale
             }
         }
@@ -415,9 +415,16 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         let newEntity = entity.duplicate()
         self.prepareNewEntity(newEntity, setup: false, relativeTo: entity)
         
-        guard let view = makeEntityView(context: self.context, entity: entity) else {
+        guard let view = makeEntityView(context: self.context, entity: newEntity) else {
             fatalError()
         }
+        
+        if let initialView = self.getView(for: entity.uuid) {
+            view.onSnapUpdated = initialView.onSnapUpdated
+            view.onPositionUpdated = initialView.onPositionUpdated
+            view.onInteractionUpdated = initialView.onInteractionUpdated
+        }
+        
         view.containerView = self
         view.update()
         self.addSubview(view)
@@ -514,6 +521,12 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             }
         }
         return nil
+    }
+    
+    public func eachView(_ f: (DrawingEntityView) -> Void) {
+        for case let view as DrawingEntityView in self.subviews {
+            f(view)
+        }
     }
     
     public func play() {
@@ -700,15 +713,15 @@ public class DrawingEntityView: UIView {
         return self.bounds
     }
     
-    func play() {
+    public func play() {
         
     }
     
-    func pause() {
+    public func pause() {
         
     }
     
-    func seek(to timestamp: Double) {
+    public func seek(to timestamp: Double) {
         
     }
     

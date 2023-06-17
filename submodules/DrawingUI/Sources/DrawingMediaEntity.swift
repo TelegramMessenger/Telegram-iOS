@@ -43,17 +43,17 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         }
     }
     
-    override func play() {
+    public override func play() {
         self.isVisible = true
         self.applyVisibility()
     }
     
-    override func pause() {
+    public override func pause() {
         self.isVisible = false
         self.applyVisibility()
     }
     
-    override func seek(to timestamp: Double) {
+    public override func seek(to timestamp: Double) {
         self.isVisible = false
         self.isPlaying = false
         

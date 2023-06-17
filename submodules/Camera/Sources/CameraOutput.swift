@@ -6,6 +6,28 @@ import CoreImage
 import Vision
 import VideoToolbox
 
+public enum VideoCaptureResult: Equatable {
+    case finished((String, UIImage), (String, UIImage)?, Double)
+    case failed
+    
+    public static func == (lhs: VideoCaptureResult, rhs: VideoCaptureResult) -> Bool {
+        switch lhs {
+        case .failed:
+            if case .failed = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .finished(_, _, lhsTime):
+            if case let .finished(_, _, rhsTime) = rhs, lhsTime == rhsTime {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+}
+
 public struct CameraCode: Equatable {
     public enum CodeType {
         case qr
@@ -272,7 +294,7 @@ final class CameraOutput: NSObject {
         }
     }
     
-    private var recordingCompletionPipe = ValuePipe<(String, UIImage?)?>()
+    private var recordingCompletionPipe = ValuePipe<VideoCaptureResult>()
     func startRecording() -> Signal<Double, NoError> {
         guard self.videoRecorder == nil else {
             return .complete()
@@ -288,18 +310,16 @@ final class CameraOutput: NSObject {
         guard let videoSettings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: codecType, assetWriterOutputFileType: .mp4) else {
             return .complete()
         }
-        guard let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) else {
-            return .complete()
-        }
+        let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
         
         let outputFileName = NSUUID().uuidString
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), videoTransform: CGAffineTransform(rotationAngle: .pi / 2.0), fileUrl: outputFileURL, completion: { [weak self] result in
             if case let .success(transitionImage) = result {
-                self?.recordingCompletionPipe.putNext((outputFilePath, transitionImage))
+                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage!), nil, CACurrentMediaTime()))
             } else {
-                self?.recordingCompletionPipe.putNext(nil)
+                self?.recordingCompletionPipe.putNext(.failed)
             }
         })
         
@@ -318,7 +338,7 @@ final class CameraOutput: NSObject {
         }
     }
     
-    func stopRecording() -> Signal<(String, UIImage?)?, NoError> {
+    func stopRecording() -> Signal<VideoCaptureResult, NoError> {
         self.videoRecorder?.stop()
         
         return self.recordingCompletionPipe.signal()

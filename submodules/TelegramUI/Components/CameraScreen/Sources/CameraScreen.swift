@@ -18,6 +18,7 @@ import LottieAnimationComponent
 import TooltipUI
 import MediaEditor
 import BundleIconComponent
+import CameraButtonComponent
 
 let videoRedColor = UIColor(rgb: 0xff3b30)
 
@@ -86,6 +87,8 @@ private final class CameraScreenComponent: CombinedComponent {
     let camera: Camera
     let updateState: ActionSlot<CameraState>
     let hasAppeared: Bool
+    let panelWidth: CGFloat
+    let flipAnimationAction: ActionSlot<Void>
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -95,6 +98,8 @@ private final class CameraScreenComponent: CombinedComponent {
         camera: Camera,
         updateState: ActionSlot<CameraState>,
         hasAppeared: Bool,
+        panelWidth: CGFloat,
+        flipAnimationAction: ActionSlot<Void>,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
         completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -103,6 +108,8 @@ private final class CameraScreenComponent: CombinedComponent {
         self.camera = camera
         self.updateState = updateState
         self.hasAppeared = hasAppeared
+        self.panelWidth = panelWidth
+        self.flipAnimationAction = flipAnimationAction
         self.present = present
         self.push = push
         self.completion = completion
@@ -113,6 +120,9 @@ private final class CameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.hasAppeared != rhs.hasAppeared {
+            return false
+        }
+        if lhs.panelWidth != rhs.panelWidth {
             return false
         }
         return true
@@ -186,7 +196,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             })
             
-            Queue.mainQueue().async {
+            Queue.concurrentDefaultQueue().async {
                 self.setupRecentAssetSubscription()
             }
         }
@@ -229,9 +239,18 @@ private final class CameraScreenComponent: CombinedComponent {
             self.hapticFeedback.impact(.light)
         }
         
-        func togglePosition() {
+        private var lastFlipTimestamp: Double?
+        func togglePosition(_ action: ActionSlot<Void>) {
+            let currentTimestamp = CACurrentMediaTime()
+            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.3 {
+                return
+            }
+            self.lastFlipTimestamp = currentTimestamp
+            
             self.camera.togglePosition()
             self.hapticFeedback.impact(.light)
+            
+            action.invoke(Void())
         }
         
         func toggleDualCamera() {
@@ -256,7 +275,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 case .began:
                     return .single(.pendingImage)
                 case let .finished(mainImage, additionalImage, _):
-                    return .single(.image(mainImage, additionalImage))
+                    return .single(.image(mainImage, additionalImage, .bottomRight))
                 case .failed:
                     return .complete()
                 }
@@ -282,9 +301,9 @@ private final class CameraScreenComponent: CombinedComponent {
         func stopVideoRecording() {
             self.cameraState = self.cameraState.updatedRecording(.none).updatedDuration(0.0)
             self.resultDisposable.set((self.camera.stopRecording()
-            |> deliverOnMainQueue).start(next: { [weak self] pathAndTransitionImage in
-                if let self, let (path, transitionImage) = pathAndTransitionImage {
-                    self.completion.invoke(.single(.video(path, transitionImage, PixelDimensions(width: 1080, height: 1920))))
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                if let self, case let .finished(mainResult, additionalResult, _) = result {
+                    self.completion.invoke(.single(.video(mainResult.0, mainResult.1, additionalResult?.0, additionalResult?.1, PixelDimensions(width: 1080, height: 1920), .bottomRight)))
                 }
             }))
             self.isTransitioning = true
@@ -316,15 +335,13 @@ private final class CameraScreenComponent: CombinedComponent {
         let zoomControl = Child(ZoomComponent.self)
         let flashButton = Child(CameraButton.self)
         let flipButton = Child(CameraButton.self)
-//        let dualButton = Child(CameraButton.self)
+        let dualButton = Child(CameraButton.self)
         let modeControl = Child(ModeComponent.self)
         let hintLabel = Child(HintLabelComponent.self)
         
         let timeBackground = Child(RoundedRectangle.self)
         let timeLabel = Child(MultilineTextComponent.self)
-        
-        let flipAnimationAction = ActionSlot<Void>()
-        
+                
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
@@ -338,6 +355,9 @@ private final class CameraScreenComponent: CombinedComponent {
             } else {
                 isTablet = false
             }
+            
+            let smallPanelWidth = min(component.panelWidth, 88.0)
+            let panelWidth = min(component.panelWidth, 185.0)
             
             let topControlInset: CGFloat = 20.0
             if case .none = state.cameraState.recording, !state.isTransitioning {
@@ -363,7 +383,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(cancelButton
-                    .position(CGPoint(x: topControlInset + cancelButton.size.width / 2.0, y: environment.safeInsets.top + topControlInset + cancelButton.size.height / 2.0))
+                    .position(CGPoint(x: isTablet ? smallPanelWidth / 2.0 : topControlInset + cancelButton.size.width / 2.0, y: environment.safeInsets.top + topControlInset + cancelButton.size.height / 2.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
@@ -423,36 +443,36 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(flashButton
-                    .position(CGPoint(x: availableSize.width - topControlInset - flashButton.size.width / 2.0, y: environment.safeInsets.top + topControlInset + flashButton.size.height / 2.0))
+                    .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0, y: environment.safeInsets.top + topControlInset + flashButton.size.height / 2.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
                 
-//                if #available(iOS 13.0, *) {
-//                    let dualButton = dualButton.update(
-//                        component: CameraButton(
-//                            content: AnyComponentWithIdentity(
-//                                id: "dual",
-//                                component: AnyComponent(
-//                                    DualIconComponent(isSelected: state.cameraState.isDualCamEnabled)
-//                                )
-//                            ),
-//                            action: { [weak state] in
-//                                guard let state else {
-//                                    return
-//                                }
-//                                state.toggleDualCamera()
-//                            }
-//                        ).tagged(dualButtonTag),
-//                        availableSize: CGSize(width: 40.0, height: 40.0),
-//                        transition: .immediate
-//                    )
-//                    context.add(dualButton
-//                        .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + topControlInset + dualButton.size.height / 2.0))
-//                        .appear(.default(scale: true))
-//                        .disappear(.default(scale: true))
-//                    )
-//                }
+                if #available(iOS 13.0, *), !isTablet && !"".isEmpty {
+                    let dualButton = dualButton.update(
+                        component: CameraButton(
+                            content: AnyComponentWithIdentity(
+                                id: "dual",
+                                component: AnyComponent(
+                                    DualIconComponent(isSelected: state.cameraState.isDualCamEnabled)
+                                )
+                            ),
+                            action: { [weak state] in
+                                guard let state else {
+                                    return
+                                }
+                                state.toggleDualCamera()
+                            }
+                        ).tagged(dualButtonTag),
+                        availableSize: CGSize(width: 40.0, height: 40.0),
+                        transition: .immediate
+                    )
+                    context.add(dualButton
+                        .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + topControlInset + dualButton.size.height / 2.0))
+                        .appear(.default(scale: true))
+                        .disappear(.default(scale: true))
+                    )
+                }
             }
             
             if case .holding = state.cameraState.recording {
@@ -494,9 +514,17 @@ private final class CameraScreenComponent: CombinedComponent {
                 }
             }
             
+            let flipAnimationAction = component.flipAnimationAction
+            let captureControlsAvailableSize: CGSize
+            if isTablet {
+                captureControlsAvailableSize = CGSize(width: panelWidth, height: availableSize.height)
+            } else {
+                captureControlsAvailableSize = availableSize
+            }
             let captureControls = captureControls.update(
                 component: CaptureControlsComponent(
                     isTablet: isTablet,
+                    hasAppeared: component.hasAppeared,
                     shutterState: shutterState,
                     lastGalleryAsset: state.lastGalleryAsset,
                     tag: captureControlsTag,
@@ -537,7 +565,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         guard let state else {
                             return
                         }
-                        state.togglePosition()
+                        state.togglePosition(flipAnimationAction)
                     },
                     galleryTapped: {
                         guard let controller = environment.controller() as? CameraScreen else {
@@ -550,45 +578,50 @@ private final class CameraScreenComponent: CombinedComponent {
                     },
                     zoomUpdated: { fraction in
                         state.updateZoom(fraction: fraction)
-                    }
+                    },
+                    flipAnimationAction: flipAnimationAction
                 ),
-                availableSize: availableSize,
+                availableSize: captureControlsAvailableSize,
                 transition: context.transition
             )
+            
+            let captureControlsPosition: CGPoint
+            if isTablet {
+                captureControlsPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0)
+            } else {
+                captureControlsPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0)
+            }
             context.add(captureControls
-                .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0))
+                .position(captureControlsPosition)
             )
             
             if isTablet {
                 let flipButton = flipButton.update(
-                    component:  CameraButton(
+                    component: CameraButton(
                         content: AnyComponentWithIdentity(
                             id: "flip",
                             component: AnyComponent(
-                                FlipButtonContentComponent(action: flipAnimationAction)
+                                FlipButtonContentComponent(
+                                    action: flipAnimationAction,
+                                    maskFrame: .zero
+                                )
                             )
                         ),
                         minSize: CGSize(width: 44.0, height: 44.0),
                         action: {
-//                            let currentTimestamp = CACurrentMediaTime()
-//                            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.3 {
-//                                return
-//                            }
-//                            self.lastFlipTimestamp = currentTimestamp
-                            state.togglePosition()
-                            flipAnimationAction.invoke(Void())
+                            state.togglePosition(flipAnimationAction)
                         }
                     ),
                     availableSize: availableSize,
                     transition: context.transition
                 )
                 context.add(flipButton
-                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - captureControls.size.height / 2.0 - environment.safeInsets.bottom - 5.0))
+                    .position(CGPoint(x: smallPanelWidth / 2.0, y: availableSize.height / 2.0))
                 )
             }
             
             var isVideoRecording = false
-            if case .video = state.cameraState.mode {
+            if case .video = state.cameraState.mode, isTablet {
                 isVideoRecording = true
             } else if state.cameraState.recording != .none {
                 isVideoRecording = true
@@ -607,6 +640,13 @@ private final class CameraScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 
+                let timePosition: CGPoint
+                if isTablet {
+                    timePosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 - 97.0)
+                } else {
+                    timePosition = CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + 40.0)
+                }
+                
                 if state.cameraState.recording != .none {
                     let timeBackground = timeBackground.update(
                         component: RoundedRectangle(color: videoRedColor, cornerRadius: 4.0),
@@ -614,19 +654,19 @@ private final class CameraScreenComponent: CombinedComponent {
                         transition: context.transition
                     )
                     context.add(timeBackground
-                        .position(CGPoint(x: availableSize.width / 2.0, y: environment.safeInsets.top + 40.0))
+                        .position(timePosition)
                         .appear(.default(alpha: true))
                         .disappear(.default(alpha: true))
                     )
                 }
                 
                 context.add(timeLabel
-                    .position(CGPoint(x: availableSize.width / 2.0, y:  environment.safeInsets.top + 40.0))
+                    .position(timePosition)
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
                 
-                if case .holding = state.cameraState.recording {
+                if case .holding = state.cameraState.recording, !isTablet {
                     let hintText: String?
                     switch state.swipeHint {
                     case .none:
@@ -656,8 +696,15 @@ private final class CameraScreenComponent: CombinedComponent {
             }
             
             if case .none = state.cameraState.recording, !state.isTransitioning {
+                let availableModeControlSize: CGSize
+                if isTablet {
+                    availableModeControlSize = CGSize(width: panelWidth, height: 120.0)
+                } else {
+                    availableModeControlSize = availableSize
+                }
                 let modeControl = modeControl.update(
                     component: ModeComponent(
+                        isTablet: isTablet,
                         availableModes: [.photo, .video],
                         currentMode: state.cameraState.mode,
                         updatedMode: { [weak state] mode in
@@ -667,12 +714,18 @@ private final class CameraScreenComponent: CombinedComponent {
                         },
                         tag: modeControlTag
                     ),
-                    availableSize: availableSize,
+                    availableSize: availableModeControlSize,
                     transition: context.transition
                 )
+                let modeControlPosition: CGPoint
+                if isTablet {
+                    modeControlPosition = CGPoint(x: availableSize.width - panelWidth / 2.0, y: availableSize.height / 2.0 + modeControl.size.height + 26.0)
+                } else {
+                    modeControlPosition = CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0)
+                }
                 context.add(modeControl
                     .clipsToBounds(true)
-                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height - environment.safeInsets.bottom + modeControl.size.height / 2.0))
+                    .position(modeControlPosition)
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -734,12 +787,30 @@ public class CameraScreen: ViewController {
         case instantVideo
     }
     
+    public enum PIPPosition {
+        case topLeft
+        case topRight
+        case bottomLeft
+        case bottomRight
+    }
+    
     public enum Result {
         case pendingImage
-        case image(UIImage, UIImage?)
-        case video(String, UIImage?, PixelDimensions)
+        case image(UIImage, UIImage?, CameraScreen.PIPPosition)
+        case video(String, UIImage?, String?, UIImage?, PixelDimensions, CameraScreen.PIPPosition)
         case asset(PHAsset)
         case draft(MediaEditorDraft)
+        
+        func withPIPPosition(_ position: CameraScreen.PIPPosition) -> Result {
+            switch self {
+            case let .image(mainImage, additionalImage, _):
+                return .image(mainImage, additionalImage, position)
+            case let .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, _):
+                return .video(mainPath, mainImage, additionalPath, additionalImage, dimensions, position)
+            default:
+                return self
+            }
+        }
     }
     
     public final class TransitionIn {
@@ -845,6 +916,10 @@ public class CameraScreen: ViewController {
         }
         
         fileprivate var previewBlurPromise = ValuePromise<Bool>(false)
+        
+        private let flipAnimationAction = ActionSlot<Void>()
+        
+        private var pipPosition: PIPPosition = .bottomRight
         
         init(controller: CameraScreen) {
             self.controller = controller
@@ -994,9 +1069,13 @@ public class CameraScreen: ViewController {
             
             self.completion.connect { [weak self] result in
                 if let self {
+                    let pipPosition = self.pipPosition
                     self.animateOutToEditor()
                     self.controller?.completion(
                         result
+                        |> map { result in
+                            return result.withPIPPosition(pipPosition)
+                        }
                         |> beforeNext { [weak self] value in
                             guard let self else {
                                 return
@@ -1070,6 +1149,9 @@ public class CameraScreen: ViewController {
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
             self.effectivePreviewView.addGestureRecognizer(tapGestureRecognizer)
             
+            let pipPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePipPan(_:)))
+            self.additionalPreviewView?.addGestureRecognizer(pipPanGestureRecognizer)
+            
             self.camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
             self.camera.startCapture()
         }
@@ -1128,7 +1210,30 @@ public class CameraScreen: ViewController {
             self.camera.focus(at: point, autoFocus: false)
         }
 
+        private var pipTranslation: CGPoint?
+        @objc private func handlePipPan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            guard let layout = self.validLayout else {
+                return
+            }
+            let translation = gestureRecognizer.translation(in: self.view)
+            let location = gestureRecognizer.location(in: self.view)
+            let velocity = gestureRecognizer.velocity(in: self.view)
+            
+            switch gestureRecognizer.state {
+            case .began, .changed:
+                self.pipTranslation = translation
+                self.containerLayoutUpdated(layout: layout, transition: .immediate)
+            case .ended, .cancelled:
+                self.pipTranslation = nil
+                self.pipPosition = pipPositionForLocation(layout: layout, position: location, velocity: velocity)
+                self.containerLayoutUpdated(layout: layout, transition: .spring(duration: 0.4))
+            default:
+                break
+            }
+        }
+        
         func animateIn() {
+            self.transitionDimView.alpha = 0.0
             self.backgroundView.alpha = 0.0
             UIView.animate(withDuration: 0.4, animations: {
                 self.backgroundView.alpha = 1.0
@@ -1185,8 +1290,10 @@ public class CameraScreen: ViewController {
                     view.layer.animatePosition(from: view.center, to: destinationLocalFrame.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     view.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 }
+            } else {
+                completion()
             }
-            
+
             self.componentHost.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
             self.previewContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false)
         }
@@ -1288,7 +1395,7 @@ public class CameraScreen: ViewController {
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
-            guard let layout = self.validLayout else {
+            guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
                 return
             }
             
@@ -1337,7 +1444,11 @@ public class CameraScreen: ViewController {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             if result == self.componentHost.view {
-                return self.effectivePreviewView
+                if let additionalPreviewView = self.additionalPreviewView, additionalPreviewView.bounds.contains(self.view.convert(point, to: additionalPreviewView)) {
+                    return additionalPreviewView
+                } else {
+                    return self.effectivePreviewView
+                }
             }
             return result
         }
@@ -1379,6 +1490,19 @@ public class CameraScreen: ViewController {
             let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
             let bottomInset = layout.size.height - previewSize.height - topInset
             
+            let panelWidth: CGFloat
+            let previewFrame: CGRect
+            let viewfinderFrame: CGRect
+            if isTablet {
+                previewFrame = CGRect(origin: .zero, size: layout.size)
+                viewfinderFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
+                panelWidth = viewfinderFrame.minX
+            } else {
+                previewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: previewSize)
+                viewfinderFrame = previewFrame
+                panelWidth = 0.0
+            }
+            
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,
@@ -1408,7 +1532,7 @@ public class CameraScreen: ViewController {
                 self.hasAppeared = hasAppeared
                 transition = transition.withUserData(CameraScreenTransition.finishedAnimateIn)
                 
-                self.presentDualCameraTooltip()
+//                self.presentDualCameraTooltip()
             }
 
             let componentSize = self.componentHost.update(
@@ -1419,6 +1543,8 @@ public class CameraScreen: ViewController {
                         camera: self.camera,
                         updateState: self.updateState,
                         hasAppeared: self.hasAppeared,
+                        panelWidth: panelWidth,
+                        flipAnimationAction: self.flipAnimationAction,
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
                         },
@@ -1452,16 +1578,6 @@ public class CameraScreen: ViewController {
             
             transition.setFrame(view: self.transitionDimView, frame: CGRect(origin: .zero, size: layout.size))
             
-            let previewFrame: CGRect
-            let viewfinderFrame: CGRect
-            if isTablet {
-                previewFrame = CGRect(origin: .zero, size: layout.size)
-                viewfinderFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: 0.0), size: previewSize)
-            } else {
-                previewFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: previewSize)
-                viewfinderFrame = previewFrame
-            }
-            
             transition.setFrame(view: self.previewContainerView, frame: previewFrame)
             self.currentPreviewView.layer.cornerRadius = 0.0
             transition.setFrame(view: self.currentPreviewView, frame: CGRect(origin: .zero, size: previewFrame.size))
@@ -1470,7 +1586,36 @@ public class CameraScreen: ViewController {
     
             if let additionalPreviewView = self.currentAdditionalPreviewView {
                 additionalPreviewView.layer.cornerRadius = 80.0
-                let additionalPreviewFrame = CGRect(origin: CGPoint(x: previewFrame.width - 160.0 - 10.0 + (self.isDualCamEnabled ? 0.0 : 180.0), y: previewFrame.height - 160.0 - 81.0), size: CGSize(width: 160.0, height: 160.0))
+                
+                var origin: CGPoint
+                switch self.pipPosition {
+                case .topLeft:
+                    origin = CGPoint(x: 10.0, y: 110.0)
+                    if !self.isDualCamEnabled {
+                        origin = origin.offsetBy(dx: -180.0, dy: 0.0)
+                    }
+                case .topRight:
+                    origin = CGPoint(x: previewFrame.width - 160.0 - 10.0, y: 110.0)
+                    if !self.isDualCamEnabled {
+                        origin = origin.offsetBy(dx: 180.0, dy: 0.0)
+                    }
+                case .bottomLeft:
+                    origin = CGPoint(x: 10.0, y: previewFrame.height - 160.0 - 110.0)
+                    if !self.isDualCamEnabled {
+                        origin = origin.offsetBy(dx: -180.0, dy: 0.0)
+                    }
+                case .bottomRight:
+                    origin = CGPoint(x: previewFrame.width - 160.0 - 10.0, y: previewFrame.height - 160.0 - 110.0)
+                    if !self.isDualCamEnabled {
+                        origin = origin.offsetBy(dx: 180.0, dy: 0.0)
+                    }
+                }
+                
+                if let pipTranslation = self.pipTranslation {
+                    origin = origin.offsetBy(dx: pipTranslation.x, dy: pipTranslation.y)
+                }
+                
+                let additionalPreviewFrame = CGRect(origin: origin, size: CGSize(width: 160.0, height: 160.0))
                 transition.setPosition(view: additionalPreviewView, position: additionalPreviewFrame.center)
                 transition.setBounds(view: additionalPreviewView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
                 
@@ -1500,6 +1645,10 @@ public class CameraScreen: ViewController {
         
             transition.setPosition(view: self.transitionCornersView, position: CGPoint(x: layout.size.width + screenCornerRadius / 2.0, y: layout.size.height / 2.0))
             transition.setBounds(view: self.transitionCornersView, bounds: CGRect(origin: .zero, size: CGSize(width: screenCornerRadius, height: layout.size.height)))
+            
+            if isTablet && isFirstTime {
+                self.animateIn()
+            }
         }
     }
 
@@ -1563,6 +1712,10 @@ public class CameraScreen: ViewController {
         self.navigationPresentation = .flatModal
         
         self.requestAudioSession()
+        
+        if #available(iOS 13.0, *) {
+            try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+        }
     }
 
     required public init(coder: NSCoder) {
@@ -1571,6 +1724,9 @@ public class CameraScreen: ViewController {
     
     deinit {
         self.audioSessionDisposable?.dispose()
+        if #available(iOS 13.0, *) {
+            try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
+        }
     }
 
     override public func loadDisplayNode() {
@@ -1611,7 +1767,17 @@ public class CameraScreen: ViewController {
         if let current = self.galleryController {
             controller = current
         } else {
-            controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
+            controller = self.context.sharedContext.makeMediaPickerScreen(context: self.context, getSourceRect: { [weak self] in
+                if let self {
+                    if let galleryButton = self.node.componentHost.findTaggedView(tag: galleryButtonTag) {
+                        return galleryButton.convert(galleryButton.bounds, to: self.view).offsetBy(dx: 0.0, dy: -15.0)
+                    } else {
+                        return .zero
+                    }
+                } else {
+                    return .zero
+                }
+            }, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
                 if let self {
                     stopCameraCapture()
                     
@@ -1665,15 +1831,21 @@ public class CameraScreen: ViewController {
         self.node.camera.stopCapture(invalidate: true)
         self.isDismissed = true
         if animated {
-            self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
-            if !interactive {
-                if let navigationController = self.navigationController as? NavigationController {
-                    navigationController.updateRootContainerTransitionOffset(self.node.frame.width, transition: .immediate)
+            if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+                self.node.animateOut(completion: {
+                    self.dismiss(animated: false)
+                })
+            } else {
+                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
+                if !interactive {
+                    if let navigationController = self.navigationController as? NavigationController {
+                        navigationController.updateRootContainerTransitionOffset(self.node.frame.width, transition: .immediate)
+                    }
                 }
+                self.updateTransitionProgress(0.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
+                    self?.dismiss(animated: false)
+                })
             }
-            self.updateTransitionProgress(0.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
-                self?.dismiss(animated: false)
-            })
         } else {
             self.dismiss(animated: false)
         }
@@ -1694,6 +1866,9 @@ public class CameraScreen: ViewController {
     }
     
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
+        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            return
+        }
         let offsetX = floorToScreenPixels((1.0 - transitionFraction) * self.node.frame.width * -1.0)
         transition.updateTransform(layer: self.node.backgroundView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
         transition.updateTransform(layer: self.node.containerView.layer, transform: CGAffineTransform(translationX: offsetX, y: 0.0))
@@ -1713,6 +1888,9 @@ public class CameraScreen: ViewController {
     }
     
     public func completeWithTransitionProgress(_ transitionFraction: CGFloat, velocity: CGFloat, dismissing: Bool) {
+        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            return
+        }
         if dismissing {
             if transitionFraction < 0.7 || velocity < -1000.0 {
                 self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
@@ -1841,4 +2019,110 @@ private final class DualIconComponent: Component {
     public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+private func pipPositionForLocation(layout: ContainerViewLayout, position: CGPoint, velocity: CGPoint) -> CameraScreen.PIPPosition {
+    var layoutInsets = layout.insets(options: [.input])
+    layoutInsets.bottom += 48.0
+    var result = CGPoint()
+    if position.x < layout.size.width / 2.0 {
+        result.x = 0.0
+    } else {
+        result.x = 1.0
+    }
+    if position.y < layoutInsets.top + (layout.size.height - layoutInsets.bottom - layoutInsets.top) / 2.0 {
+        result.y = 0.0
+    } else {
+        result.y = 1.0
+    }
+    
+    let currentPosition = result
+    
+    let angleEpsilon: CGFloat = 30.0
+    var shouldHide = false
+    
+    if (velocity.x * velocity.x + velocity.y * velocity.y) >= 500.0 * 500.0 {
+        let x = velocity.x
+        let y = velocity.y
+        
+        var angle = atan2(y, x) * 180.0 / CGFloat.pi * -1.0
+        if angle < 0.0 {
+            angle += 360.0
+        }
+        
+        if currentPosition.x.isZero && currentPosition.y.isZero {
+            if ((angle > 0 && angle < 90 - angleEpsilon) || angle > 360 - angleEpsilon) {
+                result.x = 1.0
+                result.y = 0.0
+            } else if (angle > 180 + angleEpsilon && angle < 270 + angleEpsilon) {
+                result.x = 0.0
+                result.y = 1.0
+            } else if (angle > 270 + angleEpsilon && angle < 360 - angleEpsilon) {
+                result.x = 1.0
+                result.y = 1.0
+            } else {
+                shouldHide = true
+            }
+        } else if !currentPosition.x.isZero && currentPosition.y.isZero {
+            if (angle > 90 + angleEpsilon && angle < 180 + angleEpsilon) {
+                result.x = 0.0
+                result.y = 0.0
+            }
+            else if (angle > 270 - angleEpsilon && angle < 360 - angleEpsilon) {
+                result.x = 1.0
+                result.y = 1.0
+            }
+            else if (angle > 180 + angleEpsilon && angle < 270 - angleEpsilon) {
+                result.x = 0.0
+                result.y = 1.0
+            }
+            else {
+                shouldHide = true
+            }
+        } else if currentPosition.x.isZero && !currentPosition.y.isZero {
+            if (angle > 90 - angleEpsilon && angle < 180 - angleEpsilon) {
+                result.x = 0.0
+                result.y = 0.0
+            }
+            else if (angle < angleEpsilon || angle > 270 + angleEpsilon) {
+                result.x = 1.0
+                result.y = 1.0
+            }
+            else if (angle > angleEpsilon && angle < 90 - angleEpsilon) {
+                result.x = 1.0
+                result.y = 0.0
+            }
+            else if (!shouldHide) {
+                shouldHide = true
+            }
+        } else if !currentPosition.x.isZero && !currentPosition.y.isZero {
+            if (angle > angleEpsilon && angle < 90 + angleEpsilon) {
+                result.x = 1.0
+                result.y = 0.0
+            }
+            else if (angle > 180 - angleEpsilon && angle < 270 - angleEpsilon) {
+                result.x = 0.0
+                result.y = 1.0
+            }
+            else if (angle > 90 + angleEpsilon && angle < 180 - angleEpsilon) {
+                result.x = 0.0
+                result.y = 0.0
+            }
+            else if (!shouldHide) {
+                shouldHide = true
+            }
+        }
+    }
+    
+    var position: CameraScreen.PIPPosition = .bottomRight
+    if result.x == 0.0 && result.y == 0.0 {
+        position = .topLeft
+    } else if result.x == 1.0 && result.y == 0.0 {
+        position = .topRight
+    } else if result.x == 0.0 && result.y == 1.0 {
+        position = .bottomLeft
+    } else if result.x == 1.0 && result.y == 1.0 {
+        position = .bottomRight
+    }
+    return position
 }

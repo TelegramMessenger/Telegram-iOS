@@ -8,6 +8,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public enum Content: Equatable {
         case file(TelegramMediaFile)
         case image(UIImage)
+        case video(String, UIImage?)
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -23,6 +24,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
+            case let .video(lhsPath, _):
+                if case let .video(rhsPath, _) = rhs {
+                    return lhsPath == rhsPath
+                } else {
+                    return false
+                }
             }
         }
     }
@@ -30,6 +37,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case uuid
         case file
         case image
+        case videoPath
+        case videoImage
         case referenceDrawingSize
         case position
         case scale
@@ -64,6 +73,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
         case .image:
             return false
+        case .video:
+            return true
         }
     }
     
@@ -92,6 +103,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             self.content = .file(file)
         } else if let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
             self.content = .image(image)
+        } else if let videoPath = try container.decodeIfPresent(String.self, forKey: .videoPath), let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
+            self.content = .video(videoPath, image)
         } else {
             fatalError()
         }
@@ -110,6 +123,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             try container.encode(file, forKey: .file)
         case let .image(image):
             try container.encodeIfPresent(image.pngData(), forKey: .image)
+        case let .video(path, image):
+            try container.encode(path, forKey: .videoPath)
+            try container.encodeIfPresent(image?.jpegData(compressionQuality: 0.87), forKey: .videoImage)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)

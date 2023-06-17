@@ -35,6 +35,7 @@ public struct StickerPickerInputData: Equatable {
 private final class StickerSelectionComponent: Component {
     typealias EnvironmentType = Empty
     
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let deviceMetrics: DeviceMetrics
@@ -44,6 +45,7 @@ private final class StickerSelectionComponent: Component {
     let separatorColor: UIColor
     
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
@@ -52,6 +54,7 @@ private final class StickerSelectionComponent: Component {
         backgroundColor: UIColor,
         separatorColor: UIColor
     ) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.deviceMetrics = deviceMetrics
@@ -129,6 +132,7 @@ private final class StickerSelectionComponent: Component {
             
             let topPanelHeight: CGFloat = 42.0
             
+            //let context = component.context
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
@@ -153,7 +157,44 @@ private final class StickerSelectionComponent: Component {
                     switchToTextInput: {},
                     switchToGifSubject: { _ in },
                     reorderItems: { _, _ in },
-                    makeSearchContainerNode: { _ in return nil },
+                    makeSearchContainerNode: { _ in
+                        return nil
+                    },
+//                    makeSearchContainerNode: { [weak self, weak controllerInteraction] content in
+//                        guard let self, let controllerInteraction = controllerInteraction else {
+//                            return nil
+//                        }
+//
+//                        let mappedMode: ChatMediaInputSearchMode
+//                        switch content {
+//                        case .stickers:
+//                            mappedMode = .sticker
+//                        case .gifs:
+//                            mappedMode = .sticker
+//                        }
+//
+//                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+//                        let searchContainerNode = PaneSearchContainerNode(
+//                            context: context,
+//                            theme: presentationData.theme,
+//                            strings: presentationData.strings,
+//                            controllerInteraction: controllerInteraction,
+//                            inputNodeInteraction: inputNodeInteraction,
+//                            mode: mappedMode,
+//                            trendingGifsPromise: Promise(nil),
+//                            cancel: {
+//                            },
+//                            peekBehavior: self.emojiInputInteraction?.peekBehavior
+//                        )
+//                        searchContainerNode.openGifContextMenu = { [weak self] item, sourceNode, sourceRect, gesture, isSaved in
+//                            guard let self else {
+//                                return
+//                            }
+//                            self.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceNode.view, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
+//                        }
+//
+//                        return searchContainerNode
+//                    },
                     contentIdUpdated: { _ in },
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
@@ -225,6 +266,39 @@ public class StickerPickerScreen: ViewController {
         
         fileprivate var temporaryDismiss = false
         
+        private struct EmojiSearchResult {
+            var groups: [EmojiPagerContentComponent.ItemGroup]
+            var id: AnyHashable
+            var version: Int
+            var isPreset: Bool
+        }
+        
+        private struct EmojiSearchState {
+            var result: EmojiSearchResult?
+            var isSearching: Bool
+            
+            init(result: EmojiSearchResult?, isSearching: Bool) {
+                self.result = result
+                self.isSearching = isSearching
+            }
+        }
+        
+        private let emojiSearchDisposable = MetaDisposable()
+        private let emojiSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
+        private var emojiSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {
+            didSet {
+                self.emojiSearchState.set(.single(self.emojiSearchStateValue))
+            }
+        }
+        
+        private let stickerSearchDisposable = MetaDisposable()
+        private let stickerSearchState = Promise<EmojiSearchState>(EmojiSearchState(result: nil, isSearching: false))
+        private var stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false) {
+            didSet {
+                self.stickerSearchState.set(.single(self.stickerSearchStateValue))
+            }
+        }
+        
         init(context: AccountContext, controller: StickerPickerScreen, theme: PresentationTheme) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.controller = controller
@@ -249,8 +323,52 @@ public class StickerPickerScreen: ViewController {
             self.wrappingView.addSubview(self.containerView)
             self.containerView.addSubview(self.hostView)
             
-            self.contentDisposable.set(controller.inputData.start(next: { [weak self] inputData in
+            let signal = combineLatest(
+                queue: Queue.mainQueue(),
+                controller.inputData,
+                self.stickerSearchState.get(),
+                self.emojiSearchState.get()
+            )
+            
+            
+            self.contentDisposable.set(signal.start(next: { [weak self] inputData, stickerSearchState, emojiSearchState in
                 if let strongSelf = self {
+                    let presentationData = strongSelf.presentationData
+                    var inputData = inputData
+                    
+                    let emoji = inputData.emoji
+                    if let emojiSearchResult = emojiSearchState.result {
+                        var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
+                        if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
+                            emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
+                                text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
+                                iconFile: nil
+                            )
+                        }
+                        let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty(hasResults: true)
+                        inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: emojiSearchState.isSearching ? .searching : defaultSearchState)
+                    } else if emojiSearchState.isSearching {
+                        inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emoji.contentItemGroups, itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults, searchState: .searching)
+                    }
+                    
+                    if let stickerSearchResult = stickerSearchState.result {
+                        var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
+                        if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
+                            stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
+                                text: presentationData.strings.EmojiSearch_SearchStickersEmptyResult,
+                                iconFile: nil
+                            )
+                        }
+                        if let stickers = inputData.stickers {
+                            let defaultSearchState: EmojiPagerContentComponent.SearchState = stickerSearchResult.isPreset ? .active : .empty(hasResults: true)
+                            inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: stickerSearchResult.id, version: stickerSearchResult.version), emptySearchResults: stickerSearchResults, searchState: stickerSearchState.isSearching ? .searching : defaultSearchState)
+                        }
+                    } else if stickerSearchState.isSearching {
+                        if let stickers = inputData.stickers {
+                            inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickers.contentItemGroups, itemContentUniqueId: stickers.itemContentUniqueId, emptySearchResults: stickers.emptySearchResults, searchState: .searching)
+                        }
+                    }
+                    
                     strongSelf.updateContent(inputData)
                 }
             }))
@@ -258,6 +376,8 @@ public class StickerPickerScreen: ViewController {
         
         deinit {
             self.contentDisposable.dispose()
+            self.emojiSearchDisposable.dispose()
+            self.stickerSearchDisposable.dispose()
         }
         
         func updateContent(_ content: StickerPickerInputData) {
@@ -363,9 +483,224 @@ public class StickerPickerScreen: ViewController {
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in
+                requestUpdate: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !transition.animation.isImmediate, let (layout, navigationHeight) = strongSelf.currentLayout {
+                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition)
+                    }
                 },
-                updateSearchQuery: { _ in
+                updateSearchQuery: { [weak self] query in
+                    guard let self, let controller = self.controller else {
+                        return
+                    }
+                    let context = controller.context
+                    
+                    switch query {
+                    case .none:
+                        self.emojiSearchDisposable.set(nil)
+                        self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
+                    case let .text(rawQuery, languageCode):
+                        let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                        
+                        if query.isEmpty {
+                            self.emojiSearchDisposable.set(nil)
+                            self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
+                        } else {
+                            var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
+                            if !languageCode.lowercased().hasPrefix("en") {
+                                signal = signal
+                                |> mapToSignal { keywords in
+                                    return .single(keywords)
+                                    |> then(
+                                        context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
+                                        |> map { englishKeywords in
+                                            return keywords + englishKeywords
+                                        }
+                                    )
+                                }
+                            }
+                        
+                            let hasPremium: Signal<Bool, NoError> = .single(true)
+                            let resultSignal = combineLatest(
+                                signal,
+                                hasPremium
+                            )
+                            |> mapToSignal { keywords, hasPremium -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                                var allEmoticons: [String: String] = [:]
+                                for keyword in keywords {
+                                    for emoticon in keyword.emoticons {
+                                        allEmoticons[emoticon] = keyword.keyword
+                                    }
+                                }
+                                let remoteSignal: Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError>
+                                if hasPremium {
+                                    remoteSignal = context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
+                                } else {
+                                    remoteSignal = .single(([], true))
+                                }
+                                return remoteSignal
+                                |> mapToSignal { foundEmoji -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                                    if foundEmoji.items.isEmpty && !foundEmoji.isFinalResult {
+                                        return .complete()
+                                    }
+                                    var items: [EmojiPagerContentComponent.Item] = []
+                                    
+                                    let appendUnicodeEmoji = {
+                                        for (_, list) in EmojiPagerContentComponent.staticEmojiMapping {
+                                            for emojiString in list {
+                                                if allEmoticons[emojiString] != nil {
+                                                    let item = EmojiPagerContentComponent.Item(
+                                                        animationData: nil,
+                                                        content: .staticEmoji(emojiString),
+                                                        itemFile: nil,
+                                                        subgroupId: nil,
+                                                        icon: .none,
+                                                        tintMode: .none
+                                                    )
+                                                    items.append(item)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    if !hasPremium {
+                                        appendUnicodeEmoji()
+                                    }
+                                    
+                                    var existingIds = Set<MediaId>()
+                                    for itemFile in foundEmoji.items {
+                                        if existingIds.contains(itemFile.fileId) {
+                                            continue
+                                        }
+                                        existingIds.insert(itemFile.fileId)
+                                        if itemFile.isPremiumEmoji && !hasPremium {
+                                            continue
+                                        }
+                                        let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                        let item = EmojiPagerContentComponent.Item(
+                                            animationData: animationData,
+                                            content: .animation(animationData),
+                                            itemFile: itemFile,
+                                            subgroupId: nil,
+                                            icon: .none,
+                                            tintMode: animationData.isTemplate ? .primary : .none
+                                        )
+                                        items.append(item)
+                                    }
+                                    
+                                    if hasPremium {
+                                        appendUnicodeEmoji()
+                                    }
+                                
+                                    return .single([EmojiPagerContentComponent.ItemGroup(
+                                        supergroupId: "search",
+                                        groupId: "search",
+                                        title: nil,
+                                        subtitle: nil,
+                                        actionButtonTitle: nil,
+                                        isFeatured: false,
+                                        isPremiumLocked: false,
+                                        isEmbedded: false,
+                                        hasClear: false,
+                                        collapsedLineCount: nil,
+                                        displayPremiumBadges: false,
+                                        headerItem: nil,
+                                        fillWithLoadingPlaceholders: false,
+                                        items: items
+                                    )])
+                                }
+                            }
+                            
+                            var version = 0
+                            self.emojiSearchStateValue.isSearching = true
+                            self.emojiSearchDisposable.set((resultSignal
+                            |> delay(0.15, queue: .mainQueue())
+                            |> deliverOnMainQueue).start(next: { [weak self] result in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result, id: AnyHashable(query), version: version, isPreset: false), isSearching: false)
+                                version += 1
+                            }))
+                        }
+                    case let .category(value):
+                        let resultSignal = context.engine.stickers.searchEmoji(emojiString: value)
+                        |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
+                            var items: [EmojiPagerContentComponent.Item] = []
+                            
+                            var existingIds = Set<MediaId>()
+                            for itemFile in files {
+                                if existingIds.contains(itemFile.fileId) {
+                                    continue
+                                }
+                                existingIds.insert(itemFile.fileId)
+                                let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                let item = EmojiPagerContentComponent.Item(
+                                    animationData: animationData,
+                                    content: .animation(animationData),
+                                    itemFile: itemFile, subgroupId: nil,
+                                    icon: .none,
+                                    tintMode: animationData.isTemplate ? .primary : .none
+                                )
+                                items.append(item)
+                            }
+                            
+                            return .single(([EmojiPagerContentComponent.ItemGroup(
+                                supergroupId: "search",
+                                groupId: "search",
+                                title: nil,
+                                subtitle: nil,
+                                actionButtonTitle: nil,
+                                isFeatured: false,
+                                isPremiumLocked: false,
+                                isEmbedded: false,
+                                hasClear: false,
+                                collapsedLineCount: nil,
+                                displayPremiumBadges: false,
+                                headerItem: nil,
+                                fillWithLoadingPlaceholders: false,
+                                items: items
+                            )], isFinalResult))
+                        }
+                            
+                        var version = 0
+                        self.emojiSearchDisposable.set((resultSignal
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            
+                            guard let group = result.items.first else {
+                                return
+                            }
+                            if group.items.isEmpty && !result.isFinalResult {
+                                self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                    EmojiPagerContentComponent.ItemGroup(
+                                        supergroupId: "search",
+                                        groupId: "search",
+                                        title: nil,
+                                        subtitle: nil,
+                                        actionButtonTitle: nil,
+                                        isFeatured: false,
+                                        isPremiumLocked: false,
+                                        isEmbedded: false,
+                                        hasClear: false,
+                                        collapsedLineCount: nil,
+                                        displayPremiumBadges: false,
+                                        headerItem: nil,
+                                        fillWithLoadingPlaceholders: true,
+                                        items: []
+                                    )
+                                ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                return
+                            }
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            version += 1
+                        }))
+                    }
                 },
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
@@ -570,7 +905,95 @@ public class StickerPickerScreen: ViewController {
                 },
                 requestUpdate: { _ in
                 },
-                updateSearchQuery: { _ in
+                updateSearchQuery: { [weak self] query in
+                    guard let strongSelf = self, let controller = strongSelf.controller else {
+                        return
+                    }
+                    let context = controller.context
+                    
+                    switch query {
+                    case .none:
+                        strongSelf.stickerSearchDisposable.set(nil)
+                        strongSelf.stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
+                    case .text:
+                        strongSelf.stickerSearchDisposable.set(nil)
+                        strongSelf.stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
+                    case let .category(value):
+                        let resultSignal = context.engine.stickers.searchStickers(query: value, scope: [.installed, .remote])
+                        |> mapToSignal { files -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
+                            var items: [EmojiPagerContentComponent.Item] = []
+                            
+                            var existingIds = Set<MediaId>()
+                            for item in files.items {
+                                let itemFile = item.file
+                                if existingIds.contains(itemFile.fileId) {
+                                    continue
+                                }
+                                existingIds.insert(itemFile.fileId)
+                                let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                let item = EmojiPagerContentComponent.Item(
+                                    animationData: animationData,
+                                    content: .animation(animationData),
+                                    itemFile: itemFile, subgroupId: nil,
+                                    icon: .none,
+                                    tintMode: animationData.isTemplate ? .primary : .none
+                                )
+                                items.append(item)
+                            }
+                            
+                            return .single(([EmojiPagerContentComponent.ItemGroup(
+                                supergroupId: "search",
+                                groupId: "search",
+                                title: nil,
+                                subtitle: nil,
+                                actionButtonTitle: nil,
+                                isFeatured: false,
+                                isPremiumLocked: false,
+                                isEmbedded: false,
+                                hasClear: false,
+                                collapsedLineCount: nil,
+                                displayPremiumBadges: false,
+                                headerItem: nil,
+                                fillWithLoadingPlaceholders: false,
+                                items: items
+                            )], files.isFinalResult))
+                        }
+                            
+                        var version = 0
+                        strongSelf.stickerSearchDisposable.set((resultSignal
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            guard let group = result.items.first else {
+                                return
+                            }
+                            if group.items.isEmpty && !result.isFinalResult {
+                                //strongSelf.stickerSearchStateValue.isSearching = true
+                                strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
+                                    EmojiPagerContentComponent.ItemGroup(
+                                        supergroupId: "search",
+                                        groupId: "search",
+                                        title: nil,
+                                        subtitle: nil,
+                                        actionButtonTitle: nil,
+                                        isFeatured: false,
+                                        isPremiumLocked: false,
+                                        isEmbedded: false,
+                                        hasClear: false,
+                                        collapsedLineCount: nil,
+                                        displayPremiumBadges: false,
+                                        headerItem: nil,
+                                        fillWithLoadingPlaceholders: true,
+                                        items: []
+                                    )
+                                ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                return
+                            }
+                            strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            version += 1
+                        }))
+                    }
                 },
                 updateScrollingToItemGroup: { [weak self] in
                     self?.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
@@ -667,6 +1090,9 @@ public class StickerPickerScreen: ViewController {
         }
                 
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
+            guard let controller = self.controller else {
+                return
+            }
             self.currentLayout = (layout, navigationHeight)
                         
             self.dim.frame = CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 3.0))
@@ -691,7 +1117,10 @@ public class StickerPickerScreen: ViewController {
             }
             transition.setFrame(view: self.wrappingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: nil)
             
-            let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
+            var modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
+            if self.isDismissing {
+                modalProgress = 0.0
+            }
             self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
                         
             let clipFrame: CGRect
@@ -761,6 +1190,7 @@ public class StickerPickerScreen: ViewController {
                     transition: stickersTransition,
                     component: AnyComponent(
                         StickerSelectionComponent(
+                            context: controller.context,
                             theme: self.theme,
                             strings: self.presentationData.strings,
                             deviceMetrics: layout.deviceMetrics,

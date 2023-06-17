@@ -18,17 +18,20 @@ extension CameraMode {
 private let buttonSize = CGSize(width: 55.0, height: 44.0)
 
 final class ModeComponent: Component {
+    let isTablet: Bool
     let availableModes: [CameraMode]
     let currentMode: CameraMode
     let updatedMode: (CameraMode) -> Void
     let tag: AnyObject?
     
     init(
+        isTablet: Bool,
         availableModes: [CameraMode],
         currentMode: CameraMode,
         updatedMode: @escaping (CameraMode) -> Void,
         tag: AnyObject?
     ) {
+        self.isTablet = isTablet
         self.availableModes = availableModes
         self.currentMode = currentMode
         self.updatedMode = updatedMode
@@ -36,6 +39,9 @@ final class ModeComponent: Component {
     }
     
     static func ==(lhs: ModeComponent, rhs: ModeComponent) -> Bool {
+        if lhs.isTablet != rhs.isTablet {
+            return false
+        }
         if lhs.availableModes != rhs.availableModes {
             return false
         }
@@ -114,14 +120,16 @@ final class ModeComponent: Component {
                 
         func update(component: ModeComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.component = component
-            
+        
+            let isTablet = component.isTablet
             let updatedMode = component.updatedMode
-            
-            let spacing: CGFloat = 14.0
+        
+            let spacing: CGFloat = isTablet ? 9.0 : 14.0
       
             var i = 0
             var itemFrame = CGRect(origin: .zero, size: buttonSize)
             var selectedCenter = itemFrame.minX
+            
             for mode in component.availableModes {
                 let itemView: ItemView
                 if self.itemViews.count == i {
@@ -137,20 +145,37 @@ final class ModeComponent: Component {
                
                 itemView.update(value: mode.title, selected: mode == component.currentMode)
                 itemView.bounds = CGRect(origin: .zero, size: itemFrame.size)
-                itemView.center = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
                 
-                if mode == component.currentMode {
-                    selectedCenter = itemFrame.midX
+                if isTablet {
+                    itemView.center = CGPoint(x: availableSize.width / 2.0, y: itemFrame.midY)
+                    if mode == component.currentMode {
+                        selectedCenter = itemFrame.midY
+                    }
+                    itemFrame = itemFrame.offsetBy(dx: 0.0, dy: buttonSize.height + spacing)
+                } else {
+                    itemView.center = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
+                    if mode == component.currentMode {
+                        selectedCenter = itemFrame.midX
+                    }
+                    itemFrame = itemFrame.offsetBy(dx: buttonSize.width + spacing, dy: 0.0)
                 }
-                
+                                
                 i += 1
-                itemFrame = itemFrame.offsetBy(dx: buttonSize.width + spacing, dy: 0.0)
             }
             
-            let totalSize = CGSize(width: buttonSize.width * CGFloat(component.availableModes.count) + spacing * CGFloat(component.availableModes.count - 1), height: buttonSize.height)
-            transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: availableSize.width / 2.0 - selectedCenter, y: 0.0), size: totalSize))
+            let totalSize: CGSize
+            let size: CGSize
+            if isTablet {
+                totalSize = CGSize(width: availableSize.width, height: buttonSize.height * CGFloat(component.availableModes.count) + spacing * CGFloat(component.availableModes.count - 1))
+                size = CGSize(width: availableSize.width, height: availableSize.height)
+                transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height / 2.0 - selectedCenter), size: totalSize))
+            } else {
+                size = CGSize(width: availableSize.width, height: buttonSize.height)
+                totalSize = CGSize(width: buttonSize.width * CGFloat(component.availableModes.count) + spacing * CGFloat(component.availableModes.count - 1), height: buttonSize.height)
+                transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: availableSize.width / 2.0 - selectedCenter, y: 0.0), size: totalSize))
+            }
             
-            return CGSize(width: availableSize.width, height: buttonSize.height)
+            return size
         }
     }
     

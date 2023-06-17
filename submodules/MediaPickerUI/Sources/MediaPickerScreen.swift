@@ -668,6 +668,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             let transaction = MediaPickerGridTransaction(previousList: previousEntries, list: entries, context: controller.context, interaction: interaction, theme: self.presentationData.theme, scrollToItem: scrollToItem)
             self.enqueueTransaction(transaction)
             
+            if !self.didSetReady {
+                updateLayout = true
+            }
+            
             if updateLayout, let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: previousState == nil ? .immediate : .animated(duration: 0.2, curve: .easeInOut))
             }
@@ -2167,6 +2171,7 @@ public func wallpaperMediaPickerController(
 
 public func storyMediaPickerController(
     context: AccountContext,
+    getSourceRect: @escaping () -> CGRect,
     completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping () -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
     dismissed: @escaping () -> Void
 ) -> ViewController {
@@ -2175,6 +2180,8 @@ public func storyMediaPickerController(
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
         return nil
     })
+    controller.forceSourceRect = true
+    controller.getSourceRect = getSourceRect
     controller.requestController = { _, present in
         let mediaPickerController = MediaPickerScreen(context: context, updatedPresentationData: updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .story), mainButtonState: nil, mainButtonAction: nil)
         mediaPickerController.customSelection = { controller, result in

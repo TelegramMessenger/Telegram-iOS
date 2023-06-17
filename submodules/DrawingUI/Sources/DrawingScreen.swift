@@ -738,7 +738,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         areUnicodeEmojiEnabled: true,
                         areCustomEmojiEnabled: true,
                         chatPeerId: context.account.peerId,
-                        hasSearch: false,
+                        hasSearch: true,
                         forceHasPremium: true
                     )
                     
@@ -749,7 +749,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
                         stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
                         chatPeerId: context.account.peerId,
-                        hasSearch: false,
+                        hasSearch: true,
                         hasTrending: true,
                         forceHasPremium: true
                     )
@@ -761,7 +761,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         stickerNamespaces: [Namespaces.ItemCollection.CloudMaskPacks],
                         stickerOrderedItemListCollectionIds: [],
                         chatPeerId: context.account.peerId,
-                        hasSearch: false,
+                        hasSearch: true,
                         hasTrending: false,
                         forceHasPremium: true
                     )
@@ -1153,8 +1153,14 @@ private final class DrawingScreenComponent: CombinedComponent {
                 controlsAreVisible = false
             }
                  
-            let previewSize = CGSize(width: context.availableSize.width, height: floorToScreenPixels(context.availableSize.width * 1.77778))
+            let previewSize: CGSize
             let previewTopInset: CGFloat = environment.statusBarHeight + 12.0
+            if case .regular = environment.metrics.widthClass {
+                let previewHeight = context.availableSize.height - previewTopInset - 75.0
+                previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
+            } else {
+                previewSize = CGSize(width: context.availableSize.width, height: floorToScreenPixels(context.availableSize.width * 1.77778))
+            }
             let previewBottomInset = context.availableSize.height - previewSize.height - previewTopInset
             
             var topInset = environment.safeInsets.top + 31.0
@@ -1646,7 +1652,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         transition: .immediate
                     )
                     context.add(fillButton
-                        .position(CGPoint(x: context.availableSize.width / 2.0 - (hasFlip ? 46.0 : 0.0), y: environment.safeInsets.top + 31.0))
+                        .position(CGPoint(x: context.availableSize.width / 2.0 - (hasFlip ? 46.0 : 0.0), y: topInset))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
@@ -1678,7 +1684,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         transition: .immediate
                     )
                     context.add(flipButton
-                        .position(CGPoint(x: context.availableSize.width / 2.0 + (isFilled != nil ? 46.0 : 0.0), y: environment.safeInsets.top + 31.0))
+                        .position(CGPoint(x: context.availableSize.width / 2.0 + (isFilled != nil ? 46.0 : 0.0), y: topInset))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                         .shadow(component.sourceHint == .storyEditor ? Shadow(color: UIColor(rgb: 0x000000, alpha: 0.35), radius: 2.0, offset: .zero) : nil)
@@ -1988,6 +1994,9 @@ private final class DrawingScreenComponent: CombinedComponent {
             var doneButtonPosition = CGPoint(x: context.availableSize.width - environment.safeInsets.right - doneButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - doneButton.size.height / 2.0 - 2.0 - UIScreenPixel)
             if component.sourceHint == .storyEditor {
                 doneButtonPosition.x = doneButtonPosition.x - 2.0
+                if case .regular = environment.metrics.widthClass {
+                    doneButtonPosition.x -= 20.0
+                }
                 doneButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + doneButton.size.height / 2.0)
             }
             context.add(doneButton
@@ -2105,6 +2114,9 @@ private final class DrawingScreenComponent: CombinedComponent {
             var backButtonPosition = CGPoint(x: environment.safeInsets.left + backButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - backButton.size.height / 2.0 - 2.0 - UIScreenPixel)
             if component.sourceHint == .storyEditor {
                 backButtonPosition.x = backButtonPosition.x + 2.0
+                if case .regular = environment.metrics.widthClass {
+                    backButtonPosition.x += 20.0
+                }
                 backButtonPosition.y = floorToScreenPixels(context.availableSize.height - previewBottomInset + 3.0 + backButton.size.height / 2.0)
             }
             context.add(backButton

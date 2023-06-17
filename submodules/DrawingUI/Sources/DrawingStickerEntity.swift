@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AVFoundation
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -20,6 +21,10 @@ final class DrawingStickerEntityView: DrawingEntityView {
     
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
+    
+    private var videoPlayer: AVPlayer?
+    private var videoLayer: AVPlayerLayer?
+    private var videoImageView: UIImageView?
     
     private var didSetUpAnimationNode = false
     private let stickerFetchedDisposable = MetaDisposable()
@@ -63,12 +68,27 @@ final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
+    private var video: String? {
+        if case let .video(path, _) = self.stickerEntity.content {
+            return path
+        } else {
+            return nil
+        }
+    }
+    
     private var dimensions: CGSize {
         switch self.stickerEntity.content {
-            case let .file(file):
-                return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
-            case let .image(image):
-                return image.size
+        case let .file(file):
+            return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+        case let .image(image):
+            return image.size
+        case let .video(_, image):
+            if let image {
+                let minSide = min(image.size.width, image.size.height)
+                return CGSize(width: minSide, height: minSide)
+            } else {
+                return CGSize(width: 512.0, height: 512.0)
+            }
         }
     }
     
@@ -119,23 +139,64 @@ final class DrawingStickerEntityView: DrawingEntityView {
                 return context
             }))
             self.setNeedsLayout()
+        } else if case let .video(videoPath, image) = self.stickerEntity.content {
+            let url = URL(fileURLWithPath: videoPath)
+            let asset = AVURLAsset(url: url)
+            let playerItem = AVPlayerItem(asset: asset)
+            let player = AVPlayer(playerItem: playerItem)
+            player.automaticallyWaitsToMinimizeStalling = false
+            let layer = AVPlayerLayer(player: player)
+            layer.masksToBounds = true
+            layer.videoGravity = .resizeAspectFill
+            
+            self.layer.addSublayer(layer)
+            
+            self.videoPlayer = player
+            self.videoLayer = layer
+            
+            let imageView = UIImageView(image: image)
+            imageView.clipsToBounds = true
+            imageView.contentMode = .scaleAspectFill
+            self.addSubview(imageView)
+            self.videoImageView = imageView
         }
     }
     
     override func play() {
         self.isVisible = true
         self.applyVisibility()
+        
+        if let player = self.videoPlayer {
+            player.play()
+            
+            if let videoImageView = self.videoImageView {
+                self.videoImageView = nil
+                Queue.mainQueue().after(0.1) {
+                    videoImageView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak videoImageView] _ in
+                        videoImageView?.removeFromSuperview()
+                    })
+                }
+            }
+        }
     }
     
     override func pause() {
         self.isVisible = false
         self.applyVisibility()
+        
+        if let player = self.videoPlayer {
+            player.pause()
+        }
     }
     
     override func seek(to timestamp: Double) {
         self.isVisible = false
         self.isPlaying = false
         self.animationNode?.seekTo(.timestamp(timestamp))
+        
+        if let player = self.videoPlayer {
+            player.seek(to: CMTime(seconds: timestamp, preferredTimescale: CMTimeScale(60.0)), toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { _ in })
+        }
     }
     
     override func resetToStart() {
@@ -184,10 +245,11 @@ final class DrawingStickerEntityView: DrawingEntityView {
             let boundingSize = CGSize(width: sideSize, height: sideSize)
             
             let imageSize = self.dimensions.aspectFitted(boundingSize)
+            let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+            self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
-                animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                animationNode.frame = imageFrame
                 animationNode.updateLayout(size: imageSize)
                 
                 if !self.didApplyVisibility {
@@ -195,6 +257,16 @@ final class DrawingStickerEntityView: DrawingEntityView {
                     self.applyVisibility()
                 }
             }
+            
+            if let videoLayer = self.videoLayer {
+                videoLayer.cornerRadius = imageFrame.width / 2.0
+                videoLayer.frame = imageFrame
+            }
+            if let videoImageView = self.videoImageView {
+                videoImageView.layer.cornerRadius = imageFrame.width / 2.0
+                videoImageView.frame = imageFrame
+            }
+            
             self.update(animated: false)
         }
     }
@@ -226,13 +298,19 @@ final class DrawingStickerEntityView: DrawingEntityView {
             UIView.animate(withDuration: 0.25, animations: {
                 self.imageNode.transform = animationTargetTransform
                 self.animationNode?.transform = animationTargetTransform
+                self.videoLayer?.transform = animationTargetTransform
             }, completion: { finished in
                 self.imageNode.transform = staticTransform
                 self.animationNode?.transform = staticTransform
+                self.videoLayer?.transform = staticTransform
             })
         } else {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
             self.imageNode.transform = staticTransform
             self.animationNode?.transform = staticTransform
+            self.videoLayer?.transform = staticTransform
+            CATransaction.commit()
         }
     
         super.update(animated: animated)

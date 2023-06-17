@@ -20,6 +20,8 @@ func composerEntitiesForDrawingEntity(account: Account, entity: DrawingEntity, c
             content = .file(file)
         case let .image(image):
             content = .image(image)
+        case let .video(path, _):
+            content = .video(path)
         }
         return [MediaEditorComposerStickerEntity(account: account, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace)]
     } else if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
@@ -69,6 +71,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     public enum Content {
         case file(TelegramMediaFile)
         case image(UIImage)
+        case video(String)
         
         var file: TelegramMediaFile? {
             if case let .file(file) = self {
@@ -90,7 +93,10 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     var source: AnimatedStickerNodeSource?
     var frameSource = Promise<QueueLocalObject<AnimatedStickerDirectFrameSource>?>()
     var videoFrameSource = Promise<QueueLocalObject<VideoStickerDirectFrameSource>?>()
-    var isVideo = false
+    var isVideoSticker = false
+    
+    var assetReader: AVAssetReader?
+    var videoOutput: AVAssetReaderTrackOutput?
     
     var frameCount: Int?
     var frameRate: Int?
@@ -118,9 +124,9 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         case let .file(file):
             if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                 self.isAnimated = true
-                self.isVideo = file.isVideoSticker || file.mimeType == "video/webm"
+                self.isVideoSticker = file.isVideoSticker || file.mimeType == "video/webm"
                 
-                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: isVideo)
+                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: isVideoSticker)
                 let pathPrefix = account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                 if let source = self.source {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -131,7 +137,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                             if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
                                 let queue = strongSelf.queue
                                 
-                                if strongSelf.isVideo {
+                                if strongSelf.isVideoSticker {
                                     let frameSource = QueueLocalObject<VideoStickerDirectFrameSource>(queue: queue, generate: {
                                         return VideoStickerDirectFrameSource(queue: queue, path: path, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), cachePathPrefix: pathPrefix, unpremultiplyAlpha: false)!
                                     })
@@ -180,6 +186,27 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         case let .image(image):
             self.isAnimated = false
             self.imagePromise.set(.single(image))
+        case let .video(videoPath):
+            self.isAnimated = true
+            
+            let url = URL(fileURLWithPath: videoPath)
+            let asset = AVURLAsset(url: url)
+            
+            if let assetReader = try? AVAssetReader(asset: asset), let videoTrack = asset.tracks(withMediaType: .video).first {
+                let outputSettings: [String: Any]  = [
+                    kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+                    kCVPixelBufferMetalCompatibilityKey as String: true
+                ]
+                let videoOutput = AVAssetReaderTrackOutput(track: videoTrack, outputSettings: outputSettings)
+                videoOutput.alwaysCopiesSampleData = true
+                if assetReader.canAdd(videoOutput) {
+                    assetReader.add(videoOutput)
+                }
+                
+                assetReader.startReading()
+                self.assetReader = assetReader
+                self.videoOutput = videoOutput
+            }
         }
     }
     
@@ -187,9 +214,52 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         self.disposables.dispose()
     }
     
-    var tested = false
+    private var circleMaskFilter: CIFilter?
     func image(for time: CMTime, frameRate: Float, completion: @escaping (CIImage?) -> Void) {
-        if self.isAnimated {
+        if case .video = self.content {
+            if let videoOutput = self.videoOutput {
+                if let sampleBuffer = videoOutput.copyNextSampleBuffer(), let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                    var ciImage = CIImage(cvPixelBuffer: imageBuffer)
+                    ciImage = ciImage.oriented(forExifOrientation: UIImage.Orientation.right.exifOrientation)
+                    let minSide = min(ciImage.extent.size.width, ciImage.extent.size.height)
+                    let cropRect = CGRect(origin: CGPoint(x: floor((ciImage.extent.size.width - minSide) / 2.0), y: floor((ciImage.extent.size.height - minSide) / 2.0)), size: CGSize(width: minSide, height: minSide))
+                    ciImage = ciImage.cropped(to: cropRect).samplingLinear()
+                    ciImage = ciImage.transformed(by: CGAffineTransform(translationX: 0.0, y: -420.0))
+                   // ciImage = ciImage.transformed(by: CGAffineTransform(translationX: -ciImage.extent.midX, y: -ciImage.extent.midY))
+                   // ciImage = ciImage.transformed(by: CGAffineTransform(rotationAngle: -.pi / 2.0))
+                   // ciImage = ciImage.transformed(by: CGAffineTransform(translationX: ciImage.extent.midX, y: ciImage.extent.midY))
+                    
+                    var circleMaskFilter: CIFilter?
+                    if let current = self.circleMaskFilter {
+                        circleMaskFilter = current
+                    } else {
+                        let circleImage = generateImage(CGSize(width: minSide, height: minSide), scale: 1.0, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: .zero, size: size))
+                            context.setFillColor(UIColor.white.cgColor)
+                            context.fillEllipse(in: CGRect(origin: .zero, size: size))
+                        })!
+                        let circleMask = CIImage(image: circleImage)
+                        if let filter = CIFilter(name: "CIBlendWithAlphaMask") {
+                            filter.setValue(circleMask, forKey: kCIInputMaskImageKey)
+                            self.circleMaskFilter = filter
+                            circleMaskFilter = filter
+                        } 
+                    }
+                    
+                    let _ = circleMaskFilter
+                    if let circleMaskFilter {
+                        circleMaskFilter.setValue(ciImage, forKey: kCIInputImageKey)
+                        if let output = circleMaskFilter.outputImage {
+                            ciImage = output
+                        }
+                    }
+                    
+                    completion(ciImage)
+                }
+            } else {
+                completion(nil)
+            }
+        } else if self.isAnimated {
             let currentTime = CMTimeGetSeconds(time)
             
             var tintColor: UIColor?
@@ -262,7 +332,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 }
             }
             
-            if self.isVideo {
+            if self.isVideoSticker {
                 self.disposables.add((self.videoFrameSource.get()
                 |> take(1)
                 |> deliverOn(self.queue)).start(next: { [weak self] frameSource in
@@ -370,4 +440,21 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
     CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
     
     return CIImage(cvPixelBuffer: pixelBuffer, options: [.colorSpace: deviceColorSpace])
+}
+
+private extension UIImage.Orientation {
+    var exifOrientation: Int32 {
+        switch self {
+            case .up: return 1
+            case .down: return 3
+            case .left: return 8
+            case .right: return 6
+            case .upMirrored: return 2
+            case .downMirrored: return 4
+            case .leftMirrored: return 5
+            case .rightMirrored: return 7
+        @unknown default:
+            return 0
+        }
+    }
 }

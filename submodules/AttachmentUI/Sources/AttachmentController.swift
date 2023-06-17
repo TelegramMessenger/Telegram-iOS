@@ -678,6 +678,7 @@ public class AttachmentController: ViewController {
                 self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
                     let _ = self?.container.dismiss(transition: .immediate, completion: completion)
                     self?.animating = false
+                    self?.layer.removeAllAnimations()
                 })
             } else {
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
@@ -745,12 +746,12 @@ public class AttachmentController: ViewController {
                 let position: CGPoint
                 let positionY = layout.size.height - size.height - insets.bottom - 40.0
                 if let sourceRect = controller.getSourceRect?() {
-                    position = CGPoint(x: floor(sourceRect.midX - size.width / 2.0), y: min(positionY, sourceRect.minY - size.height))
+                    position = CGPoint(x: min(layout.size.width - size.width - 28.0, floor(sourceRect.midX - size.width / 2.0)), y: min(positionY, sourceRect.minY - size.height))
                 } else {
                     position = CGPoint(x: masterWidth - 174.0, y: positionY)
                 }
                 
-                if controller.isStandalone {
+                if controller.isStandalone && !controller.forceSourceRect {
                     var containerY = floorToScreenPixels((layout.size.height - size.height) / 2.0)
                     if let inputHeight = layout.inputHeight, inputHeight > 88.0 {
                         containerY = layout.size.height - inputHeight - size.height - 80.0
@@ -932,6 +933,8 @@ public class AttachmentController: ViewController {
     public required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    public var forceSourceRect = false
     
     fileprivate var isStandalone: Bool {
         return self.buttons.contains(.standalone)

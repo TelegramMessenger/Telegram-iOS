@@ -37,9 +37,9 @@ float sdfCircle(float2 uv, float2 position, float radius) {
     return length(uv - position) - radius;
 }
 
-float map(float2 uv, float4 primaryParameters, float2 secondaryParameters) {
-    float primary = sdfRoundedRectangle(uv, float2(primaryParameters.y, 0.0), primaryParameters.x, primaryParameters.w);
-    float secondary = sdfCircle(uv, float2(secondaryParameters.y, 0.0), secondaryParameters.x);
+float map(float2 uv, float3 primaryParameters, float2 primaryOffset, float3 secondaryParameters, float2 secondaryOffset) {
+    float primary = sdfRoundedRectangle(uv, primaryOffset, primaryParameters.x, primaryParameters.z);
+    float secondary = sdfCircle(uv, secondaryOffset, secondaryParameters.x);
     float metaballs = 1.0;
     metaballs = smin(metaballs, primary, BindingDistance);
     metaballs = smin(metaballs, secondary, BindingDistance);
@@ -48,22 +48,32 @@ float map(float2 uv, float4 primaryParameters, float2 secondaryParameters) {
 
 fragment half4 cameraBlobFragment(RasterizerData in[[stage_in]],
                               constant uint2 &resolution[[buffer(0)]],
-                              constant float4 &primaryParameters[[buffer(1)]],
-                              constant float2 &secondaryParameters[[buffer(2)]])
+                              constant float3 &primaryParameters[[buffer(1)]],
+                              constant float2 &primaryOffset[[buffer(2)]],
+                              constant float3 &secondaryParameters[[buffer(3)]],
+                              constant float2 &secondaryOffset[[buffer(4)]])
 {
     float2 R = float2(resolution.x, resolution.y);
-    float2 uv = (2.0 * in.position.xy - R.xy) / R.y;
+    
+    float2 uv;
+    float offset;
+    if (R.x > R.y) {
+        uv = (2.0 * in.position.xy - R.xy) / R.y;
+        offset = uv.x;
+    } else {
+        uv = (2.0 * in.position.xy - R.xy) / R.x;
+        offset = uv.y;
+    }
     
     float t = AARadius / resolution.y;
     
-    float cAlpha = 1.0 - primaryParameters.z;
+    float cAlpha = 1.0 - primaryParameters.y;
     float bound = primaryParameters.x + 0.05;
-    if (abs(uv.x) > bound) {
-        cAlpha = mix(0.0, 1.0, min(1.0, (abs(uv.x) - bound) * 2.4));
-        
+    if (abs(offset) > bound) {
+        cAlpha = mix(0.0, 1.0, min(1.0, (abs(offset) - bound) * 2.4));
     }
 
-    float c = smoothstep(t, -t, map(uv, primaryParameters, secondaryParameters));
+    float c = smoothstep(t, -t, map(uv, primaryParameters, primaryOffset, secondaryParameters, secondaryOffset));
     
     return half4(c, max(cAlpha, 0.231), max(cAlpha, 0.188), c);
 }

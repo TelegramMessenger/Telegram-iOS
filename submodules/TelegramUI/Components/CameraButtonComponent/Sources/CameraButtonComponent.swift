@@ -2,14 +2,14 @@ import Foundation
 import UIKit
 import ComponentFlow
 
-final class CameraButton: Component {
+public final class CameraButton: Component {
     let content: AnyComponentWithIdentity<Empty>
     let minSize: CGSize?
     let tag: AnyObject?
     let isEnabled: Bool
     let action: () -> Void
 
-    init(
+    public init(
         content: AnyComponentWithIdentity<Empty>,
         minSize: CGSize? = nil,
         tag: AnyObject? = nil,
@@ -23,7 +23,7 @@ final class CameraButton: Component {
         self.action = action
     }
     
-    func tagged(_ tag: AnyObject) -> CameraButton {
+    public func tagged(_ tag: AnyObject) -> CameraButton {
         return CameraButton(
             content: self.content,
             minSize: self.minSize,
@@ -33,7 +33,7 @@ final class CameraButton: Component {
         )
     }
     
-    static func ==(lhs: CameraButton, rhs: CameraButton) -> Bool {
+    public static func ==(lhs: CameraButton, rhs: CameraButton) -> Bool {
         if lhs.content != rhs.content {
             return false
         }
@@ -49,8 +49,8 @@ final class CameraButton: Component {
         return true
     }
     
-    final class View: UIButton, ComponentTaggedView {
-        private var contentView: ComponentHostView<Empty>
+    public final class View: UIButton, ComponentTaggedView {
+        public var contentView: ComponentHostView<Empty>
         
         private var component: CameraButton?
         private var currentIsHighlighted: Bool = false {
@@ -74,7 +74,7 @@ final class CameraButton: Component {
             transition.setScale(view: self, scale: scale)
         }
     
-        override init(frame: CGRect) {
+        public override init(frame: CGRect) {
             self.contentView = ComponentHostView<Empty>()
             self.contentView.isUserInteractionEnabled = false
             self.contentView.layer.allowsGroupOpacity = true
@@ -104,19 +104,19 @@ final class CameraButton: Component {
             self.component?.action()
         }
         
-        override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        public override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
             self.currentIsHighlighted = true
             
             return super.beginTracking(touch, with: event)
         }
     
-        override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+        public override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
             self.currentIsHighlighted = false
             
             super.endTracking(touch, with: event)
         }
         
-        override func cancelTracking(with event: UIEvent?) {
+        public override func cancelTracking(with event: UIEvent?) {
             self.currentIsHighlighted = false
             
             super.cancelTracking(with: event)
@@ -155,11 +155,11 @@ final class CameraButton: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

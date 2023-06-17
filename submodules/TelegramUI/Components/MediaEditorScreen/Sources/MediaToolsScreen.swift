@@ -323,16 +323,33 @@ private final class MediaToolsScreenComponent: Component {
             self.component = component
             self.state = state
             
+            let isTablet: Bool
+            if case .regular = environment.metrics.widthClass {
+                isTablet = true
+            } else {
+                isTablet = false
+            }
+            
             let mediaEditor = (environment.controller() as? MediaToolsScreen)?.mediaEditor
             
             let sectionUpdated = component.sectionUpdated
-            
-            let previewContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: environment.safeInsets.top), size: CGSize(width: availableSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom))
-            let buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom))
-            
-            let buttonSideInset: CGFloat = 10.0
+                
+            let buttonSideInset: CGFloat
             let buttonBottomInset: CGFloat = 8.0
-                        
+            let previewSize: CGSize
+            let topInset: CGFloat = environment.statusBarHeight + 12.0
+            if isTablet {
+                let previewHeight = availableSize.height - topInset - 75.0
+                previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
+                buttonSideInset = 30.0
+            } else {
+                previewSize = CGSize(width: availableSize.width, height: floorToScreenPixels(availableSize.width * 1.77778))
+                buttonSideInset = 10.0
+            }
+            
+            let previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: environment.safeInsets.top), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom))
+            let buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom))
+                                    
             let cancelButtonSize = self.cancelButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
@@ -396,6 +413,16 @@ private final class MediaToolsScreenComponent: Component {
                 transition.setFrame(view: doneButtonView, frame: doneButtonFrame)
             }
             
+            let buttonsAvailableWidth: CGFloat
+            let buttonsLeftOffset: CGFloat
+            if isTablet {
+                buttonsAvailableWidth = previewSize.width + 260.0
+                buttonsLeftOffset = floorToScreenPixels((availableSize.width - buttonsAvailableWidth) / 2.0)
+            } else {
+                buttonsAvailableWidth = availableSize.width
+                buttonsLeftOffset = 0.0
+            }
+            
             let adjustmentsButtonSize = self.adjustmentsButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
@@ -412,7 +439,7 @@ private final class MediaToolsScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let adjustmentsButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 4.0 - 3.0 - adjustmentsButtonSize.width / 2.0), y: buttonBottomInset),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 4.0 - 3.0 - adjustmentsButtonSize.width / 2.0), y: buttonBottomInset),
                 size: adjustmentsButtonSize
             )
             if let adjustmentsButtonView = self.adjustmentsButton.view {
@@ -438,7 +465,7 @@ private final class MediaToolsScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let tintButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 2.5 + 5.0 - tintButtonSize.width / 2.0), y: buttonBottomInset),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 2.5 + 5.0 - tintButtonSize.width / 2.0), y: buttonBottomInset),
                 size: tintButtonSize
             )
             if let tintButtonView = self.tintButton.view {
@@ -464,7 +491,7 @@ private final class MediaToolsScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let blurButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width - availableSize.width / 2.5 - 5.0 - blurButtonSize.width / 2.0), y: buttonBottomInset),
+                origin: CGPoint(x: floorToScreenPixels(availableSize.width - buttonsLeftOffset - buttonsAvailableWidth / 2.5 - 5.0 - blurButtonSize.width / 2.0), y: buttonBottomInset),
                 size: blurButtonSize
             )
             if let blurButtonView = self.blurButton.view {
@@ -490,7 +517,7 @@ private final class MediaToolsScreenComponent: Component {
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
             let curvesButtonFrame = CGRect(
-                origin: CGPoint(x: floorToScreenPixels(availableSize.width / 4.0 * 3.0 + 3.0 - curvesButtonSize.width / 2.0), y: buttonBottomInset),
+                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 4.0 * 3.0 + 3.0 - curvesButtonSize.width / 2.0), y: buttonBottomInset),
                 size: curvesButtonSize
             )
             if let curvesButtonView = self.curvesButton.view {
@@ -640,10 +667,31 @@ private final class MediaToolsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: availableSize
+                    containerSize: previewContainerFrame.size
                 )
-                screenSize = previewContainerFrame.size
-                self.toolScreen = nil
+                
+                let adjustmentsToolScreen: ComponentView<Empty>
+                if let current = self.toolScreen, !sectionChanged {
+                    adjustmentsToolScreen = current
+                } else {
+                    adjustmentsToolScreen = ComponentView<Empty>()
+                    self.toolScreen = adjustmentsToolScreen
+                }
+                toolScreen = adjustmentsToolScreen
+                screenSize = adjustmentsToolScreen.update(
+                    transition: optionsTransition,
+                    component: AnyComponent(
+                        AdjustmentsScreenComponent(
+                            toggleUneditedPreview: { preview in
+                                if let controller = environment.controller() as? MediaToolsScreen {
+                                    controller.mediaEditor.setPreviewUnedited(preview)
+                                }
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
+                )
             case .tint:
                 self.curvesState = nil
                 optionsSize = self.toolOptions.update(
@@ -676,10 +724,31 @@ private final class MediaToolsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: availableSize
+                    containerSize: previewContainerFrame.size
                 )
-                screenSize = previewContainerFrame.size
-                self.toolScreen = nil
+                
+                let tintToolScreen: ComponentView<Empty>
+                if let current = self.toolScreen, !sectionChanged {
+                    tintToolScreen = current
+                } else {
+                    tintToolScreen = ComponentView<Empty>()
+                    self.toolScreen = tintToolScreen
+                }
+                toolScreen = tintToolScreen
+                screenSize = tintToolScreen.update(
+                    transition: optionsTransition,
+                    component: AnyComponent(
+                        AdjustmentsScreenComponent(
+                            toggleUneditedPreview: { preview in
+                                if let controller = environment.controller() as? MediaToolsScreen {
+                                    controller.mediaEditor.setPreviewUnedited(preview)
+                                }
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: previewContainerFrame.width, height: previewContainerFrame.height - optionsSize.height)
+                )
             case .blur:
                 self.curvesState = nil
                 optionsSize = self.toolOptions.update(
@@ -706,7 +775,7 @@ private final class MediaToolsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: availableSize
+                    containerSize: previewContainerFrame.size
                 )
                 
                 let blurToolScreen: ComponentView<Empty>
@@ -764,7 +833,7 @@ private final class MediaToolsScreenComponent: Component {
                         internalState: internalState
                     )),
                     environment: {},
-                    containerSize: availableSize
+                    containerSize: previewContainerFrame.size
                 )
                 
                 let curvesToolScreen: ComponentView<Empty>
@@ -917,9 +986,22 @@ public final class MediaToolsScreen: ViewController {
             }
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
+            
+            let isTablet: Bool
+            if case .regular = layout.metrics.widthClass {
+                isTablet = true
+            } else {
+                isTablet = false
+            }
 
-            let previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+            let previewSize: CGSize
             let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 12.0
+            if isTablet {
+                let previewHeight = layout.size.height - topInset - 75.0
+                previewSize = CGSize(width: floorToScreenPixels(previewHeight / 1.77778), height: previewHeight)
+            } else {
+                previewSize = CGSize(width: layout.size.width, height: floorToScreenPixels(layout.size.width * 1.77778))
+            }
             let bottomInset = layout.size.height - previewSize.height - topInset
             
             let environment = ViewControllerComponentContainer.Environment(
@@ -943,13 +1025,6 @@ public final class MediaToolsScreen: ViewController {
                     return self?.controller
                 }
             )
-
-//            var transition = transition
-//            if isFirstTime {
-//                transition = transition.withUserData(CameraScreenTransition.animateIn)
-//            } else if animateOut {
-//                transition = transition.withUserData(CameraScreenTransition.animateOut)
-//            }
 
             let componentSize = self.componentHost.update(
                 transition: transition,

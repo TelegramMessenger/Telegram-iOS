@@ -150,6 +150,8 @@ final class MediaEditorRenderer: TextureConsumer {
         self.renderPasses.forEach { $0.setup(device: device, library: library) }
     }
     
+    var renderPassedEnabled = true
+    
     func renderFrame() {
         let device: MTLDevice?
         if let renderTarget = self.renderTarget {
@@ -181,9 +183,11 @@ final class MediaEditorRenderer: TextureConsumer {
             return
         }
         
-        for renderPass in self.renderPasses {
-            if let nextTexture = renderPass.process(input: texture, device: device, commandBuffer: commandBuffer) {
-                texture = nextTexture
+        if self.renderPassedEnabled {
+            for renderPass in self.renderPasses {
+                if let nextTexture = renderPass.process(input: texture, device: device, commandBuffer: commandBuffer) {
+                    texture = nextTexture
+                }
             }
         }
         self.finalTexture = texture

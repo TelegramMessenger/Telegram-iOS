@@ -37,12 +37,15 @@ final class CameraDeviceContext {
     private weak var session: CameraSession?
     private weak var previewView: CameraSimplePreviewView?
     
+    private let exclusive: Bool
+    
     let device = CameraDevice()
     let input = CameraInput()
     let output = CameraOutput()
     
-    init(session: CameraSession) {
+    init(session: CameraSession, exclusive: Bool) {
         self.session = session
+        self.exclusive = exclusive
     }
     
     func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool) {
@@ -81,6 +84,9 @@ final class CameraDeviceContext {
     }
     
     private var preferredMaxFrameRate: Double {
+        if !self.exclusive {
+            return 30.0
+        }
         switch DeviceModel.current {
         case .iPhone14ProMax, .iPhone13ProMax:
             return 60.0
@@ -95,7 +101,7 @@ private final class CameraContext {
     
     private let session: CameraSession
     
-    private let mainDeviceContext: CameraDeviceContext
+    private var mainDeviceContext: CameraDeviceContext
     private var additionalDeviceContext: CameraDeviceContext?
 
     private let cameraImageContext = CIContext()
@@ -162,7 +168,7 @@ private final class CameraContext {
         self.simplePreviewView = previewView
         self.secondaryPreviewView = secondaryPreviewView
         
-        self.mainDeviceContext = CameraDeviceContext(session: session)
+        self.mainDeviceContext = CameraDeviceContext(session: session, exclusive: true)
         self.configure {
             self.mainDeviceContext.configure(position: configuration.position, previewView: self.simplePreviewView, audio: configuration.audio, photo: configuration.photo, metadata: configuration.metadata)
         }
@@ -306,8 +312,28 @@ private final class CameraContext {
         self.modeChange = .dualCamera
         if enabled {
             self.configure {
-                self.additionalDeviceContext = CameraDeviceContext(session: self.session)
+                self.mainDeviceContext.invalidate()
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: false)
+                self.mainDeviceContext.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+            
+                self.additionalDeviceContext = CameraDeviceContext(session: self.session, exclusive: false)
                 self.additionalDeviceContext?.configure(position: .front, previewView: self.secondaryPreviewView, audio: false, photo: true, metadata: false)
+            }
+            self.mainDeviceContext.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
+                guard let self else {
+                    return
+                }
+                self.previewNode?.enqueue(sampleBuffer)
+                
+                let timestamp = CACurrentMediaTime()
+                if timestamp > self.lastSnapshotTimestamp + 2.5 {
+                    var mirror = false
+                    if #available(iOS 13.0, *) {
+                        mirror = connection.inputPorts.first?.sourceDevicePosition == .front
+                    }
+                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror, additional: false)
+                    self.lastSnapshotTimestamp = timestamp
+                }
             }
             self.additionalDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self else {
@@ -325,8 +351,28 @@ private final class CameraContext {
             }
         } else {
             self.configure {
+                self.mainDeviceContext.invalidate()
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true)
+                self.mainDeviceContext.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+                
                 self.additionalDeviceContext?.invalidate()
                 self.additionalDeviceContext = nil
+            }
+            self.mainDeviceContext.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
+                guard let self else {
+                    return
+                }
+                self.previewNode?.enqueue(sampleBuffer)
+                
+                let timestamp = CACurrentMediaTime()
+                if timestamp > self.lastSnapshotTimestamp + 2.5 {
+                    var mirror = false
+                    if #available(iOS 13.0, *) {
+                        mirror = connection.inputPorts.first?.sourceDevicePosition == .front
+                    }
+                    self.savePreviewSnapshot(pixelBuffer: pixelBuffer, mirror: mirror, additional: false)
+                    self.lastSnapshotTimestamp = timestamp
+                }
             }
         }
         
@@ -394,11 +440,33 @@ private final class CameraContext {
     }
     
     public func startRecording() -> Signal<Double, NoError> {
-        return self.mainDeviceContext.output.startRecording()
+        if let additionalDeviceContext = self.additionalDeviceContext {
+            return combineLatest(
+                self.mainDeviceContext.output.startRecording(),
+                additionalDeviceContext.output.startRecording()
+            ) |> map { value, _ in
+                return value
+            }
+        } else {
+            return self.mainDeviceContext.output.startRecording()
+        }
     }
     
-    public func stopRecording() -> Signal<(String, UIImage?)?, NoError> {
-        return self.mainDeviceContext.output.stopRecording()
+    public func stopRecording() -> Signal<VideoCaptureResult, NoError> {
+        if let additionalDeviceContext = self.additionalDeviceContext {
+            return combineLatest(
+                self.mainDeviceContext.output.stopRecording(),
+                additionalDeviceContext.output.stopRecording()
+            ) |> mapToSignal { main, additional in
+                if case let .finished(mainResult, _, _) = main, case let .finished(additionalResult, _, _) = additional {
+                    return .single(.finished(mainResult, additionalResult, CACurrentMediaTime()))
+                } else {
+                    return .complete()
+                }
+            }
+        } else {
+            return self.mainDeviceContext.output.stopRecording()
+        }
     }
     
     var detectedCodes: Signal<[CameraCode], NoError> {
@@ -559,7 +627,7 @@ public final class Camera {
         }
     }
     
-    public func stopRecording() -> Signal<(String, UIImage?)?, NoError> {
+    public func stopRecording() -> Signal<VideoCaptureResult, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {

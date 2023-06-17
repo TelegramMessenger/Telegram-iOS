@@ -420,11 +420,16 @@ public final class MediaEditor {
                         if let self {
                             let start = self.values.videoTrimRange?.lowerBound ?? 0.0
                             self.player?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
+                            self.onPlaybackAction(.seek(start))
                             self.player?.play()
+                            self.onPlaybackAction(.play)
                         }
                     })
-                    player.playImmediately(atRate: 1.0)
-                    self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
+                    Queue.mainQueue().justDispatch {
+                        player.playImmediately(atRate: 1.0)
+                        self.onPlaybackAction(.play)
+                        self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
+                    }
                 }
             }
         })
@@ -460,6 +465,12 @@ public final class MediaEditor {
         return self.values.toolValues[key]
     }
     
+    private var previewUnedited = false
+    public func setPreviewUnedited(_ preview: Bool) {
+        self.previewUnedited = preview
+        self.updateRenderChain()
+    }
+    
     public func setToolValue(_ key: EditorToolKey, value: Any) {
         self.updateValues { values in
             var updatedToolValues = values.toolValues
@@ -481,11 +492,20 @@ public final class MediaEditor {
         }
     }
     
+    public enum PlaybackAction {
+        case play
+        case pause
+        case seek(Double)
+    }
+    
+    public var onPlaybackAction: (PlaybackAction) -> Void = { _ in }
+    
     private var targetTimePosition: (CMTime, Bool)?
     private var updatingTimePosition = false
     public func seek(_ position: Double, andPlay play: Bool) {
         if !play {
             self.player?.pause()
+            self.onPlaybackAction(.pause)
         }
         let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
         if self.targetTimePosition?.0 != targetPosition {
@@ -496,6 +516,7 @@ public final class MediaEditor {
         }
         if play {
             self.player?.play()
+            self.onPlaybackAction(.play)
         }
     }
     
@@ -505,14 +526,17 @@ public final class MediaEditor {
     
     public func play() {
         self.player?.play()
+        self.onPlaybackAction(.play)
     }
     
     public func stop() {
         self.player?.pause()
+        self.onPlaybackAction(.pause)
     }
     
     public func invalidate() {
         self.player?.pause()
+        self.onPlaybackAction(.pause)
         self.renderer.textureSource?.invalidate()
     }
     
@@ -531,6 +555,7 @@ public final class MediaEditor {
                 }
             }
         })
+        self.onPlaybackAction(.seek(targetPosition.seconds))
     }
     
     public func setVideoTrimRange(_ trimRange: Range<Double>, apply: Bool) {
@@ -558,6 +583,7 @@ public final class MediaEditor {
     private var previousUpdateTime: Double?
     private var scheduledUpdate = false
     private func updateRenderChain() {
+        self.renderer.renderPassedEnabled = !self.previewUnedited
         self.renderChain.update(values: self.values)
         if let player = self.player, player.rate > 0.0 {
         } else {

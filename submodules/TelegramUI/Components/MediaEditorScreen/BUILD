@@ -37,6 +37,7 @@ swift_library(
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/AvatarNode",
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
+        "//submodules/TelegramUI/Components/CameraButtonComponent",
     ],
     visibility = [
         "//visibility:public",
