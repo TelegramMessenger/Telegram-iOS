@@ -350,9 +350,9 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         var font: UIFont
         switch self.textEntity.font {
         case .sanFrancisco:
-            font = Font.with(size: fontSize, design: .round, weight: .semibold)
+            font = Font.with(size: fontSize, design: .regular, weight: .semibold)
         case let .other(fontName, _):
-            font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .round, weight: .semibold)
+            font = UIFont(name: fontName, size: fontSize) ?? Font.with(size: fontSize, design: .regular, weight: .semibold)
         }
         
         text.addAttribute(.font, value: font, range: range)
@@ -516,6 +516,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.textEntity.rotation), self.textEntity.scale, self.textEntity.scale)
         }
         
+        var cursorColor = UIColor.white
         let color = self.textEntity.color.toUIColor()
         switch self.textEntity.style {
         case .regular:
@@ -524,6 +525,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.textView.frameColor = nil
         case .filled:
             self.textView.textColor = color.lightness > 0.99 ? UIColor.black : UIColor.white
+            cursorColor = color.lightness > 0.99 ? UIColor(rgb: 0x007aff) : UIColor.white
             self.textView.strokeColor = nil
             self.textView.frameColor = color
         case .semi:
@@ -535,6 +537,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.textView.strokeColor = color
             self.textView.frameColor = nil
         }
+        self.textView.tintColor = cursorColor
         
         if case .regular = self.textEntity.style {
             self.textView.layer.shadowColor = UIColor.black.cgColor

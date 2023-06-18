@@ -423,7 +423,7 @@ final class ShareWithPeersScreenComponent: Component {
                 var minSectionHeader: UIView?
                 
                 do {
-                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: 0.0, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
+                    var sectionHeaderFrame = CGRect(origin: CGPoint(x: visibleFrame.minX, y: itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset), size: CGSize(width: itemLayout.containerSize.width, height: section.insets.top))
                     
                     let sectionHeaderMinY = topOffset + itemLayout.containerInset + itemLayout.navigationHeight
                     let sectionHeaderMaxY = itemLayout.containerInset + sectionOffset - self.scrollView.bounds.minY + itemLayout.topInset + section.totalHeight - 28.0
@@ -723,6 +723,13 @@ final class ShareWithPeersScreenComponent: Component {
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
             let sideInset: CGFloat = 0.0
+            let containerWidth: CGFloat
+            if case .regular = environment.metrics.widthClass {
+                containerWidth = 390.0
+            } else {
+                containerWidth = availableSize.width
+            }
+            let containerSideInset = floorToScreenPixels((availableSize.width - containerWidth) / 2.0)
             
             if self.component == nil {
                 switch component.initialPrivacy.base {
@@ -828,7 +835,7 @@ final class ShareWithPeersScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: 1000.0)
+                    containerSize: CGSize(width: containerWidth, height: 1000.0)
                 )
                 
                 if !self.navigationTextFieldState.text.isEmpty {
@@ -875,7 +882,7 @@ final class ShareWithPeersScreenComponent: Component {
                     secondaryAction: {}
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
+                containerSize: CGSize(width: containerWidth, height: 1000.0)
             )
             let peerItemSize = self.peerTemplateItem.update(
                 transition: transition,
@@ -894,7 +901,7 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
+                containerSize: CGSize(width: containerWidth, height: 1000.0)
             )
             
             var sections: [ItemLayout.Section] = []
@@ -936,7 +943,7 @@ final class ShareWithPeersScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: navigationHeight)
             )
-            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
+            let navigationLeftButtonFrame = CGRect(origin: CGPoint(x: containerSideInset + navigationSideInset, y: floor((navigationHeight - navigationLeftButtonSize.height) * 0.5)), size: navigationLeftButtonSize)
             if let navigationLeftButtonView = self.navigationLeftButton.view {
                 if navigationLeftButtonView.superview == nil {
                     self.navigationContainerView.addSubview(navigationLeftButtonView)
@@ -969,9 +976,9 @@ final class ShareWithPeersScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(Text(text: title, font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.primaryTextColor)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - navigationButtonsWidth, height: navigationHeight)
+                containerSize: CGSize(width: containerWidth - navigationButtonsWidth, height: navigationHeight)
             )
-            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) * 0.5), y: floor((navigationHeight - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
+            let navigationTitleFrame = CGRect(origin: CGPoint(x: containerSideInset + floor((containerWidth - navigationTitleSize.width) * 0.5), y: floor((navigationHeight - navigationTitleSize.height) * 0.5)), size: navigationTitleSize)
             if let navigationTitleView = self.navigationTitle.view {
                 if navigationTitleView.superview == nil {
                     self.navigationContainerView.addSubview(navigationTitleView)
@@ -980,14 +987,14 @@ final class ShareWithPeersScreenComponent: Component {
                 navigationTitleView.bounds = CGRect(origin: CGPoint(), size: navigationTitleFrame.size)
             }
             
-            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: navigationTextFieldSize)
+            let navigationTextFieldFrame = CGRect(origin: CGPoint(x: containerSideInset, y: navigationHeight), size: navigationTextFieldSize)
             if let navigationTextFieldView = self.navigationTextField.view {
                 if navigationTextFieldView.superview == nil {
                     self.navigationContainerView.addSubview(navigationTextFieldView)
                     self.navigationContainerView.layer.addSublayer(self.textFieldSeparatorLayer)
                 }
                 transition.setFrame(view: navigationTextFieldView, frame: navigationTextFieldFrame)
-                transition.setFrame(layer: self.textFieldSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationTextFieldFrame.maxY), size: CGSize(width: navigationTextFieldFrame.width, height: UIScreenPixel)))
+                transition.setFrame(layer: self.textFieldSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset, y: navigationTextFieldFrame.maxY), size: CGSize(width: navigationTextFieldFrame.width, height: UIScreenPixel)))
             }
             navigationHeight += navigationTextFieldFrame.height
             
@@ -1002,10 +1009,10 @@ final class ShareWithPeersScreenComponent: Component {
                 }
             }
             
-            self.navigationBackgroundView.update(size: CGSize(width: availableSize.width, height: navigationHeight), cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
-            transition.setFrame(view: self.navigationBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: navigationHeight)))
+            self.navigationBackgroundView.update(size: CGSize(width: containerWidth, height: navigationHeight), cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
+            transition.setFrame(view: self.navigationBackgroundView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: navigationHeight)))
             
-            transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+            transition.setFrame(layer: self.navigationSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset, y: navigationHeight), size: CGSize(width: containerWidth, height: UIScreenPixel)))
             
             let actionButtonTitle: String = "Save Settings"
             let actionButtonSize = self.actionButton.update(
@@ -1055,7 +1062,7 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - navigationSideInset * 2.0, height: 50.0)
+                containerSize: CGSize(width: containerWidth - navigationSideInset * 2.0, height: 50.0)
             )
             
             var bottomPanelHeight: CGFloat = 0.0
@@ -1064,38 +1071,39 @@ final class ShareWithPeersScreenComponent: Component {
             } else {
                 bottomPanelHeight += 10.0 + environment.safeInsets.bottom + actionButtonSize.height
             }
-            let actionButtonFrame = CGRect(origin: CGPoint(x: navigationSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: containerSideInset + navigationSideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
             if let actionButtonView = self.actionButton.view {
                 if actionButtonView.superview == nil {
                     self.addSubview(actionButtonView)
                 }
                 transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
             }
-            
-            transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: availableSize.width, height: bottomPanelHeight + 8.0)))
-            self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
-            transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
                         
-            let itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: bottomPanelHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
+            transition.setFrame(view: self.bottomBackgroundView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: availableSize.height - bottomPanelHeight - 8.0), size: CGSize(width: containerWidth, height: bottomPanelHeight + 8.0)))
+            self.bottomBackgroundView.update(size: self.bottomBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
+            transition.setFrame(layer: self.bottomSeparatorLayer, frame: CGRect(origin: CGPoint(x: containerSideInset + sideInset, y: availableSize.height - bottomPanelHeight - 8.0 - UIScreenPixel), size: CGSize(width: containerWidth, height: UIScreenPixel)))
+                        
+            let itemContainerSize = CGSize(width: containerWidth, height: availableSize.height)
+            let itemLayout = ItemLayout(containerSize: itemContainerSize, containerInset: containerInset, bottomInset: bottomPanelHeight, topInset: topInset, sideInset: sideInset, navigationHeight: navigationHeight, sections: sections)
             let previousItemLayout = self.itemLayout
             self.itemLayout = itemLayout
             
-            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: availableSize.width, height: itemLayout.contentHeight)))
+            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: containerWidth, height: itemLayout.contentHeight)))
             
             let scrollContentHeight = max(topInset + itemLayout.contentHeight + containerInset, availableSize.height - containerInset)
             
-            transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: availableSize.width, height: itemLayout.contentHeight)))
+            transition.setFrame(view: self.scrollContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + containerInset), size: CGSize(width: containerWidth, height: itemLayout.contentHeight)))
             
             transition.setPosition(view: self.backgroundView, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
-            transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: CGPoint(), size: availableSize))
+            transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
             
             let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset + 10.0), size: CGSize(width: availableSize.width, height: availableSize.height - 10.0))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
             
             self.ignoreScrolling = true
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
-            let contentSize = CGSize(width: availableSize.width, height: scrollContentHeight)
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
+            let contentSize = CGSize(width: containerWidth, height: scrollContentHeight)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize
             }
@@ -1104,7 +1112,7 @@ final class ShareWithPeersScreenComponent: Component {
                 self.scrollView.scrollIndicatorInsets = indicatorInsets
             }
             if resetScrolling {
-                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize)
+                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height))
             } else if let previousItemLayout, previousItemLayout.topInset != topInset {
                 let topInsetDifference = previousItemLayout.topInset - topInset
                 var scrollBounds = self.scrollView.bounds

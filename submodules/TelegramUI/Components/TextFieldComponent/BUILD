@@ -12,6 +12,8 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/ComponentFlow",
+        "//submodules/TextFormat",
+        "//submodules/TelegramPresentationData",
     ],
     visibility = [
         "//visibility:public",

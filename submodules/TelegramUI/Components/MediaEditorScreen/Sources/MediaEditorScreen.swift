@@ -541,7 +541,7 @@ final class MediaEditorScreenComponent: Component {
                         var inputText = NSAttributedString(string: "")
                         switch inputPanelView.getSendMessageInput() {
                         case let .text(text):
-                            inputText = NSAttributedString(string: text)
+                            inputText = text
                         }
                         
                         controller.requestCompletion(caption: inputText, animated: true)
@@ -777,6 +777,7 @@ final class MediaEditorScreenComponent: Component {
                     style: .editor,
                     placeholder: "Add a caption...",
                     alwaysDarkWhenHasText: false,
+                    areVoiceMessagesAvailable: false,
                     presentController: { [weak self] c in
                         guard let self, let _ = self.component else {
                             return
@@ -801,6 +802,7 @@ final class MediaEditorScreenComponent: Component {
                         controller.presentTimeoutSetup(sourceView: view)
                     },
                     forwardAction: nil,
+                    presentVoiceMessagesUnavailableTooltip: nil,
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,

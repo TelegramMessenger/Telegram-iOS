@@ -30,6 +30,7 @@ public final class MessageInputActionButtonComponent: Component {
         case apply
         case voiceInput
         case videoInput
+        case unavailableVoiceInput
         case delete
         case attach
         case forward
@@ -213,7 +214,11 @@ public final class MessageInputActionButtonComponent: Component {
                     guard let self, let component = self.component else {
                         return
                     }
-                    component.switchMediaInputMode()
+                    if case .unavailableVoiceInput = component.mode {
+                        component.action(component.mode, .up, false)
+                    } else {
+                        component.switchMediaInputMode()
+                    }
                 }
                 micButton.updateCancelTranslation = { [weak self] in
                     guard let self, let micButton = self.micButton, let component = self.component else {
@@ -222,6 +227,20 @@ public final class MessageInputActionButtonComponent: Component {
                     component.updateMediaCancelFraction(micButton.cancelTranslation)
                 }
             }
+            
+            var sendAlpha: CGFloat = 0.0
+            var microphoneAlpha: CGFloat = 0.0
+            switch component.mode {
+            case .none:
+                break
+            case .send, .apply, .attach, .delete, .forward:
+                sendAlpha = 1.0
+            case .videoInput, .voiceInput:
+                microphoneAlpha = 1.0
+            case .unavailableVoiceInput:
+                microphoneAlpha = 0.4
+            }
+            
             
             if self.sendIconView.image == nil || previousComponent?.mode.iconName != component.mode.iconName {
                 if let iconName = component.mode.iconName {
@@ -242,6 +261,21 @@ public final class MessageInputActionButtonComponent: Component {
                 } else if case .none = component.mode {
                     self.sendIconView.image = nil
                 } else {
+                    if !transition.animation.isImmediate {
+                        if let snapshotView = self.sendIconView.snapshotView(afterScreenUpdates: false) {
+                            snapshotView.frame = self.sendIconView.frame
+                            self.addSubview(snapshotView)
+                            
+                            transition.setAlpha(view: snapshotView, alpha: 0.0, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                            transition.setScale(view: snapshotView, scale: 0.01)
+                            
+                            self.sendIconView.alpha = 0.0
+                            transition.animateAlpha(view: self.sendIconView, from: 0.0, to: sendAlpha)
+                            transition.animateScale(view: self.sendIconView, from: 0.01, to: 1.0)
+                        }
+                    }
                     self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.setFillColor(UIColor.white.cgColor)
@@ -265,18 +299,6 @@ public final class MessageInputActionButtonComponent: Component {
                         context.restoreGState()
                     })
                 }
-            }
-            
-            var sendAlpha: CGFloat = 0.0
-            var microphoneAlpha: CGFloat = 0.0
-            
-            switch component.mode {
-            case .none:
-                break
-            case .send, .apply, .attach, .delete, .forward:
-                sendAlpha = 1.0
-            case .videoInput, .voiceInput:
-                microphoneAlpha = 1.0
             }
             
             transition.setAlpha(view: self.sendIconView, alpha: sendAlpha)
@@ -303,7 +325,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

@@ -30,6 +30,7 @@ public final class MessageInputPanelComponent: Component {
     public let style: Style
     public let placeholder: String
     public let alwaysDarkWhenHasText: Bool
+    public let areVoiceMessagesAvailable: Bool
     public let presentController: (ViewController) -> Void
     public let sendMessageAction: () -> Void
     public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
@@ -39,6 +40,7 @@ public final class MessageInputPanelComponent: Component {
     public let attachmentAction: (() -> Void)?
     public let timeoutAction: ((UIView) -> Void)?
     public let forwardAction: (() -> Void)?
+    public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
     public let isRecordingLocked: Bool
@@ -57,6 +59,7 @@ public final class MessageInputPanelComponent: Component {
         style: Style,
         placeholder: String,
         alwaysDarkWhenHasText: Bool,
+        areVoiceMessagesAvailable: Bool,
         presentController: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
         setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
@@ -66,6 +69,7 @@ public final class MessageInputPanelComponent: Component {
         attachmentAction: (() -> Void)?,
         timeoutAction: ((UIView) -> Void)?,
         forwardAction: (() -> Void)?,
+        presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
         isRecordingLocked: Bool,
@@ -83,6 +87,7 @@ public final class MessageInputPanelComponent: Component {
         self.style = style
         self.placeholder = placeholder
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
+        self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         self.presentController = presentController
         self.sendMessageAction = sendMessageAction
         self.setMediaRecordingActive = setMediaRecordingActive
@@ -92,6 +97,7 @@ public final class MessageInputPanelComponent: Component {
         self.attachmentAction = attachmentAction
         self.timeoutAction = timeoutAction
         self.forwardAction = forwardAction
+        self.presentVoiceMessagesUnavailableTooltip = presentVoiceMessagesUnavailableTooltip
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
         self.isRecordingLocked = isRecordingLocked
@@ -123,6 +129,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.alwaysDarkWhenHasText != rhs.alwaysDarkWhenHasText {
+            return false
+        }
+        if lhs.areVoiceMessagesAvailable != rhs.areVoiceMessagesAvailable {
             return false
         }
         if lhs.audioRecorder !== rhs.audioRecorder {
@@ -159,7 +168,7 @@ public final class MessageInputPanelComponent: Component {
     }
     
     public enum SendMessageInput {
-        case text(String)
+        case text(NSAttributedString)
     }
     
     public final class View: UIView {
@@ -222,10 +231,10 @@ public final class MessageInputPanelComponent: Component {
         
         public func getSendMessageInput() -> SendMessageInput {
             guard let textFieldView = self.textField.view as? TextFieldComponent.View else {
-                return .text("")
+                return .text(NSAttributedString())
             }
             
-            return .text(textFieldView.getText())
+            return .text(textFieldView.getAttributedText())
         }
         
         public func getAttachmentButtonView() -> UIView? {
@@ -237,7 +246,7 @@ public final class MessageInputPanelComponent: Component {
         
         public func clearSendMessageInput() {
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
-                textFieldView.setText(string: "")
+                textFieldView.setAttributedText(NSAttributedString())
             }
         }
         
@@ -308,6 +317,7 @@ public final class MessageInputPanelComponent: Component {
             let textFieldSize = self.textField.update(
                 transition: .immediate,
                 component: AnyComponent(TextFieldComponent(
+                    strings: component.strings,
                     externalState: self.textFieldExternalState,
                     placeholder: ""
                 )),
@@ -534,7 +544,11 @@ public final class MessageInputPanelComponent: Component {
                     } else if !self.textFieldExternalState.isEditing && component.forwardAction != nil {
                         inputActionButtonMode = .forward
                     } else {
-                        inputActionButtonMode = self.currentMediaInputIsVoice ? .voiceInput : .videoInput
+                        if component.areVoiceMessagesAvailable {
+                            inputActionButtonMode = self.currentMediaInputIsVoice ? .voiceInput : .videoInput
+                        } else {
+                            inputActionButtonMode = .unavailableVoiceInput
+                        }
                     }
                 }
             }
@@ -554,7 +568,7 @@ public final class MessageInputPanelComponent: Component {
                             if case .up = action {
                                 if component.recordedAudioPreview != nil {
                                     component.sendMessageAction()
-                                } else if case .text("") = self.getSendMessageInput() {
+                                } else if case let .text(string) = self.getSendMessageInput(), string.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 } else {
                                     component.sendMessageAction()
                                 }
@@ -569,6 +583,10 @@ public final class MessageInputPanelComponent: Component {
                             if case .up = action {
                                 component.forwardAction?()
                             }
+                        case .unavailableVoiceInput:
+                            if let view = self.inputActionButton.view {
+                                component.presentVoiceMessagesUnavailableTooltip?(view)
+                            }
                         default:
                             break
                         }
@@ -577,6 +595,7 @@ public final class MessageInputPanelComponent: Component {
                         guard let self else {
                             return
                         }
+                        
                         self.currentMediaInputIsVoice = !self.currentMediaInputIsVoice
                         self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                     },

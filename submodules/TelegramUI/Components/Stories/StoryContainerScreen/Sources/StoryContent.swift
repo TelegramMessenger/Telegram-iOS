@@ -115,8 +115,21 @@ public final class StoryContentItemSlice {
 }
 
 public final class StoryContentContextState {
+    public final class AdditionalPeerData: Equatable {
+        public static func == (lhs: StoryContentContextState.AdditionalPeerData, rhs: StoryContentContextState.AdditionalPeerData) -> Bool {
+            return lhs.areVoiceMessagesAvailable == rhs.areVoiceMessagesAvailable
+        }
+        
+        public let areVoiceMessagesAvailable: Bool
+        
+        public init(areVoiceMessagesAvailable: Bool) {
+            self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
+        }
+    }
+    
     public final class FocusedSlice: Equatable {
         public let peer: EnginePeer
+        public let additionalPeerData: AdditionalPeerData
         public let item: StoryContentItem
         public let totalCount: Int
         public let previousItemId: Int32?
@@ -124,12 +137,14 @@ public final class StoryContentContextState {
         
         public init(
             peer: EnginePeer,
+            additionalPeerData: AdditionalPeerData,
             item: StoryContentItem,
             totalCount: Int,
             previousItemId: Int32?,
             nextItemId: Int32?
         ) {
             self.peer = peer
+            self.additionalPeerData = additionalPeerData
             self.item = item
             self.totalCount = totalCount
             self.previousItemId = previousItemId
@@ -138,6 +153,9 @@ public final class StoryContentContextState {
         
         public static func ==(lhs: FocusedSlice, rhs: FocusedSlice) -> Bool {
             if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.additionalPeerData != rhs.additionalPeerData {
                 return false
             }
             if lhs.item.storyItem != rhs.item.storyItem {

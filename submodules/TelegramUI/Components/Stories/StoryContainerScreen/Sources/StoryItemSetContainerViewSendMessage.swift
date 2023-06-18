@@ -83,12 +83,12 @@ final class StoryItemSetContainerSendMessage {
         } else {
             switch inputPanelView.getSendMessageInput() {
             case let .text(text):
-                if !text.isEmpty {
+                if !text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     component.context.engine.messages.enqueueOutgoingMessage(
                         to: peerId,
                         replyTo: nil,
                         storyId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
-                        content: .text(text)
+                        content: .text(text.string)
                     )
                     inputPanelView.clearSendMessageInput()
                     view.endEditing(true)
@@ -285,16 +285,34 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         
-        /*let linkPromise = Promise<String?, NoError>()
-        linkPromise.set(component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))*/
+        var preferredAction: ShareControllerPreferredAction?
+        if focusedItem.storyItem.isPublic {
+            preferredAction = .custom(action: ShareControllerAction(title: "Copy Link", action: {
+                let _ = ((component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))
+                |> deliverOnMainQueue).start(next: { link in
+                    if let link {
+                        UIPasteboard.general.string = link
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                        component.presentController(UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .linkCopied(text: "Link copied."),
+                            elevatedLayout: false,
+                            animateInAsReplacement: false,
+                            action: { _ in return false }
+                        ), nil)
+                    }
+                })
+            }))
+        }
         
         let shareController = ShareController(
             context: component.context,
             subject: .media(AnyMediaReference.standalone(media: TelegramMediaStory(storyId: StoryId(peerId: peerId, id: focusedItem.storyItem.id)))),
+            preferredAction: preferredAction ?? .default,
             externalShare: false,
             immediateExternalShare: false,
-            updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }),
-            component.context.sharedContext.presentationData)
+            forceTheme: defaultDarkColorPresentationTheme
         )
         
         self.shareController = shareController
@@ -341,7 +359,7 @@ final class StoryItemSetContainerSendMessage {
         var inputText = NSAttributedString(string: "")
         switch inputPanelView.getSendMessageInput() {
         case let .text(text):
-            inputText = NSAttributedString(string: text)
+            inputText = text
         }
         
         let _ = (component.context.engine.data.get(
@@ -988,7 +1006,7 @@ final class StoryItemSetContainerSendMessage {
         var inputText = NSAttributedString(string: "")
         switch inputPanelView.getSendMessageInput() {
         case let .text(text):
-            inputText = NSAttributedString(string: text)
+            inputText = text
         }
         
         let engine = component.context.engine
@@ -1392,7 +1410,7 @@ final class StoryItemSetContainerSendMessage {
         var inputText = NSAttributedString(string: "")
         switch inputPanelView.getSendMessageInput() {
         case let .text(text):
-            inputText = NSAttributedString(string: text)
+            inputText = text
         }
         
         let _ = (component.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in

@@ -21,6 +21,7 @@ import MediaEditorScreen
 import ImageCompression
 import ShareWithPeersScreen
 import PlainButtonComponent
+import TooltipUI
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -64,7 +65,7 @@ public final class StoryItemSetContainerComponent: Component {
     public let isPanning: Bool
     public let verticalPanFraction: CGFloat
     public let pinchState: PinchState?
-    public let presentController: (ViewController) -> Void
+    public let presentController: (ViewController, Any?) -> Void
     public let close: () -> Void
     public let navigate: (NavigationDirection) -> Void
     public let delete: () -> Void
@@ -88,7 +89,7 @@ public final class StoryItemSetContainerComponent: Component {
         isPanning: Bool,
         verticalPanFraction: CGFloat,
         pinchState: PinchState?,
-        presentController: @escaping (ViewController) -> Void,
+        presentController: @escaping (ViewController, Any?) -> Void,
         close: @escaping () -> Void,
         navigate: @escaping (NavigationDirection) -> Void,
         delete: @escaping () -> Void,
@@ -270,6 +271,8 @@ public final class StoryItemSetContainerComponent: Component {
         private var audioRecorderDisposable: Disposable?
         private var audioRecorderStatusDisposable: Disposable?
         private var videoRecorderDisposable: Disposable?
+        
+        private weak var voiceMessagesRestrictedTooltipController: TooltipController?
         
         override init(frame: CGRect) {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
@@ -1007,11 +1010,12 @@ public final class StoryItemSetContainerComponent: Component {
                     style: .story,
                     placeholder: "Reply Privately...",
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
+                    areVoiceMessagesAvailable: component.slice.additionalPeerData.areVoiceMessagesAvailable,
                     presentController: { [weak self] c in
                         guard let self, let component = self.component else {
                             return
                         }
-                        component.presentController(c)
+                        component.presentController(c, nil)
                     },
                     sendMessageAction: { [weak self] in
                         guard let self else {
@@ -1057,6 +1061,29 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.sendMessageContext.performShareAction(view: self)
                     } : nil,
+                    presentVoiceMessagesUnavailableTooltip: { [weak self] view in
+                        guard let self, let component = self.component, self.voiceMessagesRestrictedTooltipController == nil else {
+                            return
+                        }
+                        let rect = view.convert(view.bounds, to: nil)
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        let text = presentationData.strings.Conversation_VoiceMessagesRestricted(component.slice.peer.compactDisplayTitle).string
+                        let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
+                        controller.dismissed = { [weak self] _ in
+                            if let self {
+                                self.voiceMessagesRestrictedTooltipController = nil
+                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                            }
+                        }
+                        component.presentController(controller, TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
+                            if let self {
+                                return (self, rect)
+                            }
+                            return nil
+                        }))
+                        self.voiceMessagesRestrictedTooltipController = controller
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                    },
                     audioRecorder: self.sendMessageContext.audioRecorderValue,
                     videoRecordingStatus: self.sendMessageContext.videoRecorderValue?.audioStatus,
                     isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,
@@ -1426,7 +1453,7 @@ public final class StoryItemSetContainerComponent: Component {
                             self.actionSheet = actionSheet
                             self.updateIsProgressPaused()
                             
-                            component.presentController(actionSheet)
+                            component.presentController(actionSheet, nil)
                         },
                         moreAction: { [weak self] sourceView, gesture in
                             guard let self, let component = self.component, let controller = component.controller() else {
@@ -1515,7 +1542,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
                                         action: { _ in return false }
-                                    ))
+                                    ), nil)
                                 } else {
                                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                     self.component?.presentController(UndoOverlayController(
@@ -1524,7 +1551,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
                                         action: { _ in return false }
-                                    ))
+                                    ), nil)
                                 }
                             })))
                             items.append(.action(ContextMenuActionItem(text: "Save image", icon: { theme in
@@ -1558,7 +1585,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                 elevatedLayout: false,
                                                 animateInAsReplacement: false,
                                                 action: { _ in return false }
-                                            ))
+                                            ), nil)
                                         }
                                     })
                                 })))
@@ -1842,6 +1869,9 @@ public final class StoryItemSetContainerComponent: Component {
             if self.sendMessageContext.recordedAudioPreview != nil {
                 effectiveDisplayReactions = false
             }
+            if self.voiceMessagesRestrictedTooltipController != nil {
+                effectiveDisplayReactions = false
+            }
             
             if let reactionItems = self.reactionItems, effectiveDisplayReactions {
                 let reactionContextNode: ReactionContextNode
@@ -2010,7 +2040,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
                                         action: { _ in return false }
-                                    ))
+                                    ), nil)
                                 })
                             }
                         })

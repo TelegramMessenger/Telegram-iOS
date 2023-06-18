@@ -251,6 +251,7 @@ final class StoryPreviewComponent: Component {
                     style: .story,
                     placeholder: "Reply Privately...",
                     alwaysDarkWhenHasText: false,
+                    areVoiceMessagesAvailable: false,
                     presentController: { _ in
                     },
                     sendMessageAction: {
@@ -262,6 +263,7 @@ final class StoryPreviewComponent: Component {
                     attachmentAction: { },
                     timeoutAction: nil,
                     forwardAction: nil,
+                    presentVoiceMessagesUnavailableTooltip: nil,
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,

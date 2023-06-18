@@ -444,7 +444,7 @@ private final class StoryContainerScreenComponent: Component {
             switch recognizer.state {
             case .began, .changed:
                 let location = recognizer.location(in: self)
-                let scale = recognizer.scale
+                let scale = max(1.0, recognizer.scale)
                 if let itemSetPinchState = self.itemSetPinchState {
                     let offset = CGPoint(x: location.x - itemSetPinchState.location.x , y: location.y - itemSetPinchState.location.y)
                     self.itemSetPinchState = StoryItemSetContainerComponent.PinchState(scale: scale, location: itemSetPinchState.location, offset: offset)
@@ -748,14 +748,14 @@ private final class StoryContainerScreenComponent: Component {
                                 isPanning: self.itemSetPanState?.didBegin == true,
                                 verticalPanFraction: verticalPanFraction,
                                 pinchState: self.itemSetPinchState,
-                                presentController: { [weak self] c in
+                                presentController: { [weak self] c, a in
                                     guard let self, let environment = self.environment else {
                                         return
                                     }
                                     if c is UndoOverlayController {
                                         environment.controller()?.present(c, in: .current)
                                     } else {
-                                        environment.controller()?.present(c, in: .window(.root))
+                                        environment.controller()?.present(c, in: .window(.root), with: a)
                                     }
                                 },
                                 close: { [weak self] in

@@ -98,7 +98,7 @@ enum DrawingTextFont: Equatable, Hashable {
     func uiFont(size: CGFloat) -> UIFont {
         switch self {
         case .sanFrancisco:
-            return Font.with(size: size, design: .round, weight: .semibold)
+            return Font.with(size: size, design: .regular, weight: .semibold)
         case let .other(font, _):
             return UIFont(name: font, size: size) ?? Font.semibold(size)
         }

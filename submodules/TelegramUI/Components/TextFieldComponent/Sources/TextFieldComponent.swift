@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import TextFormat
+import TelegramPresentationData
 
 public final class TextFieldComponent: Component {
     public final class ExternalState {
@@ -25,18 +27,24 @@ public final class TextFieldComponent: Component {
         }
     }
     
+    public let strings: PresentationStrings
     public let externalState: ExternalState
     public let placeholder: String
     
     public init(
+        strings: PresentationStrings,
         externalState: ExternalState,
         placeholder: String
     ) {
+        self.strings = strings
         self.externalState = externalState
         self.placeholder = placeholder
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.externalState !== rhs.externalState {
             return false
         }
@@ -46,6 +54,11 @@ public final class TextFieldComponent: Component {
         return true
     }
     
+    public struct InputState {
+        public var inputText: NSAttributedString
+        public var selectionRange: Range<Int>
+    }
+    
     public final class View: UIView, UITextViewDelegate, UIScrollViewDelegate {
         private let placeholder = ComponentView<Empty>()
         
@@ -53,6 +66,8 @@ public final class TextFieldComponent: Component {
         private let textStorage: NSTextStorage
         private let layoutManager: NSLayoutManager
         private let textView: UITextView
+        
+        private var inputState = InputState(inputText: NSAttributedString(), selectionRange: 0 ..< 0)
         
         private var component: TextFieldComponent?
         private weak var state: EmptyComponentState?
@@ -112,22 +127,123 @@ public final class TextFieldComponent: Component {
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
         }
         
+        @available(iOS 16.0, *)
+        public func textView(_ textView: UITextView, editMenuForTextIn range: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
+            guard let component = self.component, !textView.attributedText.string.isEmpty && textView.selectedRange.length > 0 else {
+                return UIMenu(children: suggestedActions)
+            }
+            
+            let strings = component.strings
+            var actions: [UIAction] = [
+                UIAction(title: strings.TextFormat_Bold, image: nil) { [weak self] (action) in
+                    if let self {
+                        self.toggleAttribute(key: ChatTextInputAttributes.bold)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Italic, image: nil) { [weak self] (action) in
+                    if let self {
+                        self.toggleAttribute(key: ChatTextInputAttributes.italic)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Monospace, image: nil) { [weak self] (action) in
+                    if let self {
+                        self.toggleAttribute(key: ChatTextInputAttributes.monospace)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Link, image: nil) { [weak self] (action) in
+                    if let self {
+                        let _ = self
+                    }
+                },
+                UIAction(title: strings.TextFormat_Strikethrough, image: nil) { [weak self] (action) in
+                    if let self {
+                        self.toggleAttribute(key: ChatTextInputAttributes.strikethrough)
+                    }
+                },
+                UIAction(title: strings.TextFormat_Underline, image: nil) { [weak self] (action) in
+                    if let self {
+                        self.toggleAttribute(key: ChatTextInputAttributes.underline)
+                    }
+                }
+            ]
+            actions.append(UIAction(title: strings.TextFormat_Spoiler, image: nil) { [weak self] (action) in
+                if let self {
+                    self.toggleAttribute(key: ChatTextInputAttributes.spoiler)
+                }
+            })
+            
+            var updatedActions = suggestedActions
+            let formatMenu = UIMenu(title: strings.TextFormat_Format, image: nil, children: actions)
+            updatedActions.insert(formatMenu, at: 3)
+            
+            return UIMenu(children: updatedActions)
+        }
+        
+        private func toggleAttribute(key: NSAttributedString.Key) {
+            
+        }
+        
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             //print("didScroll \(scrollView.bounds)")
         }
         
-        public func getText() -> String {
+        public func getAttributedText() -> NSAttributedString {
             Keyboard.applyAutocorrection(textView: self.textView)
-            return self.textView.text ?? ""
+            return self.inputState.inputText
         }
         
-        public func setText(string: String) {
-            self.textView.text = string
+        public func setAttributedText(_ string: NSAttributedString) {
+            self.textView.text = string.string
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
         }
         
         public func activateInput() {
             self.textView.becomeFirstResponder()
+        }
+        
+        func updateEntities() {
+//            var spoilerRects: [CGRect] = []
+//            var customEmojiRects: [CGRect: ChatTextInputTextCustomEmojiAttribute] = []
+//
+//            if !spoilerRects.isEmpty {
+//                let dustNode: InvisibleInkDustNode
+//                if let current = self.dustNode {
+//                    dustNode = current
+//                } else {
+//                    dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
+//                    dustNode.alpha = self.spoilersRevealed ? 0.0 : 1.0
+//                    dustNode.isUserInteractionEnabled = false
+//                    textInputNode.textView.addSubview(dustNode.view)
+//                    self.dustNode = dustNode
+//                }
+//                dustNode.frame = CGRect(origin: CGPoint(), size: textInputNode.textView.contentSize)
+//                dustNode.update(size: textInputNode.textView.contentSize, color: textColor, textColor: textColor, rects: rects, wordRects: rects)
+//            } else if let dustNode = self.dustNode {
+//                dustNode.removeFromSupernode()
+//                self.dustNode = nil
+//            }
+//
+//            if !customEmojiRects.isEmpty {
+//                let customEmojiContainerView: CustomEmojiContainerView
+//                if let current = self.customEmojiContainerView {
+//                    customEmojiContainerView = current
+//                } else {
+//                    customEmojiContainerView = CustomEmojiContainerView(emojiViewProvider: { [weak self] emoji in
+//                        guard let strongSelf = self, let emojiViewProvider = strongSelf.emojiViewProvider else {
+//                            return nil
+//                        }
+//                        return emojiViewProvider(emoji)
+//                    })
+//                    customEmojiContainerView.isUserInteractionEnabled = false
+//                    textInputNode.textView.addSubview(customEmojiContainerView)
+//                    self.customEmojiContainerView = customEmojiContainerView
+//                }
+//
+//                customEmojiContainerView.update(fontSize: fontSize, textColor: textColor, emojiRects: customEmojiRects)
+//            } else if let customEmojiContainerView = self.customEmojiContainerView {
+//                customEmojiContainerView.removeFromSuperview()
+//                self.customEmojiContainerView = nil
+//            }
         }
         
         func update(component: TextFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {

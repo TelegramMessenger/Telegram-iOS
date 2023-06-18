@@ -49,6 +49,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             
             var inputKeys: [PostboxViewKey] = [
                 PostboxViewKey.basicPeer(peerId),
+                PostboxViewKey.cachedPeerData(peerId: peerId),
                 PostboxViewKey.storiesState(key: .peer(peerId)),
                 PostboxViewKey.storyItems(peerId: peerId)
             ]
@@ -95,6 +96,12 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 guard let peer = peerView.peer.flatMap(EnginePeer.init) else {
                     return
+                }
+                let additionalPeerData: StoryContentContextState.AdditionalPeerData
+                if let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView, let cachedUserData = cachedPeerDataView.cachedPeerData as? CachedUserData {
+                    additionalPeerData = StoryContentContextState.AdditionalPeerData(areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable)
+                } else {
+                    additionalPeerData = StoryContentContextState.AdditionalPeerData(areVoiceMessagesAvailable: true)
                 }
                 let state = stateView.value?.get(Stories.PeerState.self)
                 
@@ -232,6 +239,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         self.nextItems = nextItems
                         self.sliceValue = StoryContentContextState.FocusedSlice(
                             peer: peer,
+                            additionalPeerData: additionalPeerData,
                             item: StoryContentItem(
                                 id: AnyHashable(mappedItem.id),
                                 position: focusedIndex,
@@ -893,7 +901,10 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
         self.context = context
         
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
-            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId)),
+            context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: storyId.peerId)
+            ),
             context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer]) in
                 guard let item = transaction.getStory(id: storyId)?.get(Stories.StoredItem.self) else {
                     return (nil, [:])
@@ -911,12 +922,17 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 return (item, peers)
             }
         )
-        |> deliverOnMainQueue).start(next: { [weak self] peer, itemAndPeers in
+        |> deliverOnMainQueue).start(next: { [weak self] peerAndVoiceMessages, itemAndPeers in
             guard let self else {
                 return
             }
             
+            let (peer, areVoiceMessagesAvailable) = peerAndVoiceMessages
             let (item, peers) = itemAndPeers
+            
+            let additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                areVoiceMessagesAvailable: areVoiceMessagesAvailable
+            )
             
             if item == nil {
                 let storyKey = StoryKey(peerId: storyId.peerId, id: storyId.id)
@@ -953,6 +969,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 let stateValue = StoryContentContextState(
                     slice: StoryContentContextState.FocusedSlice(
                         peer: peer,
+                        additionalPeerData: additionalPeerData,
                         item: StoryContentItem(
                             id: AnyHashable(item.id),
                             position: 0,
@@ -1049,14 +1066,22 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
         self.context = context
         
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
-            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+            context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: peerId)
+            ),
             listContext.state,
             self.focusedIdUpdated.get()
         )
-        |> deliverOnMainQueue).start(next: { [weak self] peer, state, _ in
+        |> deliverOnMainQueue).start(next: { [weak self] peerAndVoiceMessages, state, _ in
             guard let self else {
                 return
             }
+            
+            let (peer, areVoiceMessagesAvailable) = peerAndVoiceMessages
+            let additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                areVoiceMessagesAvailable: areVoiceMessagesAvailable
+            )
             
             self.listState = state
             
@@ -1095,6 +1120,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 stateValue = StoryContentContextState(
                     slice: StoryContentContextState.FocusedSlice(
                         peer: peer,
+                        additionalPeerData: additionalPeerData,
                         item: StoryContentItem(
                             id: AnyHashable(item.id),
                             position: focusedIndex,

@@ -89,6 +89,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let hasAppeared: Bool
     let panelWidth: CGFloat
     let flipAnimationAction: ActionSlot<Void>
+    let animateShutter: () -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -100,6 +101,7 @@ private final class CameraScreenComponent: CombinedComponent {
         hasAppeared: Bool,
         panelWidth: CGFloat,
         flipAnimationAction: ActionSlot<Void>,
+        animateShutter: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
         completion: ActionSlot<Signal<CameraScreen.Result, NoError>>
@@ -110,6 +112,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.hasAppeared = hasAppeared
         self.panelWidth = panelWidth
         self.flipAnimationAction = flipAnimationAction
+        self.animateShutter = animateShutter
         self.present = present
         self.push = push
         self.completion = completion
@@ -1082,7 +1085,6 @@ public class CameraScreen: ViewController {
                             }
                             if case .pendingImage = value {
                                 Queue.mainQueue().async {
-                                    self.effectivePreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                                     self.simplePreviewView?.isEnabled = false
                                     
                                     self.additionalPreviewView?.isEnabled = false
@@ -1239,15 +1241,21 @@ public class CameraScreen: ViewController {
                 self.backgroundView.alpha = 1.0
             })
             
+            if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+                self.controller?.statusBar.updateStatusBarStyle(.Hide, animated: true)
+            }
+            
             if let transitionIn = self.controller?.transitionIn, let sourceView = transitionIn.sourceView {
                 let sourceLocalFrame = sourceView.convert(transitionIn.sourceRect, to: self.view)
 
                 let sourceScale = sourceLocalFrame.width / self.previewContainerView.frame.width
                 self.previewContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.previewContainerView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 self.previewContainerView.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                self.previewContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width)), to: self.previewContainerView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                
+                let minSide = min(self.previewContainerView.bounds.width, self.previewContainerView.bounds.height)
+                self.previewContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: (self.previewContainerView.bounds.width - minSide) / 2.0, y: (self.previewContainerView.bounds.height - minSide) / 2.0), size: CGSize(width: minSide, height: minSide)), to: self.previewContainerView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 self.previewContainerView.layer.animate(
-                    from: self.previewContainerView.bounds.width / 2.0 as NSNumber,
+                    from: minSide / 2.0 as NSNumber,
                     to: self.previewContainerView.layer.cornerRadius as NSNumber,
                     keyPath: "cornerRadius",
                     timingFunction: kCAMediaTimingFunctionSpring,
@@ -1276,10 +1284,12 @@ public class CameraScreen: ViewController {
                     completion()
                 })
                 self.previewContainerView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                
+                let minSide = min(self.previewContainerView.bounds.width, self.previewContainerView.bounds.height)
+                self.previewContainerView.layer.animateBounds(from: self.previewContainerView.bounds, to: CGRect(origin: CGPoint(x: (self.previewContainerView.bounds.width - minSide) / 2.0, y: (self.previewContainerView.bounds.height - minSide) / 2.0), size: CGSize(width: minSide, height: minSide)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.previewContainerView.layer.animate(
                     from: self.previewContainerView.layer.cornerRadius as NSNumber,
-                    to: self.previewContainerView.bounds.width / 2.0 as NSNumber,
+                    to: minSide / 2.0 as NSNumber,
                     keyPath: "cornerRadius",
                     timingFunction: kCAMediaTimingFunctionSpring,
                     duration: 0.3,
@@ -1545,6 +1555,9 @@ public class CameraScreen: ViewController {
                         hasAppeared: self.hasAppeared,
                         panelWidth: panelWidth,
                         flipAnimationAction: self.flipAnimationAction,
+                        animateShutter: { [weak self] in
+                            self?.effectivePreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        },
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
                         },
@@ -1832,6 +1845,7 @@ public class CameraScreen: ViewController {
         self.isDismissed = true
         if animated {
             if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
                 self.node.animateOut(completion: {
                     self.dismiss(animated: false)
                 })

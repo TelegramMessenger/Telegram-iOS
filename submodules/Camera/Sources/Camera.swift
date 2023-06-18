@@ -254,17 +254,14 @@ private final class CameraContext {
     private var tmpPosition: Camera.Position = .back
     func togglePosition() {
         if self.isDualCamEnabled {
-            let targetPosition: Camera.Position
-            if case .back = self.tmpPosition {
-                targetPosition = .front
-            } else {
-                targetPosition = .back
-            }
-            self.tmpPosition = targetPosition
-            self._positionPromise.set(targetPosition)
-//            if let additionalDeviceContext = self.additionalDeviceContext {
-//                self.mainDeviceContext.switchOutputWith(additionalDeviceContext)
+//            let targetPosition: Camera.Position
+//            if case .back = self.tmpPosition {
+//                targetPosition = .front
+//            } else {
+//                targetPosition = .back
 //            }
+//            self.tmpPosition = targetPosition
+//            self._positionPromise.set(targetPosition)
         } else {
             self.configure {
                 self.mainDeviceContext.invalidate()

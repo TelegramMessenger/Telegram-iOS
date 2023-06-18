@@ -28,6 +28,8 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         }
     }
     
+    private let snapTool = DrawingEntitySnapTool()
+    
     init(context: AccountContext, entity: DrawingMediaEntity) {
         super.init(context: context, entity: entity)
     }
@@ -153,25 +155,29 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         var updatedRotation = self.mediaEntity.rotation
         var rotation: CGFloat = 0.0
         
+        let velocity = gestureRecognizer.velocity
+        
         switch gestureRecognizer.state {
         case .began:
             self.beganRotating = false
+            self.snapTool.maybeSkipFromStart(entityView: self, rotation: self.mediaEntity.rotation)
         case .changed:
             rotation = gestureRecognizer.rotation
-            if self.beganRotating || abs(rotation) >= 0.08 * .pi || abs(self.mediaEntity.rotation) >= 0.03 {
-                if !self.beganRotating {
-                    self.beganRotating = true
-                } else {
-                    updatedRotation += rotation
-                }
+            if self.beganRotating {
+                updatedRotation += rotation
+                gestureRecognizer.rotation = 0.0
+            } else if abs(rotation) >= 0.08 * .pi || abs(self.mediaEntity.rotation) >= 0.03 {
+                self.beganRotating = true
                 gestureRecognizer.rotation = 0.0
             }
         case .ended, .cancelled:
+            self.snapTool.rotationReset()
             self.beganRotating = false
         default:
             break
         }
         
+        updatedRotation = self.snapTool.update(entityView: self, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
         self.mediaEntity.rotation = updatedRotation
         self.update(animated: false)
     }

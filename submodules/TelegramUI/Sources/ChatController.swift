@@ -9232,7 +9232,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                         if let rect = rect {
                             strongSelf.mediaRestrictedTooltipController?.dismiss()
-                            let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                            let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
                             strongSelf.mediaRestrictedTooltipController = tooltipController
                             strongSelf.mediaRestrictedTooltipControllerMode = false
                             tooltipController.dismissed = { [weak tooltipController] _ in

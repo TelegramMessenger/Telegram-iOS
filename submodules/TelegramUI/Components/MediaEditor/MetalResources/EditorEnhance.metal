@@ -59,7 +59,7 @@ kernel void enhanceGenerateLUT(texture2d<float, access::write> outTexture [[text
     const float lutScale = (histSize - 1) / float(parameters.totalPixelCountPerTile);
     for (uint index = 0; index < histSize; ++index) {
         sum += l[index];
-        outTexture.write(round(sum * lutScale)/255.0, uint2(index, gid));
+        outTexture.write(round(sum * lutScale) / 255.0, uint2(index, gid));
     }
 }
 

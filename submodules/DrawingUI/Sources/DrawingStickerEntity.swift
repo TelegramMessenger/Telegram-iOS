@@ -582,7 +582,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
     }
 }
 
-private let snapTimeout = 1.0
+private let snapTimeout = 2.0
 
 class DrawingEntitySnapTool {
     enum SnapType {
@@ -911,9 +911,9 @@ class DrawingEntitySnapTool {
         
         let currentTimestamp = CACurrentMediaTime()
         
-        let snapDelta: CGFloat = 0.1
-        let snapVelocity: CGFloat = snapDelta * 5.0
-        let snapSkipRotation: CGFloat = snapDelta * 2.0
+        let snapDelta: CGFloat = 0.02
+        let snapVelocity: CGFloat = snapDelta * 8.0
+        let snapSkipRotation: CGFloat = snapDelta * 5.0
         
         if abs(velocity) < snapVelocity || self.rotationState?.waitForLeave == true {
             if let (snapRotation, skipped, waitForLeave) = self.rotationState {
