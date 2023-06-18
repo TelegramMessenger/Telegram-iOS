@@ -217,6 +217,52 @@ public enum NotificationExceptionMode : Equatable {
         }
     }
     
+    public func withUpdatedPeerStoryNotifications(_ peer: EnginePeer, _ storyNotifications: PeerNotificationDisplayPreviews) -> NotificationExceptionMode {
+        let apply:([EnginePeer.Id : NotificationExceptionWrapper], EnginePeer.Id, PeerNotificationDisplayPreviews) -> [EnginePeer.Id : NotificationExceptionWrapper] = { values, peerId, storyNotifications in
+            let storiesMuted: Bool?
+            switch storyNotifications {
+            case .default:
+                storiesMuted = nil
+            case .show:
+                storiesMuted = false
+            case .hide:
+                storiesMuted = true
+            }
+            
+            var values = values
+            if let value = values[peerId] {
+                switch storyNotifications {
+                case .default:
+                    switch value.settings.storiesMuted {
+                    case .none:
+                        values.removeValue(forKey: peerId)
+                    default:
+                        values[peerId] = value.updateSettings({$0.withUpdatedStoriesMuted(storiesMuted)}).withUpdatedDate(Date().timeIntervalSince1970)
+                    }
+                default:
+                    values[peerId] = value.updateSettings({$0.withUpdatedStoriesMuted(storiesMuted)}).withUpdatedDate(Date().timeIntervalSince1970)
+                }
+            } else {
+                switch storyNotifications {
+                case .default:
+                    break
+                default:
+                    values[peerId] = NotificationExceptionWrapper(settings: TelegramPeerNotificationSettings(muteState: .unmuted, messageSound: .default, displayPreviews: .default, storiesMuted: storiesMuted), peer: peer, date: Date().timeIntervalSince1970)
+                }
+            }
+            return values
+        }
+        
+        switch self {
+            case let .groups(values):
+                return .groups(apply(values, peer.id, storyNotifications))
+            case let .users(values):
+                return .users(apply(values, peer.id, storyNotifications))
+            case let .channels(values):
+                return .channels(apply(values, peer.id, storyNotifications))
+        }
+    }
+    
     public var peerIds: [EnginePeer.Id] {
         switch self {
         case let .users(settings), let .groups(settings), let .channels(settings):
@@ -236,6 +282,7 @@ private enum NotificationPeerExceptionSection: Int32 {
     case remove
     case switcher
     case displayPreviews
+    case storyNotifications
     case soundCloud
     case soundModern
     case soundClassic
@@ -253,6 +300,8 @@ private enum NotificationPeerExceptionEntryId: Hashable {
     case switcherHeader
     case displayPreviews(NotificationPeerExceptionSwitcher)
     case displayPreviewsHeader
+    case storyNotifications(NotificationPeerExceptionSwitcher)
+    case storyNotificationsHeader
     case soundModernHeader
     case soundClassicHeader
     case none
@@ -268,17 +317,19 @@ private final class NotificationPeerExceptionArguments  {
     let selectSound: (PeerMessageSound) -> Void
     let selectMode: (NotificationPeerExceptionSwitcher) -> Void
     let selectDisplayPreviews: (NotificationPeerExceptionSwitcher) -> Void
+    let selectStoryNotifications: (NotificationPeerExceptionSwitcher) -> Void
     let removeFromExceptions: () -> Void
     let complete: () -> Void
     let cancel: () -> Void
     let upload: () -> Void
     let deleteSound: (PeerMessageSound, String) -> Void
     
-    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, selectDisplayPreviews: @escaping (NotificationPeerExceptionSwitcher) -> Void, removeFromExceptions: @escaping () -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void, upload: @escaping () -> Void, deleteSound: @escaping (PeerMessageSound, String) -> Void) {
+    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, selectDisplayPreviews: @escaping (NotificationPeerExceptionSwitcher) -> Void, selectStoryNotifications: @escaping (NotificationPeerExceptionSwitcher) -> Void, removeFromExceptions: @escaping () -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void, upload: @escaping () -> Void, deleteSound: @escaping (PeerMessageSound, String) -> Void) {
         self.account = account
         self.selectSound = selectSound
         self.selectMode = selectMode
         self.selectDisplayPreviews = selectDisplayPreviews
+        self.selectStoryNotifications = selectStoryNotifications
         self.removeFromExceptions = removeFromExceptions
         self.complete = complete
         self.cancel = cancel
@@ -296,6 +347,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     case switcherHeader(index:Int32, theme: PresentationTheme, title: String)
     case displayPreviews(index:Int32, theme: PresentationTheme, strings: PresentationStrings, value: NotificationPeerExceptionSwitcher, selected: Bool)
     case displayPreviewsHeader(index:Int32, theme: PresentationTheme, title: String)
+    case storyNotifications(index:Int32, theme: PresentationTheme, strings: PresentationStrings, value: NotificationPeerExceptionSwitcher, selected: Bool)
+    case storyNotificationsHeader(index:Int32, theme: PresentationTheme, title: String)
     case soundModernHeader(index:Int32, theme: PresentationTheme, title: String)
     case soundClassicHeader(index:Int32, theme: PresentationTheme, title: String)
     case none(index:Int32, section: NotificationPeerExceptionSection, theme: PresentationTheme, text: String, selected: Bool)
@@ -316,6 +369,10 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
         case let .displayPreviewsHeader(index, _, _):
             return index
         case let .displayPreviews(index, _, _, _, _):
+            return index
+        case let .storyNotificationsHeader(index, _, _):
+            return index
+        case let .storyNotifications(index, _, _, _, _):
             return index
         case let .soundModernHeader(index, _, _):
             return index
@@ -344,6 +401,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return NotificationPeerExceptionSection.switcher.rawValue
         case .displayPreviews, .displayPreviewsHeader:
             return NotificationPeerExceptionSection.displayPreviews.rawValue
+        case .storyNotifications, .storyNotificationsHeader:
+            return NotificationPeerExceptionSection.storyNotifications.rawValue
         case .cloudInfo, .cloudHeader, .uploadSound:
             return NotificationPeerExceptionSection.soundCloud.rawValue
         case .soundModernHeader:
@@ -371,6 +430,10 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return .displayPreviews(mode)
         case .displayPreviewsHeader:
             return .displayPreviewsHeader
+        case let .storyNotifications(_, _, _, mode, _):
+            return .storyNotifications(mode)
+        case .storyNotificationsHeader:
+            return .storyNotificationsHeader
         case .soundModernHeader:
             return .soundModernHeader
         case .soundClassicHeader:
@@ -436,6 +499,19 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             })
         case let .displayPreviewsHeader(_, _, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .storyNotifications(_, _, strings, value, selected):
+            let title: String
+            switch value {
+            case .alwaysOn:
+                title = strings.Notification_Exceptions_MessagePreviewAlwaysOn
+            case .alwaysOff:
+                title = strings.Notification_Exceptions_MessagePreviewAlwaysOff
+            }
+            return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.selectStoryNotifications(value)
+            })
+        case let .storyNotificationsHeader(_, _, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .soundModernHeader(_, _, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .soundClassicHeader(_, _, text):
@@ -459,7 +535,7 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
 }
 
 
-private func notificationPeerExceptionEntries(presentationData: PresentationData, notificationSoundList: NotificationSoundList?, state: NotificationExceptionPeerState) -> [NotificationPeerExceptionEntry] {
+private func notificationPeerExceptionEntries(presentationData: PresentationData, peer: EnginePeer?, notificationSoundList: NotificationSoundList?, state: NotificationExceptionPeerState) -> [NotificationPeerExceptionEntry] {
     let selectedSound = resolvedNotificationSound(sound: state.selectedSound, notificationSoundList: notificationSoundList)
     
     var entries: [NotificationPeerExceptionEntry] = []
@@ -487,6 +563,16 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
         index += 1
         entries.append(.displayPreviews(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOff, selected: state.displayPreviews == .alwaysOff))
         index += 1
+        
+        if case .user = peer {
+            //TODO:localize
+            entries.append(.storyNotificationsHeader(index: index, theme: presentationData.theme, title: "STORY NOTIFICATIONS"))
+            index += 1
+            entries.append(.storyNotifications(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOn, selected: state.storyNotifications == .alwaysOn))
+            index += 1
+            entries.append(.storyNotifications(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOff, selected: state.storyNotifications == .alwaysOff))
+            index += 1
+        }
         
         entries.append(.cloudHeader(index: index, text: presentationData.strings.Notifications_TelegramTones))
         index += 1
@@ -550,6 +636,7 @@ private struct NotificationExceptionPeerState : Equatable {
     var mode: NotificationPeerExceptionSwitcher
     var defaultSound: PeerMessageSound
     var displayPreviews: NotificationPeerExceptionSwitcher
+    var storyNotifications: NotificationPeerExceptionSwitcher
     var removedSounds: [PeerMessageSound]
     
     init(canRemove: Bool, notifications: TelegramPeerNotificationSettings? = nil) {
@@ -564,27 +651,30 @@ private struct NotificationExceptionPeerState : Equatable {
                 self.mode = .alwaysOn
             }
             self.displayPreviews = notifications.displayPreviews == .hide ? .alwaysOff : .alwaysOn
+            self.storyNotifications = notifications.storiesMuted == false ? .alwaysOff : .alwaysOn
         } else {
             self.selectedSound = .default
             self.mode = .alwaysOn
             self.displayPreviews = .alwaysOn
+            self.storyNotifications = .alwaysOn
         }
       
         self.defaultSound = .default
         self.removedSounds = []
     }
     
-    init(canRemove: Bool, selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound, displayPreviews: NotificationPeerExceptionSwitcher, removedSounds: [PeerMessageSound]) {
+    init(canRemove: Bool, selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound, displayPreviews: NotificationPeerExceptionSwitcher, storyNotifications: NotificationPeerExceptionSwitcher, removedSounds: [PeerMessageSound]) {
         self.canRemove = canRemove
         self.selectedSound = selectedSound
         self.mode = mode
         self.defaultSound = defaultSound
         self.displayPreviews = displayPreviews
+        self.storyNotifications = storyNotifications
         self.removedSounds = removedSounds
     }
 }
 
-public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, customTitle: String? = nil, threadId: Int64?, canRemove: Bool, defaultSound: PeerMessageSound, edit: Bool = false, updatePeerSound: @escaping(EnginePeer.Id, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(EnginePeer.Id, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(EnginePeer.Id, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
+public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, customTitle: String? = nil, threadId: Int64?, canRemove: Bool, defaultSound: PeerMessageSound, edit: Bool = false, updatePeerSound: @escaping(EnginePeer.Id, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(EnginePeer.Id, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(EnginePeer.Id, PeerNotificationDisplayPreviews) -> Void, updatePeerStoryNotifications: @escaping(EnginePeer.Id, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState(canRemove: false)
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
@@ -623,6 +713,12 @@ public func notificationPeerExceptionController(context: AccountContext, updated
         updateState { state in
             var state = state
             state.displayPreviews = value
+            return state
+        }
+    }, selectStoryNotifications: { value in
+        updateState { state in
+            var state = state
+            state.storyNotifications = value
             return state
         }
     }, removeFromExceptions: {
@@ -686,7 +782,7 @@ public func notificationPeerExceptionController(context: AccountContext, updated
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(titleString), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: notificationPeerExceptionEntries(presentationData: presentationData, notificationSoundList: notificationSoundList, state: state), style: .blocks, animateChanges: animated)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: notificationPeerExceptionEntries(presentationData: presentationData, peer: peer, notificationSoundList: notificationSoundList, state: state), style: .blocks, animateChanges: animated)
         
         return (controllerState, (listState, arguments))
     }
@@ -709,6 +805,7 @@ public func notificationPeerExceptionController(context: AccountContext, updated
                 updatePeerSound(peer.id, resolvedNotificationSound(sound: state.selectedSound, notificationSoundList: notificationSoundList))
                 updatePeerNotificationInterval(peer.id, state.mode == .alwaysOn ? 0 : Int32.max)
                 updatePeerDisplayPreviews(peer.id, state.displayPreviews == .alwaysOn ? .show : .hide)
+                updatePeerStoryNotifications(peer.id, state.storyNotifications == .alwaysOn ? .show : .hide)
                 return state
             }
         })

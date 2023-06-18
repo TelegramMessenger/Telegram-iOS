@@ -9366,3 +9366,8 @@ Sorry for the inconvenience.";
 "Paint.Flip" = "Flip";
 
 "Message.ForwardedStoryShort" = "Forwarded Story\nFrom: %@";
+
+"Conversation.StoryForwardTooltip.Chat.One" = "Story forwarded to **%@**";
+"Conversation.StoryForwardTooltip.TwoChats.One" = "Story forwarded to to **%@** and **%@**";
+"Conversation.StoryForwardTooltip.ManyChats.One" = "Story forwarded to to **%@** and %@ others";
+"Conversation.StoryForwardTooltip.SavedMessages.One" = "Story forwarded to to **Saved Messages**";

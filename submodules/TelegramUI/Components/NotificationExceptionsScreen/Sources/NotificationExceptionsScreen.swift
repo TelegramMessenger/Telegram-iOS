@@ -496,6 +496,7 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
                     }
                     updated(stateValue.with({ $0 }).notificationExceptions)
                 })
+            }, updatePeerStoryNotifications: { _, _ in
             }, removePeerFromExceptions: {
                 let _ = context.engine.peers.removeCustomThreadNotificationSettings(peerId: peerId, threadIds: [item.threadId]).start()
                 updateState { current in

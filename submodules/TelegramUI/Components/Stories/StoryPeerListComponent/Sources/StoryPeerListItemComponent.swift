@@ -676,8 +676,8 @@ public final class StoryPeerListItemComponent: Component {
             if component.peer.id == component.context.account.peerId && !component.hasItems && component.ringAnimation == nil {
                 let cutoutSize: CGFloat = 18.0 + UIScreenPixel * 2.0
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(x: avatarSize.width - cutoutSize + UIScreenPixel, y: avatarSize.height - 1.0 - cutoutSize + UIScreenPixel), size: CGSize(width: cutoutSize, height: cutoutSize)))
-            } else if let mappedRightCenter {
-                avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineWidth, dy: -indicatorLineWidth).offsetBy(dx: abs(mappedRightCenter.x - indicatorCenter.x), dy: 0.0))
+            } else if let mappedLeftCenter {
+                avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineWidth, dy: -indicatorLineWidth).offsetBy(dx: -abs(indicatorCenter.x - mappedLeftCenter.x), dy: 0.0))
             }
             Transition.immediate.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             

@@ -4685,6 +4685,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
                         }
                         
+                        let updatePeerStoryNotifications: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = { peerId, storyNotifications in
+                            var isMuted: Bool?
+                            switch storyNotifications {
+                            case .default:
+                                isMuted = nil
+                            case .show:
+                                isMuted = false
+                            case .hide:
+                                isMuted = true
+                            }
+                            return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, isMuted: isMuted) |> deliverOnMainQueue
+                        }
+                        
                         let mode: NotificationExceptionMode
                         let defaultSound: PeerMessageSound
                         if let _ = peer as? TelegramUser {
@@ -4732,6 +4745,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             })
                         }, updatePeerDisplayPreviews: { peerId, displayPreviews in
                             let _ = (updatePeerDisplayPreviews(peerId, displayPreviews)
+                            |> deliverOnMainQueue).start(next: { _ in
+                                
+                            })
+                        }, updatePeerStoryNotifications: { peerId, storyNotifications in
+                            let _ = (updatePeerStoryNotifications(peerId, storyNotifications)
                             |> deliverOnMainQueue).start(next: { _ in
                                 
                             })

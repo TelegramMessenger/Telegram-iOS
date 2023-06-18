@@ -373,6 +373,8 @@ private final class StoryContainerScreenComponent: Component {
             case .began:
                 self.verticalPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
                 self.state?.updated(transition: .immediate)
+                
+                self.dismissAllTooltips()
             case .changed:
                 let translation = recognizer.translation(in: self)
                 self.verticalPanState = ItemSetPanState(fraction: max(-1.0, min(1.0, translation.y / self.bounds.height)), didBegin: true)
@@ -478,6 +480,18 @@ private final class StoryContainerScreenComponent: Component {
             }
             
             return nil
+        }
+        
+        private func dismissAllTooltips() {
+            guard let controller = self.environment?.controller() else {
+                return
+            }
+            controller.forEachController { controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismissWithCommitAction()
+                }
+                return true
+            }
         }
         
         func animateIn() {

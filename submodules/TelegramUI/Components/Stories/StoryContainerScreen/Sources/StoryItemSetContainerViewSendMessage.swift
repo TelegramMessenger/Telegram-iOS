@@ -315,6 +315,61 @@ final class StoryItemSetContainerSendMessage {
             forceTheme: defaultDarkColorPresentationTheme
         )
         
+        shareController.completed = { [weak view] peerIds in
+            guard let view, let component = view.component else {
+                return
+            }
+            
+            let _ = (component.context.engine.data.get(
+                EngineDataList(
+                    peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                )
+            )
+            |> deliverOnMainQueue).start(next: { [weak view] peerList in
+                guard let view, let component = view.component else {
+                    return
+                }
+                
+                let peers = peerList.compactMap { $0 }
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                var savedMessages = false
+                if peerIds.count == 1, let peerId = peerIds.first, peerId == component.context.account.peerId {
+                    text = presentationData.strings.Conversation_StoryForwardTooltip_SavedMessages_One
+                    savedMessages = true
+                } else {
+                    if peers.count == 1, let peer = peers.first {
+                        var peerName = peer.id == component.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        peerName = peerName.replacingOccurrences(of: "**", with: "")
+                        text = presentationData.strings.Conversation_StoryForwardTooltip_Chat_One(peerName).string
+                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                        var firstPeerName = firstPeer.id == component.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        firstPeerName = firstPeerName.replacingOccurrences(of: "**", with: "")
+                        var secondPeerName = secondPeer.id == component.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        secondPeerName = secondPeerName.replacingOccurrences(of: "**", with: "")
+                        text = presentationData.strings.Conversation_StoryForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                    } else if let peer = peers.first {
+                        var peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        peerName = peerName.replacingOccurrences(of: "**", with: "")
+                        text = presentationData.strings.Conversation_StoryForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                    } else {
+                        text = ""
+                    }
+                }
+                
+                if let controller = component.controller() {
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    controller.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .forward(savedMessages: savedMessages, text: text),
+                        elevatedLayout: false,
+                        animateInAsReplacement: false,
+                        action: { _ in return false }
+                    ), in: .current)
+                }
+            })
+        }
+        
         self.shareController = shareController
         view.updateIsProgressPaused()
         

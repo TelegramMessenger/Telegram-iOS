@@ -268,6 +268,10 @@ public extension TelegramEngine {
         public func updatePeerDisplayPreviewsSetting(peerId: PeerId, threadId: Int64?, displayPreviews: PeerNotificationDisplayPreviews) -> Signal<Void, NoError> {
             return _internal_updatePeerDisplayPreviewsSetting(account: self.account, peerId: peerId, threadId: threadId, displayPreviews: displayPreviews)
         }
+        
+        public func updatePeerStoriesMutedSetting(peerId: PeerId, isMuted: Bool?) -> Signal<Void, NoError> {
+            return _internal_updatePeerStoriesMutedSetting(account: self.account, peerId: peerId, isMuted: isMuted)
+        }
 
         public func updatePeerNotificationSoundInteractive(peerId: PeerId, threadId: Int64?, sound: PeerMessageSound) -> Signal<Void, NoError> {
             return _internal_updatePeerNotificationSoundInteractive(account: self.account, peerId: peerId, threadId: threadId, sound: sound)

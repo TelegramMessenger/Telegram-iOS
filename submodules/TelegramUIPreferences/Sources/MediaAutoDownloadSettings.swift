@@ -479,7 +479,11 @@ public func effectiveAutodownloadCategories(settings: MediaAutoDownloadSettings,
     }
 }
 
-private func categoryAndSizeForMedia(_ media: Media, categories: MediaAutoDownloadCategories) -> (MediaAutoDownloadCategory, Int32?)? {
+private func categoryAndSizeForMedia(_ media: Media?, categories: MediaAutoDownloadCategories) -> (MediaAutoDownloadCategory, Int32?)? {
+    guard let media = media else {
+        return (categories.photo, 0)
+    }
+    
     if media is TelegramMediaImage || media is TelegramMediaWebFile {
         return (categories.photo, 0)
     } else if let file = media as? TelegramMediaFile {
@@ -520,7 +524,7 @@ public func isAutodownloadEnabledForAnyPeerType(category: MediaAutoDownloadCateg
     return category.contacts || category.otherPrivate || category.groups || category.channels
 }
 
-public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId? = nil, contactsPeerIds: Set<PeerId> = Set(), media: Media) -> Bool {
+public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings, peerType: MediaAutoDownloadPeerType, networkType: MediaAutoDownloadNetworkType, authorPeerId: PeerId? = nil, contactsPeerIds: Set<PeerId> = Set(), media: Media?) -> Bool {
     if (networkType == .cellular && !settings.cellular.enabled) || (networkType == .wifi && !settings.wifi.enabled) {
         return false
     }
@@ -542,7 +546,7 @@ public func shouldDownloadMediaAutomatically(settings: MediaAutoDownloadSettings
                 return false
             }
             return size <= sizeLimit
-        } else if media.id?.namespace == Namespaces.Media.LocalFile {
+        } else if media?.id?.namespace == Namespaces.Media.LocalFile {
             return true
         } else if category.sizeLimit == Int32.max {
             return true

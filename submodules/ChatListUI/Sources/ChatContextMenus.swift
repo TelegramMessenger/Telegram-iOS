@@ -723,6 +723,19 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
                             return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
                         }
                         
+                        let updatePeerStoryNotifications: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = { peerId, storyNotifications in
+                            var isMuted: Bool?
+                            switch storyNotifications {
+                            case .default:
+                                isMuted = nil
+                            case .show:
+                                isMuted = false
+                            case .hide:
+                                isMuted = true
+                            }
+                            return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, isMuted: isMuted) |> deliverOnMainQueue
+                        }
+                        
                         let defaultSound: PeerMessageSound
                         
                         if case .broadcast = channel.info {
@@ -756,6 +769,9 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
                             |> deliverOnMainQueue).start(next: { _ in
                                 
                             })
+                        }, updatePeerStoryNotifications: { peerId, storyNotifications in
+                            let _ = (updatePeerStoryNotifications(peerId, storyNotifications)
+                            |> deliverOnMainQueue).start()
                         }, removePeerFromExceptions: {
                         }, modifiedPeer: {
                         })
