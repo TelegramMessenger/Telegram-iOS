@@ -35,9 +35,11 @@ public enum PhotoCaptureResult: Equatable {
 final class PhotoCaptureContext: NSObject, AVCapturePhotoCaptureDelegate {
     private let pipe = ValuePipe<PhotoCaptureResult>()
     private let filter: CameraFilter?
+    private let mirror: Bool
     
-    init(settings: AVCapturePhotoSettings, filter: CameraFilter?) {
+    init(settings: AVCapturePhotoSettings, filter: CameraFilter?, mirror: Bool) {
         self.filter = filter
+        self.mirror = mirror
         
         super.init()
     }
@@ -79,6 +81,11 @@ final class PhotoCaptureContext: NSObject, AVCapturePhotoCaptureDelegate {
                 var image = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
                 if image.imageOrientation != .up {
                     UIGraphicsBeginImageContextWithOptions(image.size, true, image.scale)
+                    if self.mirror, let context = UIGraphicsGetCurrentContext() {
+                        context.translateBy(x: image.size.width / 2.0, y: image.size.height / 2.0)
+                        context.scaleBy(x: -1.0, y: 1.0)
+                        context.translateBy(x: -image.size.width / 2.0, y: -image.size.height / 2.0)
+                    }
                     image.draw(in: CGRect(origin: .zero, size: image.size))
                     if let currentImage = UIGraphicsGetImageFromCurrentImageContext() {
                         image = currentImage

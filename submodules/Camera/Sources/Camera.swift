@@ -41,11 +41,12 @@ final class CameraDeviceContext {
     
     let device = CameraDevice()
     let input = CameraInput()
-    let output = CameraOutput()
+    let output: CameraOutput
     
     init(session: CameraSession, exclusive: Bool) {
         self.session = session
         self.exclusive = exclusive
+        self.output = CameraOutput(exclusive: exclusive)
     }
     
     func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool) {

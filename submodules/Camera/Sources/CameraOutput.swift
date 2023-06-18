@@ -73,6 +73,8 @@ final class CameraOutput: NSObject {
     let metadataOutput = AVCaptureMetadataOutput()
     private let faceLandmarksOutput = FaceLandmarksDataOutput()
     
+    let exclusive: Bool
+    
     private var photoConnection: AVCaptureConnection?
     private var videoConnection: AVCaptureConnection?
     private var previewConnection: AVCaptureConnection?
@@ -91,7 +93,9 @@ final class CameraOutput: NSObject {
     var processCodes: (([CameraCode]) -> Void)?
     var processFaceLandmarks: (([VNFaceObservation]) -> Void)?
     
-    override init() {
+    init(exclusive: Bool) {
+        self.exclusive = exclusive
+        
         super.init()
 
         self.videoOutput.alwaysDiscardsLateVideoFrames = false
@@ -270,8 +274,13 @@ final class CameraOutput: NSObject {
     }
     
     func takePhoto(orientation: AVCaptureVideoOrientation, flashMode: AVCaptureDevice.FlashMode) -> Signal<PhotoCaptureResult, NoError> {
+        var mirror = false
         if let connection = self.photoOutput.connection(with: .video) {
             connection.videoOrientation = orientation
+            
+            if #available(iOS 13.0, *) {
+                mirror = connection.inputPorts.first?.sourceDevicePosition == .front
+            }
         }
         
         let settings = AVCapturePhotoSettings(format: [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)])
@@ -280,11 +289,19 @@ final class CameraOutput: NSObject {
             settings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
         }
         if #available(iOS 13.0, *) {
-            settings.photoQualityPrioritization = .speed
+            if self.exclusive {
+                if self.photoOutput.maxPhotoQualityPrioritization != .speed  {
+                    settings.photoQualityPrioritization = .balanced
+                } else {
+                    settings.photoQualityPrioritization = .speed
+                }
+            } else {
+                settings.photoQualityPrioritization = .speed
+            }
         }
         
         let uniqueId = settings.uniqueID
-        let photoCapture = PhotoCaptureContext(settings: settings, filter: self.activeFilter)
+        let photoCapture = PhotoCaptureContext(settings: settings, filter: self.activeFilter, mirror: mirror)
         self.photoCaptureRequests[uniqueId] = photoCapture
         self.photoOutput.capturePhoto(with: settings, delegate: photoCapture)
         

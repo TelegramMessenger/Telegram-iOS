@@ -524,6 +524,8 @@ private final class CameraScreenComponent: CombinedComponent {
             } else {
                 captureControlsAvailableSize = availableSize
             }
+            
+            let animateShutter = component.animateShutter
             let captureControls = captureControls.update(
                 component: CaptureControlsComponent(
                     isTablet: isTablet,
@@ -538,6 +540,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         }
                         if case .none = state.cameraState.recording {
                             if state.cameraState.mode == .photo {
+                                animateShutter()
                                 state.takePhoto()
                             } else if state.cameraState.mode == .video {
                                 state.startVideoRecording(pressing: false)
