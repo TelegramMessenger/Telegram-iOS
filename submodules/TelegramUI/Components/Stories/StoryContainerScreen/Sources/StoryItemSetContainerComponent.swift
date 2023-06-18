@@ -427,6 +427,18 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if let centerInfoItemView = self.centerInfoItem?.view.view {
+                if centerInfoItemView.convert(centerInfoItemView.bounds, to: self).contains(point) {
+                    return false
+                }
+            }
+            
+            if let rigthInfoItemView = self.rightInfoItem?.view.view {
+                if rigthInfoItemView.convert(rigthInfoItemView.bounds, to: self).contains(point) {
+                    return false
+                }
+            }
+            
             if self.contentContainerView.frame.contains(point) {
                 return true
             }
@@ -1733,6 +1745,36 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if let currentCenterInfoItem {
+                self.centerInfoItem = currentCenterInfoItem
+                
+                let centerInfoItemSize = currentCenterInfoItem.view.update(
+                    transition: .immediate,
+                    component: AnyComponent(PlainButtonComponent(content: currentCenterInfoItem.component, effectAlignment: .center, action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        self.navigateToPeer(peer: component.slice.peer)
+                    })),
+                    environment: {},
+                    containerSize: CGSize(width: contentFrame.width, height: 44.0)
+                )
+                if let view = currentCenterInfoItem.view.view {
+                    var animateIn = false
+                    if view.superview == nil {
+                        self.contentContainerView.addSubview(view)
+                        animateIn = true
+                    }
+                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: centerInfoItemSize))
+                    
+                    if animateIn, !isFirstTime {
+                        //view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                    
+                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+                }
+            }
+            
             if let currentRightInfoItem {
                 self.rightInfoItem = currentRightInfoItem
                 
@@ -1758,37 +1800,6 @@ public final class StoryItemSetContainerComponent: Component {
                     if animateIn, !isFirstTime, !transition.animation.isImmediate {
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         view.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                    
-                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
-                }
-            }
-            
-            if let currentCenterInfoItem {
-                self.centerInfoItem = currentCenterInfoItem
-                
-                let centerInfoItemSize = currentCenterInfoItem.view.update(
-                    transition: .immediate,
-                    component: AnyComponent(PlainButtonComponent(content: currentCenterInfoItem.component, effectAlignment: .center, action: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        self.navigateToPeer(peer: component.slice.peer)
-                    })),
-                    environment: {},
-                    containerSize: CGSize(width: contentFrame.width, height: 44.0)
-                )
-                if let view = currentCenterInfoItem.view.view {
-                    var animateIn = false
-                    if view.superview == nil {
-                        view.isUserInteractionEnabled = false
-                        self.contentContainerView.addSubview(view)
-                        animateIn = true
-                    }
-                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: centerInfoItemSize))
-                    
-                    if animateIn, !isFirstTime {
-                        //view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     
                     transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
