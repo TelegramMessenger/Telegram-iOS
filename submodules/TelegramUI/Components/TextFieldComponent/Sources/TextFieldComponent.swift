@@ -189,7 +189,8 @@ public final class TextFieldComponent: Component {
         
         public func getAttributedText() -> NSAttributedString {
             Keyboard.applyAutocorrection(textView: self.textView)
-            return self.inputState.inputText
+            return NSAttributedString(string: self.textView.text ?? "")
+            //return self.inputState.inputText
         }
         
         public func setAttributedText(_ string: NSAttributedString) {
