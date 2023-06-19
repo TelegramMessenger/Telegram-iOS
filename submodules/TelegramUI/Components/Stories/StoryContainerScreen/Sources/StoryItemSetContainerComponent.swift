@@ -1627,6 +1627,7 @@ public final class StoryItemSetContainerComponent: Component {
                         animateIn = true
                     }
                     viewListTransition.setFrame(view: viewListView, frame: viewListFrame)
+                    viewListTransition.setAlpha(view: viewListView, alpha: component.hideUI ? 0.0 : 1.0)
                     
                     if animateIn, !transition.animation.isImmediate {
                         viewListView.animateIn(transition: transition)
