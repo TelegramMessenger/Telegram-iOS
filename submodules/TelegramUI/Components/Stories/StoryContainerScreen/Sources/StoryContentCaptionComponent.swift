@@ -3,8 +3,23 @@ import UIKit
 import Display
 import ComponentFlow
 import MultilineTextComponent
+import AccountContext
+import TelegramCore
+import TextNodeWithEntities
+import TextFormat
+import InvisibleInkDustNode
+import UrlEscaping
 
 final class StoryContentCaptionComponent: Component {
+    enum Action {
+        case url(url: String, concealed: Bool)
+        case textMention(String)
+        case peerMention(peerId: EnginePeer.Id, mention: String)
+        case hashtag(String?, String)
+        case bankCard(String)
+        case customEmoji(TelegramMediaFile)
+    }
+    
     final class ExternalState {
         fileprivate(set) var isExpanded: Bool = false
         
@@ -25,18 +40,36 @@ final class StoryContentCaptionComponent: Component {
     }
     
     let externalState: ExternalState
+    let context: AccountContext
     let text: String
+    let entities: [MessageTextEntity]
+    let action: (Action) -> Void
     
     init(
         externalState: ExternalState,
-        text: String
+        context: AccountContext,
+        text: String,
+        entities: [MessageTextEntity],
+        action: @escaping (Action) -> Void
     ) {
         self.externalState = externalState
+        self.context = context
         self.text = text
+        self.entities = entities
+        self.action = action
     }
 
     static func ==(lhs: StoryContentCaptionComponent, rhs: StoryContentCaptionComponent) -> Bool {
+        if lhs.externalState !== rhs.externalState {
+            return false
+        }
+        if lhs.context !== rhs.context {
+            return false
+        }
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.entities != rhs.entities {
             return false
         }
         return true
@@ -70,7 +103,9 @@ final class StoryContentCaptionComponent: Component {
         private let shadowGradientLayer: SimpleGradientLayer
         private let shadowPlainLayer: SimpleLayer
         
-        private let text = ComponentView<Empty>()
+        private var textNode: TextNodeWithEntities?
+        private var linkHighlightingNode: LinkHighlightingNode?
+        private var dustNode: InvisibleInkDustNode?
 
         private var component: StoryContentCaptionComponent?
         private weak var state: EmptyComponentState?
@@ -133,10 +168,10 @@ final class StoryContentCaptionComponent: Component {
             if !self.bounds.contains(point) {
                 return nil
             }
-            if let textView = self.text.view {
+            if let textView = self.textNode?.textNode.view {
                 let textLocalPoint = self.convert(point, to: textView)
                 if textLocalPoint.y >= -7.0 {
-                    return self.scrollView
+                    return textView
                 }
             }
             
@@ -205,6 +240,103 @@ final class StoryContentCaptionComponent: Component {
             }
         }
         
+        @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+            switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let component = self.component, let textNode = self.textNode {
+                    switch gesture {
+                    case .tap:
+                        let titleFrame = textNode.textNode.view.bounds
+                        if titleFrame.contains(location) {
+                            if let (index, attributes) = textNode.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
+                                    return
+                                } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                    var concealed = true
+                                    if let (attributeText, fullText) = textNode.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                                        concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
+                                    }
+                                    component.action(.url(url: url, concealed: concealed))
+                                    return
+                                } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                                    component.action(.peerMention(peerId: peerMention.peerId, mention: peerMention.mention))
+                                    return
+                                } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                                    component.action(.textMention(peerName))
+                                    return
+                                } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                                    component.action(.hashtag(hashtag.peerName, hashtag.hashtag))
+                                    return
+                                } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
+                                    component.action(.bankCard(bankCard))
+                                    return
+                                } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
+                                    component.action(.customEmoji(file))
+                                    return
+                                }
+                            }
+                        }
+                        
+                        self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                    default:
+                        break
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+        private func updateTouchesAtPoint(_ point: CGPoint?) {
+            guard let textNode = self.textNode else {
+                return
+            }
+            var rects: [CGRect]?
+            var spoilerRects: [CGRect]?
+            if let point = point {
+                let textNodeFrame = textNode.textNode.bounds
+                if let (index, attributes) = textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                    let possibleNames: [String] = [
+                        TelegramTextAttributes.URL,
+                        TelegramTextAttributes.PeerMention,
+                        TelegramTextAttributes.PeerTextMention,
+                        TelegramTextAttributes.BotCommand,
+                        TelegramTextAttributes.Hashtag,
+                        TelegramTextAttributes.Timecode,
+                        TelegramTextAttributes.BankCard
+                    ]
+                    for name in possibleNames {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
+                            rects = textNode.textNode.attributeRects(name: name, at: index)
+                            break
+                        }
+                    }
+                    if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)] {
+                        spoilerRects = textNode.textNode.attributeRects(name: TelegramTextAttributes.Spoiler, at: index)
+                    }
+                }
+            }
+            
+            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, let dustNode = self.dustNode, !dustNode.isRevealed {
+            } else if let rects = rects {
+                let linkHighlightingNode: LinkHighlightingNode
+                if let current = self.linkHighlightingNode {
+                    linkHighlightingNode = current
+                } else {
+                    linkHighlightingNode = LinkHighlightingNode(color: UIColor(white: 1.0, alpha: 0.5))
+                    self.linkHighlightingNode = linkHighlightingNode
+                    self.scrollView.insertSubview(linkHighlightingNode.view, belowSubview: textNode.textNode.view)
+                }
+                linkHighlightingNode.frame = textNode.textNode.view.frame
+                linkHighlightingNode.updateRects(rects)
+            } else if let linkHighlightingNode = self.linkHighlightingNode {
+                self.linkHighlightingNode = nil
+                linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                    linkHighlightingNode?.removeFromSupernode()
+                })
+            }
+        }
+        
         func update(component: StoryContentCaptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.ignoreExternalState = true
             
@@ -213,29 +345,64 @@ final class StoryContentCaptionComponent: Component {
             
             let sideInset: CGFloat = 16.0
             let verticalInset: CGFloat = 7.0
-            let textContainerSize = CGSize(width: availableSize.width - sideInset * 2.0 - 50.0, height: availableSize.height - verticalInset * 2.0)
+            let textContainerSize = CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height - verticalInset * 2.0)
             
-            let textSize = self.text.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.text, font: Font.regular(16.0), textColor: .white)),
-                    maximumNumberOfLines: 0
-                )),
-                environment: {},
-                containerSize: textContainerSize
+            let attributedText = stringWithAppliedEntities(
+                component.text,
+                entities: component.entities,
+                baseColor: .white,
+                linkColor: .white,
+                baseFont: Font.regular(16.0),
+                linkFont: Font.regular(16.0),
+                boldFont: Font.semibold(16.0),
+                italicFont: Font.italic(16.0),
+                boldItalicFont: Font.semiboldItalic(16.0),
+                fixedFont: Font.monospace(16.0),
+                blockQuoteFont: Font.monospace(16.0),
+                message: nil
             )
             
+            let makeLayout = TextNodeWithEntities.asyncLayout(self.textNode)
+            let textLayout = makeLayout(TextNodeLayoutArguments(
+                attributedString: attributedText,
+                maximumNumberOfLines: 0,
+                truncationType: .end,
+                constrainedSize: textContainerSize
+            ))
+            
             let maxHeight: CGFloat = 50.0
-            let visibleTextHeight = min(maxHeight, textSize.height)
-            let textOverflowHeight: CGFloat = textSize.height - visibleTextHeight
+            let visibleTextHeight = min(maxHeight, textLayout.0.size.height)
+            let textOverflowHeight: CGFloat = textLayout.0.size.height - visibleTextHeight
             let scrollContentSize = CGSize(width: availableSize.width, height: availableSize.height + textOverflowHeight)
             
-            if let textView = self.text.view {
-                if textView.superview == nil {
-                    self.scrollView.addSubview(textView)
+            let textNode = textLayout.1(TextNodeWithEntities.Arguments(
+                context: component.context,
+                cache: component.context.animationCache,
+                renderer: component.context.animationRenderer,
+                placeholderColor: UIColor(white: 0.2, alpha: 1.0), attemptSynchronous: true
+            ))
+            if self.textNode !== textNode {
+                self.textNode?.textNode.view.removeFromSuperview()
+                
+                self.textNode = textNode
+                if textNode.textNode.view.superview == nil  {
+                    self.scrollView.addSubview(textNode.textNode.view)
+                    
+                    let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+                    recognizer.tapActionAtPoint = { point in
+                        return .waitForSingleTap
+                    }
+                    recognizer.highlight = { [weak self] point in
+                        guard let self else {
+                            return
+                        }
+                        self.updateTouchesAtPoint(point)
+                    }
+                    textNode.textNode.view.addGestureRecognizer(recognizer)
                 }
-                textView.frame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: textSize)
             }
+
+            textNode.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: textLayout.0.size)
             
             self.itemLayout = ItemLayout(
                 containerSize: availableSize,

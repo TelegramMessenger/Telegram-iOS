@@ -889,6 +889,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
 
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    
+    private weak var pendingOpenListContext: PeerStoryListContentContextImpl?
         
     public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
@@ -952,6 +954,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
             }
             
+            if self.pendingOpenListContext != nil {
+                return
+            }
+            
             //TODO:selection
             let listContext = PeerStoryListContentContextImpl(
                 context: self.context,
@@ -959,12 +965,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 listContext: self.listSource,
                 initialId: item.story.id
             )
+            self.pendingOpenListContext = listContext
+            self.itemGrid.isUserInteractionEnabled = false
+            
             let _ = (listContext.state
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let self, let navigationController = self.navigationController() else {
                     return
                 }
+                
+                guard let pendingOpenListContext = self.pendingOpenListContext, pendingOpenListContext === listContext else {
+                    return
+                }
+                self.pendingOpenListContext = nil
+                self.itemGrid.isUserInteractionEnabled = true
                 
                 var transitionIn: StoryContainerScreen.TransitionIn?
                 
@@ -1016,6 +1031,12 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     },
                                     updateView: { view, state, transition in
                                         (view as? ItemTransitionView)?.update(state: state, transition: transition)
+                                    },
+                                    insertCloneTransitionView: { [weak self] view in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.view.insertSubview(view, aboveSubview: self.itemGrid.view)
                                     }
                                 ),
                                 destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),

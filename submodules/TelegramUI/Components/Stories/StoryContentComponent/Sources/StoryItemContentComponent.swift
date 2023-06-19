@@ -148,7 +148,7 @@ final class StoryItemContentComponent: Component {
                 return
             }
             
-            if case let .file(file) = currentMessageMedia, let peerReference = PeerReference(component.peer._asPeer()) {
+            if case let .file(file) = currentMessageMedia, let peerReference = PeerReference(component.peer._asPeer()), !"".isEmpty {
                 if self.videoNode == nil {
                     let videoNode = UniversalVideoNode(
                         postbox: component.context.account.postbox,

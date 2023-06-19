@@ -6,7 +6,6 @@ import AppBundle
 import ComponentDisplayAdapters
 import ReactionSelectionNode
 import EntityKeyboard
-import StoryFooterPanelComponent
 import MessageInputPanelComponent
 import TelegramPresentationData
 import SwiftSignalKit
@@ -22,6 +21,7 @@ import ImageCompression
 import ShareWithPeersScreen
 import PlainButtonComponent
 import TooltipUI
+import PresentationDataUtils
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -242,7 +242,6 @@ public final class StoryItemSetContainerComponent: Component {
         var captionItem: CaptionItem?
         
         let inputPanel = ComponentView<Empty>()
-        let footerPanel = ComponentView<Empty>()
         let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
         
         var displayViewList: Bool = false
@@ -274,6 +273,8 @@ public final class StoryItemSetContainerComponent: Component {
         
         private weak var voiceMessagesRestrictedTooltipController: TooltipController?
         
+        let transitionCloneContainerView: UIView
+        
         override init(frame: CGRect) {
             self.sendMessageContext = StoryItemSetContainerSendMessage()
             
@@ -293,6 +294,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.closeButton = HighlightableButton()
             self.closeButtonIconView = UIImageView()
+            
+            self.transitionCloneContainerView = UIView()
             
             super.init(frame: frame)
             
@@ -648,8 +651,10 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             if component.slice.peer.id == component.context.account.peerId {
-                self.displayViewList = true
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                if let views = component.slice.item.storyItem.views, !views.seenPeers.isEmpty {
+                    self.displayViewList = true
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                }
             } else {
                 if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
                     inputPanelView.activateInput()
@@ -669,16 +674,6 @@ public final class StoryItemSetContainerComponent: Component {
                     additive: true
                 )
                 inputPanelView.layer.animateAlpha(from: 0.0, to: inputPanelView.alpha, duration: 0.28)
-            }
-            if let footerPanelView = self.footerPanel.view {
-                footerPanelView.layer.animatePosition(
-                    from: CGPoint(x: 0.0, y: self.bounds.height - footerPanelView.frame.minY),
-                    to: CGPoint(),
-                    duration: 0.3,
-                    timingFunction: kCAMediaTimingFunctionSpring,
-                    additive: true
-                )
-                footerPanelView.layer.animateAlpha(from: 0.0, to: footerPanelView.alpha, duration: 0.28)
             }
             if let viewListView = self.viewList?.view.view {
                 viewListView.layer.animatePosition(
@@ -749,9 +744,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func animateOut(transitionOut: StoryContainerScreen.TransitionOut, completion: @escaping () -> Void) {
-            self.closeButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-                completion()
-            })
+            var cleanups: [() -> Void] = []
             
             if let inputPanelView = self.inputPanel.view {
                 inputPanelView.layer.animatePosition(
@@ -763,17 +756,6 @@ public final class StoryItemSetContainerComponent: Component {
                     additive: true
                 )
                 inputPanelView.layer.animateAlpha(from: inputPanelView.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false)
-            }
-            if let footerPanelView = self.footerPanel.view {
-                footerPanelView.layer.animatePosition(
-                    from: CGPoint(),
-                    to: CGPoint(x: 0.0, y: self.bounds.height - footerPanelView.frame.minY),
-                    duration: 0.3,
-                    timingFunction: kCAMediaTimingFunctionSpring,
-                    removeOnCompletion: false,
-                    additive: true
-                )
-                footerPanelView.layer.animateAlpha(from: footerPanelView.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false)
             }
             if let viewListView = self.viewList?.view.view {
                 viewListView.layer.animatePosition(
@@ -811,39 +793,75 @@ public final class StoryItemSetContainerComponent: Component {
                 if let rightInfoView = self.rightInfoItem?.view.view {
                     if transitionOut.destinationIsAvatar {
                         let transitionView = transitionOut.transitionView
-                        let transitionViewImpl = transitionView?.makeView()
-                        if let transitionViewImpl {
-                            self.insertSubview(transitionViewImpl, aboveSubview: self.contentContainerView)
+                        
+                        var transitionViewsImpl: [UIView] = []
+                        
+                        if let transitionViewImpl = transitionView?.makeView() {
+                            transitionViewsImpl.append(transitionViewImpl)
+                            
+                            let transitionSourceContainerView = UIView(frame: self.bounds)
+                            transitionSourceContainerView.isUserInteractionEnabled = false
+                            self.insertSubview(transitionSourceContainerView, aboveSubview: self.contentContainerView)
+                            
+                            transitionSourceContainerView.addSubview(transitionViewImpl)
+                            
+                            if let insertCloneTransitionView = transitionView?.insertCloneTransitionView {
+                                if let transitionCloneViewImpl = transitionView?.makeView() {
+                                    transitionViewsImpl.append(transitionCloneViewImpl)
+                                    
+                                    let transitionCloneContainerView = self.transitionCloneContainerView
+                                    transitionCloneContainerView.isUserInteractionEnabled = false
+                                    insertCloneTransitionView(transitionCloneContainerView)
+                                    transitionCloneContainerView.frame = transitionCloneContainerView.convert(self.convert(self.bounds, to: nil), from: nil)
+                                    
+                                    transitionCloneContainerView.addSubview(transitionCloneViewImpl)
+                                    
+                                    transitionSourceContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, removeOnCompletion: false)
+                                    transitionCloneContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                                    
+                                    cleanups.append({ [weak transitionCloneContainerView] in
+                                        transitionCloneContainerView?.removeFromSuperview()
+                                    })
+                                }
+                            }
                             
                             let rightInfoSourceFrame = rightInfoView.convert(rightInfoView.bounds, to: self)
                             let positionKeyframes: [CGPoint] = generateParabollicMotionKeyframes(from: sourceLocalFrame.center, to: rightInfoSourceFrame.center, elevation: 0.0, duration: 0.3, curve: .spring, reverse: true)
                             
-                            transitionViewImpl.frame = rightInfoSourceFrame
-                            transitionViewImpl.alpha = 0.0
-                            transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
-                                sourceSize: rightInfoSourceFrame.size,
-                                destinationSize: sourceLocalFrame.size,
-                                progress: 0.0
-                            ), .immediate)
+                            for transitionViewImpl in transitionViewsImpl {
+                                transitionViewImpl.frame = rightInfoSourceFrame
+                                transitionViewImpl.alpha = 0.0
+                                transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                                    sourceSize: rightInfoSourceFrame.size,
+                                    destinationSize: sourceLocalFrame.size,
+                                    progress: 0.0
+                                ), .immediate)
+                            }
                             
                             let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
                             
-                            transitionViewImpl.alpha = 1.0
-                            transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                            for transitionViewImpl in transitionViewsImpl {
+                                transitionViewImpl.alpha = 1.0
+                                transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                            }
                             
                             rightInfoView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                             
-                            transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
+                            for transitionViewImpl in transitionViewsImpl {
+                                transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
+                            }
                             
-                            transitionViewImpl.layer.position = positionKeyframes[positionKeyframes.count - 1]
-                            transitionViewImpl.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: 0.3, keyPath: "position", removeOnCompletion: false, additive: false)
-                            transitionViewImpl.layer.animateBounds(from: CGRect(origin: CGPoint(), size: rightInfoSourceFrame.size), to: CGRect(origin: CGPoint(), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                            
-                            transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
-                                sourceSize: rightInfoSourceFrame.size,
-                                destinationSize: sourceLocalFrame.size,
-                                progress: 1.0
-                            ), transition)
+                            for transitionViewImpl in transitionViewsImpl {
+                                transitionViewImpl.layer.position = positionKeyframes[positionKeyframes.count - 1]
+                                transitionViewImpl.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: 0.3, keyPath: "position", removeOnCompletion: false, additive: false)
+                                transitionViewImpl.layer.animateBounds(from: CGRect(origin: CGPoint(), size: rightInfoSourceFrame.size), to: CGRect(origin: CGPoint(), size: sourceLocalFrame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                                
+                                transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                                    sourceSize: rightInfoSourceFrame.size,
+                                    destinationSize: sourceLocalFrame.size,
+                                    progress: 1.0
+                                ), transition)
+                            }
                         }
                         
                         let positionKeyframes: [CGPoint] = generateParabollicMotionKeyframes(from: innerSourceLocalFrame.center, to: rightInfoView.layer.position, elevation: 0.0, duration: 0.3, curve: .spring, reverse: true)
@@ -867,30 +885,63 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if !transitionOut.destinationIsAvatar {
                     let transitionView = transitionOut.transitionView
-                    let transitionViewImpl = transitionView?.makeView()
-                    if let transitionViewImpl {
-                        self.insertSubview(transitionViewImpl, belowSubview: self.contentContainerView)
+                    
+                    var transitionViewsImpl: [UIView] = []
+                    
+                    if let transitionViewImpl = transitionView?.makeView() {
+                        transitionViewsImpl.append(transitionViewImpl)
                         
-                        transitionViewImpl.frame = contentSourceFrame
-                        transitionViewImpl.alpha = 0.0
-                        transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
-                            sourceSize: contentSourceFrame.size,
-                            destinationSize: sourceLocalFrame.size,
-                            progress: 0.0
-                        ), .immediate)
+                        let transitionSourceContainerView = UIView(frame: self.bounds)
+                        transitionSourceContainerView.isUserInteractionEnabled = false
+                        self.insertSubview(transitionSourceContainerView, belowSubview: self.contentContainerView)
+                        
+                        transitionSourceContainerView.addSubview(transitionViewImpl)
+                        
+                        if let insertCloneTransitionView = transitionView?.insertCloneTransitionView {
+                            if let transitionCloneViewImpl = transitionView?.makeView() {
+                                transitionViewsImpl.append(transitionCloneViewImpl)
+                                
+                                let transitionCloneContainerView = self.transitionCloneContainerView
+                                transitionCloneContainerView.isUserInteractionEnabled = false
+                                insertCloneTransitionView(transitionCloneContainerView)
+                                
+                                transitionCloneContainerView.addSubview(transitionCloneViewImpl)
+                                
+                                transitionSourceContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, removeOnCompletion: false)
+                                transitionCloneContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                                
+                                cleanups.append({ [weak transitionCloneContainerView] in
+                                    transitionCloneContainerView?.removeFromSuperview()
+                                })
+                            }
+                        }
+                        
+                        for transitionViewImpl in transitionViewsImpl {
+                            transitionViewImpl.frame = contentSourceFrame
+                            transitionViewImpl.alpha = 0.0
+                            transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                                sourceSize: contentSourceFrame.size,
+                                destinationSize: sourceLocalFrame.size,
+                                progress: 0.0
+                            ), .immediate)
+                        }
                         
                         let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
                         
-                        transitionViewImpl.alpha = 1.0
-                        transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        for transitionViewImpl in transitionViewsImpl {
+                            transitionViewImpl.alpha = 1.0
+                            transitionViewImpl.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        }
                         self.contentContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                         
-                        transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
-                        transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
-                            sourceSize: contentSourceFrame.size,
-                            destinationSize: sourceLocalFrame.size,
-                            progress: 1.0
-                        ), transition)
+                        for transitionViewImpl in transitionViewsImpl {
+                            transition.setFrame(view: transitionViewImpl, frame: sourceLocalFrame)
+                            transitionView?.updateView(transitionViewImpl, StoryContainerScreen.TransitionState(
+                                sourceSize: contentSourceFrame.size,
+                                destinationSize: sourceLocalFrame.size,
+                                progress: 1.0
+                            ), transition)
+                        }
                     }
                 }
                 
@@ -919,6 +970,14 @@ public final class StoryItemSetContainerComponent: Component {
                     visibleItemView.layer.animateScale(from: 1.0, to: innerScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 }
             }
+            
+            self.closeButton.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                for cleanup in cleanups {
+                    cleanup()
+                }
+                cleanups.removeAll()
+                completion()
+            })
         }
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -1112,238 +1171,6 @@ public final class StoryItemSetContainerComponent: Component {
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
             )
             
-            /*let footerPanelSize = self.footerPanel.update(
-                transition: transition,
-                component: AnyComponent(StoryFooterPanelComponent(
-                    context: component.context,
-                    storyItem: currentItem?.storyItem,
-                    expandViewStats: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        
-                        if !self.displayViewList {
-                            self.displayViewList = true
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                        }
-                    },
-                    deleteAction: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        
-                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                        let actionSheet = ActionSheetController(presentationData: presentationData)
-                        
-                        actionSheet.setItemGroups([
-                            ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    
-                                    guard let self, let component = self.component else {
-                                        return
-                                    }
-                                    component.delete()
-                                    
-                                    /*if let currentSlice = self.currentSlice, let index = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
-                                        let item = currentSlice.items[index]
-                                        
-                                        if currentSlice.items.count == 1 {
-                                            component.navigateToItemSet(.next)
-                                        } else {
-                                            var nextIndex: Int = index + 1
-                                            if nextIndex >= currentSlice.items.count {
-                                                nextIndex = currentSlice.items.count - 1
-                                            }
-                                            self.focusedItemId = currentSlice.items[nextIndex].id
-                                            
-                                            currentSlice.items[nextIndex].markAsSeen?()
-                                            
-                                            self.state?.updated(transition: .immediate)
-                                        }
-                                        
-                                        item.delete?()
-                                    }*/
-                                })
-                            ]),
-                            ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                })
-                            ])
-                        ])
-                        
-                        actionSheet.dismissed = { [weak self] _ in
-                            guard let self else {
-                                return
-                            }
-                            self.actionSheet = nil
-                            self.updateIsProgressPaused()
-                        }
-                        self.actionSheet = actionSheet
-                        self.updateIsProgressPaused()
-                        
-                        component.presentController(actionSheet)
-                    },
-                    moreAction: { [weak self] sourceView, gesture in
-                        guard let self, let component = self.component, let controller = component.controller() else {
-                            return
-                        }
-                        
-                        var items: [ContextMenuItem] = []
-                        
-                        let additionalCount = component.slice.item.storyItem.privacy?.additionallyIncludePeers.count ?? 0
-                        
-                        let privacyText: String
-                        switch component.slice.item.storyItem.privacy?.base {
-                        case .closeFriends:
-                            if additionalCount != 0 {
-                                privacyText = "Close Friends (+\(additionalCount)"
-                            } else {
-                                privacyText = "Close Friends"
-                            }
-                        case .contacts:
-                            if additionalCount != 0 {
-                                privacyText = "Contacts (+\(additionalCount)"
-                            } else {
-                                privacyText = "Contacts"
-                            }
-                        case .nobody:
-                            if additionalCount != 0 {
-                                if additionalCount == 1 {
-                                    privacyText = "\(additionalCount) Person"
-                                } else {
-                                    privacyText = "\(additionalCount) People"
-                                }
-                            } else {
-                                privacyText = "Only Me"
-                            }
-                        default:
-                            privacyText = "Everyone"
-                        }
-                        
-                        items.append(.action(ContextMenuActionItem(text: "Who can see", textLayout: .secondLineWithValue(privacyText), icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            self.openItemPrivacySettings()
-                        })))
-                        
-                        items.append(.action(ContextMenuActionItem(text: "Edit Story", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            self.openStoryEditing()
-                        })))
-                        
-                        items.append(.separator)
-                        
-                        component.controller()?.forEachController { c in
-                            if let c = c as? UndoOverlayController {
-                                c.dismiss()
-                            }
-                            return true
-                        }
-                        
-                        items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from profile" : "Save to profile", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Chat/Context Menu/Check" : "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            
-                            let _ = component.context.engine.messages.updateStoriesArePinned(ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
-                            
-                            if component.slice.item.storyItem.isPinned {
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                self.component?.presentController(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .info(title: nil, text: "Story removed from your profile", timeout: nil),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ))
-                            } else {
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                self.component?.presentController(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .info(title: "Story saved to your profile", text: "Saved stories can be viewed by others on your profile until you remove them.", timeout: nil),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ))
-                            }
-                        })))
-                        items.append(.action(ContextMenuActionItem(text: "Save image", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.contextMenu.primaryColor)
-                        }, action: { _, a in
-                            a(.default)
-                        })))
-                        
-                        if component.slice.item.storyItem.isPublic {
-                            items.append(.action(ContextMenuActionItem(text: "Copy link", icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, a in
-                                a(.default)
-                                
-                                guard let self, let component = self.component else {
-                                    return
-                                }
-                                
-                                let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                                |> deliverOnMainQueue).start(next: { [weak self] link in
-                                    guard let self, let component = self.component else {
-                                        return
-                                    }
-                                    if let link {
-                                        UIPasteboard.general.string = link
-                                        
-                                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                        component.presentController(UndoOverlayController(
-                                            presentationData: presentationData,
-                                            content: .linkCopied(text: "Link copied."),
-                                            elevatedLayout: false,
-                                            animateInAsReplacement: false,
-                                            action: { _ in return false }
-                                        ))
-                                    }
-                                })
-                            })))
-                            items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-                            }, action: { _, a in
-                                a(.default)
-                            })))
-                        }
-
-                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                        let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-                        contextController.dismissed = { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            self.contextController = nil
-                            self.updateIsProgressPaused()
-                        }
-                        self.contextController = contextController
-                        self.updateIsProgressPaused()
-                        controller.present(contextController, in: .window(.root))
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 200.0)
-            )*/
-            
             let bottomContentInsetWithoutInput = bottomContentInset
             var viewListInset: CGFloat = 0.0
             
@@ -1379,8 +1206,10 @@ public final class StoryItemSetContainerComponent: Component {
                 let outerExpansionFraction: CGFloat
                 if self.displayViewList {
                     outerExpansionFraction = 1.0
-                } else {
+                } else if let views = component.slice.item.storyItem.views, !views.seenPeers.isEmpty {
                     outerExpansionFraction = component.verticalPanFraction
+                } else {
+                    outerExpansionFraction = 0.0
                 }
                 
                 viewList.view.parentState = state
@@ -1762,7 +1591,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if let view = currentCenterInfoItem.view.view {
                     var animateIn = false
                     if view.superview == nil {
-                        self.contentContainerView.addSubview(view)
+                        self.contentContainerView.insertSubview(view, belowSubview: self.closeButton)
                         animateIn = true
                     }
                     transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: centerInfoItemSize))
@@ -1857,7 +1686,38 @@ public final class StoryItemSetContainerComponent: Component {
                     transition: captionItemTransition,
                     component: AnyComponent(StoryContentCaptionComponent(
                         externalState: captionItem.externalState,
-                        text: component.slice.item.storyItem.text
+                        context: component.context,
+                        text: component.slice.item.storyItem.text,
+                        entities: component.slice.item.storyItem.entities,
+                        action: { [weak self] action in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            switch action {
+                            case let .url(url, concealed):
+                                openUserGeneratedUrl(context: component.context, peerId: component.slice.peer.id, url: url, concealed: concealed, skipUrlAuth: false, skipConcealedAlert: false, present: { [weak self] c in
+                                    guard let self, let component = self.component, let controller = component.controller() else {
+                                        return
+                                    }
+                                    controller.present(c, in: .window(.root))
+                                }, openResolved: { [weak self] resolved in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.sendMessageContext.openResolved(view: self, result: resolved, forceExternal: false, concealed: concealed)
+                                })
+                            case let .textMention(value):
+                                self.sendMessageContext.openPeerMention(view: self, name: value)
+                            case let .peerMention(peerId, _):
+                                self.sendMessageContext.openPeerMention(view: self, peerId: peerId)
+                            case let .hashtag(username, value):
+                                self.sendMessageContext.openHashtag(view: self, hashtag: value, peerName: username)
+                            case let .bankCard(value):
+                                let _ = value
+                            case .customEmoji:
+                                break
+                            }
+                        }
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: contentFrame.height)
@@ -2108,22 +1968,6 @@ public final class StoryItemSetContainerComponent: Component {
                     reactionContextNode.updateLayout(size: availableSize, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
                 }
             }
-            
-            /*var footerPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputPanelBottomInset - footerPanelSize.height), size: footerPanelSize)
-            var footerPanelAlpha: CGFloat = (focusedItem?.isMy == true && !self.displayViewList) ? 1.0 : 0.0
-            if case .regular = component.metrics.widthClass {
-                footerPanelAlpha *= component.visibilityFraction
-            }
-            if self.displayViewList {
-                footerPanelFrame.origin.y += footerPanelSize.height
-            }
-            if let footerPanelView = self.footerPanel.view {
-                if footerPanelView.superview == nil {
-                    self.addSubview(footerPanelView)
-                }
-                transition.setFrame(view: footerPanelView, frame: footerPanelFrame)
-                transition.setAlpha(view: footerPanelView, alpha: footerPanelAlpha)
-            }*/
             
             let bottomGradientHeight = inputPanelSize.height + 32.0
             transition.setFrame(layer: self.bottomContentGradientLayer, frame: CGRect(origin: CGPoint(x: contentFrame.minX, y: availableSize.height - component.inputHeight - bottomGradientHeight), size: CGSize(width: contentFrame.width, height: bottomGradientHeight)))

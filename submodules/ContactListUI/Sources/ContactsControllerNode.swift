@@ -373,6 +373,8 @@ final class ContactsControllerNode: ASDisplayNode {
                 uploadProgress: nil,
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
+                accessoryPanelContainer: nil,
+                accessoryPanelContainerHeight: 0.0,
                 activateSearch: { [weak self] searchContentNode in
                     guard let self else {
                         return

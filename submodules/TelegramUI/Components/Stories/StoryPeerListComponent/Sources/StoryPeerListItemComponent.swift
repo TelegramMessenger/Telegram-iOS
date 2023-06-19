@@ -697,8 +697,9 @@ public final class StoryPeerListItemComponent: Component {
             
             var titleTransition = transition
             if previousComponent?.ringAnimation != nil && component.ringAnimation == nil {
-                if let titleView = self.title.view, let snapshotView = titleView.snapshotContentTree() {
-                    titleView.superview?.addSubview(snapshotView)
+                if let titleView = self.title.view, let snapshotView = titleView.snapshotView(afterScreenUpdates: false) {
+                    self.button.addSubview(snapshotView)
+                    snapshotView.frame = titleView.frame
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
                     })

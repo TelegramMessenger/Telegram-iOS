@@ -851,7 +851,7 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         
                         let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)), size: itemSetContainerSize)
-                        if let itemSetComponentView = itemSetView.view.view {
+                        if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             if itemSetView.superview == nil {
                                 self.addSubview(itemSetView)
                             }
@@ -865,6 +865,10 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
                             itemSetTransition.setBounds(view: itemSetView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             itemSetTransition.setSublayerTransform(view: itemSetView, transform: CATransform3DMakeScale(dismissPanScale, dismissPanScale, 1.0))
+                            
+                            itemSetTransition.setPosition(view: itemSetComponentView.transitionCloneContainerView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
+                            itemSetTransition.setBounds(view: itemSetComponentView.transitionCloneContainerView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                            itemSetTransition.setSublayerTransform(view: itemSetComponentView.transitionCloneContainerView, transform: CATransform3DMakeScale(dismissPanScale, dismissPanScale, 1.0))
                             
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
@@ -1037,13 +1041,16 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     public final class TransitionView {
         public let makeView: () -> UIView
         public let updateView: (UIView, TransitionState, Transition) -> Void
+        public let insertCloneTransitionView: ((UIView) -> Void)?
         
         public init(
             makeView: @escaping () -> UIView,
-            updateView: @escaping (UIView, TransitionState, Transition) -> Void
+            updateView: @escaping (UIView, TransitionState, Transition) -> Void,
+            insertCloneTransitionView: ((UIView) -> Void)?
         ) {
             self.makeView = makeView
             self.updateView = updateView
+            self.insertCloneTransitionView = insertCloneTransitionView
         }
     }
     
@@ -1092,6 +1099,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     }
     
     private let context: AccountContext
+    private var didAnimateIn: Bool = false
     private var isDismissed: Bool = false
     
     private let focusedItemPromise = Promise<StoryId?>(nil)
@@ -1141,8 +1149,12 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         
         self.view.disablesInteractiveModalDismiss = true
         
-        if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
-            componentView.animateIn()
+        if !self.didAnimateIn {
+            self.didAnimateIn = true
+            
+            if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
+                componentView.animateIn()
+            }
         }
     }
     

@@ -218,6 +218,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
         super.init(context: context, navigationBarPresentationData: nil, mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: groupCallPanelSource)
         
+        self.accessoryPanelContainer = ASDisplayNode()
+        
         self.tabBarItemContextActionType = .always
         self.automaticallyControlPresentationContextLayout = false
         
@@ -2275,7 +2277,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         var primaryContent: ChatListHeaderComponent.Content?
         if let primaryContext = self.primaryContext {
             var backTitle: String?
-            if let previousItem = self.navigationBar?.previousItem {
+            if let previousItem = self.previousItem {
                 switch previousItem {
                 case let .item(item):
                     backTitle = item.title ?? self.presentationData.strings.Common_Back

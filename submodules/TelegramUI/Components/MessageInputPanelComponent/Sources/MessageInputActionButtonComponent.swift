@@ -16,7 +16,7 @@ private extension MessageInputActionButtonComponent.Mode {
         case .attach:
             return "Chat/Input/Text/IconAttachment"
         case .forward:
-            return "Chat/Input/Text/IconForward"
+            return "Chat/Input/Text/IconForwardSend"
         default:
             return nil
         }

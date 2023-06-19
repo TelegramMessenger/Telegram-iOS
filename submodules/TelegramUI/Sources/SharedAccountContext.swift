@@ -37,6 +37,7 @@ import TextFormat
 import ChatTextLinkEditUI
 import AttachmentTextInputPanelNode
 import ChatEntityKeyboardInputNode
+import HashtagSearchUI
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1716,6 +1717,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         return inputPanelNode
+    }
+    
+    public func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String) -> ViewController {
+        return HashtagSearchController(context: context, peer: peer, query: query)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {

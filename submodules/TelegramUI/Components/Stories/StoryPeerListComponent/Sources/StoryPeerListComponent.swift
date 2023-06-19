@@ -240,7 +240,8 @@ public final class StoryPeerListComponent: Component {
                         },
                         updateView: { view, state, transition in
                             (view as? StoryPeerListItemComponent.TransitionView)?.update(state: state, transition: transition)
-                        }
+                        },
+                        insertCloneTransitionView: nil
                     ))
                 }
             }
