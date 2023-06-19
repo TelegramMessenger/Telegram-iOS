@@ -1470,6 +1470,7 @@ public final class StoryItemSetContainerComponent: Component {
                         animateIn = true
                     }
                     viewListTransition.setFrame(view: viewListView, frame: viewListFrame)
+                    viewListTransition.setAlpha(view: viewListView, alpha: component.hideUI ? 0.0 : 1.0)
                     
                     if animateIn, !transition.animation.isImmediate {
                         viewListView.animateIn(transition: transition)
@@ -1824,18 +1825,14 @@ public final class StoryItemSetContainerComponent: Component {
                                 return
                             }
                             
-                            var selectedReaction: AvailableReactions.Reaction?
+                            var animation: TelegramMediaFile?
                             for reaction in availableReactions.reactions {
                                 if reaction.value == updateReaction.reaction {
-                                    selectedReaction = reaction
+                                    animation = reaction.centerAnimation
                                     break
                                 }
                             }
-                            
-                            guard let reaction = selectedReaction else {
-                                return
-                            }
-                            
+                                                        
                             let targetView = UIView(frame: CGRect(origin: CGPoint(x: floor((self.bounds.width - 100.0) * 0.5), y: floor((self.bounds.height - 100.0) * 0.5)), size: CGSize(width: 100.0, height: 100.0)))
                             targetView.isUserInteractionEnabled = false
                             self.addSubview(targetView)
@@ -1856,71 +1853,70 @@ public final class StoryItemSetContainerComponent: Component {
                                     })
                                 }
                             })
+    
                             
                             if hasFirstResponder(self) {
                                 self.endEditing(true)
                             }
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
-                            
-                            if let centerAnimation = reaction.centerAnimation {
-                                let file = centerAnimation
-                                
-                                var text = ""
-                                var messageAttributes: [MessageAttribute] = []
-                                var inlineStickers: [MediaId : Media] = [:]
-                                switch reaction.value {
-                                case let .builtin(textValue):
-                                    text = textValue
-                                case .custom:
+                                                        
+                            var text = ""
+                            var messageAttributes: [MessageAttribute] = []
+                            var inlineStickers: [MediaId : Media] = [:]
+                            switch updateReaction {
+                            case let .builtin(textValue):
+                                text = textValue
+                            case let .custom(fileId, file):
+                                if let file {
+                                    animation = file
                                     loop: for attribute in file.attributes {
                                         switch attribute {
                                         case let .CustomEmoji(_, _, displayText, _):
                                             text = displayText
-                                            messageAttributes = [
-                                                TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< 1, type: .CustomEmoji(stickerPack: nil, fileId: centerAnimation.fileId.id))])
-                                            ]
-                                            inlineStickers = [centerAnimation.fileId: centerAnimation]
+                                            let length = (text as NSString).length
+                                            messageAttributes = [TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< length, type: .CustomEmoji(stickerPack: nil, fileId: fileId))])]
+                                            inlineStickers = [file.fileId: file]
                                             break loop
                                         default:
                                             break
                                         }
                                     }
                                 }
-  
-                                
-                                let message: EnqueueMessage = .message(
-                                    text: text,
-                                    attributes: messageAttributes,
-                                    inlineStickers: inlineStickers,
-                                    mediaReference: nil,
-                                    replyToMessageId: nil,
-                                    replyToStoryId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
-                                    localGroupingKey: nil,
-                                    correlationId: nil,
-                                    bubbleUpEmojiOrStickersets: []
-                                )
-                                
-                                let context = component.context
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                                let presentController = component.presentController
-                                let controller = component.controller
-                                let peer = component.slice.peer
-                                
-                                let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: [message])
-                                |> deliverOnMainQueue).start(next: { messageIds in
+                            }
+
+                            let message: EnqueueMessage = .message(
+                                text: text,
+                                attributes: messageAttributes,
+                                inlineStickers: inlineStickers,
+                                mediaReference: nil,
+                                replyToMessageId: nil,
+                                replyToStoryId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
+                                localGroupingKey: nil,
+                                correlationId: nil,
+                                bubbleUpEmojiOrStickersets: []
+                            )
+                            
+                            let context = component.context
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                            let presentController = component.presentController
+                            let peer = component.slice.peer
+                            
+                            let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: [message])
+                            |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+                                if let animation {
                                     presentController(UndoOverlayController(
                                         presentationData: presentationData,
-                                        content: .sticker(context: context, file: centerAnimation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: {
-                                            if let messageId = messageIds.first, let messageId, let navigationController = controller()?.navigationController as? NavigationController {
-                                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: false, timecode: nil)))
+                                        content: .sticker(context: context, file: animation, loop: false, title: nil, text: "Reaction Sent.", undoText: "View in Chat", customAction: { [weak self] in
+                                            if let messageId = messageIds.first, let self {
+                                                self.navigateToPeer(peer: peer, messageId: messageId)
                                             }
                                         }),
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
                                         action: { _ in return false }
                                     ), nil)
-                                })
-                            }
+                                }
+                            })
                         })
                     }
                 }
@@ -2079,7 +2075,7 @@ public final class StoryItemSetContainerComponent: Component {
             })
         }
         
-        private func navigateToPeer(peer: EnginePeer) {
+        private func navigateToPeer(peer: EnginePeer, messageId: EngineMessage.Id? = nil) {
             guard let component = self.component else {
                 return
             }
@@ -2090,7 +2086,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
-            component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+            component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: messageId.flatMap { .message(id: .id($0), highlight: false, timecode: nil) }, keepStack: .always, animated: true, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
                 guard let controller, let navigationController else {
                     return
                 }
