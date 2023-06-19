@@ -466,6 +466,13 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     )
     |> distinctUntilChanged
     
+    let storyListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
+    let hasStories: Signal<Bool, NoError> = storyListContext.state
+    |> map { state -> Bool in
+        return !state.items.isEmpty
+    }
+    |> distinctUntilChanged
+    
     return combineLatest(
         context.account.viewTracker.peerView(peerId, updateData: true),
         accountsAndPeers,
@@ -487,9 +494,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         |> mapToSignal { settings -> Signal<Bool, NoError> in
             return automaticEnergyUsageShouldBeOn(settings: settings)
         }
-        |> distinctUntilChanged
+        |> distinctUntilChanged,
+        hasStories
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -546,7 +554,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             groupsInCommon: nil,
             linkedDiscussionPeer: nil,
             members: nil,
-            storyListContext: nil,
+            storyListContext: storyListContext,
             encryptionKeyFingerprint: nil,
             globalSettings: globalSettings,
             invitations: nil,

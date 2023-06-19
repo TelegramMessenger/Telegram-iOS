@@ -341,6 +341,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         strongSelf.selectTab(id: targetTab)
                     } else {
+                        if let componentView = strongSelf.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
+                            storyPeerListView.scrollToTop()
+                        }
+                        
                         strongSelf.chatListDisplayNode.willScrollToTop()
                         if let inlineStackContainerNode = strongSelf.chatListDisplayNode.inlineStackContainerNode {
                             inlineStackContainerNode.currentItemNode.scrollToPosition(.top)
@@ -1726,10 +1730,35 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.displayNodeDidLoad()
         
         if case .chatList(.root) = self.location {
-            self.preloadStorySubscriptionsDisposable = (self.context.engine.messages.preloadStorySubscriptions(includeHidden: false)
-            |> deliverOnMainQueue).start(next: { [weak self] resources in
+            let automaticDownloadNetworkType = context.account.networkType
+            |> map { type -> MediaAutoDownloadNetworkType in
+                switch type {
+                    case .none, .wifi:
+                        return .wifi
+                    case .cellular:
+                        return .cellular
+                }
+            }
+            |> distinctUntilChanged
+            
+            self.preloadStorySubscriptionsDisposable = (combineLatest(queue: .mainQueue(),
+                self.context.engine.messages.preloadStorySubscriptions(includeHidden: false),
+                self.context.sharedContext.automaticMediaDownloadSettings,
+                automaticDownloadNetworkType
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] resources, automaticMediaDownloadSettings, automaticDownloadNetworkType in
                 guard let self else {
                     return
+                }
+                
+                var autodownloadEnabled = true
+                if !shouldDownloadMediaAutomatically(settings: automaticMediaDownloadSettings, peerType: .contact, networkType: automaticDownloadNetworkType, authorPeerId: nil, contactsPeerIds: [], media: nil) {
+                    autodownloadEnabled = false
+                }
+                
+                var resources = resources
+                if !autodownloadEnabled {
+                    resources.removeAll()
                 }
                 
                 var validIds: [MediaResourceId] = []

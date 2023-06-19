@@ -700,6 +700,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var isSticker = false
             var maxDimensions = layoutConstants.image.maxDimensions
             var maxHeight = layoutConstants.image.maxDimensions.height
+            var isStory = false
             
             var unboundSize: CGSize
             if let _ = media as? TelegramMediaStory {
@@ -987,6 +988,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         }
                         
                         if let story = media as? TelegramMediaStory {
+                            isStory = true
+                            
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
                             }
@@ -1058,7 +1061,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         uploading = true
                                     }
                                     
-                                    if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !uploading {
+                                    if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !isStory && !uploading {
                                         updateVideoFile = file
                                         if hasCurrentVideoNode {
                                             if let currentFile = currentMedia as? TelegramMediaFile {
@@ -1194,7 +1197,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 uploading = true
                             }
                             
-                            if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !uploading {
+                            if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !isStory && !uploading {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                     if let currentFile = currentMedia as? TelegramMediaFile {

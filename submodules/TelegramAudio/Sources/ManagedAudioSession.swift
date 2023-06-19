@@ -766,8 +766,10 @@ public final class ManagedAudioSession: NSObject {
                 managedAudioSessionLog("ManagedAudioSession setting category for \(type) (native: \(nativeCategory)) activateNow: \(activateNow)")
                 var options: AVAudioSession.CategoryOptions = []
                 switch type {
-                    case .play, .ambient:
+                    case .play:
                         break
+                    case .ambient:
+                        options.insert(.mixWithOthers)
                     case .playWithPossiblePortOverride:
                         if case .playAndRecord = nativeCategory {
                             options.insert(.allowBluetoothA2DP)

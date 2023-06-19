@@ -247,6 +247,10 @@ public final class StoryPeerListComponent: Component {
             return nil
         }
         
+        public func scrollToTop() {
+            self.scrollView.setContentOffset(CGPoint(), animated: true)
+        }
+        
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate, keepVisibleUntilCompletion: false)

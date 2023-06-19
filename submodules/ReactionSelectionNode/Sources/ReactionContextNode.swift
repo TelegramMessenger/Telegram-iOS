@@ -2011,6 +2011,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     targetView.layer.removeAnimation(forKey: "opacity")
                 }
                 
+                if strongSelf.hapticFeedback == nil {
+                    strongSelf.hapticFeedback = HapticFeedback()
+                }
+                strongSelf.hapticFeedback?.tap()
+                
                 guard let targetView = targetView as? ReactionIconView else {
                     return
                 }
@@ -2023,11 +2028,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     targetView.addSubnode(itemNode)
                     itemNode.frame = selfTargetBounds
                 }
-                
-                if strongSelf.hapticFeedback == nil {
-                    strongSelf.hapticFeedback = HapticFeedback()
-                }
-                strongSelf.hapticFeedback?.tap()
                 
                 if switchToInlineImmediately {
                     mainAnimationCompleted = true

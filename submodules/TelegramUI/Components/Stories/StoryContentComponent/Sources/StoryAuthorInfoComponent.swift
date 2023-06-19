@@ -43,6 +43,8 @@ final class StoryAuthorInfoComponent: Component {
         
 		override init(frame: CGRect) {
 			super.init(frame: frame)
+            
+            self.isUserInteractionEnabled = false
 		}
         
         required init?(coder: NSCoder) {
@@ -88,12 +90,14 @@ final class StoryAuthorInfoComponent: Component {
             
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
                     self.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
             }
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
+                    subtitleView.isUserInteractionEnabled = false
                     self.addSubview(subtitleView)
                 }
                 transition.setFrame(view: subtitleView, frame: subtitleFrame)

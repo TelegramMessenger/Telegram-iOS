@@ -229,7 +229,7 @@ public final class StoryItemSetContainerComponent: Component {
         let contentContainerView: UIView
         let topContentGradientLayer: SimpleGradientLayer
         let bottomContentGradientLayer: SimpleGradientLayer
-        let contentDimLayer: SimpleLayer
+        let contentDimView: UIView
         
         let closeButton: HighlightableButton
         let closeButtonIconView: UIImageView
@@ -287,7 +287,9 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.topContentGradientLayer = SimpleGradientLayer()
             self.bottomContentGradientLayer = SimpleGradientLayer()
-            self.contentDimLayer = SimpleLayer()
+            
+            self.contentDimView = UIView()
+            self.contentDimView.isUserInteractionEnabled = false
             
             self.closeButton = HighlightableButton()
             self.closeButtonIconView = UIImageView()
@@ -312,7 +314,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.scrollView.clipsToBounds = true
             
             self.addSubview(self.contentContainerView)
-            self.contentContainerView.layer.addSublayer(self.contentDimLayer)
+            self.contentContainerView.addSubview(self.contentDimView)
             self.contentContainerView.layer.addSublayer(self.topContentGradientLayer)
             self.layer.addSublayer(self.bottomContentGradientLayer)
             
@@ -421,6 +423,18 @@ public final class StoryItemSetContainerComponent: Component {
         func isPointInsideContentArea(point: CGPoint) -> Bool {
             if let inputPanelView = self.inputPanel.view {
                 if inputPanelView.frame.contains(point) {
+                    return false
+                }
+            }
+            
+            if let centerInfoItemView = self.centerInfoItem?.view.view {
+                if centerInfoItemView.convert(centerInfoItemView.bounds, to: self).contains(point) {
+                    return false
+                }
+            }
+            
+            if let rigthInfoItemView = self.rightInfoItem?.view.view {
+                if rigthInfoItemView.convert(rigthInfoItemView.bounds, to: self).contains(point) {
                     return false
                 }
             }
@@ -970,7 +984,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.bottomContentGradientLayer.colors = colors
                 self.bottomContentGradientLayer.type = .axial
                 
-                self.contentDimLayer.backgroundColor = UIColor(white: 0.0, alpha: 0.3).cgColor
+                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.3)
             }
             
             //self.updatePreloads()
@@ -1732,6 +1746,36 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            if let currentCenterInfoItem {
+                self.centerInfoItem = currentCenterInfoItem
+                
+                let centerInfoItemSize = currentCenterInfoItem.view.update(
+                    transition: .immediate,
+                    component: AnyComponent(PlainButtonComponent(content: currentCenterInfoItem.component, effectAlignment: .center, action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        self.navigateToPeer(peer: component.slice.peer)
+                    })),
+                    environment: {},
+                    containerSize: CGSize(width: contentFrame.width, height: 44.0)
+                )
+                if let view = currentCenterInfoItem.view.view {
+                    var animateIn = false
+                    if view.superview == nil {
+                        self.contentContainerView.addSubview(view)
+                        animateIn = true
+                    }
+                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: centerInfoItemSize))
+                    
+                    if animateIn, !isFirstTime {
+                        //view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                    
+                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+                }
+            }
+            
             if let currentRightInfoItem {
                 self.rightInfoItem = currentRightInfoItem
                 
@@ -1757,32 +1801,6 @@ public final class StoryItemSetContainerComponent: Component {
                     if animateIn, !isFirstTime, !transition.animation.isImmediate {
                         view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         view.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                    
-                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
-                }
-            }
-            
-            if let currentCenterInfoItem {
-                self.centerInfoItem = currentCenterInfoItem
-                
-                let centerInfoItemSize = currentCenterInfoItem.view.update(
-                    transition: .immediate,
-                    component: currentCenterInfoItem.component,
-                    environment: {},
-                    containerSize: CGSize(width: contentFrame.width, height: 44.0)
-                )
-                if let view = currentCenterInfoItem.view.view {
-                    var animateIn = false
-                    if view.superview == nil {
-                        view.isUserInteractionEnabled = false
-                        self.contentContainerView.addSubview(view)
-                        animateIn = true
-                    }
-                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: centerInfoItemSize))
-                    
-                    if animateIn, !isFirstTime {
-                        //view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     
                     transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
@@ -2126,12 +2144,12 @@ public final class StoryItemSetContainerComponent: Component {
                 dimAlpha = 0.0
             }
             
-            transition.setFrame(layer: self.contentDimLayer, frame: CGRect(origin: CGPoint(), size: contentFrame.size))
+            transition.setFrame(view: self.contentDimView, frame: CGRect(origin: CGPoint(), size: contentFrame.size))
             
-            if transition.animation.isImmediate && forceDimAnimation && self.contentDimLayer.opacity != Float(dimAlpha) {
-                Transition(animation: .curve(duration: 0.25, curve: .easeInOut)).setAlpha(layer: self.contentDimLayer, alpha: dimAlpha)
+            if transition.animation.isImmediate && forceDimAnimation && self.contentDimView.alpha != dimAlpha {
+                Transition(animation: .curve(duration: 0.25, curve: .easeInOut)).setAlpha(view: self.contentDimView, alpha: dimAlpha)
             } else {
-                transition.setAlpha(layer: self.contentDimLayer, alpha: dimAlpha)
+                transition.setAlpha(view: self.contentDimView, alpha: dimAlpha)
             }
             
             self.ignoreScrolling = true
