@@ -129,7 +129,7 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
         if referencedReplyIds.isEmpty && referencedGeneralIds.isEmpty {
             return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages, reactions: [], result: Void())
             |> mapToSignal { _ -> Signal<T, NoError> in
-                return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages, result: Void())
+                return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages, additionalPeers: peers, result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
                     return postbox.transaction { transaction -> T in
                         return f(transaction, [], [])
@@ -227,7 +227,14 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                 
                 return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages + additionalMessages, reactions: [], result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
-                    return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages + additionalMessages, result: Void())
+                    var additionalPeerMap: [PeerId: Peer] = [:]
+                    for (_, peer) in peers {
+                        additionalPeerMap[peer.id] = peer
+                    }
+                    for peer in additionalPeers {
+                        additionalPeerMap[peer.id] = peer
+                    }
+                    return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages + additionalMessages, additionalPeers: additionalPeerMap, result: Void())
                     |> mapToSignal { _ -> Signal<T, NoError> in
                         return postbox.transaction { transaction -> T in
                             return f(transaction, additionalPeers, additionalMessages)

@@ -2098,7 +2098,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
     }
 }
 
-func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, storyIds: Set<StoryId>, result: T) -> Signal<T, NoError> {
+func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, storyIds: Set<StoryId>, additionalPeers: [PeerId: Peer], result: T) -> Signal<T, NoError> {
     var storyBuckets: [PeerId: [Int32]] = [:]
     for id in storyIds {
         if storyBuckets[id.peerId] == nil {
@@ -2113,7 +2113,7 @@ func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, 
         while idOffset < allIds.count {
             let bucketLength = min(100, allIds.count - idOffset)
             let ids = Array(allIds[idOffset ..< (idOffset + bucketLength)])
-            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, ids: ids)
+            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, peerReference: additionalPeers[peerId].flatMap(PeerReference.init), ids: ids)
             |> mapToSignal { result -> Signal<Never, NoError> in
                 return postbox.transaction { transaction -> Void in
                     for id in ids {
@@ -2166,7 +2166,7 @@ func resolveAssociatedStories(postbox: Postbox, network: Network, accountPeerId:
         }
         
         if !missingStoryIds.isEmpty {
-            return resolveStories(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, storyIds: missingStoryIds, result: state)
+            return resolveStories(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, storyIds: missingStoryIds, additionalPeers: state.insertedPeers, result: state)
         } else {
             return .single(state)
         }
@@ -2174,7 +2174,7 @@ func resolveAssociatedStories(postbox: Postbox, network: Network, accountPeerId:
     |> switchToLatest
 }
 
-func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, messages: [StoreMessage], result: T) -> Signal<T, NoError> {
+func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, messages: [StoreMessage], additionalPeers: [PeerId: Peer], result: T) -> Signal<T, NoError> {
     return postbox.transaction { transaction -> Signal<T, NoError> in
         var missingStoryIds = Set<StoryId>()
         
@@ -2190,7 +2190,7 @@ func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHo
         }
         
         if !missingStoryIds.isEmpty {
-            return resolveStories(postbox: postbox, source: source, accountPeerId: accountPeerId, storyIds: missingStoryIds, result: result)
+            return resolveStories(postbox: postbox, source: source, accountPeerId: accountPeerId, storyIds: missingStoryIds, additionalPeers: additionalPeers, result: result)
         } else {
             return .single(result)
         }
@@ -3298,6 +3298,8 @@ func replayFinalState(
             if let entry = CodableEntry(storyItem) {
                 transaction.setStory(id: id, value: entry)
             }
+        } else {
+            transaction.setStory(id: id, value: CodableEntry(data: Data()))
         }
     }
     
