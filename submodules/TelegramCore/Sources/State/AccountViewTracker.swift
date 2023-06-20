@@ -1236,7 +1236,14 @@ public final class AccountViewTracker {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
                 let messageTimestamp = self.refreshStoriesForMessageIdsAndTimestamps[messageId]
-                if messageTimestamp == nil {
+                var refresh = false
+                if let messageTimestamp = messageTimestamp {
+                    refresh = messageTimestamp < timestamp - 60
+                } else {
+                    refresh = true
+                }
+                
+                if refresh {
                     self.refreshStoriesForMessageIdsAndTimestamps[messageId] = timestamp
                     addedMessageIds.append(messageId)
                 }
@@ -1256,6 +1263,12 @@ public final class AccountViewTracker {
                                             result.insert(storyMedia.storyId)
                                         } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content)  = webpage.content, let story = content.story {
                                             result.insert(story.storyId)
+                                        }
+                                    }
+                                    
+                                    for attribute in message.attributes {
+                                        if let attribute = attribute as? ReplyStoryAttribute {
+                                            result.insert(attribute.storyId)
                                         }
                                     }
                                 }

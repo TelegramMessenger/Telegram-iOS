@@ -2093,6 +2093,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.stableId != ChatHistoryListNode.fixedAdMessageStableId {
                                     visibleAdOpaqueIds.append(attribute.opaqueId)
                                 }
+                            } else if let _ = attribute as? ReplyStoryAttribute {
+                                storiesRequiredValidation = true
                             }
                         }
                         
@@ -2132,14 +2134,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if invoice.version != TelegramMediaInvoice.lastVersion {
                                     contentRequiredValidation = true
                                 }
-                            } else if let story = media as? TelegramMediaStory {
-                                if message.associatedStories[story.storyId] == nil {
-                                    storiesRequiredValidation = true
-                                }
-                            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let story = content.story {
-                                if message.associatedStories[story.storyId] == nil {
-                                    storiesRequiredValidation = true
-                                }
+                            } else if let _ = media as? TelegramMediaStory {
+                                storiesRequiredValidation = true
+                            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, let _ = content.story {
+                                storiesRequiredValidation = true
                             }
                         }
                         if contentRequiredValidation {

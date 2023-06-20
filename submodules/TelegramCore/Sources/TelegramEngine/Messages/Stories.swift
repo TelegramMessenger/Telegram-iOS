@@ -1707,6 +1707,8 @@ func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) ->
                     if let entry = CodableEntry(updatedItem) {
                         updated = entry
                     }
+                } else {
+                    updated = CodableEntry(data: Data())
                 }
                 if current != updated {
                     transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))

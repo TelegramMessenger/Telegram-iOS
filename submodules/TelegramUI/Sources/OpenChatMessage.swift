@@ -92,9 +92,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                                     let scale = toScale.interpolate(to: fromScale, amount: state.progress)
                                     transition.setTransform(view: view, transform: CATransform3DMakeScale(scale, scale, 1.0))
                                 },
-                                insertCloneTransitionView: nil/*{ view in
+                                insertCloneTransitionView: { view in
                                     params.addToTransitionSurface(view)
-                                }*/
+                                }
                             ),
                             destinationRect: selectedTransitionNode.1,
                             destinationCornerRadius: 0.0,

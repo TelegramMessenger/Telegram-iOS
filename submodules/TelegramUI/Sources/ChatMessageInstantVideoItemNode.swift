@@ -13,6 +13,7 @@ import LocalizedPeerData
 import ContextUI
 import Markdown
 import ChatControllerInteraction
+import ChatMessageForwardInfoNode
 
 private let nameFont = Font.medium(14.0)
 
@@ -528,7 +529,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                     }
                 }
                 let availableWidth = max(60.0, availableContentWidth - normalDisplaySize.width + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, false, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
             if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {

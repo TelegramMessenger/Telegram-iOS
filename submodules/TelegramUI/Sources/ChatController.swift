@@ -4508,6 +4508,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
+            if let story = message.associatedStories[storyId], story.data.isEmpty {
+                return
+            }
+            
             let storyContent = SingleStoryContentContextImpl(context: self.context, storyId: storyId)
             let _ = (storyContent.state
             |> take(1)
