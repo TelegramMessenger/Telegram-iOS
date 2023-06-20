@@ -60,12 +60,25 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                             peerIds.removeAll(where: { $0 == updated.id })
                             transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
                         }
+                        if transaction.storySubscriptionsContains(key: .hidden, peerId: updated.id) {
+                            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                            if !peerIds.contains(updated.id) {
+                                peerIds.append(updated.id)
+                                transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                            }
+                        }
                     } else {
-                        if transaction.storySubscriptionsContains(key: .all, peerId: updated.id) && !transaction.storySubscriptionsContains(key: .filtered, peerId: updated.id) {
-                            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .all)
+                        if transaction.storySubscriptionsContains(key: .hidden, peerId: updated.id) {
+                            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
                             peerIds.removeAll(where: { $0 == updated.id })
-                            peerIds.append(updated.id)
-                            transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                            transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                        }
+                        if transaction.storySubscriptionsContains(key: .filtered, peerId: updated.id) {
+                            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                            if !peerIds.contains(updated.id) {
+                                peerIds.append(updated.id)
+                                transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                            }
                         }
                     }
                 }

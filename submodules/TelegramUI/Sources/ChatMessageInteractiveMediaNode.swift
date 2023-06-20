@@ -1686,6 +1686,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             }
         }
         
+        var isStory: Bool = false
+        
         var game: TelegramMediaGame?
         var webpage: TelegramMediaWebpage?
         var invoice: TelegramMediaInvoice?
@@ -1696,6 +1698,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 invoice = media
             } else if let media = media as? TelegramMediaGame {
                 game = media
+            } else if let _ = media as? TelegramMediaStory {
+                isStory = true
+                automaticPlayback = false
             }
         }
         
@@ -1717,6 +1722,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else if let file = content.file, file.isVideo, !file.isAnimated && !file.isVideoSticker {
                             progressRequired = true
                         }
+                    } else if isStory {
+                        progressRequired = true
                     }
                 case .Remote, .Fetching, .Paused:
                     if let webpage = webpage, let automaticDownload = self.automaticDownload, case .full = automaticDownload, case let .Loaded(content) = webpage.content {
@@ -1953,7 +1960,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         state = .customIcon(secretProgressIcon)
                     } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)
-                        if !isInlinePlayableVideo && file.isVideo {
+                        if (!isInlinePlayableVideo || isStory) && file.isVideo {
                             state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
                         } else {
                             state = .none
@@ -2208,14 +2215,18 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func transitionNode() -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
-        let bounds: CGRect
+    func transitionNode(adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+        var bounds: CGRect
         if let currentImageArguments = self.currentImageArguments {
-            bounds = currentImageArguments.imageRect
+            if adjustRect {
+                bounds = currentImageArguments.drawingRect
+            } else {
+                bounds = currentImageArguments.imageRect
+            }
         } else {
             bounds = self.bounds
         }
-        return (self, bounds, { [weak self] in
+        return (adjustRect ? self.imageNode : self, bounds, { [weak self] in
             var badgeNodeHidden: Bool?
             if let badgeNode = self?.badgeNode {
                 badgeNodeHidden = badgeNode.isHidden

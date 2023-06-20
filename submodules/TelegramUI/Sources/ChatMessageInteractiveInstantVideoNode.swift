@@ -19,6 +19,7 @@ import UndoUI
 import TelegramNotices
 import Markdown
 import TextFormat
+import ChatMessageForwardInfoNode
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize
@@ -399,7 +400,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                 }
                 let availableWidth = max(60.0, availableContentWidth - 210.0 + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, false, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
             var notConsumed = false

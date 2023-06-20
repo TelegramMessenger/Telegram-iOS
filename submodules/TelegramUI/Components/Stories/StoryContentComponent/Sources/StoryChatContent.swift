@@ -359,7 +359,7 @@ public final class StoryContentContextImpl: StoryContentContext {
     }
     
     private let context: AccountContext
-    private let includeHidden: Bool
+    private let isHidden: Bool
     
     public private(set) var stateValue: StoryContentContextState?
     public var state: Signal<StoryContentContextState, NoError> {
@@ -395,12 +395,12 @@ public final class StoryContentContextImpl: StoryContentContext {
     
     public init(
         context: AccountContext,
-        includeHidden: Bool,
+        isHidden: Bool,
         focusedPeerId: EnginePeer.Id?,
         singlePeer: Bool
     ) {
         self.context = context
-        self.includeHidden = includeHidden
+        self.isHidden = isHidden
         if let focusedPeerId {
             self.focusedItem = (focusedPeerId, nil)
         }
@@ -494,7 +494,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 self.updatePeerContexts()
             })
         } else {
-            self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(includeHidden: includeHidden)
+            self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(isHidden: isHidden)
             |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
                 guard let self else {
                     return
@@ -1074,6 +1074,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             listContext.state,
             self.focusedIdUpdated.get()
         )
+        //|> delay(0.4, queue: .mainQueue())
         |> deliverOnMainQueue).start(next: { [weak self] peerAndVoiceMessages, state, _ in
             guard let self else {
                 return

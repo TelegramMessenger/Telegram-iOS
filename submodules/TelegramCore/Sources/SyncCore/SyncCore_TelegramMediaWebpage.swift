@@ -308,7 +308,15 @@ public final class TelegramMediaWebpage: Media, Equatable {
     public var id: MediaId? {
         return self.webpageId
     }
-    public let peerIds: [PeerId] = []
+    public var peerIds: [PeerId] {
+        var result: [PeerId] = []
+        for storyId in self.storyIds {
+            if !result.contains(storyId.peerId) {
+                result.append(storyId.peerId)
+            }
+        }
+        return result
+    }
     
     public var storyIds: [StoryId] {
         if case let .Loaded(content) = self.content, let story = content.story {

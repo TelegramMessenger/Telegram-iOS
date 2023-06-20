@@ -32,6 +32,8 @@ import TelegramPresentationData
 import ShareController
 import ChatPresentationInterfaceState
 import Postbox
+import OverlayStatusController
+import PresentationDataUtils
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
@@ -54,6 +56,8 @@ final class StoryItemSetContainerSendMessage {
     var videoRecorder = Promise<InstantVideoController?>()
     let controllerNavigationDisposable = MetaDisposable()
     let enqueueMediaMessageDisposable = MetaDisposable()
+    let navigationActionDisposable = MetaDisposable()
+    let resolvePeerByNameDisposable = MetaDisposable()
     
     private(set) var isMediaRecordingLocked: Bool = false
     var wasRecordingDismissed: Bool = false
@@ -61,6 +65,8 @@ final class StoryItemSetContainerSendMessage {
     deinit {
         self.controllerNavigationDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
+        self.navigationActionDisposable.dispose()
+        self.resolvePeerByNameDisposable.dispose()
     }
     
     func toggleInputMode() {
@@ -1807,5 +1813,259 @@ final class StoryItemSetContainerSendMessage {
         }
         let _ = (legacyAssetPickerEnqueueMessages(context: component.context, account: component.context.account, signals: signals)
         |> deliverOnMainQueue).start()
+    }
+    
+    func openResolved(view: StoryItemSetContainerComponent.View, result: ResolvedUrl, forceExternal: Bool = false, concealed: Bool = false) {
+        guard let component = view.component, let navigationController = component.controller()?.navigationController as? NavigationController else {
+            return
+        }
+        let peerId = component.slice.peer.id
+        component.context.sharedContext.openResolvedUrl(result, context: component.context, urlContext: .chat(peerId: peerId, updatedPresentationData: nil), navigationController: navigationController, forceExternal: forceExternal, openPeer: { [weak self, weak view] peerId, navigation in
+            guard let self, let view, let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
+                return
+            }
+            
+            controller.dismissWithoutTransitionOut()
+            
+            switch navigation {
+            case let .chat(_, subject, peekData):
+                if let navigationController = controller.navigationController as? NavigationController {
+                    if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                        component.context.sharedContext.navigateToForumChannel(context: component.context, peerId: peerId.id, navigationController: navigationController)
+                    } else {
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+                            guard let controller, let navigationController else {
+                                return
+                            }
+                            var viewControllers = navigationController.viewControllers
+                            if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                                viewControllers.insert(chatController, at: index)
+                            } else {
+                                viewControllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: animated)
+                        }))
+                    }
+                }
+            case .info:
+                self.navigationActionDisposable.set((component.context.account.postbox.loadedPeerWithId(peerId.id)
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak view] peer in
+                    guard let view, let component = view.component else {
+                        return
+                    }
+                    if peer.restrictionText(platform: "ios", contentSettings: component.context.currentContentSettings.with { $0 }) == nil {
+                        if let infoController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                            component.controller()?.push(infoController)
+                        }
+                    }
+                }))
+            case let .withBotStartPayload(startPayload):
+                if let navigationController = controller.navigationController as? NavigationController {
+                    component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), botStart: startPayload, keepStack: .always))
+                }
+            case let .withAttachBot(attachBotStart):
+                if let navigationController = controller.navigationController as? NavigationController {
+                    component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
+                }
+            default:
+                break
+            }
+        },
+        sendFile: nil,
+        sendSticker: nil,
+        requestMessageActionUrlAuth: nil,
+        joinVoiceChat: nil,
+        present: { [weak view] c, a in
+            guard let view, let component = view.component, let controller = component.controller() else {
+                return
+            }
+            controller.present(c, in: .window(.root), with: a)
+        }, dismissInput: { [weak view] in
+            guard let view else {
+                return
+            }
+            view.endEditing(true)
+        },
+        contentContext: nil
+        )
+    }
+    
+    func navigateToMessage(view: StoryItemSetContainerComponent.View, messageId: EngineMessage.Id, completion: (() -> Void)?) {
+        guard let component = view.component else {
+            return
+        }
+        let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
+        |> deliverOnMainQueue).start(next: { [weak view] peer in
+            guard let view, let component = view.component, let controller = component.controller(), let peer = peer else {
+                return
+            }
+            if let navigationController = controller.navigationController as? NavigationController {
+                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
+            }
+            completion?()
+        })
+    }
+    
+    func openPeerMention(view: StoryItemSetContainerComponent.View, name: String, navigation: ChatControllerInteractionNavigateToPeer = .default, sourceMessageId: MessageId? = nil) {
+        guard let component = view.component, let parentController = component.controller() else {
+            return
+        }
+        let disposable = self.resolvePeerByNameDisposable
+        var resolveSignal = component.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+        
+        var cancelImpl: (() -> Void)?
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            parentController?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        resolveSignal = resolveSignal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.resolvePeerByNameDisposable.set(nil)
+        }
+        disposable.set((resolveSignal
+        |> take(1)
+        |> mapToSignal { peer -> Signal<Peer?, NoError> in
+            return .single(peer?._asPeer())
+        }
+        |> deliverOnMainQueue).start(next: { [weak view] peer in
+            guard let view, let component = view.component else {
+                return
+            }
+            if let peer = peer {
+                var navigation = navigation
+                if case .default = navigation {
+                    if let peer = peer as? TelegramUser, peer.botInfo != nil {
+                        navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
+                    }
+                }
+                self.openResolved(view: view, result: .peer(peer, navigation))
+            } else {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                component.controller()?.present(textAlertController(context: component.context, updatedPresentationData: nil, title: nil, text: presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }
+        }))
+    }
+    
+    func openHashtag(view: StoryItemSetContainerComponent.View, hashtag: String, peerName: String?) {
+        guard let component = view.component, let parentController = component.controller() else {
+            return
+        }
+        
+        let peerId = component.slice.peer.id
+        
+        var resolveSignal: Signal<Peer?, NoError>
+        if let peerName = peerName {
+            resolveSignal = component.context.engine.peers.resolvePeerByName(name: peerName)
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                if let peer = peer {
+                    return .single(peer._asPeer())
+                } else {
+                    return .single(nil)
+                }
+            }
+        } else {
+            resolveSignal = component.context.account.postbox.loadedPeerWithId(peerId)
+            |> map(Optional.init)
+        }
+        var cancelImpl: (() -> Void)?
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak parentController] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            parentController?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.15, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.start()
+        
+        resolveSignal = resolveSignal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.resolvePeerByNameDisposable.set(nil)
+        }
+        self.resolvePeerByNameDisposable.set((resolveSignal
+        |> deliverOnMainQueue).start(next: { [weak view] peer in
+            guard let view, let component = view.component else {
+                return
+            }
+            guard let navigationController = component.controller()?.navigationController as? NavigationController else {
+                return
+            }
+            if !hashtag.isEmpty {
+                let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
+                navigationController.pushViewController(searchController)
+            }
+        }))
+    }
+    
+    func openPeerMention(view: StoryItemSetContainerComponent.View, peerId: EnginePeer.Id) {
+        guard let component = view.component else {
+            return
+        }
+        let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).start(next: { [weak self, weak view] peer in
+            guard let self, let view, let peer else {
+                return
+            }
+            self.openPeer(view: view, peer: peer)
+        })
+    }
+    
+    func openPeer(view: StoryItemSetContainerComponent.View, peer: EnginePeer, expandAvatar: Bool = false, peerTypes: ReplyMarkupButtonAction.PeerTypes? = nil) {
+        guard let component = view.component else {
+            return
+        }
+        
+        let peerSignal: Signal<Peer?, NoError> = component.context.account.postbox.loadedPeerWithId(peer.id) |> map(Optional.init)
+        self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak view] peer in
+            guard let view, let component = view.component, let peer else {
+                return
+            }
+            let mode: PeerInfoControllerMode = .generic
+            var expandAvatar = expandAvatar
+            if peer.smallProfileImage == nil {
+                expandAvatar = false
+            }
+            if component.metrics.widthClass == .regular {
+                expandAvatar = false
+            }
+            if let infoController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: expandAvatar, fromChat: false, requestsContext: nil) {
+                component.controller()?.push(infoController)
+            }
+        }))
     }
 }

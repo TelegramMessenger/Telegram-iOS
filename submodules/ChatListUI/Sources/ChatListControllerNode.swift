@@ -1884,6 +1884,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 uploadProgress: self.controller?.storyUploadProgress,
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
+                accessoryPanelContainer: self.controller?.accessoryPanelContainer,
+                accessoryPanelContainerHeight: self.controller?.accessoryPanelContainerHeight ?? 0.0,
                 activateSearch: { [weak self] searchContentNode in
                     guard let self, let controller = self.controller else {
                         return

@@ -76,7 +76,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     if let webpage = webPageContent {
-                        item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
+                        if webpage.story != nil {
+                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        } else {
+                            item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
+                        }
                     }
                 }
             }
@@ -217,7 +221,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mediaAndFlags = (image, flags)
                     }
                 } else if let story = mainMedia as? TelegramMediaStory {
-                    mediaAndFlags = (story, [.preferMediaBeforeText])
+                    mediaAndFlags = (story, [])
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
                         var colors: [UInt32] = []
@@ -326,7 +330,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         case "telegram_chatlist":
                             actionTitle = item.presentationData.strings.Conversation_OpenChatFolder
                         case "telegram_story":
-                            actionTitle = "Open Story"
+                            if let story = webpage.story, let peer = item.message.peers[story.storyId.peerId] {
+                                title = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                subtitle = nil
+                            }
+                            actionTitle = "OPEN STORY"
                         default:
                             break
                     }
@@ -523,7 +531,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id != messageId {
             return nil
         }

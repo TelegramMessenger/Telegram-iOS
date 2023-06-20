@@ -45,7 +45,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             var transitionIn: StoryContainerScreen.TransitionIn? = nil
             
             var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
-            selectedTransitionNode = params.transitionNode(params.message.id, story)
+            selectedTransitionNode = params.transitionNode(params.message.id, story, true)
             
             if let selectedTransitionNode {
                 transitionIn = StoryContainerScreen.TransitionIn(
@@ -66,7 +66,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     var transitionOut: StoryContainerScreen.TransitionOut? = nil
                     
                     var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
-                    selectedTransitionNode = params.transitionNode(params.message.id, story)
+                    selectedTransitionNode = params.transitionNode(params.message.id, story, true)
                     if let selectedTransitionNode {
                         transitionOut = StoryContainerScreen.TransitionOut(
                             destinationView: selectedTransitionNode.0.view,
@@ -91,6 +91,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                                     let fromScale: CGFloat = 1.0
                                     let scale = toScale.interpolate(to: fromScale, amount: state.progress)
                                     transition.setTransform(view: view, transform: CATransform3DMakeScale(scale, scale, 1.0))
+                                },
+                                insertCloneTransitionView: { view in
+                                    params.addToTransitionSurface(view)
                                 }
                             ),
                             destinationRect: selectedTransitionNode.1,
@@ -142,7 +145,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
                     var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if entry.index == centralIndex {
-                        selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia)
+                        selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia, false)
                     }
                     if let selectedTransitionNode = selectedTransitionNode {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
@@ -274,7 +277,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         params.centralItemUpdated?(messageId)
                     }
                     params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                        let selectedTransitionNode = params.transitionNode(messageId, media)
+                        let selectedTransitionNode = params.transitionNode(messageId, media, false)
                         if let selectedTransitionNode = selectedTransitionNode {
                             return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                         }
@@ -285,7 +288,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .secretGallery(gallery):
                 params.dismissInput()
                 params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                    let selectedTransitionNode = params.transitionNode(messageId, media)
+                    let selectedTransitionNode = params.transitionNode(messageId, media, false)
                     if let selectedTransitionNode = selectedTransitionNode {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
@@ -329,7 +332,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }, media)
                 
                 params.present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
-                    if let selectedTransitionNode = params.transitionNode(params.message.id, media) {
+                    if let selectedTransitionNode = params.transitionNode(params.message.id, media, false) {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil

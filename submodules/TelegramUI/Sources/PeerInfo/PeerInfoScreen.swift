@@ -4094,7 +4094,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private func openStories(fromAvatar: Bool) {
         if let expiringStoryList = self.expiringStoryList, let expiringStoryListState = self.expiringStoryListState, !expiringStoryListState.items.isEmpty {
             let _ = expiringStoryList
-            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: self.peerId, singlePeer: true)
+            let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: self.peerId, singlePeer: true)
             let _ = (storyContent.state
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
@@ -4111,9 +4111,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         sourceCornerRadius: transitionView.bounds.height * 0.5,
                         sourceIsAvatar: true
                     )
+                    self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
                 }
-                
-                self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
                 
                 let storyContainerScreen = StoryContainerScreen(
                     context: self.context,
@@ -4124,6 +4123,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             return nil
                         }
                         if !fromAvatar {
+                            self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
                             return nil
                         }
                         
@@ -4174,7 +4174,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self?.view.endEditing(true)
         }, present: { [weak self] c, a in
             self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-        }, transitionNode: { [weak self] messageId, media in
+        }, transitionNode: { [weak self] messageId, media, _ in
             guard let strongSelf = self else {
                 return nil
             }

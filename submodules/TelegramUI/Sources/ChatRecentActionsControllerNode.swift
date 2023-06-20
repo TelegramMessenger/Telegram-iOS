@@ -212,12 +212,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
                     self?.presentController(c, .window(.root), a)
-                }, transitionNode: { messageId, media in
+                }, transitionNode: { messageId, media, adjustRect in
                     var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if let strongSelf = self {
                         strongSelf.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView {
-                                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: adjustRect) {
                                     selectedNode = result
                                 }
                             }

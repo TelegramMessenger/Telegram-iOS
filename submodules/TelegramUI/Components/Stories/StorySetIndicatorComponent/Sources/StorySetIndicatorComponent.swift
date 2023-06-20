@@ -70,7 +70,15 @@ private final class ShapeImageView: UIView {
             let imageRect = CGRect(origin: CGPoint(x: item.position.x - item.diameter * 0.5, y: item.position.y - item.diameter * 0.5), size: CGSize(width: item.diameter, height: item.diameter)).insetBy(dx: params.lineWidth + params.innerSpacing, dy: params.lineWidth + params.innerSpacing)
             
             if let image = item.image {
-                context.draw(image.cgImage!, in: imageRect)
+                context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                
+                image.draw(in: imageRect, blendMode: .normal, alpha: 1.0)
+                
+                context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
             } else {
                 context.setFillColor(UIColor.black.cgColor)
                 context.fillEllipse(in: imageRect)

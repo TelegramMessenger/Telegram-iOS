@@ -12,7 +12,6 @@ import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import StoryContainerScreen
 import HierarchyTrackingLayer
-import VolumeButtons
 
 final class StoryItemContentComponent: Component {
     typealias EnvironmentType = StoryContentItem.Environment
@@ -94,8 +93,6 @@ final class StoryItemContentComponent: Component {
         private let imageNode: TransformImageNode
         private var videoNode: UniversalVideoNode?
         
-        private var volumeButtonsListener: VolumeButtonsListener?
-        
         private var currentMessageMedia: EngineMedia?
         private var fetchDisposable: Disposable?
         
@@ -164,9 +161,13 @@ final class StoryItemContentComponent: Component {
                             loopVideo: true,
                             enableSound: true,
                             beginWithAmbientSound: environment.sharedState.useAmbientMode,
+                            useLargeThumbnail: true,
+                            autoFetchFullSizeThumbnail: true,
                             tempFilePath: nil,
                             captureProtected: false,
-                            storeAfterDownload: nil
+                            hintDimensions: file.dimensions?.cgSize,
+                            storeAfterDownload: nil,
+                            displayImage: false
                         ),
                         priority: .gallery
                     )
@@ -193,19 +194,6 @@ final class StoryItemContentComponent: Component {
                     if update {
                         self.state?.updated(transition: .immediate)
                     }
-                    
-                    if self.volumeButtonsListener == nil, let sharedState = self.environment?.sharedState, sharedState.useAmbientMode {
-                        self.volumeButtonsListener = VolumeButtonsListener(shouldBeActive: .single(true), valueChanged: { [weak self] in
-                            guard let self, let sharedState = self.environment?.sharedState, sharedState.useAmbientMode else {
-                                return
-                            }
-                            sharedState.useAmbientMode = false
-                            if let videoNode = self.videoNode {
-                                videoNode.continueWithOverridingAmbientMode()
-                            }
-                            self.volumeButtonsListener = nil
-                        })
-                    }
                 }
             }
         }
@@ -223,6 +211,12 @@ final class StoryItemContentComponent: Component {
                 if self.contentLoaded {
                     videoNode.seek(0.0)
                 }
+            }
+        }
+        
+        override func leaveAmbientMode() {
+            if let videoNode = self.videoNode {
+                videoNode.continueWithOverridingAmbientMode()
             }
         }
         

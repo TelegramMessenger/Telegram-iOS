@@ -951,63 +951,65 @@ public final class SparseItemGrid: ASDisplayNode {
             var updateLayers: [SparseItemGridDisplayItem] = []
 
             let visibleRange = layout.visibleItemRange(for: visibleBounds, count: items.count)
-            for index in visibleRange.minIndex ... visibleRange.maxIndex {
-                if let item = items.item(at: index) {
-                    let itemFrame = layout.frame(at: index)
-
-                    let itemLayer: VisibleItem
-                    if let current = self.visibleItems[item.id] {
-                        itemLayer = current
-                        updateLayers.append(itemLayer)
-                    } else {
-                        itemLayer = VisibleItem(layer: items.itemBinding.createLayer(), view: items.itemBinding.createView())
-                        self.visibleItems[item.id] = itemLayer
-
-                        bindItems.append(item)
-                        bindLayers.append(itemLayer)
-
-                        if let layer = itemLayer.layer {
-                            self.scrollView.layer.addSublayer(layer)
-                        } else if let view = itemLayer.view {
-                            self.scrollView.addSubview(view)
+            if visibleRange.maxIndex >= visibleRange.minIndex {
+                for index in visibleRange.minIndex ... visibleRange.maxIndex {
+                    if let item = items.item(at: index) {
+                        let itemFrame = layout.frame(at: index)
+                        
+                        let itemLayer: VisibleItem
+                        if let current = self.visibleItems[item.id] {
+                            itemLayer = current
+                            updateLayers.append(itemLayer)
+                        } else {
+                            itemLayer = VisibleItem(layer: items.itemBinding.createLayer(), view: items.itemBinding.createView())
+                            self.visibleItems[item.id] = itemLayer
+                            
+                            bindItems.append(item)
+                            bindLayers.append(itemLayer)
+                            
+                            if let layer = itemLayer.layer {
+                                self.scrollView.layer.addSublayer(layer)
+                            } else if let view = itemLayer.view {
+                                self.scrollView.addSubview(view)
+                            }
                         }
-                    }
-
-                    if itemLayer.needsShimmer {
+                        
+                        if itemLayer.needsShimmer {
+                            let placeholderLayer: SparseItemGridShimmerLayer
+                            if let current = itemLayer.shimmerLayer {
+                                placeholderLayer = current
+                            } else {
+                                placeholderLayer = items.itemBinding.createShimmerLayer() ?? Shimmer.Layer()
+                                self.scrollView.layer.insertSublayer(placeholderLayer, at: 0)
+                                itemLayer.shimmerLayer = placeholderLayer
+                            }
+                            
+                            placeholderLayer.frame = itemFrame
+                            self.shimmer.update(colors: shimmerColors, layer: placeholderLayer, containerSize: layout.containerLayout.size, frame: itemFrame.offsetBy(dx: 0.0, dy: -visibleBounds.minY))
+                            placeholderLayer.update(size: itemFrame.size)
+                        } else if let placeholderLayer = itemLayer.shimmerLayer {
+                            itemLayer.shimmerLayer = nil
+                            placeholderLayer.removeFromSuperlayer()
+                        }
+                        
+                        validIds.insert(item.id)
+                        
+                        itemLayer.frame = itemFrame
+                    } else {
                         let placeholderLayer: SparseItemGridShimmerLayer
-                        if let current = itemLayer.shimmerLayer {
-                            placeholderLayer = current
+                        if self.visiblePlaceholders.count > usedPlaceholderCount {
+                            placeholderLayer = self.visiblePlaceholders[usedPlaceholderCount]
                         } else {
                             placeholderLayer = items.itemBinding.createShimmerLayer() ?? Shimmer.Layer()
-                            self.scrollView.layer.insertSublayer(placeholderLayer, at: 0)
-                            itemLayer.shimmerLayer = placeholderLayer
+                            self.scrollView.layer.addSublayer(placeholderLayer)
+                            self.visiblePlaceholders.append(placeholderLayer)
                         }
-
+                        let itemFrame = layout.frame(at: index)
                         placeholderLayer.frame = itemFrame
                         self.shimmer.update(colors: shimmerColors, layer: placeholderLayer, containerSize: layout.containerLayout.size, frame: itemFrame.offsetBy(dx: 0.0, dy: -visibleBounds.minY))
                         placeholderLayer.update(size: itemFrame.size)
-                    } else if let placeholderLayer = itemLayer.shimmerLayer {
-                        itemLayer.shimmerLayer = nil
-                        placeholderLayer.removeFromSuperlayer()
+                        usedPlaceholderCount += 1
                     }
-
-                    validIds.insert(item.id)
-
-                    itemLayer.frame = itemFrame
-                } else {
-                    let placeholderLayer: SparseItemGridShimmerLayer
-                    if self.visiblePlaceholders.count > usedPlaceholderCount {
-                        placeholderLayer = self.visiblePlaceholders[usedPlaceholderCount]
-                    } else {
-                        placeholderLayer = items.itemBinding.createShimmerLayer() ?? Shimmer.Layer()
-                        self.scrollView.layer.addSublayer(placeholderLayer)
-                        self.visiblePlaceholders.append(placeholderLayer)
-                    }
-                    let itemFrame = layout.frame(at: index)
-                    placeholderLayer.frame = itemFrame
-                    self.shimmer.update(colors: shimmerColors, layer: placeholderLayer, containerSize: layout.containerLayout.size, frame: itemFrame.offsetBy(dx: 0.0, dy: -visibleBounds.minY))
-                    placeholderLayer.update(size: itemFrame.size)
-                    usedPlaceholderCount += 1
                 }
             }
 

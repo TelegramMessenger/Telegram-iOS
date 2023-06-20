@@ -325,11 +325,14 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 if i == 0 {
                     if canBeClosed {
                         controllers[i].transitionNavigationBar?.previousItem = .close
+                        controllers[i].previousItem = .close
                     } else {
                         controllers[i].transitionNavigationBar?.previousItem = nil
+                        controllers[i].previousItem = nil
                     }
                 } else {
                     controllers[i].transitionNavigationBar?.previousItem = .item(controllers[i - 1].navigationItem)
+                    controllers[i].previousItem = .item(controllers[i - 1].navigationItem)
                 }
             }
         

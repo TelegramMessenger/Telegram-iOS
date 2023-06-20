@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "timer.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

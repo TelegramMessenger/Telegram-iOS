@@ -24,7 +24,7 @@ public final class StoryPeerListComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let sideInset: CGFloat
-    public let includesHidden: Bool
+    public let useHiddenList: Bool
     public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
     public let unlockedFraction: CGFloat
@@ -38,7 +38,7 @@ public final class StoryPeerListComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         sideInset: CGFloat,
-        includesHidden: Bool,
+        useHiddenList: Bool,
         storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
         unlockedFraction: CGFloat,
@@ -51,7 +51,7 @@ public final class StoryPeerListComponent: Component {
         self.theme = theme
         self.strings = strings
         self.sideInset = sideInset
-        self.includesHidden = includesHidden
+        self.useHiddenList = useHiddenList
         self.storySubscriptions = storySubscriptions
         self.collapseFraction = collapseFraction
         self.unlockedFraction = unlockedFraction
@@ -73,7 +73,7 @@ public final class StoryPeerListComponent: Component {
         if lhs.sideInset != rhs.sideInset {
             return false
         }
-        if lhs.includesHidden != rhs.includesHidden {
+        if lhs.useHiddenList != rhs.useHiddenList {
             return false
         }
         if lhs.storySubscriptions != rhs.storySubscriptions {
@@ -240,7 +240,8 @@ public final class StoryPeerListComponent: Component {
                         },
                         updateView: { view, state, transition in
                             (view as? StoryPeerListItemComponent.TransitionView)?.update(state: state, transition: transition)
-                        }
+                        },
+                        insertCloneTransitionView: nil
                     ))
                 }
             }
@@ -268,7 +269,7 @@ public final class StoryPeerListComponent: Component {
             }
             let _ = hasStories
             
-            let collapseStartIndex = component.includesHidden ? 0 : 1
+            let collapseStartIndex = component.useHiddenList ? 0 : 1
             
             let collapsedItemWidth: CGFloat = 24.0
             let collapsedItemDistance: CGFloat = 14.0
@@ -509,8 +510,8 @@ public final class StoryPeerListComponent: Component {
                 if self.requestedLoadMoreToken != hasMoreToken {
                     self.requestedLoadMoreToken = hasMoreToken
                     
-                    if component.includesHidden {
-                        if let storySubscriptionsContext = component.context.account.allStorySubscriptionsContext {
+                    if component.useHiddenList {
+                        if let storySubscriptionsContext = component.context.account.hiddenStorySubscriptionsContext {
                             storySubscriptionsContext.loadMore()
                         }
                     } else {
@@ -525,7 +526,7 @@ public final class StoryPeerListComponent: Component {
             
             self.sortedItems.removeAll(keepingCapacity: true)
             if let storySubscriptions = component.storySubscriptions {
-                if !component.includesHidden, let accountItem = storySubscriptions.accountItem {
+                if !component.useHiddenList, let accountItem = storySubscriptions.accountItem {
                     self.sortedItems.append(accountItem)
                 }
                 

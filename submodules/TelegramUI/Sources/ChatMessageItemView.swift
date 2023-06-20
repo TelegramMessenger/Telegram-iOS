@@ -782,7 +782,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    func transitionNode(id: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     

@@ -100,7 +100,7 @@ func resolveUnknownEmojiFiles<T>(postbox: Postbox, source: FetchMessageHistoryHo
     }
 }
 
-func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> T) -> Signal<T, NoError> {
+func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> T) -> Signal<T, NoError> {
     return postbox.transaction { transaction -> Signal<T, NoError> in
         var storedIds = Set<MessageId>()
         var referencedReplyIds = ReferencedReplyMessageIds()
@@ -129,7 +129,7 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
         if referencedReplyIds.isEmpty && referencedGeneralIds.isEmpty {
             return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages, reactions: [], result: Void())
             |> mapToSignal { _ -> Signal<T, NoError> in
-                return resolveAssociatedStories(postbox: postbox, source: source, messages: storeMessages, result: Void())
+                return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages, additionalPeers: peers, result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
                     return postbox.transaction { transaction -> T in
                         return f(transaction, [], [])
@@ -227,7 +227,14 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                 
                 return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages + additionalMessages, reactions: [], result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
-                    return resolveAssociatedStories(postbox: postbox, source: source, messages: storeMessages + additionalMessages, result: Void())
+                    var additionalPeerMap: [PeerId: Peer] = [:]
+                    for (_, peer) in peers {
+                        additionalPeerMap[peer.id] = peer
+                    }
+                    for peer in additionalPeers {
+                        additionalPeerMap[peer.id] = peer
+                    }
+                    return resolveAssociatedStories(postbox: postbox, source: source, accountPeerId: accountPeerId, messages: storeMessages + additionalMessages, additionalPeers: additionalPeerMap, result: Void())
                     |> mapToSignal { _ -> Signal<T, NoError> in
                         return postbox.transaction { transaction -> T in
                             return f(transaction, additionalPeers, additionalMessages)
@@ -669,7 +676,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     }
                 }
                 
-                return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
+                return withResolvedAssociatedMessages(postbox: postbox, source: source, accountPeerId: accountPeerId, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages -> FetchMessageHistoryHoleResult? in
                     let _ = transaction.addMessages(storeMessages, location: .Random)
                     let _ = transaction.addMessages(additionalMessages, location: .Random)
                     var filledRange: ClosedRange<MessageId.Id>
@@ -805,7 +812,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             }
             |> ignoreValues
         }
-        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
+        return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
             updatePeers(transaction: transaction, peers: fetchedChats.peers + additionalPeers, update: { _, updated -> Peer in
                 return updated
             })

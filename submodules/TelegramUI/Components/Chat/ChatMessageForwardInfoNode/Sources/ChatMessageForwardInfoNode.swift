@@ -7,7 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import LocalizedPeerData
 
-enum ChatMessageForwardInfoType: Equatable {
+public enum ChatMessageForwardInfoType: Equatable {
     case bubble(incoming: Bool)
     case standalone
 }
@@ -57,18 +57,27 @@ private final class InfoButtonNode: HighlightableButtonNode {
     }
 }
 
-class ChatMessageForwardInfoNode: ASDisplayNode {
+public class ChatMessageForwardInfoNode: ASDisplayNode {
+    public struct StoryData: Equatable {
+        public var isExpired: Bool
+        
+        public init(isExpired: Bool) {
+            self.isExpired = isExpired
+        }
+    }
+    
     private var textNode: TextNode?
     private var credibilityIconNode: ASImageNode?
     private var infoNode: InfoButtonNode?
+    private var expiredStoryIconView: UIImageView?
     
-    var openPsa: ((String, ASDisplayNode) -> Void)?
+    public var openPsa: ((String, ASDisplayNode) -> Void)?
     
-    override init() {
+    override public init() {
         super.init()
     }
     
-    func hasAction(at point: CGPoint) -> Bool {
+    public func hasAction(at point: CGPoint) -> Bool {
         if let infoNode = self.infoNode, infoNode.frame.contains(point) {
             return true
         } else {
@@ -76,7 +85,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         }
     }
     
-    func updatePsaButtonDisplay(isVisible: Bool, animated: Bool) {
+    public func updatePsaButtonDisplay(isVisible: Bool, animated: Bool) {
         if let infoNode = self.infoNode {
             if isVisible != !infoNode.iconNode.alpha.isZero {
                 let transition: ContainedViewLayoutTransition
@@ -91,10 +100,10 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer?, _ authorName: String?, _ psaType: String?, _ isStory: Bool, _ constrainedSize: CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode) {
+    public static func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer?, _ authorName: String?, _ psaType: String?, _ storyData: StoryData?, _ constrainedSize: CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode) {
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         
-        return { presentationData, strings, type, peer, authorName, psaType, isStory, constrainedSize in
+        return { presentationData, strings, type, peer, authorName, psaType, storyData, constrainedSize in
             let fontSize = floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)
             let prefixFont = Font.regular(fontSize)
             let peerFont = Font.medium(fontSize)
@@ -149,7 +158,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                     } else {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         
-                        if isStory {
+                        if let _ = storyData {
                             completeSourceString = strings.Message_ForwardedStoryShort(peerString)
                         } else {
                             completeSourceString = strings.Message_ForwardedMessageShort(peerString)
@@ -234,6 +243,11 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             if hasPsaInfo {
                 infoWidth += 32.0
             }
+            var leftOffset: CGFloat = 0.0
+            if let storyData, storyData.isExpired {
+                leftOffset += 34.0 + 6.0
+            }
+            infoWidth += leftOffset
             
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -251,7 +265,33 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                     node.textNode = textNode
                     node.addSubnode(textNode)
                 }
-                textNode.frame = CGRect(origin: CGPoint(), size: textLayout.size)
+                textNode.frame = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: textLayout.size)
+                
+                if let storyData, storyData.isExpired {
+                    let expiredStoryIconView: UIImageView
+                    if let current = node.expiredStoryIconView {
+                        expiredStoryIconView = current
+                    } else {
+                        expiredStoryIconView = UIImageView()
+                        node.expiredStoryIconView = expiredStoryIconView
+                        node.view.addSubview(expiredStoryIconView)
+                    }
+                    
+                    let imageType: ChatExpiredStoryIndicatorType
+                    switch type {
+                    case .standalone:
+                        imageType = .free
+                    case let .bubble(incoming):
+                        imageType = incoming ? .incoming : .outgoing
+                    }
+                    
+                    expiredStoryIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(presentationData.theme.theme, type: imageType)
+                    if let image = expiredStoryIconView.image {
+                        expiredStoryIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: image.size)
+                    }
+                } else if let expiredStoryIconView = node.expiredStoryIconView {
+                    expiredStoryIconView.removeFromSuperview()
+                }
                 
                 if let credibilityIconImage = currentCredibilityIconImage {
                     let credibilityIconNode: ASImageNode

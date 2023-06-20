@@ -25,6 +25,8 @@ public final class ChatListNavigationBar: Component {
     public let uploadProgress: Float?
     public let tabsNode: ASDisplayNode?
     public let tabsNodeIsSearch: Bool
+    public let accessoryPanelContainer: ASDisplayNode?
+    public let accessoryPanelContainerHeight: CGFloat
     public let activateSearch: (NavigationBarSearchContentNode) -> Void
     public let openStatusSetup: (UIView) -> Void
     
@@ -44,6 +46,8 @@ public final class ChatListNavigationBar: Component {
         uploadProgress: Float?,
         tabsNode: ASDisplayNode?,
         tabsNodeIsSearch: Bool,
+        accessoryPanelContainer: ASDisplayNode?,
+        accessoryPanelContainerHeight: CGFloat,
         activateSearch: @escaping (NavigationBarSearchContentNode) -> Void,
         openStatusSetup: @escaping (UIView) -> Void
     ) {
@@ -62,6 +66,8 @@ public final class ChatListNavigationBar: Component {
         self.uploadProgress = uploadProgress
         self.tabsNode = tabsNode
         self.tabsNodeIsSearch = tabsNodeIsSearch
+        self.accessoryPanelContainer = accessoryPanelContainer
+        self.accessoryPanelContainerHeight = accessoryPanelContainerHeight
         self.activateSearch = activateSearch
         self.openStatusSetup = openStatusSetup
     }
@@ -110,6 +116,12 @@ public final class ChatListNavigationBar: Component {
             return false
         }
         if lhs.tabsNodeIsSearch != rhs.tabsNodeIsSearch {
+            return false
+        }
+        if lhs.accessoryPanelContainer !== rhs.accessoryPanelContainer {
+            return false
+        }
+        if lhs.accessoryPanelContainerHeight != rhs.accessoryPanelContainerHeight {
             return false
         }
         return true
@@ -199,7 +211,7 @@ public final class ChatListNavigationBar: Component {
         }
         
         public func applyScroll(offset: CGFloat, allowAvatarsExpansion: Bool, forceUpdate: Bool = false, transition: Transition) {
-            if self.currentAllowAvatarsExpansion != allowAvatarsExpansion, allowAvatarsExpansion {
+            if self.currentAllowAvatarsExpansion != allowAvatarsExpansion, allowAvatarsExpansion, !transition.animation.isImmediate {
                 self.addStoriesUnlockedAnimation(duration: 0.3, animateScrollUnlocked: false)
             }
             
@@ -317,6 +329,9 @@ public final class ChatListNavigationBar: Component {
             if component.tabsNode != nil {
                 searchFrame.origin.y -= 40.0
             }
+            if !component.isSearchActive {
+                searchFrame.origin.y -= component.accessoryPanelContainerHeight
+            }
             
             let clippedSearchOffset = max(0.0, min(clippedScrollOffset - effectiveStoriesOffsetDistance, searchOffsetDistance))
             let searchOffsetFraction = clippedSearchOffset / searchOffsetDistance
@@ -407,9 +422,14 @@ public final class ChatListNavigationBar: Component {
             }
             
             var tabsFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height), size: CGSize(width: visibleSize.width, height: 46.0))
+            if !component.isSearchActive {
+                tabsFrame.origin.y -= component.accessoryPanelContainerHeight
+            }
             if component.tabsNode != nil {
                 tabsFrame.origin.y -= 46.0
             }
+            
+            let accessoryPanelContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height - component.accessoryPanelContainerHeight), size: CGSize(width: visibleSize.width, height: component.accessoryPanelContainerHeight))
             
             if let disappearingTabsView = self.disappearingTabsView {
                 disappearingTabsView.layer.anchorPoint = CGPoint()
@@ -441,6 +461,23 @@ public final class ChatListNavigationBar: Component {
                 
                 tabsNodeTransition.setFrameWithAdditivePosition(view: tabsNode.view, frame: tabsFrame.offsetBy(dx: 0.0, dy: component.tabsNodeIsSearch ? (-currentLayout.size.height + 2.0) : 0.0))
             }
+            
+            if let accessoryPanelContainer = component.accessoryPanelContainer {
+                var tabsNodeTransition = transition
+                if accessoryPanelContainer.view.superview !== self {
+                    accessoryPanelContainer.view.layer.anchorPoint = CGPoint()
+                    tabsNodeTransition = .immediate
+                    accessoryPanelContainer.view.alpha = 1.0
+                    self.addSubview(accessoryPanelContainer.view)
+                    if !transition.animation.isImmediate {
+                        accessoryPanelContainer.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                } else {
+                    transition.setAlpha(view: accessoryPanelContainer.view, alpha: 1.0)
+                }
+                
+                tabsNodeTransition.setFrameWithAdditivePosition(view: accessoryPanelContainer.view, frame: accessoryPanelContainerFrame)
+            }
         }
         
         public func updateStoryUploadProgress(storyUploadProgress: Float?) {
@@ -464,6 +501,8 @@ public final class ChatListNavigationBar: Component {
                     uploadProgress: storyUploadProgress,
                     tabsNode: component.tabsNode,
                     tabsNodeIsSearch: component.tabsNodeIsSearch,
+                    accessoryPanelContainer: component.accessoryPanelContainer,
+                    accessoryPanelContainerHeight: component.accessoryPanelContainerHeight,
                     activateSearch: component.activateSearch,
                     openStatusSetup: component.openStatusSetup
                 )
@@ -545,6 +584,10 @@ public final class ChatListNavigationBar: Component {
             
             if component.tabsNode != nil {
                 contentHeight += 40.0
+            }
+            
+            if component.accessoryPanelContainer != nil && !component.isSearchActive {
+                contentHeight += component.accessoryPanelContainerHeight
             }
             
             let size = CGSize(width: availableSize.width, height: contentHeight)

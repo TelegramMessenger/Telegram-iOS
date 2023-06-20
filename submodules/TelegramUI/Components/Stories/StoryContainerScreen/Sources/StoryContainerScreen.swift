@@ -16,6 +16,7 @@ import EntityKeyboard
 import AsyncDisplayKit
 import AttachmentUI
 import simd
+import VolumeButtons
 
 func hasFirstResponder(_ view: UIView) -> Bool {
     if view.isFirstResponder {
@@ -171,6 +172,11 @@ private final class StoryContainerScreenComponent: Component {
         private var verticalPanState: ItemSetPanState?
         private var isHoldingTouch: Bool = false
         
+        private var transitionCloneMasterView: UIView
+        
+        private var volumeButtonsListener: VolumeButtonsListener?
+        private let volumeButtonsListenerShouldBeActvie = ValuePromise<Bool>(false, ignoreRepeated: true)
+        
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
         
@@ -184,7 +190,14 @@ private final class StoryContainerScreenComponent: Component {
             self.backgroundEffectView = BlurredBackgroundView(color: UIColor(rgb: 0x000000, alpha: 0.9), enableBlur: true)
             self.backgroundEffectView.layer.zPosition = -1001.0
             
+            let transitionCloneMasterView = UIView()
+            transitionCloneMasterView.isHidden = true
+            transitionCloneMasterView.isUserInteractionEnabled = false
+            self.transitionCloneMasterView = transitionCloneMasterView
+            
             super.init(frame: frame)
+            
+            self.addSubview(transitionCloneMasterView)
             
             self.layer.addSublayer(self.backgroundLayer)
             
@@ -528,7 +541,12 @@ private final class StoryContainerScreenComponent: Component {
                 
                 let transitionOutCompleted = transitionOut.completed
                 let focusedItemPromise = component.focusedItemPromise
-                itemSetComponentView.animateOut(transitionOut: transitionOut, completion: {
+                
+                let transitionCloneMasterView = self.transitionCloneMasterView
+                transitionCloneMasterView.isHidden = false
+                self.transitionCloneMasterView = UIView()
+                
+                itemSetComponentView.animateOut(transitionOut: transitionOut, transitionCloneMasterView: transitionCloneMasterView, completion: {
                     completion()
                     transitionOutCompleted()
                     focusedItemPromise.set(.single(nil))
@@ -556,35 +574,22 @@ private final class StoryContainerScreenComponent: Component {
             self.didAnimateOut = true
         }
         
-        private func updatePreloads() {
-            /*var validIds: [AnyHashable] = []
-            if let currentSlice = self.currentSlice, let focusedItemId = self.focusedItemId, let currentIndex = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
-                for i in 0 ..< 2 {
-                    var nextIndex: Int = currentIndex + 1 + i
-                    nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
-                    if nextIndex != currentIndex {
-                        let nextItem = currentSlice.items[nextIndex]
-                        
-                        validIds.append(nextItem.id)
-                        if self.preloadContexts[nextItem.id] == nil {
-                            if let signal = nextItem.preload {
-                                self.preloadContexts[nextItem.id] = signal.start()
-                            }
+        private func updateVolumeButtonMonitoring() {
+            if self.volumeButtonsListener == nil {
+                self.volumeButtonsListener = VolumeButtonsListener(shouldBeActive: self.volumeButtonsListenerShouldBeActvie.get(), valueChanged: { [weak self] in
+                    guard let self, self.storyItemSharedState.useAmbientMode else {
+                        return
+                    }
+                    self.storyItemSharedState.useAmbientMode = false
+                    self.volumeButtonsListenerShouldBeActvie.set(false)
+                    
+                    for (_, itemSetView) in self.visibleItemSetViews {
+                        if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                            componentView.leaveAmbientMode()
                         }
                     }
-                }
+                })
             }
-            
-            var removeIds: [AnyHashable] = []
-            for (id, disposable) in self.preloadContexts {
-                if !validIds.contains(id) {
-                    removeIds.append(id)
-                    disposable.dispose()
-                }
-            }
-            for id in removeIds {
-                self.preloadContexts.removeValue(forKey: id)
-            }*/
         }
         
         func update(component: StoryContainerScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
@@ -605,10 +610,21 @@ private final class StoryContainerScreenComponent: Component {
                     }
                     if update {
                         var focusedItemId: StoryId?
+                        var isVideo = false
                         if let slice = component.content.stateValue?.slice {
                             focusedItemId = StoryId(peerId: slice.peer.id, id: slice.item.storyItem.id)
+                            if case .file = slice.item.storyItem.media {
+                                isVideo = true
+                            }
                         }
                         self.focusedItem.set(focusedItemId)
+                        
+                        if self.storyItemSharedState.useAmbientMode {
+                            self.volumeButtonsListenerShouldBeActvie.set(isVideo)
+                            if isVideo {
+                                self.updateVolumeButtonMonitoring()
+                            }
+                        }
                         
                         if component.content.stateValue?.slice == nil {
                             self.environment?.controller()?.dismiss()
@@ -622,6 +638,8 @@ private final class StoryContainerScreenComponent: Component {
             
             self.component = component
             self.state = state
+            
+            transition.setFrame(view: self.transitionCloneMasterView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: availableSize))
             transition.setFrame(view: self.backgroundEffectView, frame: CGRect(origin: CGPoint(), size: availableSize))
@@ -851,7 +869,7 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         
                         let itemFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - itemSetContainerSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - itemSetContainerSize.height) / 2.0)), size: itemSetContainerSize)
-                        if let itemSetComponentView = itemSetView.view.view {
+                        if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             if itemSetView.superview == nil {
                                 self.addSubview(itemSetView)
                             }
@@ -860,11 +878,17 @@ private final class StoryContainerScreenComponent: Component {
                                 itemSetComponentView.layer.isDoubleSided = false
                                 itemSetView.addSubview(itemSetComponentView)
                                 itemSetView.layer.addSublayer(itemSetView.tintLayer)
+                                
+                                self.transitionCloneMasterView.addSubview(itemSetComponentView.transitionCloneContainerView)
                             }
                             
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
                             itemSetTransition.setBounds(view: itemSetView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
                             itemSetTransition.setSublayerTransform(view: itemSetView, transform: CATransform3DMakeScale(dismissPanScale, dismissPanScale, 1.0))
+                            
+                            itemSetTransition.setPosition(view: itemSetComponentView.transitionCloneContainerView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
+                            itemSetTransition.setBounds(view: itemSetComponentView.transitionCloneContainerView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                            itemSetTransition.setSublayerTransform(view: itemSetComponentView.transitionCloneContainerView, transform: CATransform3DMakeScale(dismissPanScale, dismissPanScale, 1.0))
                             
                             itemSetTransition.setPosition(view: itemSetComponentView, position: CGRect(origin: CGPoint(), size: itemFrame.size).center)
                             itemSetTransition.setBounds(view: itemSetComponentView, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
@@ -982,6 +1006,10 @@ private final class StoryContainerScreenComponent: Component {
                 if !validIds.contains(id) {
                     removedIds.append(id)
                     itemSetView.removeFromSuperview()
+                    
+                    if let view = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        view.transitionCloneContainerView.removeFromSuperview()
+                    }
                 }
             }
             for id in removedIds {
@@ -1037,13 +1065,16 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     public final class TransitionView {
         public let makeView: () -> UIView
         public let updateView: (UIView, TransitionState, Transition) -> Void
+        public let insertCloneTransitionView: ((UIView) -> Void)?
         
         public init(
             makeView: @escaping () -> UIView,
-            updateView: @escaping (UIView, TransitionState, Transition) -> Void
+            updateView: @escaping (UIView, TransitionState, Transition) -> Void,
+            insertCloneTransitionView: ((UIView) -> Void)?
         ) {
             self.makeView = makeView
             self.updateView = updateView
+            self.insertCloneTransitionView = insertCloneTransitionView
         }
     }
     
@@ -1092,6 +1123,7 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
     }
     
     private let context: AccountContext
+    private var didAnimateIn: Bool = false
     private var isDismissed: Bool = false
     
     private let focusedItemPromise = Promise<StoryId?>(nil)
@@ -1141,8 +1173,12 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
         
         self.view.disablesInteractiveModalDismiss = true
         
-        if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
-            componentView.animateIn()
+        if !self.didAnimateIn {
+            self.didAnimateIn = true
+            
+            if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
+                componentView.animateIn()
+            }
         }
     }
     

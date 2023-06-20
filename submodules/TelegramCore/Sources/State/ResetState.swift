@@ -14,7 +14,7 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
             guard let fetchedChats = fetchedChats else {
                 return .never()
             }
-            return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
+            return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
                 for peerId in transaction.chatListGetAllPeerIds() {
                     if peerId.namespace != Namespaces.Peer.SecretChat {
                         transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)

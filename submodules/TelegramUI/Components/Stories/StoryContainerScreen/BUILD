@@ -58,6 +58,12 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/ShimmerEffect",
         "//submodules/ImageCompression",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
+        "//submodules/InvisibleInkDustNode",
+        "//submodules/PresentationDataUtils",
+        "//submodules/UrlEscaping",
+        "//submodules/OverlayStatusController",
+        "//submodules/Utils/VolumeButtons",
     ],
     visibility = [
         "//visibility:public",
