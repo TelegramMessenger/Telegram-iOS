@@ -536,6 +536,9 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var sortedItems: [EngineStorySubscriptions.Item] = []
+                if !startedWithUnseen, let accountItem = storySubscriptions.accountItem, accountItem.storyCount != 0 {
+                    sortedItems.append(accountItem)
+                }
                 for peerId in self.fixedSubscriptionOrder {
                     if let index = storySubscriptions.items.firstIndex(where: { $0.peer.id == peerId }) {
                         sortedItems.append(storySubscriptions.items[index])
@@ -606,13 +609,48 @@ public final class StoryContentContextImpl: StoryContentContext {
                     }
                 }
                 
-                if let (focusedPeerId, _) = self.focusedItem, focusedPeerId == self.context.account.peerId {
-                    let centralPeerContext = PeerContext(context: self.context, peerId: self.context.account.peerId, focusedId: nil, loadIds: loadIds)
+                var centralIndex: Int?
+                if let (focusedPeerId, _) = self.focusedItem {
+                    if let index = subscriptionItems.firstIndex(where: { $0.peer.id == focusedPeerId }) {
+                        centralIndex = index
+                    }
+                }
+                if centralIndex == nil {
+                    if !subscriptionItems.isEmpty {
+                        centralIndex = 0
+                    }
+                }
+                
+                if let centralIndex {
+                    let centralPeerContext: PeerContext
+                    if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex].peer.id) {
+                        centralPeerContext = existingContext
+                    } else {
+                        centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
+                    }
+                    
+                    var previousPeerContext: PeerContext?
+                    if centralIndex != 0 {
+                        if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex - 1].peer.id) {
+                            previousPeerContext = existingContext
+                        } else {
+                            previousPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex - 1].peer.id, focusedId: nil, loadIds: loadIds)
+                        }
+                    }
+                    
+                    var nextPeerContext: PeerContext?
+                    if centralIndex != subscriptionItems.count - 1 {
+                        if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex + 1].peer.id) {
+                            nextPeerContext = existingContext
+                        } else {
+                            nextPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex + 1].peer.id, focusedId: nil, loadIds: loadIds)
+                        }
+                    }
                     
                     let pendingState = StateContext(
                         centralPeerContext: centralPeerContext,
-                        previousPeerContext: nil,
-                        nextPeerContext: nil
+                        previousPeerContext: previousPeerContext,
+                        nextPeerContext: nextPeerContext
                     )
                     self.pendingState = pendingState
                     self.pendingStateReadyDisposable = (pendingState.updated.get()
@@ -637,74 +675,6 @@ public final class StoryContentContextImpl: StoryContentContext {
                             self.updateState()
                         })
                     })
-                } else {
-                    var centralIndex: Int?
-                    if let (focusedPeerId, _) = self.focusedItem {
-                        if let index = subscriptionItems.firstIndex(where: { $0.peer.id == focusedPeerId }) {
-                            centralIndex = index
-                        }
-                    }
-                    if centralIndex == nil {
-                        if !subscriptionItems.isEmpty {
-                            centralIndex = 0
-                        }
-                    }
-                    
-                    if let centralIndex {
-                        let centralPeerContext: PeerContext
-                        if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex].peer.id) {
-                            centralPeerContext = existingContext
-                        } else {
-                            centralPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex].peer.id, focusedId: nil, loadIds: loadIds)
-                        }
-                        
-                        var previousPeerContext: PeerContext?
-                        if centralIndex != 0 {
-                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex - 1].peer.id) {
-                                previousPeerContext = existingContext
-                            } else {
-                                previousPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex - 1].peer.id, focusedId: nil, loadIds: loadIds)
-                            }
-                        }
-                        
-                        var nextPeerContext: PeerContext?
-                        if centralIndex != subscriptionItems.count - 1 {
-                            if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: subscriptionItems[centralIndex + 1].peer.id) {
-                                nextPeerContext = existingContext
-                            } else {
-                                nextPeerContext = PeerContext(context: self.context, peerId: subscriptionItems[centralIndex + 1].peer.id, focusedId: nil, loadIds: loadIds)
-                            }
-                        }
-                        
-                        let pendingState = StateContext(
-                            centralPeerContext: centralPeerContext,
-                            previousPeerContext: previousPeerContext,
-                            nextPeerContext: nextPeerContext
-                        )
-                        self.pendingState = pendingState
-                        self.pendingStateReadyDisposable = (pendingState.updated.get()
-                        |> deliverOnMainQueue).start(next: { [weak self, weak pendingState] _ in
-                            guard let self, let pendingState, self.pendingState === pendingState, pendingState.isReady else {
-                                return
-                            }
-                            self.pendingState = nil
-                            self.pendingStateReadyDisposable?.dispose()
-                            self.pendingStateReadyDisposable = nil
-                            
-                            self.currentState = pendingState
-                            
-                            self.updateState()
-                            
-                            self.currentStateUpdatedDisposable?.dispose()
-                            self.currentStateUpdatedDisposable = (pendingState.updated.get()
-                            |> deliverOnMainQueue).start(next: { [weak self, weak pendingState] _ in
-                                guard let self, let pendingState, self.currentState === pendingState else {
-                                    return
-                                }
-                                self.updateState()
-                            })
-                        })
-                    }
                 }
             }
         }

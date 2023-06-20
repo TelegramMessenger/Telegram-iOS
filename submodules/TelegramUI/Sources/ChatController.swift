@@ -98,6 +98,7 @@ import StoryContainerScreen
 import StoryContentComponent
 import MoreHeaderButton
 import VolumeButtons
+import ChatAvatarNavigationNode
 
 #if DEBUG
 import os.signpost
@@ -560,6 +561,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var currentSpeechHolder: SpeechSynthesizerHolder?
     
     private var powerSavingMonitoringDisposable: Disposable?
+    
+    private var avatarNode: ChatAvatarNavigationNode?
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
@@ -4687,7 +4690,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.presentInGlobalOverlay(contextController)
             }
+            
             chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
+            self.avatarNode = avatarNode
+            
+            avatarNode.updateStoryView(transition: .immediate, theme: self.presentationData.theme)
         case .feed:
             chatInfoButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
         }

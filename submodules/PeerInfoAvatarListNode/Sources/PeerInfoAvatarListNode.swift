@@ -1435,7 +1435,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 transition.updateAlpha(node: self.setByYouNode, alpha: 0.7)
                 self.setByYouNode.attributedText = NSAttributedString(string: photoTitle, font: Font.regular(12.0), textColor: UIColor.white)
                 let setByYouSize = self.setByYouNode.updateLayout(size)
-                self.setByYouNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - setByYouSize.width) / 2.0), y: 17.0), size: setByYouSize)
+                self.setByYouNode.frame = CGRect(origin: CGPoint(x: size.width - setByYouSize.width - 14.0, y: size.height - setByYouSize.height - 58.0), size: setByYouSize)
                 self.setByYouNode.isUserInteractionEnabled = hasLink
             } else {
                 transition.updateAlpha(node: self.setByYouNode, alpha: 0.0)
@@ -1445,7 +1445,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             if let fallbackImageSignal = fallbackImageSignal {
                 self.setByYouImageNode.setSignal(fallbackImageSignal)
                 transition.updateAlpha(node: self.setByYouImageNode, alpha: 1.0)
-                self.setByYouImageNode.frame = CGRect(origin: CGPoint(x: self.setByYouNode.frame.minX - 32.0, y: 11.0), size: CGSize(width: 28.0, height: 28.0))
+                self.setByYouImageNode.frame = CGRect(origin: CGPoint(x: self.setByYouNode.frame.minX - 32.0, y: self.setByYouNode.frame.minY - 7.0), size: CGSize(width: 28.0, height: 28.0))
             } else {
                 transition.updateAlpha(node: self.setByYouImageNode, alpha: 0.0)
             }

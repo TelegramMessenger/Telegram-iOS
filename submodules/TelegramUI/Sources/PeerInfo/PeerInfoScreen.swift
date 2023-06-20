@@ -90,6 +90,7 @@ import PeerInfoVisualMediaPaneNode
 import PeerInfoStoryGridScreen
 import StoryContainerScreen
 import StoryContentComponent
+import ChatAvatarNavigationNode
 
 enum PeerInfoAvatarEditingMode {
     case generic
