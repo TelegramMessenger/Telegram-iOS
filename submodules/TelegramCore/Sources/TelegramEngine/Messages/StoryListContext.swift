@@ -144,7 +144,7 @@ public final class StorySubscriptionsContext {
         private let queue: Queue
         private let postbox: Postbox
         private let network: Network
-        private let includesHidden: Bool
+        private let isHidden: Bool
         
         private var taskState = TaskState()
         
@@ -155,12 +155,12 @@ public final class StorySubscriptionsContext {
         private let loadMoreDisposable = MetaDisposable()
         private let refreshTimerDisposable = MetaDisposable()
         
-        init(queue: Queue, accountPeerId: PeerId, postbox: Postbox, network: Network, includesHidden: Bool) {
+        init(queue: Queue, accountPeerId: PeerId, postbox: Postbox, network: Network, isHidden: Bool) {
             self.accountPeerId = accountPeerId
             self.queue = queue
             self.postbox = postbox
             self.network = network
-            self.includesHidden = includesHidden
+            self.isHidden = isHidden
             
             self.taskState.isRefreshScheduled = true
             
@@ -183,7 +183,7 @@ public final class StorySubscriptionsContext {
                 return
             }
             
-            let subscriptionsKey: PostboxStorySubscriptionsKey = self.includesHidden ? .all : .filtered
+            let subscriptionsKey: PostboxStorySubscriptionsKey = self.isHidden ? .hidden : .filtered
             
             if self.taskState.isRefreshScheduled {
                 self.isLoading = true
@@ -244,7 +244,7 @@ public final class StorySubscriptionsContext {
         private func loadImpl(isRefresh: Bool, stateMark: OpaqueStateMark) {
             var flags: Int32 = 0
             
-            if self.includesHidden {
+            if self.isHidden {
                 flags |= 1 << 2
             }
             
@@ -270,8 +270,8 @@ public final class StorySubscriptionsContext {
             
             let accountPeerId = self.accountPeerId
             
-            let includesHidden = self.includesHidden
-            let subscriptionsKey: PostboxStorySubscriptionsKey = self.includesHidden ? .all : .filtered
+            let isHidden = self.isHidden
+            let subscriptionsKey: PostboxStorySubscriptionsKey = self.isHidden ? .hidden : .filtered
             
             self.loadMoreDisposable.set((self.network.request(Api.functions.stories.getAllStories(flags: flags, state: state))
             |> deliverOn(self.queue)).start(next: { [weak self] result in
@@ -343,7 +343,7 @@ public final class StorySubscriptionsContext {
                         }
                         
                         if isRefresh {
-                            if !includesHidden {
+                            if !isHidden {
                                 if !peerEntries.contains(where: { $0 == accountPeerId }) {
                                     transaction.setStoryItems(peerId: accountPeerId, items: [])
                                 }
@@ -396,10 +396,10 @@ public final class StorySubscriptionsContext {
     private let queue = Queue(name: "StorySubscriptionsContext")
     private let impl: QueueLocalObject<Impl>
     
-    init(accountPeerId: PeerId, postbox: Postbox, network: Network, includesHidden: Bool) {
+    init(accountPeerId: PeerId, postbox: Postbox, network: Network, isHidden: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            Impl(queue: queue, accountPeerId: accountPeerId, postbox: postbox, network: network, includesHidden: includesHidden)
+            Impl(queue: queue, accountPeerId: accountPeerId, postbox: postbox, network: network, isHidden: isHidden)
         })
     }
     

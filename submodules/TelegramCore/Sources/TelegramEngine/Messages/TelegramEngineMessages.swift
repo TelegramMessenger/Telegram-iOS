@@ -592,7 +592,7 @@ public extension TelegramEngine {
             }).start()
         }
         
-        public func storySubscriptions(includeHidden: Bool) -> Signal<EngineStorySubscriptions, NoError> {
+        public func storySubscriptions(isHidden: Bool) -> Signal<EngineStorySubscriptions, NoError> {
             let debugTimerSignal: Signal<Bool, NoError>
             #if DEBUG && false
             debugTimerSignal = Signal<Bool, NoError>.single(true)
@@ -609,7 +609,7 @@ public extension TelegramEngine {
             debugTimerSignal = .single(true)
             #endif
             
-            let subscriptionsKey: PostboxStorySubscriptionsKey = includeHidden ? .all : .filtered
+            let subscriptionsKey: PostboxStorySubscriptionsKey = isHidden ? .hidden : .filtered
             
             let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
             let storySubscriptionsKey = PostboxViewKey.storySubscriptions(key: subscriptionsKey)
@@ -759,9 +759,9 @@ public extension TelegramEngine {
             }
         }
         
-        public func preloadStorySubscriptions(includeHidden: Bool) -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> {
+        public func preloadStorySubscriptions(isHidden: Bool) -> Signal<[EngineMediaResource.Id: StoryPreloadInfo], NoError> {
             let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
-            let subscriptionsKey: PostboxStorySubscriptionsKey = includeHidden ? .all : .filtered
+            let subscriptionsKey: PostboxStorySubscriptionsKey = isHidden ? .hidden : .filtered
             let storySubscriptionsKey = PostboxViewKey.storySubscriptions(key: subscriptionsKey)
             return self.account.postbox.combinedView(keys: [
                 basicPeerKey,

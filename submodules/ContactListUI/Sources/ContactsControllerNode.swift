@@ -227,7 +227,7 @@ final class ContactsControllerNode: ASDisplayNode {
             return self.contentScrollingEnded(listView: listView)
         }
         
-        self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(includeHidden: true)
+        self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: true)
         |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
             guard let self else {
                 return

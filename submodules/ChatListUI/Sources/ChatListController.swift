@@ -1253,7 +1253,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peerId, singlePeer: false)
+            let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peerId, singlePeer: false)
             let _ = (storyContent.state
             |> filter { $0.slice != nil }
             |> take(1)
@@ -1744,7 +1744,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             |> distinctUntilChanged
             
             self.preloadStorySubscriptionsDisposable = (combineLatest(queue: .mainQueue(),
-                self.context.engine.messages.preloadStorySubscriptions(includeHidden: false),
+                self.context.engine.messages.preloadStorySubscriptions(isHidden: false),
                 self.context.sharedContext.automaticMediaDownloadSettings,
                 automaticDownloadNetworkType
             )
@@ -1790,7 +1790,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     self.preloadStoryResourceDisposables.removeValue(forKey: id)
                 }
             })
-            self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(includeHidden: false)
+            self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: false)
             |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
                 guard let self else {
                     return
@@ -2391,7 +2391,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, includeHidden: false, focusedPeerId: peer?.id, singlePeer: false)
+                let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peer?.id, singlePeer: false)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
