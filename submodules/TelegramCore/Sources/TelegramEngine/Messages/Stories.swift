@@ -1263,7 +1263,7 @@ func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: 
     }
 }
 
-func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, ids: [Int32]) -> Signal<[Stories.StoredItem], NoError> {
+func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, peerId: PeerId, ids: [Int32]) -> Signal<[Stories.StoredItem], NoError> {
     return postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
@@ -1272,7 +1272,7 @@ func _internal_getStoriesById(accountPeerId: PeerId, postbox: Postbox, network: 
             return .single([])
         }
         
-        return network.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: ids))
+        return source.request(Api.functions.stories.getStoriesByID(userId: inputUser, id: ids))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
             return .single(nil)
@@ -1685,7 +1685,7 @@ func _internal_exportStoryLink(account: Account, peerId: EnginePeer.Id, id: Int3
 }
 
 func _internal_refreshStories(account: Account, peerId: PeerId, ids: [Int32]) -> Signal<Never, NoError> {
-    return _internal_getStoriesById(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peerId: peerId, ids: ids)
+    return _internal_getStoriesById(accountPeerId: account.peerId, postbox: account.postbox, source: .network(account.network), peerId: peerId, ids: ids)
     |> mapToSignal { result -> Signal<Never, NoError> in
         return account.postbox.transaction { transaction -> Void in
             var currentItems = transaction.getStoryItems(peerId: peerId)

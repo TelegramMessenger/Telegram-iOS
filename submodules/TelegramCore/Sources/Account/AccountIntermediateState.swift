@@ -212,6 +212,7 @@ struct AccountMutableState {
     var insertedPeers: [PeerId: Peer] = [:]
     
     var preCachedResources: [(MediaResource, Data)] = []
+    var preCachedStories: [StoryId: Api.StoryItem] = [:]
     
     var updatedMaxMessageId: Int32?
     var updatedQts: Int32?
@@ -281,6 +282,11 @@ struct AccountMutableState {
             self.apiChats[chat.peerId] = chat
         }
         self.preCachedResources.append(contentsOf: other.preCachedResources)
+        
+        for (id, story) in other.preCachedStories {
+            self.preCachedStories[id] = story
+        }
+        
         self.externallyUpdatedPeerId.formUnion(other.externallyUpdatedPeerId)
         for (peerId, namespaces) in other.namespacesWithHolesFromPreviousState {
             if self.namespacesWithHolesFromPreviousState[peerId] == nil {
@@ -303,6 +309,10 @@ struct AccountMutableState {
     
     mutating func addPreCachedResource(_ resource: MediaResource, data: Data) {
         self.preCachedResources.append((resource, data))
+    }
+    
+    mutating func addPreCachedStory(id: StoryId, story: Api.StoryItem) {
+        self.preCachedStories[id] = story
     }
     
     mutating func addExternallyUpdatedPeerId(_ peerId: PeerId) {

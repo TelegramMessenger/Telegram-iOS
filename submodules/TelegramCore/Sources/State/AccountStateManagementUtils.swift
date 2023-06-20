@@ -727,6 +727,11 @@ func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: 
                 updatedState.addPreCachedResource(resource, data: data)
             }
         }
+        if let preCachedStories = message.preCachedStories {
+            for (id, story) in preCachedStories {
+                updatedState.addPreCachedStory(id: id, story: story)
+            }
+        }
         var peerIsForum = false
         if let peerId = message.peerId {
             peerIsForum = updatedState.isPeerForum(peerId: peerId)
@@ -954,6 +959,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                     updatedState.addPreCachedResource(resource, data: data)
                                 }
                             }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
+                                }
+                            }
                             var attributes = message.attributes
                             attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
                             updatedState.editMessage(messageId, message: message.withUpdatedAttributes(attributes))
@@ -1020,6 +1030,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             updatedState.addPreCachedResource(resource, data: data)
                         }
                     }
+                    if let preCachedStories = apiMessage.preCachedStories {
+                        for (id, story) in preCachedStories {
+                            updatedState.addPreCachedStory(id: id, story: story)
+                        }
+                    }
                     updatedState.editMessage(messageId, message: message)
                     for media in message.media {
                         if let media = media as? TelegramMediaAction {
@@ -1048,6 +1063,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
                                     updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
                                 }
                             }
                             var attributes = message.attributes
@@ -1080,6 +1100,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     if let preCachedResources = apiMessage.preCachedResources {
                         for (resource, data) in preCachedResources {
                             updatedState.addPreCachedResource(resource, data: data)
+                        }
+                    }
+                    if let preCachedStories = apiMessage.preCachedStories {
+                        for (id, story) in preCachedStories {
+                            updatedState.addPreCachedStory(id: id, story: story)
                         }
                     }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
@@ -1715,7 +1740,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
         |> mapToSignal { finalState in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                return resolveAssociatedStories(postbox: postbox, network: network, state: finalState)
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: finalState)
                 |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                     return resolveMissingPeerChatInfos(network: network, state: resultingState)
                     |> map { resultingState, resolveError -> AccountFinalState in
@@ -2073,16 +2098,102 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
     }
 }
 
-func resolveAssociatedStories(postbox: Postbox, network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+func resolveStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, storyIds: Set<StoryId>, result: T) -> Signal<T, NoError> {
+    var storyBuckets: [PeerId: [Int32]] = [:]
+    for id in storyIds {
+        if storyBuckets[id.peerId] == nil {
+            storyBuckets[id.peerId] = []
+        }
+        storyBuckets[id.peerId]?.append(id.id)
+    }
+    
+    var signals: [Signal<Never, NoError>] = []
+    for (peerId, allIds) in storyBuckets {
+        var idOffset = 0
+        while idOffset < allIds.count {
+            let bucketLength = min(100, allIds.count - idOffset)
+            let ids = Array(allIds[idOffset ..< (idOffset + bucketLength)])
+            signals.append(_internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, source: source, peerId: peerId, ids: ids)
+            |> mapToSignal { result -> Signal<Never, NoError> in
+                return postbox.transaction { transaction -> Void in
+                    for id in ids {
+                        let current = transaction.getStory(id: StoryId(peerId: peerId, id: id))
+                        var updated: CodableEntry?
+                        if let updatedItem = result.first(where: { $0.id == id }) {
+                            if let entry = CodableEntry(updatedItem) {
+                                updated = entry
+                            }
+                        }
+                        if current != updated {
+                            transaction.setStory(id: StoryId(peerId: peerId, id: id), value: updated ?? CodableEntry(data: Data()))
+                        }
+                    }
+                }
+                |> ignoreValues
+            })
+            idOffset += bucketLength
+        }
+    }
+    
+    return combineLatest(signals)
+    |> ignoreValues
+    |> map { _ -> T in
+    }
+    |> then(.single(result))
+}
+
+func resolveAssociatedStories(postbox: Postbox, network: Network, accountPeerId: PeerId, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     return postbox.transaction { transaction -> Signal<AccountMutableState, NoError> in
-        return .single(state)
+        var missingStoryIds = Set<StoryId>()
+        
+        for operation in state.operations {
+            switch operation {
+            case let .AddMessages(messages, _):
+                for message in messages {
+                    for media in message.media {
+                        for id in media.storyIds {
+                            if let existing = transaction.getStory(id: id), case .item = existing.get(Stories.StoredItem.self) {
+                            } else if state.preCachedStories[id] != nil {
+                            } else {
+                                missingStoryIds.insert(id)
+                            }
+                        }
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+        if !missingStoryIds.isEmpty {
+            return resolveStories(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, storyIds: missingStoryIds, result: state)
+        } else {
+            return .single(state)
+        }
     }
     |> switchToLatest
 }
 
-func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, messages: [StoreMessage], result: T) -> Signal<T, NoError> {
+func resolveAssociatedStories<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, accountPeerId: PeerId, messages: [StoreMessage], result: T) -> Signal<T, NoError> {
     return postbox.transaction { transaction -> Signal<T, NoError> in
-        return .single(result)
+        var missingStoryIds = Set<StoryId>()
+        
+        for message in messages {
+            for media in message.media {
+                for id in media.storyIds {
+                    if let existing = transaction.getStory(id: id), case .item = existing.get(Stories.StoredItem.self) {
+                    } else {
+                        missingStoryIds.insert(id)
+                    }
+                }
+            }
+        }
+        
+        if !missingStoryIds.isEmpty {
+            return resolveStories(postbox: postbox, source: source, accountPeerId: accountPeerId, storyIds: missingStoryIds, result: result)
+        } else {
+            return .single(result)
+        }
     }
     |> switchToLatest
 }
@@ -2420,7 +2531,7 @@ func pollChannelOnce(accountPeerId: PeerId, postbox: Postbox, network: Network, 
         |> mapToSignal { (finalState, _, timeout) -> Signal<Int32, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
-                return resolveAssociatedStories(postbox: postbox, network: network, state: finalState)
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: finalState)
             }
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerChatInfos(network: network, state: resultingState)
@@ -2477,7 +2588,7 @@ public func standalonePollChannelOnce(accountPeerId: PeerId, postbox: Postbox, n
         |> mapToSignal { (finalState, _, timeout) -> Signal<Never, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
-                return resolveAssociatedStories(postbox: postbox, network: network, state: finalState)
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: finalState)
             }
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                 return resolveMissingPeerChatInfos(network: network, state: resultingState)
@@ -2687,7 +2798,7 @@ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, pe
             // TODO: delete messages later than top
             return resolveAssociatedMessages(postbox: postbox, network: network, state: updatedState)
             |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
-                return resolveAssociatedStories(postbox: postbox, network: network, state: updatedState)
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: updatedState)
             }
         }
     }
@@ -2758,6 +2869,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                                 updatedState.addPreCachedResource(resource, data: data)
                             }
                         }
+                        if let preCachedStories = apiMessage.preCachedStories {
+                            for (id, story) in preCachedStories {
+                                updatedState.addPreCachedStory(id: id, story: story)
+                            }
+                        }
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                         if case let .Id(id) = message.id {
                             updatedState.updateChannelSynchronizedUntilMessage(id.peerId, id: id.id)
@@ -2785,6 +2901,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
                                     updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
                                 }
                             }
                             var attributes = message.attributes
@@ -2837,7 +2958,7 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 
                 return resolveForumThreads(postbox: postbox, network: network, state: updatedState)
                 |> mapToSignal { updatedState in
-                    return resolveAssociatedStories(postbox: postbox, network: network, state: updatedState)
+                    return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: updatedState)
                     |> map { updatedState -> (AccountMutableState, Bool, Int32?) in
                         return (updatedState, true, apiTimeout)
                     }
@@ -2902,6 +3023,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
                                     updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
+                            if let preCachedStories = apiMessage.preCachedStories {
+                                for (id, story) in preCachedStories {
+                                    updatedState.addPreCachedStory(id: id, story: story)
                                 }
                             }
                             
@@ -3166,6 +3292,14 @@ func replayFinalState(
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
     var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
+    
+    for (id, story) in finalState.state.preCachedStories {
+        if let storyItem = Stories.StoredItem(apiStoryItem: story, peerId: id.peerId, transaction: transaction) {
+            if let entry = CodableEntry(storyItem) {
+                transaction.setStory(id: id, value: entry)
+            }
+        }
+    }
     
     for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
         for (namespace, namespaceState) in namespaces {
