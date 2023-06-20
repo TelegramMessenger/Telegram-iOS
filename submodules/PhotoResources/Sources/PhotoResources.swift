@@ -477,7 +477,11 @@ private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResource
                         let fetchedDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(thumbnailRepresentation.resource), statsCategory: .video).start()
                         let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailRepresentation.resource, attemptSynchronously: synchronousLoad).start(next: { next in
                             let data: Data? = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
-                            subscriber.putNext(data ?? decodedThumbnailData)
+                            if let data {
+                                subscriber.putNext(data)
+                            } else {
+                                subscriber.putNext(decodedThumbnailData)
+                            }
                         }, error: subscriber.putError, completed: subscriber.putCompletion)
                         
                         return ActionDisposable {

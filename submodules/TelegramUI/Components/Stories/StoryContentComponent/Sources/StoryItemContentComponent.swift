@@ -164,9 +164,13 @@ final class StoryItemContentComponent: Component {
                             loopVideo: true,
                             enableSound: true,
                             beginWithAmbientSound: environment.sharedState.useAmbientMode,
+                            useLargeThumbnail: true,
+                            autoFetchFullSizeThumbnail: true,
                             tempFilePath: nil,
                             captureProtected: false,
-                            storeAfterDownload: nil
+                            hintDimensions: file.dimensions?.cgSize,
+                            storeAfterDownload: nil,
+                            displayImage: false
                         ),
                         priority: .gallery
                     )
