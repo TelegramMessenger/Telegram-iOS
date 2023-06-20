@@ -429,7 +429,10 @@ public final class ChatListNavigationBar: Component {
                 tabsFrame.origin.y -= 46.0
             }
             
-            let accessoryPanelContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height - component.accessoryPanelContainerHeight), size: CGSize(width: visibleSize.width, height: component.accessoryPanelContainerHeight))
+            var accessoryPanelContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height), size: CGSize(width: visibleSize.width, height: component.accessoryPanelContainerHeight))
+            if !component.isSearchActive {
+                accessoryPanelContainerFrame.origin.y -= component.accessoryPanelContainerHeight
+            }
             
             if let disappearingTabsView = self.disappearingTabsView {
                 disappearingTabsView.layer.anchorPoint = CGPoint()
@@ -466,6 +469,7 @@ public final class ChatListNavigationBar: Component {
                 var tabsNodeTransition = transition
                 if accessoryPanelContainer.view.superview !== self {
                     accessoryPanelContainer.view.layer.anchorPoint = CGPoint()
+                    accessoryPanelContainer.clipsToBounds = true
                     tabsNodeTransition = .immediate
                     accessoryPanelContainer.view.alpha = 1.0
                     self.addSubview(accessoryPanelContainer.view)
