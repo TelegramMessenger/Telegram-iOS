@@ -775,7 +775,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override public func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override public func transitionNode(id: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let item = self.item, item.message?.id == id, self.iconImageNode.supernode != nil {
             let iconImageNode = self.iconImageNode
             return (self.iconImageNode, self.iconImageNode.bounds, { [weak iconImageNode] in

@@ -225,9 +225,6 @@ final class StoryContentCaptionComponent: Component {
             let expandDistance: CGFloat = 50.0
             var expandFraction: CGFloat = self.scrollView.contentOffset.y / expandDistance
             expandFraction = max(0.0, min(1.0, expandFraction))
-            if self.scrollView.contentSize.height < self.scrollView.bounds.height + expandDistance {
-                expandFraction = 0.0
-            }
             
             let isExpanded = expandFraction > 0.0
             

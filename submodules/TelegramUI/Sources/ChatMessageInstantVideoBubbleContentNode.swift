@@ -364,7 +364,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     

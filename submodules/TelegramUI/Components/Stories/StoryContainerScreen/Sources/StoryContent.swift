@@ -25,6 +25,9 @@ public final class StoryContentItem {
         
         open func rewind() {
         }
+        
+        open func leaveAmbientMode() {
+        }
     }
     
     public final class Environment: Equatable {

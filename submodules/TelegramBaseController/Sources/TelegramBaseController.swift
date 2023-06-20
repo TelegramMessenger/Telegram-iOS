@@ -33,7 +33,7 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
                 controller?.view.endEditing(true)
             }, present: { c, a in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-            }, transitionNode: { _, _ in
+            }, transitionNode: { _, _, _ in
                 return nil
             }, addToTransitionSurface: { _ in
             }, openUrl: { _ in

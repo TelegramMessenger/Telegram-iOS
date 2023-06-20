@@ -947,7 +947,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                                         strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                                             if let itemNode = itemNode as? ChatMessageItemView {
-                                                if let result = itemNode.transitionNode(id: message.id, media: image) {
+                                                if let result = itemNode.transitionNode(id: message.id, media: image, adjustRect: false) {
                                                     selectedNode = result
                                                 }
                                             }
@@ -1001,12 +1001,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
-            }, transitionNode: { messageId, media in
+            }, transitionNode: { messageId, media, adjustRect in
                 var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                 if let strongSelf = self {
                     strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
-                            if let result = itemNode.transitionNode(id: messageId, media: media) {
+                            if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: adjustRect) {
                                 selectedNode = result
                             }
                         }
@@ -18243,7 +18243,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
-                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
                     selectedNode = result
                 }
             }

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum PostboxStorySubscriptionsKey: Int32 {
-    case all = 0
+    case hidden = 0
     case filtered = 1
 }
 

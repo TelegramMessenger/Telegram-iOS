@@ -85,6 +85,19 @@ extension Api.MessageMedia {
                 return nil
         }
     }
+    
+    var preCachedStories: [StoryId: Api.StoryItem]? {
+        switch self {
+        case let .messageMediaStory(_, userId, id, story):
+            if let story = story {
+                return [StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id): story]
+            } else {
+                return nil
+            }
+        default:
+            return nil
+        }
+    }
 }
 
 extension Api.Message {
@@ -142,10 +155,19 @@ extension Api.Message {
     
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _):
-                return media?.preCachedResources
-            default:
-                return nil
+        case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _):
+            return media?.preCachedResources
+        default:
+            return nil
+        }
+    }
+    
+    var preCachedStories: [StoryId: Api.StoryItem]? {
+        switch self {
+        case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _):
+            return media?.preCachedStories
+        default:
+            return nil
         }
     }
 }

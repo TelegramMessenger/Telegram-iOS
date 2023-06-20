@@ -476,7 +476,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(to: media) {
             let imageNode = self.imageNode
             return (self.imageNode, self.imageNode.bounds, { [weak imageNode] in

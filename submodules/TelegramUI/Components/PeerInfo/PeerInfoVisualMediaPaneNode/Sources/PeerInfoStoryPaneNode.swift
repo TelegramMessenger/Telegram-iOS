@@ -891,6 +891,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var presentationDataDisposable: Disposable?
     
     private weak var pendingOpenListContext: PeerStoryListContentContextImpl?
+    
+    private var preloadArchiveListContext: PeerStoryListContext?
         
     public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
@@ -1448,6 +1450,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         })
         
         self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
+        
+        if peerId == context.account.peerId {
+            self.preloadArchiveListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: true)
+        }
     }
     
     deinit {

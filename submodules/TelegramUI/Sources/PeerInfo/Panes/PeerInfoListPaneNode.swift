@@ -502,7 +502,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListMessageNode {
-                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
                     transitionNode = result
                 }
             }
