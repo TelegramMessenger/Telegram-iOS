@@ -171,6 +171,8 @@ private final class StoryContainerScreenComponent: Component {
         private var verticalPanState: ItemSetPanState?
         private var isHoldingTouch: Bool = false
         
+        private var transitionCloneMasterView: UIView
+        
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
         
@@ -184,7 +186,14 @@ private final class StoryContainerScreenComponent: Component {
             self.backgroundEffectView = BlurredBackgroundView(color: UIColor(rgb: 0x000000, alpha: 0.9), enableBlur: true)
             self.backgroundEffectView.layer.zPosition = -1001.0
             
+            let transitionCloneMasterView = UIView()
+            transitionCloneMasterView.isHidden = true
+            transitionCloneMasterView.isUserInteractionEnabled = false
+            self.transitionCloneMasterView = transitionCloneMasterView
+            
             super.init(frame: frame)
+            
+            self.addSubview(transitionCloneMasterView)
             
             self.layer.addSublayer(self.backgroundLayer)
             
@@ -528,7 +537,12 @@ private final class StoryContainerScreenComponent: Component {
                 
                 let transitionOutCompleted = transitionOut.completed
                 let focusedItemPromise = component.focusedItemPromise
-                itemSetComponentView.animateOut(transitionOut: transitionOut, completion: {
+                
+                let transitionCloneMasterView = self.transitionCloneMasterView
+                transitionCloneMasterView.isHidden = false
+                self.transitionCloneMasterView = UIView()
+                
+                itemSetComponentView.animateOut(transitionOut: transitionOut, transitionCloneMasterView: transitionCloneMasterView, completion: {
                     completion()
                     transitionOutCompleted()
                     focusedItemPromise.set(.single(nil))
@@ -554,37 +568,6 @@ private final class StoryContainerScreenComponent: Component {
             }
             
             self.didAnimateOut = true
-        }
-        
-        private func updatePreloads() {
-            /*var validIds: [AnyHashable] = []
-            if let currentSlice = self.currentSlice, let focusedItemId = self.focusedItemId, let currentIndex = currentSlice.items.firstIndex(where: { $0.id == focusedItemId }) {
-                for i in 0 ..< 2 {
-                    var nextIndex: Int = currentIndex + 1 + i
-                    nextIndex = max(0, min(nextIndex, currentSlice.items.count - 1))
-                    if nextIndex != currentIndex {
-                        let nextItem = currentSlice.items[nextIndex]
-                        
-                        validIds.append(nextItem.id)
-                        if self.preloadContexts[nextItem.id] == nil {
-                            if let signal = nextItem.preload {
-                                self.preloadContexts[nextItem.id] = signal.start()
-                            }
-                        }
-                    }
-                }
-            }
-            
-            var removeIds: [AnyHashable] = []
-            for (id, disposable) in self.preloadContexts {
-                if !validIds.contains(id) {
-                    removeIds.append(id)
-                    disposable.dispose()
-                }
-            }
-            for id in removeIds {
-                self.preloadContexts.removeValue(forKey: id)
-            }*/
         }
         
         func update(component: StoryContainerScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
@@ -622,6 +605,8 @@ private final class StoryContainerScreenComponent: Component {
             
             self.component = component
             self.state = state
+            
+            transition.setFrame(view: self.transitionCloneMasterView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: availableSize))
             transition.setFrame(view: self.backgroundEffectView, frame: CGRect(origin: CGPoint(), size: availableSize))
@@ -860,6 +845,8 @@ private final class StoryContainerScreenComponent: Component {
                                 itemSetComponentView.layer.isDoubleSided = false
                                 itemSetView.addSubview(itemSetComponentView)
                                 itemSetView.layer.addSublayer(itemSetView.tintLayer)
+                                
+                                self.transitionCloneMasterView.addSubview(itemSetComponentView.transitionCloneContainerView)
                             }
                             
                             itemSetTransition.setPosition(view: itemSetView, position: itemFrame.center.offsetBy(dx: 0.0, dy: dismissPanOffset))
@@ -986,6 +973,10 @@ private final class StoryContainerScreenComponent: Component {
                 if !validIds.contains(id) {
                     removedIds.append(id)
                     itemSetView.removeFromSuperview()
+                    
+                    if let view = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        view.transitionCloneContainerView.removeFromSuperview()
+                    }
                 }
             }
             for id in removedIds {

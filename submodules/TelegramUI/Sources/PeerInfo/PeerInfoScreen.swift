@@ -4111,9 +4111,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         sourceCornerRadius: transitionView.bounds.height * 0.5,
                         sourceIsAvatar: true
                     )
+                    self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
                 }
-                
-                self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = true
                 
                 let storyContainerScreen = StoryContainerScreen(
                     context: self.context,
@@ -4124,6 +4123,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             return nil
                         }
                         if !fromAvatar {
+                            self.headerNode.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
                             return nil
                         }
                         

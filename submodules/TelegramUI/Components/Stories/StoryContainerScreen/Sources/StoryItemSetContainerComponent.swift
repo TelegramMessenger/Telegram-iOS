@@ -743,7 +743,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        func animateOut(transitionOut: StoryContainerScreen.TransitionOut, completion: @escaping () -> Void) {
+        func animateOut(transitionOut: StoryContainerScreen.TransitionOut, transitionCloneMasterView: UIView, completion: @escaping () -> Void) {
             var cleanups: [() -> Void] = []
             
             if let inputPanelView = self.inputPanel.view {
@@ -809,18 +809,20 @@ public final class StoryItemSetContainerComponent: Component {
                                 if let transitionCloneViewImpl = transitionView?.makeView() {
                                     transitionViewsImpl.append(transitionCloneViewImpl)
                                     
-                                    let transitionCloneContainerView = self.transitionCloneContainerView
-                                    transitionCloneContainerView.isUserInteractionEnabled = false
-                                    insertCloneTransitionView(transitionCloneContainerView)
-                                    transitionCloneContainerView.frame = transitionCloneContainerView.convert(self.convert(self.bounds, to: nil), from: nil)
+                                    transitionCloneMasterView.isUserInteractionEnabled = false
+                                    let transitionCloneMasterGlobalFrame = transitionCloneMasterView.convert(transitionCloneMasterView.bounds, to: nil)
+                                    insertCloneTransitionView(transitionCloneMasterView)
+                                    if let newParentView = transitionCloneMasterView.superview {
+                                        newParentView.frame = newParentView.convert(transitionCloneMasterGlobalFrame, from: nil)
+                                    }
                                     
-                                    transitionCloneContainerView.addSubview(transitionCloneViewImpl)
+                                    self.transitionCloneContainerView.addSubview(transitionCloneViewImpl)
                                     
                                     transitionSourceContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, removeOnCompletion: false)
-                                    transitionCloneContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                                    self.transitionCloneContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                                     
-                                    cleanups.append({ [weak transitionCloneContainerView] in
-                                        transitionCloneContainerView?.removeFromSuperview()
+                                    cleanups.append({ [weak transitionCloneMasterView] in
+                                        transitionCloneMasterView?.removeFromSuperview()
                                     })
                                 }
                             }
@@ -901,14 +903,17 @@ public final class StoryItemSetContainerComponent: Component {
                             if let transitionCloneViewImpl = transitionView?.makeView() {
                                 transitionViewsImpl.append(transitionCloneViewImpl)
                                 
-                                let transitionCloneContainerView = self.transitionCloneContainerView
-                                transitionCloneContainerView.isUserInteractionEnabled = false
-                                insertCloneTransitionView(transitionCloneContainerView)
+                                transitionCloneMasterView.isUserInteractionEnabled = false
+                                let transitionCloneMasterGlobalFrame = transitionCloneMasterView.convert(transitionCloneMasterView.bounds, to: nil)
+                                insertCloneTransitionView(transitionCloneMasterView)
+                                if let newParentView = transitionCloneMasterView.superview {
+                                    transitionCloneMasterView.frame = newParentView.convert(transitionCloneMasterGlobalFrame, from: nil)
+                                }
                                 
-                                transitionCloneContainerView.addSubview(transitionCloneViewImpl)
+                                self.transitionCloneContainerView.addSubview(transitionCloneViewImpl)
                                 
                                 transitionSourceContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, removeOnCompletion: false)
-                                transitionCloneContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
+                                self.transitionCloneContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                                 
                                 cleanups.append({ [weak transitionCloneContainerView] in
                                     transitionCloneContainerView?.removeFromSuperview()
