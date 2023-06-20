@@ -468,6 +468,18 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
+        func leaveAmbientMode() {
+            guard let component = self.component else {
+                return
+            }
+            guard let visibleItem = self.visibleItems[component.slice.item.id] else {
+                return
+            }
+            if let itemView = visibleItem.view.view as? StoryContentItem.View {
+                itemView.leaveAmbientMode()
+            }
+        }
+        
         @objc public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if otherGestureRecognizer is UIPanGestureRecognizer {
                 return true
@@ -1439,8 +1451,13 @@ public final class StoryItemSetContainerComponent: Component {
                                 })))
                                 items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-                                }, action: { _, a in
+                                }, action: {  [weak self] _, a in
                                     a(.default)
+                                    
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.sendMessageContext.performShareAction(view: self)
                                 })))
                             }
 

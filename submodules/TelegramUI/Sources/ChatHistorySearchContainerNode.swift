@@ -362,15 +362,15 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
-                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
                     transitionNode = result
                 }
             } else if let itemNode = itemNode as? ListMessageNode {
-                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
                     transitionNode = result
                 }
             } else if let itemNode = itemNode as? GridMessageItemNode {
-                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
                     transitionNode = result
                 }
             }

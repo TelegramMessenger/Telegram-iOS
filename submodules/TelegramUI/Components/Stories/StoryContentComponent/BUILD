@@ -23,7 +23,6 @@ swift_library(
         "//submodules/TelegramUniversalVideoContent",
         "//submodules/AvatarNode",
         "//submodules/Components/HierarchyTrackingLayer",
-        "//submodules/Utils/VolumeButtons",
     ],
     visibility = [
         "//visibility:public",

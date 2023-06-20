@@ -61,6 +61,7 @@ swift_library(
         "//submodules/PresentationDataUtils",
         "//submodules/UrlEscaping",
         "//submodules/OverlayStatusController",
+        "//submodules/Utils/VolumeButtons",
     ],
     visibility = [
         "//visibility:public",

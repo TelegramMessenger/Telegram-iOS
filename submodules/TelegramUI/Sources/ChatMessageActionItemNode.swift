@@ -89,7 +89,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         super.didLoad()
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let imageNode = self.imageNode, self.item?.message.id == messageId {
             return (imageNode, imageNode.bounds, { [weak self] in
                 guard let strongSelf = self, let imageNode = strongSelf.imageNode else {

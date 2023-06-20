@@ -16,6 +16,7 @@ import EntityKeyboard
 import AsyncDisplayKit
 import AttachmentUI
 import simd
+import VolumeButtons
 
 func hasFirstResponder(_ view: UIView) -> Bool {
     if view.isFirstResponder {
@@ -172,6 +173,9 @@ private final class StoryContainerScreenComponent: Component {
         private var isHoldingTouch: Bool = false
         
         private var transitionCloneMasterView: UIView
+        
+        private var volumeButtonsListener: VolumeButtonsListener?
+        private let volumeButtonsListenerShouldBeActvie = ValuePromise<Bool>(false, ignoreRepeated: true)
         
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
@@ -570,6 +574,24 @@ private final class StoryContainerScreenComponent: Component {
             self.didAnimateOut = true
         }
         
+        private func updateVolumeButtonMonitoring() {
+            if self.volumeButtonsListener == nil {
+                self.volumeButtonsListener = VolumeButtonsListener(shouldBeActive: self.volumeButtonsListenerShouldBeActvie.get(), valueChanged: { [weak self] in
+                    guard let self, self.storyItemSharedState.useAmbientMode else {
+                        return
+                    }
+                    self.storyItemSharedState.useAmbientMode = false
+                    self.volumeButtonsListenerShouldBeActvie.set(false)
+                    
+                    for (_, itemSetView) in self.visibleItemSetViews {
+                        if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                            componentView.leaveAmbientMode()
+                        }
+                    }
+                })
+            }
+        }
+        
         func update(component: StoryContainerScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             if self.didAnimateOut {
                 return availableSize
@@ -588,10 +610,21 @@ private final class StoryContainerScreenComponent: Component {
                     }
                     if update {
                         var focusedItemId: StoryId?
+                        var isVideo = false
                         if let slice = component.content.stateValue?.slice {
                             focusedItemId = StoryId(peerId: slice.peer.id, id: slice.item.storyItem.id)
+                            if case .file = slice.item.storyItem.media {
+                                isVideo = true
+                            }
                         }
                         self.focusedItem.set(focusedItemId)
+                        
+                        if self.storyItemSharedState.useAmbientMode {
+                            self.volumeButtonsListenerShouldBeActvie.set(isVideo)
+                            if isVideo {
+                                self.updateVolumeButtonMonitoring()
+                            }
+                        }
                         
                         if component.content.stateValue?.slice == nil {
                             self.environment?.controller()?.dismiss()

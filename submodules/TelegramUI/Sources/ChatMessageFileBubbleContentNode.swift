@@ -183,7 +183,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id == messageId {
             return self.interactiveFileNode.transitionNode(media: media)
         } else {

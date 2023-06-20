@@ -4174,7 +4174,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self?.view.endEditing(true)
         }, present: { [weak self] c, a in
             self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-        }, transitionNode: { [weak self] messageId, media in
+        }, transitionNode: { [weak self] messageId, media, _ in
             guard let strongSelf = self else {
                 return nil
             }
