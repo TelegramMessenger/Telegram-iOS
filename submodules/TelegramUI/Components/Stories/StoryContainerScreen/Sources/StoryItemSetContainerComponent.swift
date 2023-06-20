@@ -1749,9 +1749,7 @@ public final class StoryItemSetContainerComponent: Component {
                 let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.height - captionSize.height), size: captionSize)
                 if let captionItemView = captionItem.view.view {
                     if captionItemView.superview == nil {
-                        if self.contentContainerView.subviews.count >= 1 {
-                            self.contentContainerView.insertSubview(captionItemView, at: 1)
-                        }
+                        self.contentContainerView.insertSubview(captionItemView, aboveSubview: self.contentDimView)
                     }
                     captionItemTransition.setFrame(view: captionItemView, frame: captionFrame)
                     captionItemTransition.setAlpha(view: captionItemView, alpha: (component.hideUI || self.displayViewList || self.inputPanelExternalState.isEditing) ? 0.0 : 1.0)
