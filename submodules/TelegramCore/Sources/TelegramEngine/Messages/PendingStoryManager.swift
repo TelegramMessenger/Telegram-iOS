@@ -194,7 +194,7 @@ final class PendingStoryManager {
                     guard let `self` = self else {
                         return
                     }
-                    if let bag, let listBag = self.storyObserverContexts[stableId], listBag === bag {
+                    if let bag = bag, let listBag = self.storyObserverContexts[stableId], listBag === bag {
                         bag.remove(index)
                         if bag.isEmpty {
                             self.storyObserverContexts.removeValue(forKey: stableId)
