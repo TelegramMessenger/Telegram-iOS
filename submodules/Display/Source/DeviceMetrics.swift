@@ -266,7 +266,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return 20.0
         }
     }
-    
+        
     public func keyboardHeight(inLandscape: Bool) -> CGFloat {
         if inLandscape {
             switch self {
@@ -335,6 +335,10 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                     return 44.0
             }
         }
+    }
+    
+    public func standardInputHeight(inLandscape: Bool) -> CGFloat {
+        return self.keyboardHeight(inLandscape: inLandscape) + predictiveInputHeight(inLandscape: inLandscape)
     }
     
     public var hasTopNotch: Bool {

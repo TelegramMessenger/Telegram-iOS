@@ -34,8 +34,16 @@ import ChatPresentationInterfaceState
 import Postbox
 
 final class StoryItemSetContainerSendMessage {
+    enum InputMode {
+        case text
+        case emoji
+        case sticker
+    }
+    
     weak var attachmentController: AttachmentController?
     weak var shareController: ShareController?
+    
+    var inputMode: InputMode = .text
     
     var audioRecorderValue: ManagedAudioRecorder?
     var audioRecorder = Promise<ManagedAudioRecorder?>()
@@ -53,6 +61,9 @@ final class StoryItemSetContainerSendMessage {
     deinit {
         self.controllerNavigationDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
+    }
+    
+    func toggleInputMode() {
     }
     
     func performSendMessageAction(

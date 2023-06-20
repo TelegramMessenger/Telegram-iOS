@@ -20,6 +20,7 @@ import PremiumUI
 import StickerPeekUI
 import UndoUI
 import Pasteboard
+import ChatContextQuery
 
 private enum EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     case symbol(String)

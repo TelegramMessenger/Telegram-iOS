@@ -256,7 +256,7 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                         return true
                     }
                 }
-                presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }))
+                presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }))
             }
             
             updateTimeoutDisposable.set((context.engine.privacy.updateGlobalMessageRemovalTimeout(timeout: timeout == 0 ? nil : timeout)
@@ -408,7 +408,7 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                                 return true
                             }
                         }
-                        presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }))
+                        presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }))
                     })
                 }
             })

@@ -11,6 +11,7 @@ import SwiftSignalKit
 import TelegramStringFormatting
 import ShimmerEffect
 import StoryFooterPanelComponent
+import PeerListItemComponent
 
 final class StoryItemSetViewListComponent: Component {
     final class ExternalState {
@@ -429,10 +430,12 @@ final class StoryItemSetViewListComponent: Component {
                             context: component.context,
                             theme: component.theme,
                             strings: component.strings,
+                            style: .generic,
                             sideInset: itemLayout.sideInset,
                             title: item.peer.displayTitle(strings: component.strings, displayOrder: .firstLast),
                             peer: item.peer,
                             subtitle: dateText,
+                            subtitleAccessory: .checks,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1,
                             action: { [weak self] peer in
@@ -627,10 +630,12 @@ final class StoryItemSetViewListComponent: Component {
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,
+                    style: .generic,
                     sideInset: sideInset,
                     title: "AAAAAAAAAAAA",
                     peer: nil,
                     subtitle: "BBBBBBB",
+                    subtitleAccessory: .checks,
                     selectionState: .none,
                     hasNext: true,
                     action: { _ in

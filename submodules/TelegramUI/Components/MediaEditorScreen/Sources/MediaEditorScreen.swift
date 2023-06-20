@@ -25,6 +25,9 @@ import PresentationDataUtils
 import ContextUI
 import BundleIconComponent
 import CameraButtonComponent
+import UndoUI
+import ChatEntityKeyboardInputNode
+import ChatPresentationInterfaceState
 
 enum DrawingScreenType {
     case drawing
@@ -39,12 +42,21 @@ private let saveButtonTag = GenericComponentViewTag()
 final class MediaEditorScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    public final class ExternalState {
+        public fileprivate(set) var derivedInputHeight: CGFloat = 0.0
+        
+        public init() {
+        }
+    }
+    
     let context: AccountContext
+    let externalState: ExternalState
     let isDisplayingTool: Bool
     let isInteractingWithEntities: Bool
     let isSavingAvailable: Bool
     let hasAppeared: Bool
     let isDismissing: Bool
+    let bottomSafeInset: CGFloat
     let mediaEditor: MediaEditor?
     let privacy: MediaEditorResultPrivacy
     let selectedEntity: DrawingEntity?
@@ -54,11 +66,13 @@ final class MediaEditorScreenComponent: Component {
     
     init(
         context: AccountContext,
+        externalState: ExternalState,
         isDisplayingTool: Bool,
         isInteractingWithEntities: Bool,
         isSavingAvailable: Bool,
         hasAppeared: Bool,
         isDismissing: Bool,
+        bottomSafeInset: CGFloat,
         mediaEditor: MediaEditor?,
         privacy: MediaEditorResultPrivacy,
         selectedEntity: DrawingEntity?,
@@ -67,11 +81,13 @@ final class MediaEditorScreenComponent: Component {
         openTools: @escaping () -> Void
     ) {
         self.context = context
+        self.externalState = externalState
         self.isDisplayingTool = isDisplayingTool
         self.isInteractingWithEntities = isInteractingWithEntities
         self.isSavingAvailable = isSavingAvailable
         self.hasAppeared = hasAppeared
         self.isDismissing = isDismissing
+        self.bottomSafeInset = bottomSafeInset
         self.mediaEditor = mediaEditor
         self.privacy = privacy
         self.selectedEntity = selectedEntity
@@ -97,6 +113,9 @@ final class MediaEditorScreenComponent: Component {
             return false
         }
         if lhs.isDismissing != rhs.isDismissing {
+            return false
+        }
+        if lhs.bottomSafeInset != rhs.bottomSafeInset {
             return false
         }
         if lhs.privacy != rhs.privacy {
@@ -206,6 +225,7 @@ final class MediaEditorScreenComponent: Component {
         
         private let inputPanel = ComponentView<Empty>()
         private let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
+        private let inputPanelBackground = ComponentView<Empty>()
         
         private let scrubber = ComponentView<Empty>()
         
@@ -221,6 +241,17 @@ final class MediaEditorScreenComponent: Component {
         
         private var isDismissed = false
         
+        private var isEditingCaption = false
+        private var currentInputMode: MessageInputPanelComponent.InputMode = .keyboard
+        
+        private var didInitializeInputMediaNodeDataPromise = false
+        private var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
+        private var inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
+        private var inputMediaNodeDataDisposable: Disposable?
+        private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
+        private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
+        private var inputMediaNode: ChatEntityKeyboardInputNode?
+        
         private var component: MediaEditorScreenComponent?
         private weak var state: State?
         private var environment: ViewControllerComponentContainer.Environment?
@@ -235,13 +266,114 @@ final class MediaEditorScreenComponent: Component {
             self.fadeView.alpha = 0.0
             
             self.addSubview(self.fadeView)
+            
+            self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                self.inputMediaNodeData = value
+            })
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.inputMediaNodeDataDisposable?.dispose()
+        }
+        
+        private func setupIfNeeded() {
+            guard let component = self.component else {
+                return
+            }
+            
+            if !self.didInitializeInputMediaNodeDataPromise {
+                self.didInitializeInputMediaNodeDataPromise = true
+                
+                let context = component.context
+                self.inputMediaNodeDataPromise.set(
+                    EmojiPagerContentComponent.emojiInputData(
+                        context: context,
+                        animationCache: context.animationCache,
+                        animationRenderer: context.animationRenderer,
+                        isStandalone: true,
+                        isStatusSelection: false,
+                        isReactionSelection: false,
+                        isEmojiSelection: false,
+                        hasTrending: false,
+                        topReactionItems: [],
+                        areUnicodeEmojiEnabled: true,
+                        areCustomEmojiEnabled: true,
+                        chatPeerId: nil,
+                        forceHasPremium: false,
+                        hideBackground: true
+                    ) |> map { emoji -> ChatEntityKeyboardInputNode.InputData in
+                        return ChatEntityKeyboardInputNode.InputData(
+                            emoji: emoji,
+                            stickers: nil,
+                            gifs: nil,
+                            availableGifSearchEmojies: []
+                        )
+                    }
+                )
+                
+                self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
+                    sendSticker: { _, _, _, _, _, _, _, _, _ in
+                        return false
+                    },
+                    sendEmoji: { [weak self] text, attribute, bool1 in
+                        if let self {
+                            let _ = self
+                        }
+                    },
+                    sendGif: { _, _, _, _, _ in
+                        return false
+                    },
+                    sendBotContextResultAsGif: { _, _, _, _, _, _ in
+                        return false
+                    },
+                    updateChoosingSticker: { _ in },
+                    switchToTextInput: { [weak self] in
+                        if let self {
+                            self.currentInputMode = .keyboard
+                            self.state?.updated(transition: .immediate)
+                        }
+                    },
+                    dismissTextInput: {
+                        
+                    },
+                    insertText: { [weak self] text in
+                        if let self {
+                            self.inputPanelExternalState.insertText(text)
+                        }
+                    },
+                    backwardsDeleteText: { [weak self] in
+                        if let self {
+                            self.inputPanelExternalState.deleteBackward()
+                        }
+                    },
+                    presentController: { [weak self] c, a in
+                        if let self {
+                            self.environment?.controller()?.present(c, in: .window(.root), with: a)
+                        }
+                    },
+                    presentGlobalOverlayController: { [weak self] c, a in
+                        if let self {
+                            self.environment?.controller()?.presentInGlobalOverlay(c, with: a)
+                        }
+                    },
+                    getNavigationController: { return nil },
+                    requestLayout: { _ in
+                        
+                    }
+                )
+            }
+        }
+        
         @objc private func fadePressed() {
+            self.currentInputMode = .keyboard
             self.endEditing(true)
         }
         
@@ -346,7 +478,6 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: view, alpha: 0.0)
                 transition.setScale(view: view, scale: 0.1)
             }
-            
             
             if case .camera = source {
                 if let view = self.inputPanel.view {
@@ -453,7 +584,6 @@ final class MediaEditorScreenComponent: Component {
             }
         }
         
-        private var isEditingCaption = false
         func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
@@ -464,6 +594,8 @@ final class MediaEditorScreenComponent: Component {
             self.component = component
             self.state = state
             
+            self.setupIfNeeded()
+                        
             let isTablet: Bool
             if case .regular = environment.metrics.widthClass {
                 isTablet = true
@@ -757,15 +889,27 @@ final class MediaEditorScreenComponent: Component {
                 timeoutValue = "\(timeout ?? 1)"
                 timeoutSelected = timeout != nil
             }
-            
-            
+                        
             var inputPanelAvailableWidth = previewSize.width
+            var inputPanelAvailableHeight = 115.0
             if case .regular = environment.metrics.widthClass {
                 if (self.inputPanelExternalState.isEditing || self.inputPanelExternalState.hasText) {
                     inputPanelAvailableWidth += 200.0
                 }
             }
+            if environment.inputHeight > 0.0 || self.currentInputMode == .emoji {
+                inputPanelAvailableHeight = 200.0
+            }
             
+            let nextInputMode: MessageInputPanelComponent.InputMode
+            switch self.currentInputMode {
+            case .keyboard:
+                nextInputMode = .emoji
+            case .emoji:
+                nextInputMode = .keyboard
+            default:
+                nextInputMode = .emoji
+            }
             self.inputPanel.parentState = state
             let inputPanelSize = self.inputPanel.update(
                 transition: transition,
@@ -777,6 +921,7 @@ final class MediaEditorScreenComponent: Component {
                     style: .editor,
                     placeholder: "Add a caption...",
                     alwaysDarkWhenHasText: false,
+                    nextInputMode: nextInputMode,
                     areVoiceMessagesAvailable: false,
                     presentController: { [weak self] c in
                         guard let self, let _ = self.component else {
@@ -788,6 +933,7 @@ final class MediaEditorScreenComponent: Component {
                         guard let self else {
                             return
                         }
+                        self.currentInputMode = .keyboard
                         self.endEditing(true)
                     },
                     setMediaRecordingActive: nil,
@@ -795,11 +941,34 @@ final class MediaEditorScreenComponent: Component {
                     stopAndPreviewMediaRecording: nil,
                     discardMediaRecordingPreview: nil,
                     attachmentAction: nil,
+                    inputModeAction: { [weak self] in
+                        if let self {
+                            switch self.currentInputMode {
+                            case .keyboard:
+                                self.currentInputMode = .emoji
+                            case .emoji:
+                                self.currentInputMode = .keyboard
+                            default:
+                                self.currentInputMode = .emoji
+                            }
+                            self.state?.updated(transition: .immediate)
+                        }
+                    },
                     timeoutAction: { [weak self] view in
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
-                        controller.presentTimeoutSetup(sourceView: view)
+                        let context = controller.context
+                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                        |> deliverOnMainQueue).start(next: { [weak controller] peer in
+                            let hasPremium: Bool
+                            if case let .user(user) = peer {
+                                hasPremium = user.isPremium
+                            } else {
+                                hasPremium = false
+                            }
+                            controller?.presentTimeoutSetup(sourceView: view, hasPremium: hasPremium)
+                        })
                     },
                     forwardAction: nil,
                     presentVoiceMessagesUnavailableTooltip: nil,
@@ -811,10 +980,11 @@ final class MediaEditorScreenComponent: Component {
                     timeoutValue: timeoutValue,
                     timeoutSelected: timeoutSelected,
                     displayGradient: false,
-                    bottomInset: 0.0
+                    bottomInset: 0.0,
+                    hideKeyboard: self.currentInputMode == .emoji
                 )),
                 environment: {},
-                containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
+                containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)
             )
             
             let fadeTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
@@ -836,6 +1006,29 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
+            var inputHeight = environment.inputHeight
+            if self.inputPanelExternalState.isEditing {
+                if self.currentInputMode == .emoji || inputHeight.isZero {
+                    inputHeight = environment.deviceMetrics.standardInputHeight(inLandscape: false)
+                }
+            }
+            
+            let inputPanelBackgroundSize = self.inputPanelBackground.update(
+                transition: transition,
+                component: AnyComponent(BlurredGradientComponent(position: .bottom, tag: nil)),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: environment.deviceMetrics.standardInputHeight(inLandscape: false) + 100.0)
+            )
+            if let inputPanelBackgroundView = self.inputPanelBackground.view {
+                if inputPanelBackgroundView.superview == nil {
+                    self.addSubview(inputPanelBackgroundView)
+                }
+                let isVisible = inputHeight > 44.0
+                transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
+                transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
+            }
+            
+                        
             var isEditingTextEntity = false
             var sizeSliderVisible = false
             var sizeValue: CGFloat?
@@ -845,11 +1038,9 @@ final class MediaEditorScreenComponent: Component {
                 sizeValue = textEntity.fontSize
             }
             
-            var inputPanelOffset: CGFloat = 0.0
             var inputPanelBottomInset: CGFloat = scrubberBottomInset
-            if environment.inputHeight > 0.0 {
-                inputPanelBottomInset = environment.inputHeight - environment.safeInsets.bottom
-                inputPanelOffset = inputPanelBottomInset
+            if inputHeight > 0.0 {
+                inputPanelBottomInset = inputHeight - environment.safeInsets.bottom
             }
             let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - inputPanelBottomInset - inputPanelSize.height - 3.0), size: inputPanelSize)
             if let inputPanelView = self.inputPanel.view {
@@ -910,7 +1101,7 @@ final class MediaEditorScreenComponent: Component {
                 )
             } else {
                 privacyButtonFrame = CGRect(
-                    origin: CGPoint(x: 16.0, y: environment.safeInsets.top + 20.0 - inputPanelOffset),
+                    origin: CGPoint(x: 16.0, y: environment.safeInsets.top + 20.0),
                     size: privacyButtonSize
                 )
             }
@@ -969,7 +1160,7 @@ final class MediaEditorScreenComponent: Component {
                 containerSize: CGSize(width: 44.0, height: 44.0)
             )
             let saveButtonFrame = CGRect(
-                origin: CGPoint(x: availableSize.width - 20.0 - saveButtonSize.width, y: environment.safeInsets.top + 20.0 - inputPanelOffset),
+                origin: CGPoint(x: availableSize.width - 20.0 - saveButtonSize.width, y: environment.safeInsets.top + 20.0),
                 size: saveButtonSize
             )
             if let saveButtonView = self.saveButton.view {
@@ -1042,7 +1233,7 @@ final class MediaEditorScreenComponent: Component {
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let muteButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: environment.safeInsets.top + 20.0 - inputPanelOffset),
+                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: environment.safeInsets.top + 20.0),
                     size: muteButtonSize
                 )
                 if let muteButtonView = self.muteButton.view {
@@ -1080,7 +1271,7 @@ final class MediaEditorScreenComponent: Component {
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let settingsButtonFrame = CGRect(
-                    origin: CGPoint(x: floorToScreenPixels((availableSize.width - settingsButtonSize.width) / 2.0), y: environment.safeInsets.top + 20.0 - inputPanelOffset),
+                    origin: CGPoint(x: floorToScreenPixels((availableSize.width - settingsButtonSize.width) / 2.0), y: environment.safeInsets.top + 20.0),
                     size: settingsButtonSize
                 )
                 if let settingsButtonView = self.settingsButton.view {
@@ -1172,7 +1363,7 @@ final class MediaEditorScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 30.0, height: 240.0)
             )
-            let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : environment.safeInsets.bottom
+            let bottomInset: CGFloat = inputHeight > 0.0 ? inputHeight : environment.safeInsets.bottom
             let textSizeFrame = CGRect(
                 origin: CGPoint(x: 0.0, y: environment.safeInsets.top + (availableSize.height - environment.safeInsets.top - bottomInset) / 2.0 - textSizeSize.height / 2.0),
                 size: textSizeSize
@@ -1185,6 +1376,78 @@ final class MediaEditorScreenComponent: Component {
                 transition.setBounds(view: textSizeView, bounds: CGRect(origin: .zero, size: textSizeFrame.size))
                 transition.setAlpha(view: textSizeView, alpha: sizeSliderVisible && !component.isInteractingWithEntities ? 1.0 : 0.0)
             }
+            
+            if case .emoji = self.currentInputMode, let inputData = self.inputMediaNodeData {
+                let inputMediaNode: ChatEntityKeyboardInputNode
+                if let current = self.inputMediaNode {
+                    inputMediaNode = current
+                } else {
+                    inputMediaNode = ChatEntityKeyboardInputNode(
+                        context: component.context,
+                        currentInputData: inputData,
+                        updatedInputData: self.inputMediaNodeDataPromise.get(),
+                        defaultToEmojiTab: true,
+                        opaqueTopPanelBackground: false,
+                        interaction: self.inputMediaInteraction,
+                        chatPeerId: nil,
+                        stateContext: self.inputMediaNodeStateContext
+                    )
+                    inputMediaNode.externalTopPanelContainerImpl = nil
+                    if let inputPanelView = self.inputPanel.view {
+                        self.insertSubview(inputMediaNode.view, belowSubview: inputPanelView)
+                    }
+                    self.inputMediaNode = inputMediaNode
+                }
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+                let presentationInterfaceState = ChatPresentationInterfaceState(
+                    chatWallpaper: .builtin(WallpaperSettings()),
+                    theme: presentationData.theme,
+                    strings: presentationData.strings,
+                    dateTimeFormat: presentationData.dateTimeFormat,
+                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                    limitsConfiguration: component.context.currentLimitsConfiguration.with { $0 },
+                    fontSize: presentationData.chatFontSize,
+                    bubbleCorners: presentationData.chatBubbleCorners,
+                    accountPeerId: component.context.account.peerId,
+                    mode: .standard(previewing: false),
+                    chatLocation: .peer(id: component.context.account.peerId),
+                    subject: nil,
+                    peerNearbyData: nil,
+                    greetingData: nil,
+                    pendingUnpinnedAllMessages: false,
+                    activeGroupCallInfo: nil,
+                    hasActiveGroupCall: false,
+                    importState: nil,
+                    threadData: nil,
+                    isGeneralThreadClosed: nil
+                )
+                
+                let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: component.bottomSafeInset, standardInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: environment.inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: environment.metrics, deviceMetrics: environment.deviceMetrics, isVisible: true, isExpanded: false)
+                let inputNodeHeight = heightAndOverflow.0
+                let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+                transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+            } else if let inputMediaNode = self.inputMediaNode {
+                self.inputMediaNode = nil
+                
+                var targetFrame = inputMediaNode.frame
+                if inputHeight > 0.0 {
+                    targetFrame.origin.y = availableSize.height - inputHeight
+                } else {
+                    targetFrame.origin.y = availableSize.height
+                }
+                transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
+                    if let inputMediaNode {
+                        Queue.mainQueue().after(0.3) {
+                            inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
+                                inputMediaNode?.view.removeFromSuperview()
+                            })
+                        }
+                    }
+                })
+            }
+            
+            component.externalState.derivedInputHeight = inputHeight
        
             return availableSize
         }
@@ -1263,6 +1526,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         private let backgroundDimView: UIView
         fileprivate let containerView: UIView
+        fileprivate let componentExternalState = MediaEditorScreenComponent.ExternalState()
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
         fileprivate let storyPreview: ComponentView<Empty>
         fileprivate let toolValue: ComponentView<Empty>
@@ -2231,9 +2495,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             let bottomInset = layout.size.height - previewSize.height - topInset
             
-            var inputHeight = layout.inputHeight ?? 0.0
+            var layoutInputHeight = layout.inputHeight ?? 0.0
             if self.stickerScreen != nil {
-                inputHeight = 0.0
+                layoutInputHeight = 0.0
             }
             
             let environment = ViewControllerComponentContainer.Environment(
@@ -2245,12 +2509,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
-                inputHeight: inputHeight,
+                inputHeight: layoutInputHeight,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,
                 orientation: nil,
                 isVisible: true,
-                theme: self.presentationData.theme,
+                theme: defaultDarkPresentationTheme,
                 strings: self.presentationData.strings,
                 dateTimeFormat: self.presentationData.dateTimeFormat,
                 controller: { [weak self] in
@@ -2267,11 +2531,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 component: AnyComponent(
                     MediaEditorScreenComponent(
                         context: self.context,
+                        externalState: self.componentExternalState,
                         isDisplayingTool: self.isDisplayingTool,
                         isInteractingWithEntities: self.isInteractingWithEntities,
                         isSavingAvailable: controller.isSavingAvailable,
                         hasAppeared: self.hasAppeared,
                         isDismissing: self.isDismissing,
+                        bottomSafeInset: layout.intrinsicInsets.bottom,
                         mediaEditor: self.mediaEditor,
                         privacy: controller.state.privacy,
                         selectedEntity: self.isDisplayingTool ? nil : self.entitiesView.selectedEntityView?.entity,
@@ -2309,7 +2575,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         }
                                     }
                                     self.stickerScreen = controller
-                                    self.controller?.present(controller, in: .current)
+                                    self.controller?.present(controller, in: .window(.root))
                                     return
                                 case .text:
                                     let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
@@ -2352,7 +2618,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         self?.interaction?.activate()
                                         self?.entitiesView.selectEntity(nil)
                                     }
-                                    self.controller?.present(controller, in: .current)
+                                    self.controller?.present(controller, in: .window(.root))
                                     self.animateOutToTool()
                                 }
                             }
@@ -2368,7 +2634,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         self.animateInFromTool()
                                     }
                                 }
-                                self.controller?.present(controller, in: .current)
+                                self.controller?.present(controller, in: .window(.root))
                                 self.animateOutToTool()
                             }
                         }
@@ -2387,6 +2653,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(x: 0.0, y: self.dismissOffset), size: componentSize))
             }
+            
+            let inputHeight = self.componentExternalState.derivedInputHeight
             
             let storyPreviewSize = self.storyPreview.update(
                 transition: transition,
@@ -2441,7 +2709,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if self.entitiesView.selectedEntityView != nil || self.isDisplayingTool {
                         bottomInputOffset = inputHeight / 2.0
                     } else {
-                        bottomInputOffset = inputHeight - bottomInset - 17.0
+                        bottomInputOffset = 0.0 //inputHeight - bottomInset - 17.0
                     }
                 }
             }
@@ -2460,6 +2728,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
+            
+            var layout = layout
+            layout.intrinsicInsets.bottom = bottomInset + 60.0
+            controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             
             if isFirstTime {
                 self.animateIn()
@@ -2574,6 +2846,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.automaticallyControlPresentationContextLayout = false
         
         self.navigationPresentation = .flatModal
                     
@@ -2719,7 +2993,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
     }
     
-    func presentTimeoutSetup(sourceView: UIView) {
+    func presentTimeoutSetup(sourceView: UIView, hasPremium: Bool) {
         self.hapticFeedback.impact(.light)
         
         var items: [ContextMenuItem] = []
@@ -2755,18 +3029,34 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         switch self.state.privacy {
         case .story:
             items.append(.action(ContextMenuActionItem(text: "6 Hours", icon: { theme in
-                return currentValue == 3600 * 6 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-            }, action: { _, a in
+                if !hasPremium {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
+                } else {
+                    return currentValue == 3600 * 6 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                }
+            }, action: { [weak self] _, a in
                 a(.default)
                 
-                updateTimeout(3600 * 6, false)
+                if hasPremium {
+                    updateTimeout(3600 * 6, false)
+                } else {
+                    self?.presentTimeoutPremiumSuggestion(3600 * 6)
+                }
             })))
             items.append(.action(ContextMenuActionItem(text: "12 Hours", icon: { theme in
-                return currentValue == 3600 * 12 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-            }, action: { _, a in
+                if !hasPremium {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
+                } else {
+                    return currentValue == 3600 * 12 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                }
+            }, action: { [weak self] _, a in
                 a(.default)
                 
-                updateTimeout(3600 * 12, false)
+                if hasPremium {
+                    updateTimeout(3600 * 12, false)
+                } else {
+                    self?.presentTimeoutPremiumSuggestion(3600 * 12)
+                }
             })))
             items.append(.action(ContextMenuActionItem(text: "24 Hours", icon: { theme in
                 return currentValue == 86400 && !currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
@@ -2776,11 +3066,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 updateTimeout(86400, false)
             })))
             items.append(.action(ContextMenuActionItem(text: "48 Hours", icon: { theme in
-                return currentValue == 86400 * 2 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-            }, action: { _, a in
+                if !hasPremium {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
+                } else {
+                    return currentValue == 86400 * 2 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                }
+            }, action: { [weak self] _, a in
                 a(.default)
                 
-                updateTimeout(86400 * 2, false)
+                if hasPremium {
+                    updateTimeout(86400 * 2, false)
+                } else {
+                    self?.presentTimeoutPremiumSuggestion(86400 * 2)
+                }
             })))
             items.append(.action(ContextMenuActionItem(text: "Keep Always", icon: { theme in
                 return currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
@@ -2790,7 +3088,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 updateTimeout(86400, true)
             })))
             items.append(.separator)
-            items.append(.action(ContextMenuActionItem(text: "Select 'Keep Always' to always show the story in your profile.", textLayout: .multiline, textFont: .small, icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: "Select 'Keep Always' to show the story on your page.", textLayout: .multiline, textFont: .small, icon: { theme in
                 return nil
             }, action: { _, _ in
             })))
@@ -2835,6 +3133,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         self.present(contextController, in: .window(.root))
+    }
+    
+    private func presentTimeoutPremiumSuggestion(_ timeout: Int32) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
+        let timeoutString = presentationData.strings.MuteExpires_Hours(max(1, timeout / (60 * 60)))
+        let text = "Subscribe to **Telegram Premium** to make your stories disappear \(timeoutString)."
+        
+        let context = self.context
+        let controller = UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: true, title: nil, text: text, customUndoText: "More"), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+            if case .undo = action, let self {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
+                self.push(controller)
+            }
+            return false }
+        )
+        self.present(controller, in: .current)
     }
     
     func maybePresentDiscardAlert() {
@@ -3529,5 +3844,86 @@ private final class ToolValueComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+public final class BlurredGradientComponent: Component {
+    public enum Position {
+        case top
+        case bottom
+    }
+    
+    let position: Position
+    let tag: AnyObject?
+
+    public init(
+        position: Position,
+        tag: AnyObject?
+    ) {
+        self.position = position
+        self.tag = tag
+    }
+    
+    public static func ==(lhs: BlurredGradientComponent, rhs: BlurredGradientComponent) -> Bool {
+        if lhs.position != rhs.position {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: BlurredBackgroundView, ComponentTaggedView {
+        private var component: BlurredGradientComponent?
+        
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        private var gradientMask = UIImageView()
+        private var gradientForeground = SimpleGradientLayer()
+        
+        public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            self.component = component
+            
+            self.isUserInteractionEnabled = false
+            
+            self.updateColor(color: UIColor(rgb: 0x000000, alpha: component.position == .top ? 0.15 : 0.25), transition: transition.containedViewLayoutTransition)
+           
+            if self.mask == nil {
+                self.mask = self.gradientMask
+                self.gradientMask.image = generateGradientImage(
+                    size: CGSize(width: 1.0, height: availableSize.height),
+                    colors: [UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 1.0), UIColor(rgb: 0xffffff, alpha: 0.0)],
+                    locations: component.position == .top ? [0.0, 0.8, 1.0] : [1.0, 0.20, 0.0],
+                    direction: .vertical
+                )
+                
+                self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.35).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
+                self.gradientForeground.startPoint = CGPoint(x: 0.5, y: component.position == .top ? 0.0 : 1.0)
+                self.gradientForeground.endPoint = CGPoint(x: 0.5, y: component.position == .top ? 1.0 : 0.0)
+                
+                self.layer.addSublayer(self.gradientForeground)
+            }
+            
+            transition.setFrame(view: self.gradientMask, frame: CGRect(origin: .zero, size: availableSize))
+            transition.setFrame(layer: self.gradientForeground, frame: CGRect(origin: .zero, size: availableSize))
+            
+            self.update(size: availableSize, transition: transition.containedViewLayoutTransition)
+            
+            return availableSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(color: nil, enableBlur: true)
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

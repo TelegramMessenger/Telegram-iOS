@@ -6,6 +6,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import ChatInterfaceState
+import ChatContextQuery
 
 public extension ChatLocation {
     var peerId: PeerId? {
@@ -27,53 +28,6 @@ public extension ChatLocation {
             return Int64(replyThreadMessage.messageId.id)
         case .feed:
             return nil
-        }
-    }
-}
-
-public enum ChatPresentationInputQueryKind: Int32 {
-    case emoji
-    case hashtag
-    case mention
-    case command
-    case contextRequest
-    case emojiSearch
-}
-
-public struct ChatInputQueryMentionTypes: OptionSet, Hashable {
-    public var rawValue: Int32
-    
-    public init(rawValue: Int32) {
-        self.rawValue = rawValue
-    }
-    
-    public static let contextBots = ChatInputQueryMentionTypes(rawValue: 1 << 0)
-    public static let members = ChatInputQueryMentionTypes(rawValue: 1 << 1)
-    public static let accountPeer = ChatInputQueryMentionTypes(rawValue: 1 << 2)
-}
-
-public enum ChatPresentationInputQuery: Hashable, Equatable {
-    case emoji(String)
-    case hashtag(String)
-    case mention(query: String, types: ChatInputQueryMentionTypes)
-    case command(String)
-    case emojiSearch(query: String, languageCode: String, range: NSRange)
-    case contextRequest(addressName: String, query: String)
-    
-    public var kind: ChatPresentationInputQueryKind {
-        switch self {
-            case .emoji:
-                return .emoji
-            case .hashtag:
-                return .hashtag
-            case .mention:
-                return .mention
-            case .command:
-                return .command
-            case .contextRequest:
-                return .contextRequest
-            case .emojiSearch:
-                return .emojiSearch
         }
     }
 }

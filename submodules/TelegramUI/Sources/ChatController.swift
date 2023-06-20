@@ -98,6 +98,7 @@ import StoryContainerScreen
 import StoryContentComponent
 import MoreHeaderButton
 import VolumeButtons
+import ChatContextQuery
 
 #if DEBUG
 import os.signpost
@@ -18572,7 +18573,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
                 }
                 if let text = text {
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             })
         })

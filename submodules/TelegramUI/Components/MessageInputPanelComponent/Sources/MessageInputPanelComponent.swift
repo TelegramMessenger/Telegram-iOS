@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import AppBundle
 import TextFieldComponent
 import BundleIconComponent
@@ -9,15 +10,27 @@ import AccountContext
 import TelegramPresentationData
 import ChatPresentationInterfaceState
 import LottieComponent
+import ChatContextQuery
+import TextFormat
 
 public final class MessageInputPanelComponent: Component {
     public enum Style {
         case story
         case editor
     }
+    
+    public enum InputMode: Hashable {
+        case keyboard
+        case stickers
+        case emoji
+    }
+    
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
+        
+        public fileprivate(set) var insertText: (NSAttributedString) -> Void = { _ in }
+        public fileprivate(set) var deleteBackward: () -> Void = { }
         
         public init() {
         }
@@ -30,6 +43,7 @@ public final class MessageInputPanelComponent: Component {
     public let style: Style
     public let placeholder: String
     public let alwaysDarkWhenHasText: Bool
+    public let nextInputMode: InputMode?
     public let areVoiceMessagesAvailable: Bool
     public let presentController: (ViewController) -> Void
     public let sendMessageAction: () -> Void
@@ -38,6 +52,7 @@ public final class MessageInputPanelComponent: Component {
     public let stopAndPreviewMediaRecording: (() -> Void)?
     public let discardMediaRecordingPreview: (() -> Void)?
     public let attachmentAction: (() -> Void)?
+    public let inputModeAction: (() -> Void)?
     public let timeoutAction: ((UIView) -> Void)?
     public let forwardAction: (() -> Void)?
     public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
@@ -50,6 +65,7 @@ public final class MessageInputPanelComponent: Component {
     public let timeoutSelected: Bool
     public let displayGradient: Bool
     public let bottomInset: CGFloat
+    public let hideKeyboard: Bool
     
     public init(
         externalState: ExternalState,
@@ -59,6 +75,7 @@ public final class MessageInputPanelComponent: Component {
         style: Style,
         placeholder: String,
         alwaysDarkWhenHasText: Bool,
+        nextInputMode: InputMode?,
         areVoiceMessagesAvailable: Bool,
         presentController: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
@@ -67,6 +84,7 @@ public final class MessageInputPanelComponent: Component {
         stopAndPreviewMediaRecording: (() -> Void)?,
         discardMediaRecordingPreview: (() -> Void)?,
         attachmentAction: (() -> Void)?,
+        inputModeAction: (() -> Void)?,
         timeoutAction: ((UIView) -> Void)?,
         forwardAction: (() -> Void)?,
         presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
@@ -78,13 +96,15 @@ public final class MessageInputPanelComponent: Component {
         timeoutValue: String?,
         timeoutSelected: Bool,
         displayGradient: Bool,
-        bottomInset: CGFloat
+        bottomInset: CGFloat,
+        hideKeyboard: Bool
     ) {
         self.externalState = externalState
         self.context = context
         self.theme = theme
         self.strings = strings
         self.style = style
+        self.nextInputMode = nextInputMode
         self.placeholder = placeholder
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
         self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
@@ -95,6 +115,7 @@ public final class MessageInputPanelComponent: Component {
         self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
         self.discardMediaRecordingPreview = discardMediaRecordingPreview
         self.attachmentAction = attachmentAction
+        self.inputModeAction = inputModeAction
         self.timeoutAction = timeoutAction
         self.forwardAction = forwardAction
         self.presentVoiceMessagesUnavailableTooltip = presentVoiceMessagesUnavailableTooltip
@@ -107,6 +128,7 @@ public final class MessageInputPanelComponent: Component {
         self.timeoutSelected = timeoutSelected
         self.displayGradient = displayGradient
         self.bottomInset = bottomInset
+        self.hideKeyboard = hideKeyboard
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -123,6 +145,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.style != rhs.style {
+            return false
+        }
+        if lhs.nextInputMode != rhs.nextInputMode {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
@@ -164,6 +189,9 @@ public final class MessageInputPanelComponent: Component {
         if (lhs.forwardAction == nil) != (rhs.forwardAction == nil) {
             return false
         }
+        if lhs.hideKeyboard != rhs.hideKeyboard {
+            return false
+        }
         return true
     }
     
@@ -198,6 +226,12 @@ public final class MessageInputPanelComponent: Component {
         
         private var currentMediaInputIsVoice: Bool = true
         private var mediaCancelFraction: CGFloat = 0.0
+        
+        private var contextQueryStates: [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)] = [:]
+        private var contextQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult] = [:]
+        
+        private var contextQueryResultPanel: ComponentView<Empty>?
+        private var contextQueryResultPanelExternalState: ContextResultPanelComponent.ExternalState?
         
         private var component: MessageInputPanelComponent?
         private weak var state: EmptyComponentState?
@@ -256,9 +290,56 @@ public final class MessageInputPanelComponent: Component {
             }
         }
         
+        public func updateContextQueries() {
+            guard let component = self.component, let textFieldView = self.textField.view as? TextFieldComponent.View else {
+                return
+            }
+            let context = component.context
+            let inputState = textFieldView.getInputState()
+            
+            let contextQueryUpdates = contextQueryResultState(context: context, inputState: inputState, currentQueryStates: &self.contextQueryStates)
+
+            for (kind, update) in contextQueryUpdates {
+                switch update {
+                case .remove:
+                    if let (_, disposable) = self.contextQueryStates[kind] {
+                        disposable.dispose()
+                        self.contextQueryStates.removeValue(forKey: kind)
+                        self.contextQueryResults[kind] = nil
+                    }
+                case let .update(query, signal):
+                    let currentQueryAndDisposable = self.contextQueryStates[kind]
+                    currentQueryAndDisposable?.1.dispose()
+
+                    var inScope = true
+                    var inScopeResult: ((ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?)?
+                    self.contextQueryStates[kind] = (query, (signal
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        if let self {
+                            if Thread.isMainThread && inScope {
+                                inScope = false
+                                inScopeResult = result
+                            } else {
+                                self.contextQueryResults[kind] = result(self.contextQueryResults[kind])
+                                self.state?.updated(transition: .immediate)
+                            }
+                        }
+                    }))
+                    inScope = false
+                    if let inScopeResult = inScopeResult {
+                        self.contextQueryResults[kind] = inScopeResult(self.contextQueryResults[kind])
+                    }
+                }
+            }
+        }
+        
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             
+            if result == nil, let contextQueryResultPanel = self.contextQueryResultPanel?.view, let panelResult = contextQueryResultPanel.hitTest(self.convert(point, to: contextQueryResultPanel), with: event), panelResult !== contextQueryResultPanel {
+                return panelResult
+            }
+             
             return result
         }
         
@@ -276,6 +357,7 @@ public final class MessageInputPanelComponent: Component {
             
             let baseFieldHeight: CGFloat = 40.0
             
+            let previousComponent = self.component
             self.component = component
             self.state = state
 
@@ -317,9 +399,16 @@ public final class MessageInputPanelComponent: Component {
             let textFieldSize = self.textField.update(
                 transition: .immediate,
                 component: AnyComponent(TextFieldComponent(
+                    context: component.context,
                     strings: component.strings,
                     externalState: self.textFieldExternalState,
-                    placeholder: ""
+                    fontSize: 17.0,
+                    textColor: UIColor(rgb: 0xffffff),
+                    insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: 48.0),
+                    hideKeyboard: component.hideKeyboard,
+                    present: { c in
+                        component.presentController(c)
+                    }
                 )),
                 environment: {},
                 containerSize: availableTextFieldSize
@@ -644,36 +733,100 @@ public final class MessageInputPanelComponent: Component {
             }
         
             var fieldIconNextX = fieldBackgroundFrame.maxX - 4.0
-            if case .story = component.style {
-                let stickerButtonSize = self.stickerButton.update(
-                    transition: transition,
-                    component: AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Chat/Input/Text/AccessoryIconStickers",
-                            tintColor: .white
-                        )),
-                        action: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            self.component?.attachmentAction?()
+            
+            var inputModeVisible = false
+            if component.style == .story || self.textFieldExternalState.isEditing {
+                inputModeVisible = true
+            }
+            
+            let animationName: String
+            var animationPlay = false
+            
+            if let inputMode = component.nextInputMode {
+                switch inputMode {
+                case .keyboard:
+                    if let previousInputMode = previousComponent?.nextInputMode {
+                        if case .stickers = previousInputMode {
+                            animationName = "input_anim_stickerToKey"
+                            animationPlay = true
+                        } else if case .emoji = previousInputMode {
+                            animationName = "input_anim_smileToKey"
+                            animationPlay = true
+                        } else {
+                            animationName = "input_anim_stickerToKey"
                         }
-                    ).minSize(CGSize(width: 32.0, height: 32.0))),
-                    environment: {},
-                    containerSize: CGSize(width: 32.0, height: 32.0)
-                )
-                if let stickerButtonView = self.stickerButton.view {
-                    if stickerButtonView.superview == nil {
-                        self.addSubview(stickerButtonView)
+                    } else {
+                        animationName = "input_anim_stickerToKey"
                     }
-                    let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldBackgroundFrame.minY + floor((fieldBackgroundFrame.height - stickerButtonSize.height) * 0.5)), size: stickerButtonSize)
-                    transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
-                    transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
-                    
-                    transition.setAlpha(view: stickerButtonView, alpha: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
-                    transition.setScale(view: stickerButtonView, scale: (self.textFieldExternalState.hasText || hasMediaRecording || hasMediaEditing) ? 0.1 : 1.0)
-                    
+                case .stickers:
+                    if let previousInputMode = previousComponent?.nextInputMode {
+                        if case .keyboard = previousInputMode {
+                            animationName = "input_anim_keyToSticker"
+                            animationPlay = true
+                        } else if case .emoji = previousInputMode {
+                            animationName = "input_anim_smileToSticker"
+                            animationPlay = true
+                        } else {
+                            animationName = "input_anim_keyToSticker"
+                        }
+                    } else {
+                        animationName = "input_anim_keyToSticker"
+                    }
+                case .emoji:
+                    if let previousInputMode = previousComponent?.nextInputMode {
+                        if case .keyboard = previousInputMode {
+                            animationName = "input_anim_keyToSmile"
+                            animationPlay = true
+                        } else if case .stickers = previousInputMode {
+                            animationName = "input_anim_stickerToSmile"
+                            animationPlay = true
+                        } else {
+                            animationName = "input_anim_keyToSmile"
+                        }
+                    } else {
+                        animationName = "input_anim_keyToSmile"
+                    }
+                }
+            } else {
+                animationName = ""
+            }
+            
+            let stickerButtonSize = self.stickerButton.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: animationName),
+                        color: .white
+                    )),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.component?.inputModeAction?()
+                    }
+                ).minSize(CGSize(width: 32.0, height: 32.0))),
+                environment: {},
+                containerSize: CGSize(width: 32.0, height: 32.0)
+            )
+            if let stickerButtonView = self.stickerButton.view as? Button.View {
+                if stickerButtonView.superview == nil {
+                    self.addSubview(stickerButtonView)
+                }
+                let stickerIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - stickerButtonSize.width, y: fieldFrame.maxY - 4.0 - stickerButtonSize.height), size: stickerButtonSize)
+                transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
+                transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
+                
+                transition.setAlpha(view: stickerButtonView, alpha: (hasMediaRecording || hasMediaEditing || !inputModeVisible) ? 0.0 : 1.0)
+                transition.setScale(view: stickerButtonView, scale: (hasMediaRecording || hasMediaEditing || !inputModeVisible) ? 0.1 : 1.0)
+                
+                if inputModeVisible {
                     fieldIconNextX -= stickerButtonSize.width + 2.0
+                    
+                    if let animationView = stickerButtonView.content as? LottieComponent.View {
+                        if animationPlay {
+                            animationView.playOnce()
+                        }
+                    }
                 }
             }
             
@@ -723,14 +876,13 @@ public final class MessageInputPanelComponent: Component {
                     if timeoutButtonView.superview == nil {
                         self.addSubview(timeoutButtonView)
                     }
-                    let timeoutIconFrame = CGRect(origin: CGPoint(x: fieldIconNextX - timeoutButtonSize.width, y: fieldFrame.maxY - 4.0 - timeoutButtonSize.height), size: timeoutButtonSize)
+                    let originX = fieldBackgroundFrame.maxX - 4.0
+                    let timeoutIconFrame = CGRect(origin: CGPoint(x: originX - timeoutButtonSize.width, y: fieldFrame.maxY - 4.0 - timeoutButtonSize.height), size: timeoutButtonSize)
                     transition.setPosition(view: timeoutButtonView, position: timeoutIconFrame.center)
                     transition.setBounds(view: timeoutButtonView, bounds: CGRect(origin: CGPoint(), size: timeoutIconFrame.size))
                     
                     transition.setAlpha(view: timeoutButtonView, alpha: self.textFieldExternalState.isEditing ? 0.0 : 1.0)
                     transition.setScale(view: timeoutButtonView, scale: self.textFieldExternalState.isEditing ? 0.1 : 1.0)
-                    
-                    fieldIconNextX -= timeoutButtonSize.width + 2.0
                 }
             }
             
@@ -748,6 +900,16 @@ public final class MessageInputPanelComponent: Component {
             
             component.externalState.isEditing = self.textFieldExternalState.isEditing
             component.externalState.hasText = self.textFieldExternalState.hasText
+            component.externalState.insertText = { [weak self] text in
+                if let self, let view = self.textField.view as? TextFieldComponent.View {
+                    view.insertText(text)
+                }
+            }
+            component.externalState.deleteBackward = { [weak self] in
+                if let self, let view = self.textField.view as? TextFieldComponent.View {
+                    view.deleteBackward()
+                }
+            }
             
             if hasMediaRecording {
                 if let dismissingMediaRecordingPanel = self.dismissingMediaRecordingPanel {
@@ -892,6 +1054,94 @@ public final class MessageInputPanelComponent: Component {
                         })
                     }
                 }
+            }
+            
+            self.updateContextQueries()
+            
+            if let result = self.contextQueryResults[.mention], result.count > 0 && self.textFieldExternalState.isEditing {
+                let availablePanelHeight: CGFloat = 413.0
+                
+                var animateIn = false
+                let panel: ComponentView<Empty>
+                let externalState: ContextResultPanelComponent.ExternalState
+                var transition = transition
+                if let current = self.contextQueryResultPanel, let currentState = self.contextQueryResultPanelExternalState {
+                    panel = current
+                    externalState = currentState
+                } else {
+                    panel = ComponentView<Empty>()
+                    externalState = ContextResultPanelComponent.ExternalState()
+                    self.contextQueryResultPanel = panel
+                    self.contextQueryResultPanelExternalState = externalState
+                    animateIn = true
+                    transition = .immediate
+                }
+                let panelLeftInset: CGFloat = max(insets.left, 7.0)
+                let panelRightInset: CGFloat = max(insets.right, 41.0)
+                let panelSize = panel.update(
+                    transition: transition,
+                    component: AnyComponent(ContextResultPanelComponent(
+                        externalState: externalState,
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        results: result,
+                        action: { [weak self] action in
+                            if let self, case let .mention(peer) = action, let textView = self.textField.view as? TextFieldComponent.View {
+                                let inputState = textView.getInputState()
+                                
+                                var mentionQueryRange: NSRange?
+                                inner: for (range, type, _) in textInputStateContextQueryRangeAndType(inputState: inputState) {
+                                    if type == [.mention] {
+                                        mentionQueryRange = range
+                                        break inner
+                                    }
+                                }
+                                
+                                if let range = mentionQueryRange {
+                                    let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                                    if let addressName = peer.addressName, !addressName.isEmpty {
+                                        let replacementText = addressName + " "
+                                        inputText.replaceCharacters(in: range, with: replacementText)
+                                        
+                                        let selectionPosition = range.lowerBound + (replacementText as NSString).length
+                                        textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                    } else if !peer.compactDisplayTitle.isEmpty {
+                                        let replacementText = NSMutableAttributedString()
+                                        replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+                                        replacementText.append(NSAttributedString(string: " "))
+                                        
+                                        let updatedRange = NSRange(location: range.location - 1, length: range.length + 1)
+                                        inputText.replaceCharacters(in: updatedRange, with: replacementText)
+                                        
+                                        let selectionPosition = updatedRange.lowerBound + replacementText.length
+                                        textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                    }
+                                }
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - panelLeftInset - panelRightInset, height: availablePanelHeight)
+                )
+                
+                let panelFrame = CGRect(origin: CGPoint(x: insets.left, y: -panelSize.height + 33.0), size: panelSize)
+                if let panelView = panel.view as? ContextResultPanelComponent.View {
+                    if panelView.superview == nil {
+                        self.insertSubview(panelView, at: 0)
+                    }
+                    transition.setFrame(view: panelView, frame: panelFrame)
+                    
+                    if animateIn {
+                        panelView.animateIn(transition: .spring(duration: 0.4))
+                    }
+                }
+                
+            } else if let contextQueryResultPanel = self.contextQueryResultPanel?.view as? ContextResultPanelComponent.View {
+                self.contextQueryResultPanel = nil
+                contextQueryResultPanel.animateOut(transition: .spring(duration: 0.4), completion: { [weak contextQueryResultPanel] in
+                    contextQueryResultPanel?.removeFromSuperview()
+                })
             }
             
             return size

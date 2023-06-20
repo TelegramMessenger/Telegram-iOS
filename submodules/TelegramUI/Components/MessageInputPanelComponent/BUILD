@@ -24,6 +24,9 @@ swift_library(
         "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/TelegramUI/Components/AudioWaveformComponent",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/ChatContextQuery",
+        "//submodules/TextFormat",
+        "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -758,6 +758,48 @@ public class ContactsController: ViewController {
         let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ContactsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
     }
+    
+    private var storyCameraTransitionInCoordinator: StoryCameraTransitionInCoordinator?
+    var hasStoryCameraTransition: Bool {
+        return self.storyCameraTransitionInCoordinator != nil
+    }
+    func storyCameraPanGestureChanged(transitionFraction: CGFloat) {
+        guard let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface else {
+            return
+        }
+            
+        let coordinator: StoryCameraTransitionInCoordinator?
+        if let current = self.storyCameraTransitionInCoordinator {
+            coordinator = current
+        } else {
+            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] finished in
+                guard let self else {
+                    return nil
+                }
+                
+                let _ = self
+//                if finished, let componentView = self.chatListHeaderView() {
+//                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
+//                        return StoryCameraTransitionOut(
+//                            destinationView: transitionView,
+//                            destinationRect: transitionView.bounds,
+//                            destinationCornerRadius: transitionView.bounds.height * 0.5
+//                        )
+//                    }
+//                }
+                return nil
+            })
+            self.storyCameraTransitionInCoordinator = coordinator
+        }
+        coordinator?.updateTransitionProgress(transitionFraction)
+    }
+    
+    func storyCameraPanGestureEnded(transitionFraction: CGFloat, velocity: CGFloat) {
+        if let coordinator = self.storyCameraTransitionInCoordinator {
+            coordinator.completeWithTransitionProgressAndVelocity(transitionFraction, velocity)
+            self.storyCameraTransitionInCoordinator = nil
+        }
+    }
 }
 
 private final class ContactsTabBarContextExtractedContentSource: ContextExtractedContentSource {

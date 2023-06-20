@@ -582,7 +582,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
     }
 }
 
-private let snapTimeout = 2.0
+private let snapTimeout = 1.0
 
 class DrawingEntitySnapTool {
     enum SnapType {

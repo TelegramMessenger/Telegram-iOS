@@ -251,6 +251,7 @@ final class StoryPreviewComponent: Component {
                     style: .story,
                     placeholder: "Reply Privately...",
                     alwaysDarkWhenHasText: false,
+                    nextInputMode: nil,
                     areVoiceMessagesAvailable: false,
                     presentController: { _ in
                     },
@@ -261,6 +262,7 @@ final class StoryPreviewComponent: Component {
                     stopAndPreviewMediaRecording: nil,
                     discardMediaRecordingPreview: nil,
                     attachmentAction: { },
+                    inputModeAction: nil,
                     timeoutAction: nil,
                     forwardAction: nil,
                     presentVoiceMessagesUnavailableTooltip: nil,
@@ -272,7 +274,8 @@ final class StoryPreviewComponent: Component {
                     timeoutValue: nil,
                     timeoutSelected: false,
                     displayGradient: false,
-                    bottomInset: 0.0
+                    bottomInset: 0.0,
+                    hideKeyboard: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 200.0)

@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "TextFieldComponent",
-    module_name = "TextFieldComponent",
+    name = "PeerListItemComponent",
+    module_name = "PeerListItemComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -12,14 +12,19 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/ComponentFlow",
-        "//submodules/TextFormat",
         "//submodules/TelegramPresentationData",
+        "//submodules/AsyncDisplayKit",
+        "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AccountContext",
-        "//submodules/InvisibleInkDustNode",
-        "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
-        "//submodules/ChatTextLinkEditUI"
+        "//submodules/TelegramCore",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/AvatarNode",
+        "//submodules/CheckNode",
+        "//submodules/TelegramStringFormatting",
+        "//submodules/AppBundle",
     ],
     visibility = [
         "//visibility:public",
     ],
 )
+

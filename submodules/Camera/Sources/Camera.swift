@@ -214,6 +214,8 @@ private final class CameraContext {
     
     func stopCapture(invalidate: Bool = false) {
         if invalidate {
+            self.setZoomLevel(1.0)
+            
             self.configure {
                 self.mainDeviceContext.invalidate()
             }

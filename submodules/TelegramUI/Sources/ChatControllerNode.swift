@@ -2282,13 +2282,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
     }
-    
-    private final class EmptyInputView: UIView, UIInputViewAudioFeedback {
-        var enableInputClicksWhenVisible: Bool {
-            return true
-        }
-    }
-    
+        
     private let emptyInputView = EmptyInputView()
     private func chatPresentationInterfaceStateInputView(_ state: ChatPresentationInterfaceState) -> UIView? {
         switch state.inputMode {
@@ -2634,13 +2628,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             peerId = id
         }
         
+        guard let interfaceInteraction = self.interfaceInteraction else {
+            return nil
+        }
+        
         let inputNode = ChatEntityKeyboardInputNode(
             context: self.context,
             currentInputData: inputMediaNodeData,
             updatedInputData: self.inputMediaNodeDataPromise.get(),
             defaultToEmojiTab: !self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.string.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || self.openStickersBeginWithEmoji,
-            controllerInteraction: self.controllerInteraction,
-            interfaceInteraction: self.interfaceInteraction,
+            interaction: ChatEntityKeyboardInputNode.Interaction(chatControllerInteraction: self.controllerInteraction, panelInteraction: interfaceInteraction),
             chatPeerId: peerId,
             stateContext: self.inputMediaNodeStateContext
         )
@@ -2650,12 +2647,23 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
-        if !self.didInitializeInputMediaNodeDataPromise, let interfaceInteraction = self.interfaceInteraction {
+        if !self.didInitializeInputMediaNodeDataPromise {
             self.didInitializeInputMediaNodeDataPromise = true
-            
-            let areCustomEmojiEnabled = self.chatPresentationInterfaceState.customEmojiAvailable
-            
-            self.inputMediaNodeDataPromise.set(ChatEntityKeyboardInputNode.inputData(context: self.context, interfaceInteraction: interfaceInteraction, controllerInteraction: self.controllerInteraction, chatPeerId: self.chatLocation.peerId, areCustomEmojiEnabled: areCustomEmojiEnabled))
+                        
+            self.inputMediaNodeDataPromise.set(
+                ChatEntityKeyboardInputNode.inputData(
+                    context: self.context,
+                    chatPeerId: self.chatLocation.peerId,
+                    areCustomEmojiEnabled: self.chatPresentationInterfaceState.customEmojiAvailable,
+                    sendGif: { [weak self] fileReference, sourceView, sourceRect, silentPosting, schedule in
+                        if let self {
+                            return self.controllerInteraction.sendGif(fileReference, sourceView, sourceRect, silentPosting, schedule)
+                        } else {
+                            return false
+                        }
+                    }
+                )
+            )
         }
         
         self.textInputPanelNode?.loadTextInputNodeIfNeeded()

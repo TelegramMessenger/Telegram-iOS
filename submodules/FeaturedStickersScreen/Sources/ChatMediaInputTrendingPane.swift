@@ -12,7 +12,6 @@ import AccountContext
 import StickerPackPreviewUI
 import PresentationDataUtils
 import UndoUI
-import ChatControllerInteraction
 
 public final class TrendingPaneInteraction {
     public let installPack: (ItemCollectionInfo) -> Void
@@ -192,8 +191,24 @@ private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], ins
 }
 
 public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
+    public final class Interaction {
+        let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+        let presentController: (ViewController, Any?) -> Void
+        let getNavigationController: () -> NavigationController?
+        
+        public init(
+            sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
+            presentController: @escaping (ViewController, Any?) -> Void,
+            getNavigationController: @escaping () -> NavigationController?
+        ) {
+            self.sendSticker = sendSticker
+            self.presentController = presentController
+            self.getNavigationController = getNavigationController
+        }
+    }
+    
     private let context: AccountContext
-    private let controllerInteraction: ChatControllerInteraction
+    private let interaction: ChatMediaInputTrendingPane.Interaction
     private let getItemIsPreviewed: (StickerPackItem) -> Bool
     private let isPane: Bool
     
@@ -215,9 +230,9 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     private let installDisposable = MetaDisposable()
     
-    public init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, isPane: Bool) {
+    public init(context: AccountContext, interaction: ChatMediaInputTrendingPane.Interaction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, isPane: Bool) {
         self.context = context
-        self.controllerInteraction = controllerInteraction
+        self.interaction = interaction
         self.getItemIsPreviewed = getItemIsPreviewed
         self.isPane = isPane
         
@@ -279,7 +294,7 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
-                    self?.controllerInteraction.presentController(controller, nil)
+                    self?.interaction.presentController(controller, nil)
                     return ActionDisposable { [weak controller] in
                         Queue.mainQueue().async() {
                             controller?.dismiss()
@@ -306,7 +321,7 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     }
                     
                     var animateInAsReplacement = false
-                    if let navigationController = strongSelf.controllerInteraction.navigationController() {
+                    if let navigationController = strongSelf.interaction.getNavigationController() {
                         for controller in navigationController.overlayControllers {
                             if let controller = controller as? UndoOverlayController {
                                 controller.dismissWithCommitActionAndReplacementAnimation()
@@ -316,7 +331,7 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     }
                     
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                    strongSelf.interaction.getNavigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))
                 }))
@@ -325,14 +340,14 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 strongSelf.view.window?.endEditing(true)
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
+                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
+                        return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
                     } else {
                         return false
                     }
                 })
-                strongSelf.controllerInteraction.presentController(controller, nil)
+                strongSelf.interaction.presentController(controller, nil)
             }
         }, getItemIsPreviewed: self.getItemIsPreviewed,
         openSearch: { [weak self] in

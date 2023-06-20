@@ -31,7 +31,6 @@ swift_library(
         "//submodules/StickerResources:StickerResources",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
-        "//submodules/TelegramUI/Components/ChatControllerInteraction:ChatControllerInteraction",
     ],
     visibility = [
         "//visibility:public",

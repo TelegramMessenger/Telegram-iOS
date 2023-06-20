@@ -44,7 +44,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-final class ContactsControllerNode: ASDisplayNode {
+final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     let contactListNode: ContactListNode
     
     private let context: AccountContext
@@ -81,6 +81,8 @@ final class ContactsControllerNode: ASDisplayNode {
     private var storySubscriptionsDisposable: Disposable?
     
     let storiesReady = Promise<Bool>()
+    
+    private var panRecognizer: InteractiveTransitionGestureRecognizer?
     
     init(context: AccountContext, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void, controller: ContactsController) {
         self.context = context
@@ -261,6 +263,34 @@ final class ContactsControllerNode: ASDisplayNode {
     deinit {
         self.presentationDataDisposable?.dispose()
         self.storySubscriptionsDisposable?.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { _ in
+            let directions: InteractiveTransitionGestureRecognizerDirections = [.rightCenter, .rightEdge]
+            return directions
+        }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
+        panRecognizer.delegate = self
+        panRecognizer.delaysTouchesBegan = false
+        panRecognizer.cancelsTouchesInView = true
+        self.panRecognizer = panRecognizer
+        self.view.addGestureRecognizer(panRecognizer)
+    }
+    
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
+    }
+    
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+            return false
+        }
+        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+            return true
+        }
+        return false
     }
     
     private func updateThemeAndStrings() {
@@ -510,6 +540,38 @@ final class ContactsControllerNode: ASDisplayNode {
             self.searchDisplayController = nil
             
             placeholderNode.frame = previousFrame
+        }
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        guard let (layout, _) = self.containerLayout else {
+            return
+        }
+        switch recognizer.state {
+        case .began:
+            break
+        case .changed:
+            let translation = recognizer.translation(in: self.view)
+            if case .compact = layout.metrics.widthClass {
+                let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
+                if translation.x > 0.0 {
+                    self.controller?.storyCameraPanGestureChanged(transitionFraction: translation.x / layout.size.width)
+                } else if translation.x <= 0.0 && cameraIsAlreadyOpened {
+                    self.controller?.storyCameraPanGestureChanged(transitionFraction: 0.0)
+                }
+                if cameraIsAlreadyOpened {
+                    return
+                }
+            }
+        case .cancelled, .ended:
+            let translation = recognizer.translation(in: self.view)
+            let velocity = recognizer.velocity(in: self.view)
+            let hasStoryCameraTransition = self.controller?.hasStoryCameraTransition ?? false
+            if hasStoryCameraTransition {
+                self.controller?.storyCameraPanGestureEnded(transitionFraction: translation.x / layout.size.width, velocity: velocity.x)
+            }
+        default:
+            break
         }
     }
 }

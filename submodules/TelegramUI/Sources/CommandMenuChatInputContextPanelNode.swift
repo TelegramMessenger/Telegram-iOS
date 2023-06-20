@@ -11,6 +11,7 @@ import MergeLists
 import AccountContext
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
+import ChatContextQuery
 
 private struct CommandMenuChatInputContextPanelEntryStableId: Hashable {
     let command: PeerCommand

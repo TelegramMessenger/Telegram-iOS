@@ -14,7 +14,7 @@ open class PagerExternalTopPanelContainer: SparseContainerView {
 }
 
 public protocol PagerContentViewWithBackground: UIView {
-    func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition)
+    func pagerUpdateBackground(backgroundFrame: CGRect, topPanelHeight: CGFloat, transition: Transition)
 }
 
 public final class PagerComponentChildEnvironment: Equatable {
@@ -904,7 +904,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                         }
                         
                         if let contentViewWithBackground = contentView.view.componentView as? PagerContentViewWithBackground {
-                            contentViewWithBackground.pagerUpdateBackground(backgroundFrame: backgroundFrame, transition: contentTransition)
+                            contentViewWithBackground.pagerUpdateBackground(backgroundFrame: backgroundFrame, topPanelHeight: topPanelHeight, transition: contentTransition)
                         }
                     }
                 }

@@ -114,6 +114,7 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
                 }
             } else if key == ChatTextInputAttributes.customEmoji {
                 result.addAttribute(key, value: value, range: range)
+                result.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
             }
         }
             
@@ -713,6 +714,31 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
             }
         })
     }
+}
+
+public func refreshChatTextInputTypingAttributes(_ textView: UITextView, textColor: UIColor, baseFontSize: CGFloat) {
+    var filteredAttributes: [NSAttributedString.Key: Any] = [
+        NSAttributedString.Key.font: Font.regular(baseFontSize),
+        NSAttributedString.Key.foregroundColor: textColor
+    ]
+    let style = NSMutableParagraphStyle()
+    style.baseWritingDirection = .natural
+    filteredAttributes[NSAttributedString.Key.paragraphStyle] = style
+    if let attributedText = textView.attributedText, attributedText.length != 0 {
+        let attributes = attributedText.attributes(at: max(0, min(textView.selectedRange.location - 1, attributedText.length - 1)), effectiveRange: nil)
+        for (key, value) in attributes {
+            if key == ChatTextInputAttributes.bold {
+                filteredAttributes[key] = value
+            } else if key == ChatTextInputAttributes.italic {
+                filteredAttributes[key] = value
+            } else if key == ChatTextInputAttributes.monospace {
+                filteredAttributes[key] = value
+            } else if key == NSAttributedString.Key.font {
+                filteredAttributes[key] = value
+            }
+        }
+    }
+    textView.typingAttributes = filteredAttributes
 }
 
 public func refreshChatTextInputTypingAttributes(_ textNode: ASEditableTextNode, theme: PresentationTheme, baseFontSize: CGFloat) {

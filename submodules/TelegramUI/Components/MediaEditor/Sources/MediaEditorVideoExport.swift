@@ -282,6 +282,19 @@ public final class MediaEditorVideoExport {
         self.outputPath = outputPath
         
         self.setup()
+        
+        let _ = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.resume()
+        })
+        let _ = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil, using: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.pause()
+        })
     }
     
     private func setup() {

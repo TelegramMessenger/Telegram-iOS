@@ -2633,6 +2633,7 @@ public final class EmojiPagerContentComponent: Component {
     public let itemContentUniqueId: ContentId?
     public let searchState: SearchState
     public let warpContentsOnEdges: Bool
+    public let hideBackground: Bool
     public let displaySearchWithPlaceholder: String?
     public let searchCategories: EmojiSearchCategories?
     public let searchInitiallyHidden: Bool
@@ -2655,6 +2656,7 @@ public final class EmojiPagerContentComponent: Component {
         itemContentUniqueId: ContentId?,
         searchState: SearchState,
         warpContentsOnEdges: Bool,
+        hideBackground: Bool,
         displaySearchWithPlaceholder: String?,
         searchCategories: EmojiSearchCategories?,
         searchInitiallyHidden: Bool,
@@ -2676,6 +2678,7 @@ public final class EmojiPagerContentComponent: Component {
         self.itemContentUniqueId = itemContentUniqueId
         self.searchState = searchState
         self.warpContentsOnEdges = warpContentsOnEdges
+        self.hideBackground = hideBackground
         self.displaySearchWithPlaceholder = displaySearchWithPlaceholder
         self.searchCategories = searchCategories
         self.searchInitiallyHidden = searchInitiallyHidden
@@ -2700,6 +2703,7 @@ public final class EmojiPagerContentComponent: Component {
             itemContentUniqueId: itemContentUniqueId,
             searchState: searchState,
             warpContentsOnEdges: self.warpContentsOnEdges,
+            hideBackground: self.hideBackground,
             displaySearchWithPlaceholder: self.displaySearchWithPlaceholder,
             searchCategories: self.searchCategories,
             searchInitiallyHidden: self.searchInitiallyHidden,
@@ -2749,6 +2753,9 @@ public final class EmojiPagerContentComponent: Component {
             return false
         }
         if lhs.warpContentsOnEdges != rhs.warpContentsOnEdges {
+            return false
+        }
+        if lhs.hideBackground != rhs.hideBackground {
             return false
         }
         if lhs.displaySearchWithPlaceholder != rhs.displaySearchWithPlaceholder {
@@ -3619,6 +3626,7 @@ public final class EmojiPagerContentComponent: Component {
         private var isSearchActivated: Bool = false
         
         private let backgroundView: BlurredBackgroundView
+        private var fadingMaskLayer: FadingMaskLayer?
         private var vibrancyClippingView: UIView
         private var vibrancyEffectView: UIVisualEffectView?
         public private(set) var mirrorContentClippingView: UIView?
@@ -6185,7 +6193,7 @@ public final class EmojiPagerContentComponent: Component {
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(ContentAnimation(type: .groupExpanded(id: groupId))))
         }
         
-        public func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition) {
+        public func pagerUpdateBackground(backgroundFrame: CGRect, topPanelHeight: CGFloat, transition: Transition) {
             guard let component = self.component, let keyboardChildEnvironment = self.keyboardChildEnvironment, let pagerEnvironment = self.pagerEnvironment else {
                 return
             }
@@ -6232,7 +6240,21 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
-            if component.warpContentsOnEdges {
+            if component.hideBackground {
+                self.backgroundView.isHidden = true
+                
+                let maskLayer: FadingMaskLayer
+                if let current = self.fadingMaskLayer {
+                    maskLayer = current
+                } else {
+                    maskLayer = FadingMaskLayer()
+                    self.fadingMaskLayer = maskLayer
+                }
+                if self.layer.mask == nil {
+                    self.layer.mask = maskLayer
+                }
+                maskLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: (topPanelHeight - 34.0) * 0.75), size: backgroundFrame.size)
+            } else if component.warpContentsOnEdges {
                 self.backgroundView.isHidden = true
             } else {
                 self.backgroundView.isHidden = false
@@ -7005,7 +7027,8 @@ public final class EmojiPagerContentComponent: Component {
         topicColor: Int32? = nil,
         hasSearch: Bool = true,
         forceHasPremium: Bool = false,
-        premiumIfSavedMessages: Bool = true
+        premiumIfSavedMessages: Bool = true,
+        hideBackground: Bool = false
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -7990,6 +8013,7 @@ public final class EmojiPagerContentComponent: Component {
                 itemContentUniqueId: nil,
                 searchState: .empty(hasResults: false),
                 warpContentsOnEdges: isReactionSelection || isStatusSelection || isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
+                hideBackground: hideBackground,
                 displaySearchWithPlaceholder: displaySearchWithPlaceholder,
                 searchCategories: searchCategories,
                 searchInitiallyHidden: searchInitiallyHidden,
@@ -8015,7 +8039,8 @@ public final class EmojiPagerContentComponent: Component {
         forceHasPremium: Bool,
         searchIsPlaceholderOnly: Bool = true,
         isProfilePhotoEmojiSelection: Bool = false,
-        isGroupPhotoEmojiSelection: Bool = false
+        isGroupPhotoEmojiSelection: Bool = false,
+        hideBackground: Bool = false
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -8456,6 +8481,7 @@ public final class EmojiPagerContentComponent: Component {
                 itemContentUniqueId: nil,
                 searchState: .empty(hasResults: false),
                 warpContentsOnEdges: isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
+                hideBackground: hideBackground,
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
                 searchCategories: searchCategories,
                 searchInitiallyHidden: true,
@@ -8521,4 +8547,25 @@ func generateTopicIcon(backgroundColors: [UIColor], strokeColors: [UIColor], tit
         CTLineDraw(line, context)
         context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
     })
+}
+
+private final class FadingMaskLayer: SimpleLayer {
+    let gradientLayer = SimpleLayer()
+    let fillLayer = SimpleLayer()
+    
+    override func layoutSublayers() {
+        let gradientHeight: CGFloat = 66.0
+        if self.gradientLayer.contents == nil {
+            self.addSublayer(self.gradientLayer)
+            self.addSublayer(self.fillLayer)
+            
+            let gradientImage = generateGradientImage(size: CGSize(width: 1.0, height: gradientHeight), colors: [UIColor.white.withAlphaComponent(0.0), UIColor.white.withAlphaComponent(0.0), UIColor.white, UIColor.white], locations: [0.0, 0.4, 0.9, 1.0], direction: .vertical)
+            self.gradientLayer.contents = gradientImage?.cgImage
+            self.gradientLayer.contentsGravity = .resize
+            self.fillLayer.backgroundColor = UIColor.white.cgColor
+        }
+        
+        self.gradientLayer.frame = CGRect(origin: .zero, size: CGSize(width: self.bounds.width, height: gradientHeight))
+        self.fillLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: gradientHeight), size: CGSize(width: self.bounds.width, height: self.bounds.height - gradientHeight))
+    }
 }

@@ -451,6 +451,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: "main", version: 0),
             searchState: .empty(hasResults: false),
             warpContentsOnEdges: false,
+            hideBackground: false,
             displaySearchWithPlaceholder: self.presentationData.strings.EmojiSearch_SearchEmojiPlaceholder,
             searchCategories: nil,
             searchInitiallyHidden: false,

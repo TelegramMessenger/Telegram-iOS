@@ -37,6 +37,7 @@ import LottieComponent
 import SolidRoundedButtonNode
 import TooltipUI
 import ChatTextInputMediaRecordingButton
+import ChatContextQuery
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])

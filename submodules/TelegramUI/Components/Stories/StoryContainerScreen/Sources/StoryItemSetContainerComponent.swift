@@ -241,6 +241,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         var captionItem: CaptionItem?
         
+        let inputBackground = ComponentView<Empty>()
         let inputPanel = ComponentView<Empty>()
         let footerPanel = ComponentView<Empty>()
         let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
@@ -1013,6 +1014,13 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            let nextInputMode: MessageInputPanelComponent.InputMode
+            if self.inputPanelExternalState.hasText {
+                nextInputMode = .emoji
+            } else {
+                nextInputMode = .stickers
+            }
+            
             self.inputPanel.parentState = state
             let inputPanelSize = self.inputPanel.update(
                 transition: inputPanelTransition,
@@ -1024,6 +1032,7 @@ public final class StoryItemSetContainerComponent: Component {
                     style: .story,
                     placeholder: "Reply Privately...",
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
+                    nextInputMode: nextInputMode,
                     areVoiceMessagesAvailable: component.slice.additionalPeerData.areVoiceMessagesAvailable,
                     presentController: { [weak self] c in
                         guard let self, let component = self.component else {
@@ -1068,6 +1077,13 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.sendMessageContext.presentAttachmentMenu(view: self, subject: .default)
                     },
+                    inputModeAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.toggleInputMode()
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)))
+                    },
                     timeoutAction: nil,
                     forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
                         guard let self else {
@@ -1106,7 +1122,8 @@ public final class StoryItemSetContainerComponent: Component {
                     timeoutValue: nil,
                     timeoutSelected: false,
                     displayGradient: component.inputHeight != 0.0 && component.metrics.widthClass != .regular,
-                    bottomInset: component.inputHeight != 0.0 ? 0.0 : bottomContentInset
+                    bottomInset: component.inputHeight != 0.0 ? 0.0 : bottomContentInset,
+                    hideKeyboard: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)

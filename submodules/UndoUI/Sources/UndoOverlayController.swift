@@ -28,7 +28,7 @@ public enum UndoOverlayContent {
     case importedMessage(text: String)
     case audioRate(rate: CGFloat, text: String)
     case forward(savedMessages: Bool, text: String)
-    case autoDelete(isOn: Bool, title: String?, text: String)
+    case autoDelete(isOn: Bool, title: String?, text: String, customUndoText: String?)
     case gigagroupConversion(text: String)
     case linkRevoked(text: String)
     case voiceChatRecording(text: String)

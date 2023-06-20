@@ -361,7 +361,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 if let imageData = compressImageToJPEG(image, quality: 0.6) {
                                     switch privacy {
                                     case let .story(storyPrivacy, period, pin):
-                                        self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
+                                        let text = caption ?? NSAttributedString()
+                                        let entities = generateChatInputTextEntities(text)
+                                        self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: text.string, entities: entities, pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
                                         
                                         /*let _ = (self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
                                         |> deliverOnMainQueue).start(next: { [weak chatListController] result in
@@ -465,7 +467,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
                                     
                                     if case let .story(storyPrivacy, period, pin) = privacy {
-                                        self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
+                                        let text = caption ?? NSAttributedString()
+                                        let entities = generateChatInputTextEntities(text)
+                                        self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: text.string, entities: entities, pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
                                         /*let _ = (self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
                                         |> deliverOnMainQueue).start(next: { [weak chatListController] result in
                                             if let chatListController {
