@@ -1116,7 +1116,7 @@ public class CameraScreen: ViewController {
                     let previousPosition = self.cameraPosition
                     self.cameraPosition = state.position
                     self.isDualCamEnabled = state.isDualCamEnabled
-                    
+
                     if self.isDualCamEnabled && previousPosition != state.position, let additionalPreviewView = self.additionalPreviewView {
                         if state.position == .front {
                             additionalPreviewView.superview?.sendSubviewToBack(additionalPreviewView)
@@ -1600,7 +1600,7 @@ public class CameraScreen: ViewController {
             transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
     
-            if let additionalPreviewView = self.currentAdditionalPreviewView {
+            if let additionalPreviewView = self.currentAdditionalPreviewView as? CameraSimplePreviewView {
                 additionalPreviewView.layer.cornerRadius = 80.0
                 
                 var origin: CGPoint
@@ -1632,7 +1632,11 @@ public class CameraScreen: ViewController {
                 }
                 
                 let additionalPreviewFrame = CGRect(origin: origin, size: CGSize(width: 160.0, height: 160.0))
-                transition.setPosition(view: additionalPreviewView, position: additionalPreviewFrame.center)
+                transition.setPosition(view: additionalPreviewView, position: additionalPreviewFrame.center, completion: { _ in
+                    if !self.isDualCamEnabled {
+                        additionalPreviewView.resetPlaceholder()
+                    }
+                })
                 transition.setBounds(view: additionalPreviewView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
                 
                 transition.setScale(view: additionalPreviewView, scale: self.isDualCamEnabled ? 1.0 : 0.1)

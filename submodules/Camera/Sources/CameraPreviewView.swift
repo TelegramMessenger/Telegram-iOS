@@ -42,17 +42,46 @@ public class CameraSimplePreviewView: UIView {
         }
     }
     
+    private let additional: Bool
+    
     private var previewingDisposable: Disposable?
     private let placeholderView = UIImageView()
+    
     public init(frame: CGRect, additional: Bool) {
+        self.additional = additional
+        
         super.init(frame: frame)
         
         self.videoPreviewLayer.videoGravity = .resizeAspectFill
         
+        self.placeholderView.alpha = 0.0
         self.placeholderView.contentMode = .scaleAspectFill
         self.placeholderView.image = additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
         self.addSubview(self.placeholderView)
         
+        self.resetPlaceholder()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.previewingDisposable?.dispose()
+    }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        self.placeholderView.frame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
+    }
+    
+    public func resetPlaceholder() {
+        guard self.placeholderView.alpha == 0.0 else {
+            return
+        }
+        self.placeholderView.image = self.additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
+        self.placeholderView.alpha = 1.0
         if #available(iOS 13.0, *) {
             self.previewingDisposable = (self.isPreviewing
             |> filter { $0 }
@@ -69,20 +98,6 @@ public class CameraSimplePreviewView: UIView {
                 }
             }
         }
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        self.previewingDisposable?.dispose()
-    }
-    
-    public override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        self.placeholderView.frame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
     }
     
     private var _videoPreviewLayer: AVCaptureVideoPreviewLayer?

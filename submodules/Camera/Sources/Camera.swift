@@ -145,13 +145,13 @@ private final class CameraContext {
             var ciImage = CIImage(cvImageBuffer: pixelBuffer)
             let size = ciImage.extent.size
             if mirror {
-                var transform = CGAffineTransformMakeScale(-1.0, 1.0)
-                transform = CGAffineTransformTranslate(transform, size.width, 0.0)
+                var transform = CGAffineTransformMakeScale(1.0, -1.0)
+                transform = CGAffineTransformTranslate(transform, 0.0, -size.height)
                 ciImage = ciImage.transformed(by: transform)
             }
             ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 40.0).cropped(to: CGRect(origin: .zero, size: size))
             if let cgImage = self.cameraImageContext.createCGImage(ciImage, from: ciImage.extent) {
-                let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: additional ? .up : .right)
+                let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
                 if additional {
                     CameraSimplePreviewView.saveAdditionalLastStateImage(uiImage)
                 } else {
@@ -352,11 +352,11 @@ private final class CameraContext {
         } else {
             self.configure {
                 self.mainDeviceContext.invalidate()
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true)
-                self.mainDeviceContext.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
-                
                 self.additionalDeviceContext?.invalidate()
                 self.additionalDeviceContext = nil
+                
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true)
+                self.mainDeviceContext.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
             }
             self.mainDeviceContext.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self else {
