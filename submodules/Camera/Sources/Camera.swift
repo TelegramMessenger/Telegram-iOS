@@ -38,14 +38,16 @@ final class CameraDeviceContext {
     private weak var previewView: CameraSimplePreviewView?
     
     private let exclusive: Bool
+    private let additional: Bool
     
     let device = CameraDevice()
     let input = CameraInput()
     let output: CameraOutput
     
-    init(session: CameraSession, exclusive: Bool) {
+    init(session: CameraSession, exclusive: Bool, additional: Bool) {
         self.session = session
         self.exclusive = exclusive
+        self.additional = additional
         self.output = CameraOutput(exclusive: exclusive)
     }
     
@@ -169,7 +171,7 @@ private final class CameraContext {
         self.simplePreviewView = previewView
         self.secondaryPreviewView = secondaryPreviewView
         
-        self.mainDeviceContext = CameraDeviceContext(session: session, exclusive: true)
+        self.mainDeviceContext = CameraDeviceContext(session: session, exclusive: true, additional: false)
         self.configure {
             self.mainDeviceContext.configure(position: configuration.position, previewView: self.simplePreviewView, audio: configuration.audio, photo: configuration.photo, metadata: configuration.metadata)
         }
@@ -313,10 +315,10 @@ private final class CameraContext {
         if enabled {
             self.configure {
                 self.mainDeviceContext.invalidate()
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: false)
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: false)
                 self.mainDeviceContext.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
             
-                self.additionalDeviceContext = CameraDeviceContext(session: self.session, exclusive: false)
+                self.additionalDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: true)
                 self.additionalDeviceContext?.configure(position: .front, previewView: self.secondaryPreviewView, audio: false, photo: true, metadata: false)
             }
             self.mainDeviceContext.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
@@ -355,7 +357,7 @@ private final class CameraContext {
                 self.additionalDeviceContext?.invalidate()
                 self.additionalDeviceContext = nil
                 
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true)
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false)
                 self.mainDeviceContext.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
             }
             self.mainDeviceContext.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in

@@ -54,7 +54,6 @@ public class CameraSimplePreviewView: UIView {
         
         self.videoPreviewLayer.videoGravity = .resizeAspectFill
         
-        self.placeholderView.alpha = 0.0
         self.placeholderView.contentMode = .scaleAspectFill
         self.placeholderView.image = additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
         self.addSubview(self.placeholderView)
@@ -72,8 +71,6 @@ public class CameraSimplePreviewView: UIView {
                     self.removePlaceholder(delay: 0.15)
                 }
             }
-        } else {
-            self.placeholderView.alpha = 1.0
         }
     }
     

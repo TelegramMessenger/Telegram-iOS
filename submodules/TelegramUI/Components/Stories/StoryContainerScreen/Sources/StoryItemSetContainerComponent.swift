@@ -1879,7 +1879,7 @@ public final class StoryItemSetContainerComponent: Component {
                             self.addSubview(targetView)
                             
                             reactionContextNode.willAnimateOutToReaction(value: updateReaction.reaction)
-                            reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
+                            reactionContextNode.animateOutToReaction(value: updateReaction.reaction, targetView: targetView, hideNode: false, animateTargetContainer: nil, addStandaloneReactionAnimation: "".isEmpty ? nil : { [weak self] standaloneReactionAnimation in
                                 guard let self else {
                                     return
                                 }
