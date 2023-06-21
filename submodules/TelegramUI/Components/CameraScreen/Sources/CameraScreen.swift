@@ -877,6 +877,7 @@ public class CameraScreen: ViewController {
         
         private var changingPositionDisposable: Disposable?
         private var isDualCamEnabled = false
+        private var appliedDualCam = false
         private var cameraPosition: Camera.Position = .back
         
         private let completion = ActionSlot<Signal<CameraScreen.Result, NoError>>()
@@ -1069,6 +1070,10 @@ public class CameraScreen: ViewController {
                                 previewSnapshotView.removeFromSuperview()
                             })
                         }
+                        
+                        if self.isDualCamEnabled {
+                            self.additionalPreviewView?.removePlaceholder()
+                        }
                     }
                 }
             })
@@ -1115,6 +1120,8 @@ public class CameraScreen: ViewController {
                 if let self {
                     let previousPosition = self.cameraPosition
                     self.cameraPosition = state.position
+                    
+                    let dualCamWasEnabled = self.isDualCamEnabled
                     self.isDualCamEnabled = state.isDualCamEnabled
 
                     if self.isDualCamEnabled && previousPosition != state.position, let additionalPreviewView = self.additionalPreviewView {
@@ -1128,6 +1135,9 @@ public class CameraScreen: ViewController {
                         self.requestUpdateLayout(hasAppeared: false, transition: .immediate)
                         CATransaction.commit()
                     } else {
+                        if !dualCamWasEnabled && self.isDualCamEnabled {
+                            
+                        }
                         self.requestUpdateLayout(hasAppeared: false, transition: .spring(duration: 0.4))
                     }
                 }
@@ -1599,8 +1609,10 @@ public class CameraScreen: ViewController {
             transition.setFrame(view: self.currentPreviewView, frame: CGRect(origin: .zero, size: previewFrame.size))
             transition.setFrame(view: self.previewBlurView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
-    
             if let additionalPreviewView = self.currentAdditionalPreviewView as? CameraSimplePreviewView {
+                let dualCamUpdated = self.appliedDualCam != self.isDualCamEnabled
+                self.appliedDualCam = self.isDualCamEnabled
+                
                 additionalPreviewView.layer.cornerRadius = 80.0
                 
                 var origin: CGPoint
@@ -1632,15 +1644,17 @@ public class CameraScreen: ViewController {
                 }
                 
                 let additionalPreviewFrame = CGRect(origin: origin, size: CGSize(width: 160.0, height: 160.0))
-                transition.setPosition(view: additionalPreviewView, position: additionalPreviewFrame.center, completion: { _ in
-                    if !self.isDualCamEnabled {
-                        additionalPreviewView.resetPlaceholder()
-                    }
-                })
+                transition.setPosition(view: additionalPreviewView, position: additionalPreviewFrame.center)
                 transition.setBounds(view: additionalPreviewView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
                 
                 transition.setScale(view: additionalPreviewView, scale: self.isDualCamEnabled ? 1.0 : 0.1)
                 transition.setAlpha(view: additionalPreviewView, alpha: self.isDualCamEnabled ? 1.0 : 0.0)
+                
+                if dualCamUpdated && !self.isDualCamEnabled {
+                    Queue.mainQueue().after(0.5) {
+                        additionalPreviewView.resetPlaceholder()
+                    }
+                }
             }
                         
             self.previewFrameLeftDimView.isHidden = !isTablet

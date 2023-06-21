@@ -100,7 +100,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 let additionalPeerData: StoryContentContextState.AdditionalPeerData
                 if let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView, let cachedUserData = cachedPeerDataView.cachedPeerData as? CachedUserData {
                     let _ = cachedUserData
-                    additionalPeerData = StoryContentContextState.AdditionalPeerData(areVoiceMessagesAvailable: false) //cachedUserData.voiceMessagesAvailable)
+                    additionalPeerData = StoryContentContextState.AdditionalPeerData(areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable)
                 } else {
                     additionalPeerData = StoryContentContextState.AdditionalPeerData(areVoiceMessagesAvailable: true)
                 }
