@@ -103,8 +103,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             self.content = .file(file)
         } else if let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
             self.content = .image(image)
-        } else if let videoPath = try container.decodeIfPresent(String.self, forKey: .videoPath), let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
-            self.content = .video(videoPath, image)
+        } else if let videoPath = try container.decodeIfPresent(String.self, forKey: .videoPath) {
+            var imageValue: UIImage?
+            if let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
+                imageValue = image
+            }
+            self.content = .video(videoPath, imageValue)
         } else {
             fatalError()
         }
