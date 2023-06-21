@@ -1495,7 +1495,9 @@ public final class PostboxDecoder {
             var objectLength: Int32 = 0
             memcpy(&objectLength, self.buffer.memory + self.offset, 4)
             if objectLength < 0 || objectLength > 2 * 1024 * 1024 {
-                preconditionFailure()
+                assertionFailure()
+                self.offset = 0
+                break
             }
 
             let innerBuffer = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false)
