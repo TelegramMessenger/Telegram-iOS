@@ -358,92 +358,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             chatListController.scrollToStories()
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
-                                if let imageData = compressImageToJPEG(image, quality: 0.6) {
-                                    switch privacy {
-                                    case let .story(storyPrivacy, period, pin):
-                                        let text = caption ?? NSAttributedString()
-                                        let entities = generateChatInputTextEntities(text)
-                                        self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: text.string, entities: entities, pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
-                                        
-                                        /*let _ = (self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
-                                        |> deliverOnMainQueue).start(next: { [weak chatListController] result in
-                                            if let chatListController {
-                                                switch result {
-                                                case let .progress(progress):
-                                                    chatListController.updateStoryUploadProgress(progress)
-                                                case let .completed(id):
-                                                    if let id {
-                                                        moveStorySource(engine: context.engine, from: randomId, to: Int64(id))
-                                                    }
-                                                    Queue.mainQueue().after(0.2) {
-                                                        chatListController.updateStoryUploadProgress(nil)
-                                                    }
-                                                    
-                                                    let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image, title: nil, text: "Story successfully uploaded", round: false, undoText: "View"), elevatedLayout: false, action: { action in
-                                                        switch action {
-                                                            case .undo:
-                                                                break
-                                                            default:
-                                                                break
-                                                        }
-                                                        return true
-                                                    })
-                                                    chatListController.present(undoOverlayController, in: .current)
-                                                }
-                                            }
-                                        })*/
-                                        Queue.mainQueue().justDispatch {
-                                            commit({})
-                                        }
-                                    case let .message(peerIds, timeout):
-                                        var randomId: Int64 = 0
-                                        arc4random_buf(&randomId, 8)
-                                        let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpg"
-                                        let _ = try? imageData.write(to: URL(fileURLWithPath: tempFilePath))
-
-                                        var representations: [TelegramMediaImageRepresentation] = []
-                                        let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-                                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
-                                        
-                                        var attributes: [MessageAttribute] = []
-                                        let imageFlags: TelegramMediaImageFlags = []
-
-                                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: imageFlags)
-                                        if let timeout, timeout > 0 && timeout <= 60 {
-                                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timeout), countdownBeginTime: nil))
-                                        }
-                                                                                    
-                                        let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
-                                        let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
-                                        if !entities.isEmpty {
-                                            attributes.append(TextEntitiesMessageAttribute(entities: entities))
-                                        }
-                                        var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
-                                        text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
-                                            if let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                                                if let file = value.file {
-                                                    if let packId = value.interactivelySelectedFromPackId {
-                                                        bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
-                                                    }
-                                                }
-                                            }
-                                        })
-                                        var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
-                                        for entity in entities {
-                                            if case let .CustomEmoji(_, fileId) = entity.type {
-                                                if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
-                                                    if !bubbleUpEmojiOrStickersets.contains(packId) {
-                                                        bubbleUpEmojiOrStickersets.append(packId)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        
-                                        let _ = enqueueMessagesToMultiplePeers(
-                                            account: self.context.account,
-                                            peerIds: peerIds, threadIds: [:],
-                                            messages: [.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]).start()
-                                        
+                                if let imageData = compressImageToJPEG(image, quality: 0.7) {
+                                    let text = caption ?? NSAttributedString()
+                                    let entities = generateChatInputTextEntities(text)
+                                    self.context.engine.messages.uploadStory(media: .image(dimensions: dimensions, data: imageData), text: text.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
+                                    Queue.mainQueue().justDispatch {
                                         commit({})
                                     }
                                 }
@@ -463,46 +382,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     case let .asset(localIdentifier):
                                         resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                     }
-                                    
                                     let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
-                                    
-                                    if case let .story(storyPrivacy, period, pin) = privacy {
-                                        let text = caption ?? NSAttributedString()
-                                        let entities = generateChatInputTextEntities(text)
-                                        self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: text.string, entities: entities, pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
-                                        /*let _ = (self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource), text: caption?.string ?? "", entities: [], pin: pin, privacy: storyPrivacy, period: period, randomId: randomId)
-                                        |> deliverOnMainQueue).start(next: { [weak chatListController] result in
-                                            if let chatListController {
-                                                switch result {
-                                                case let .progress(progress):
-                                                    chatListController.updateStoryUploadProgress(progress)
-                                                case let .completed(id):
-                                                    if let id {
-                                                        moveStorySource(engine: context.engine, from: randomId, to: Int64(id))
-                                                    }
-                                                    Queue.mainQueue().after(0.2) {
-                                                        chatListController.updateStoryUploadProgress(nil)
-                                                    }
-                                                    
-                                                    if let image {
-                                                        let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image, title: nil, text: "Story successfully uploaded", round: false, undoText: "View"), elevatedLayout: false, action: { action in
-                                                            switch action {
-                                                            case .undo:
-                                                                break
-                                                            default:
-                                                                break
-                                                            }
-                                                            return true
-                                                        })
-                                                        chatListController.present(undoOverlayController, in: .current)
-                                                    }
-                                                }
-                                            }
-                                        })*/
-                                        Queue.mainQueue().justDispatch {
-                                            commit({})
-                                        }
-                                    } else {
+                                    let text = caption ?? NSAttributedString()
+                                    let entities = generateChatInputTextEntities(text)
+                                    self.context.engine.messages.uploadStory(media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameImageData: imageData), text: text.string, entities: entities, pin: privacy.archive, privacy: privacy.privacy, period: privacy.timeout, randomId: randomId)
+                                    Queue.mainQueue().justDispatch {
                                         commit({})
                                     }
                                 }

@@ -519,19 +519,11 @@ final class ShareWithPeersScreenComponent: Component {
                                     guard let self else {
                                         return
                                     }
-                                    switch categoryId {
-                                    case .everyone:
-                                        if self.selectedCategories.contains(categoryId) {
-                                        } else {
-                                            self.selectedCategories.removeAll()
-                                            self.selectedCategories.insert(categoryId)
-                                        }
-                                    case .contacts, .closeFriends, .selectedContacts:
-                                        if self.selectedCategories.contains(categoryId) {
-                                        } else {
-                                            self.selectedCategories.removeAll()
-                                            self.selectedCategories.insert(categoryId)
-                                        }
+                                    if self.selectedCategories.contains(categoryId) {
+                                    } else {
+                                        self.selectedPeers = []
+                                        self.selectedCategories.removeAll()
+                                        self.selectedCategories.insert(categoryId)
                                     }
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
                                 },
@@ -1189,6 +1181,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 self.stateValue = state
                 self.stateSubject.set(.single(state))
                 self.readySubject.set(true)
+                self.initialPeerIds = initialPeerIds
             case .chats:
                 self.stateDisposable = (context.engine.messages.chatList(group: .root, count: 200)
                 |> deliverOnMainQueue).start(next: { [weak self] chatList in
@@ -1237,16 +1230,23 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                                 selectedPeers.append(peer)
                             }
                         }
-                        selectedPeers = selectedPeers.sorted(by: { lhs, rhs in
-                            let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
-                            if result == .orderedSame {
-                                return lhs.id < rhs.id
-                            } else {
-                                return result == .orderedAscending
-                            }
-                        })
                         self.initialPeerIds = Set(selectedPeers.map { $0.id })
+                    } else {
+                        for peer in contactList.peers {
+                            if case let .user(user) = peer, initialPeerIds.contains(user.id) {
+                                selectedPeers.append(peer)
+                            }
+                        }
+                        self.initialPeerIds = initialPeerIds
                     }
+                    selectedPeers = selectedPeers.sorted(by: { lhs, rhs in
+                        let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
+                        if result == .orderedSame {
+                            return lhs.id < rhs.id
+                        } else {
+                            return result == .orderedAscending
+                        }
+                    })
                     
                     var peers: [EnginePeer] = []
                     peers = contactList.peers.filter { !self.initialPeerIds.contains($0.id) && $0.id != context.account.peerId }.sorted(by: { lhs, rhs in

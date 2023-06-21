@@ -625,7 +625,11 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
         }
     }
     if !privacyUsers.isEmpty {
-        privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
+        if case .contacts = privacy.base {
+            privacyRules.append(.inputPrivacyValueDisallowUsers(users: privacyUsers))
+        } else {
+            privacyRules.append(.inputPrivacyValueAllowUsers(users: privacyUsers))
+        }
     }
     if !privacyChats.isEmpty {
         privacyRules.append(.inputPrivacyValueAllowChatParticipants(chats: privacyChats))

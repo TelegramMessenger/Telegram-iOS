@@ -2165,8 +2165,8 @@ public final class StoryItemSetContainerComponent: Component {
                         completion: { [weak self] _, mediaResult, privacy, commit in
                             switch mediaResult {
                             case let .image(image, dimensions, caption):
-                                if let imageData = compressImageToJPEG(image, quality: 0.6), case let .story(storyPrivacy, _, _) = privacy {
-                                    let _ = (context.engine.messages.editStory(media: .image(dimensions: dimensions, data: imageData), id: id, text: caption?.string ?? "", entities: [], privacy: storyPrivacy)
+                                if let imageData = compressImageToJPEG(image, quality: 0.6) {
+                                    let _ = (context.engine.messages.editStory(media: .image(dimensions: dimensions, data: imageData), id: id, text: caption?.string ?? "", entities: [], privacy: privacy.privacy)
                                     |> deliverOnMainQueue).start(next: { [weak self] result in
                                             switch result {
                                             case let .progress(progress):
