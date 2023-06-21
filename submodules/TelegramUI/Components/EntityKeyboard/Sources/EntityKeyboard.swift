@@ -803,7 +803,7 @@ public final class EntityKeyboardComponent: Component {
                     searchView = ComponentHostView<EntitySearchContentEnvironment>()
                     self.searchView = searchView
                     self.addSubview(searchView)
-                    
+                                        
                     animateIn = true
                     component.topPanelExtensionUpdated(0.0, transition)
                 }

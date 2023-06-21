@@ -282,7 +282,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var genericReactionEffectDisposable: Disposable?
     private var genericReactionEffect: String?
     
-    private var isReactionSearchActive: Bool = false
+    public var isReactionSearchActive: Bool = false
     
     public static func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
         return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
@@ -2016,17 +2016,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.hapticFeedback?.tap()
                 
-                guard let targetView = targetView as? ReactionIconView else {
-                    return
-                }
-                
-                if switchToInlineImmediately {
-                    targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
-                    itemNode.isHidden = true
-                } else {
-                    targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
-                    targetView.addSubnode(itemNode)
-                    itemNode.frame = selfTargetBounds
+                if let targetView = targetView as? ReactionIconView {
+                    if switchToInlineImmediately {
+                        targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
+                        itemNode.isHidden = true
+                    } else {
+                        targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+                        targetView.addSubnode(itemNode)
+                        itemNode.frame = selfTargetBounds
+                    }
                 }
                 
                 if switchToInlineImmediately {
@@ -2071,7 +2069,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 targetView: targetView,
                                 addStandaloneReactionAnimation: nil,
                                 completion: { [weak standaloneReactionAnimation] in
-                                    standaloneReactionAnimation?.removeFromSupernode()
+                                    if let _ = standaloneReactionAnimation?.supernode {
+                                        standaloneReactionAnimation?.removeFromSupernode()
+                                    } else {
+                                        standaloneReactionAnimation?.view.removeFromSuperview()
+                                    }
                                 }
                             )
                         }
@@ -2085,7 +2087,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         targetView.isHidden = false
                         if let targetView = targetView as? ReactionIconView {
                             targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
-                            itemNode.removeFromSupernode()
+                            if let _ = itemNode.supernode {
+                                itemNode.removeFromSupernode()
+                            } else {
+                                itemNode.view.removeFromSuperview()
+                            }
                         }
                     }
                     mainAnimationCompleted = true

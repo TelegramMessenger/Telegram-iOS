@@ -101,11 +101,12 @@ final class StoryItemSetContainerSendMessage {
             switch inputPanelView.getSendMessageInput() {
             case let .text(text):
                 if !text.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let entities = generateChatInputTextEntities(text)
                     component.context.engine.messages.enqueueOutgoingMessage(
                         to: peerId,
                         replyTo: nil,
                         storyId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
-                        content: .text(text.string)
+                        content: .text(text.string, entities)
                     )
                     inputPanelView.clearSendMessageInput()
                     view.endEditing(true)

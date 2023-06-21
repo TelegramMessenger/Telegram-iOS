@@ -451,7 +451,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     .disappear(.default(scale: true))
                 )
                 
-                if #available(iOS 13.0, *), !isTablet && !"".isEmpty {
+                if #available(iOS 13.0, *), !isTablet {
                     let dualButton = dualButton.update(
                         component: CameraButton(
                             content: AnyComponentWithIdentity(
@@ -1431,7 +1431,7 @@ public class CameraScreen: ViewController {
             
             let parentFrame = self.view.convert(self.bounds, to: nil)
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 25.0), size: CGSize())
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 4.0), size: CGSize())
                         
             let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: "Draft Saved", location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _ in
                 return .ignore
@@ -1682,13 +1682,13 @@ public class CameraScreen: ViewController {
         public weak var sourceView: UIView?
         public let sourceRect: CGRect
         public let sourceImage: UIImage?
-        public let transitionOut: () -> (UIView, CGRect)?
+        public let transitionOut: (Bool?) -> (UIView, CGRect)?
     
         public init(
             sourceView: UIView,
             sourceRect: CGRect,
             sourceImage: UIImage?,
-            transitionOut: @escaping () -> (UIView, CGRect)?
+            transitionOut: @escaping (Bool?) -> (UIView, CGRect)?
         ) {
             self.sourceView = sourceView
             self.sourceRect = sourceRect
@@ -1775,8 +1775,15 @@ public class CameraScreen: ViewController {
                 return
             }
             didStopCameraCapture = true
-            
             self.node.pauseCameraCapture()
+        }
+        
+        let resumeCameraCapture = { [weak self] in
+            guard didStopCameraCapture, let self else {
+                return
+            }
+            didStopCameraCapture = false
+            self.node.resumeCameraCapture()
         }
         
         let controller: ViewController
@@ -1809,10 +1816,8 @@ public class CameraScreen: ViewController {
                         self.completion(.single(.draft(draft)), resultTransition, dismissed)
                     }
                 }
-            }, dismissed: { [weak self] in
-                if let self {
-                    self.node.resumeCameraCapture()
-                }
+            }, dismissed: {
+                resumeCameraCapture()
             })
             self.galleryController = controller
         }

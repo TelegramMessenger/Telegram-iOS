@@ -15,6 +15,7 @@ import FeaturedStickersScreen
 import TelegramNotices
 import ChatEntityKeyboardInputNode
 import ContextUI
+import ChatPresentationInterfaceState
 
 public struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
@@ -90,7 +91,7 @@ private final class StickerSelectionComponent: Component {
     }
     
     public final class View: UIView {
-        private let keyboardView: ComponentView<Empty>
+        fileprivate let keyboardView: ComponentView<Empty>
         private let keyboardClippingView: UIView
         private let panelHostView: PagerExternalTopPanelContainer
         private let panelBackgroundView: BlurredBackgroundView
@@ -98,6 +99,12 @@ private final class StickerSelectionComponent: Component {
         
         private var component: StickerSelectionComponent?
         private weak var state: EmptyComponentState?
+        
+        private var interaction: ChatEntityKeyboardInputNode.Interaction?
+        private var inputNodeInteraction: ChatMediaInputNodeInteraction?
+        private let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
+        
+        private var forceUpdate = false
         
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
@@ -112,6 +119,71 @@ private final class StickerSelectionComponent: Component {
             self.addSubview(self.panelBackgroundView)
             self.addSubview(self.panelSeparatorView)
             self.addSubview(self.panelHostView)
+            
+            self.interaction = ChatEntityKeyboardInputNode.Interaction(
+                sendSticker: { file, silent, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, _ in
+                    let _ = file
+                    let _ = silent
+                    let _ = schedule
+                    let _ = query
+                    let _ = clearInput
+                    let _ = sourceView
+                    let _ = sourceRect
+                    let _ = sourceLayer
+                    
+                    return false
+                },
+                sendEmoji: { _, _, _ in
+                },
+                sendGif: { _, _, _, _, _ in
+                    return false
+                },
+                sendBotContextResultAsGif: { _, _, _, _, _, _ in
+                    return false
+                },
+                updateChoosingSticker: { _ in },
+                switchToTextInput: {},
+                dismissTextInput: {},
+                insertText: { _ in
+                },
+                backwardsDeleteText: {},
+                presentController: { c, a in
+                    let _ = c
+                    let _ = a
+                },
+                presentGlobalOverlayController: { c, a in
+                    let _ = c
+                    let _ = a
+                },
+                getNavigationController: {
+                    return nil
+                },
+                requestLayout: { transition in
+                    let _ = transition
+                })
+            
+            self.inputNodeInteraction = ChatMediaInputNodeInteraction(
+                navigateToCollectionId: { _ in
+                },
+                navigateBackToStickers: {
+                },
+                setGifMode: { _ in
+                },
+                openSettings: {
+                },
+                openTrending: { _ in
+                },
+                dismissTrendingPacks: { _ in
+                },
+                toggleSearch: { _, _, _ in
+                },
+                openPeerSpecificSettings: {
+                },
+                dismissPeerSpecificSettings: {
+                },
+                clearRecentlyUsedStickers: {
+                }
+            )
         }
         
         required init?(coder: NSCoder) {
@@ -132,7 +204,19 @@ private final class StickerSelectionComponent: Component {
             
             let topPanelHeight: CGFloat = 42.0
             
-            //let context = component.context
+            let context = component.context
+            let stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
+                context: context,
+                interaction: nil,
+                chatPeerId: nil,
+                present: { c, a in
+                    let _ = c
+                    let _ = a
+//                    controller?.presentInGlobalOverlay(c, with: a)
+                }
+            )
+            
+            let trendingGifsPromise = self.trendingGifsPromise
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
@@ -152,49 +236,52 @@ private final class StickerSelectionComponent: Component {
                     externalBottomPanelContainer: nil,
                     displayTopPanelBackground: .blur,
                     topPanelExtensionUpdated: { _, _ in },
-                    hideInputUpdated: { _, _, _ in },
+                    hideInputUpdated: { [weak self] _, _, transition in
+                        guard let self else {
+                            return
+                        }
+                        self.forceUpdate = true
+                        self.state?.updated(transition: transition)
+                    },
                     hideTopPanelUpdated: { _, _ in },
                     switchToTextInput: {},
                     switchToGifSubject: { _ in },
                     reorderItems: { _, _ in },
-                    makeSearchContainerNode: { _ in
-                        return nil
-                    },
-//                    makeSearchContainerNode: { [weak self, weak controllerInteraction] content in
-//                        guard let self, let controllerInteraction = controllerInteraction else {
-//                            return nil
-//                        }
-//
-//                        let mappedMode: ChatMediaInputSearchMode
-//                        switch content {
-//                        case .stickers:
-//                            mappedMode = .sticker
-//                        case .gifs:
-//                            mappedMode = .sticker
-//                        }
-//
-//                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-//                        let searchContainerNode = PaneSearchContainerNode(
-//                            context: context,
-//                            theme: presentationData.theme,
-//                            strings: presentationData.strings,
-//                            controllerInteraction: controllerInteraction,
-//                            inputNodeInteraction: inputNodeInteraction,
-//                            mode: mappedMode,
-//                            trendingGifsPromise: Promise(nil),
-//                            cancel: {
-//                            },
-//                            peekBehavior: self.emojiInputInteraction?.peekBehavior
-//                        )
+                    makeSearchContainerNode: { [weak self] content in
+                        guard let self, let interaction = self.interaction, let inputNodeInteraction = self.inputNodeInteraction else {
+                            return nil
+                        }
+
+                        let mappedMode: ChatMediaInputSearchMode
+                        switch content {
+                        case .stickers:
+                            mappedMode = .sticker
+                        case .gifs:
+                            mappedMode = .gif
+                        }
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        let searchContainerNode = PaneSearchContainerNode(
+                            context: context,
+                            theme: presentationData.theme,
+                            strings: presentationData.strings,
+                            interaction: interaction,
+                            inputNodeInteraction: inputNodeInteraction,
+                            mode: mappedMode,
+                            trendingGifsPromise: trendingGifsPromise,
+                            cancel: {
+                            },
+                            peekBehavior: stickerPeekBehavior
+                        )
 //                        searchContainerNode.openGifContextMenu = { [weak self] item, sourceNode, sourceRect, gesture, isSaved in
 //                            guard let self else {
 //                                return
 //                            }
 //                            self.openGifContextMenu(file: item.file, contextResult: item.contextResult, sourceView: sourceNode.view, sourceRect: sourceRect, gesture: gesture, isSaved: isSaved)
 //                        }
-//
-//                        return searchContainerNode
-//                    },
+                        
+                        return searchContainerNode
+                    },
                     contentIdUpdated: { _ in },
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
@@ -204,8 +291,10 @@ private final class StickerSelectionComponent: Component {
                     clipContentToTopPanel: false
                 )),
                 environment: {},
+                forceUpdate: self.forceUpdate,
                 containerSize: availableSize
             )
+            self.forceUpdate = false
             if let keyboardComponentView = self.keyboardView.view {
                 if keyboardComponentView.superview == nil {
                     self.keyboardClippingView.addSubview(keyboardComponentView)
@@ -818,7 +907,12 @@ public class StickerPickerScreen: ViewController {
                 deleteBackwards: nil,
                 openStickerSettings: nil,
                 openFeatured: nil,
-                openSearch: {
+                openSearch: { [weak self] in
+                    if let self, let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
+                        if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View {
+                            pagerView.openSearch()
+                        }
+                    }
                 },
                 addGroupAction: { [weak self] groupId, isPremiumLocked, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {

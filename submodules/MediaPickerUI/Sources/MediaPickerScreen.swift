@@ -985,6 +985,17 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }
         
+        fileprivate func defaultTransitionView() -> UIView? {
+            var transitionNode: MediaPickerGridItemNode?
+            if let itemNode = self.gridNode.itemNodeAtPoint(.zero) {
+                if let itemNode = itemNode as? MediaPickerGridItemNode {
+                    transitionNode = itemNode
+                }
+            }
+            let transitionView = transitionNode?.transitionView(snapshot: false)
+            return transitionView
+        }
+        
         fileprivate func transitionView(for identifier: String, snapshot: Bool = true, hideSource: Bool = false) -> UIView? {
             if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
                 return selectionNode.transitionView(for: identifier, hideSource: hideSource)
@@ -1952,6 +1963,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
     }
     
+    fileprivate func defaultTransitionView() -> UIView? {
+        return self.controllerNode.defaultTransitionView()
+    }
+    
     fileprivate func transitionView(for identifier: String, snapshot: Bool, hideSource: Bool = false) -> UIView? {
         return self.controllerNode.transitionView(for: identifier, snapshot: snapshot, hideSource: hideSource)
     }
@@ -2172,7 +2187,7 @@ public func wallpaperMediaPickerController(
 public func storyMediaPickerController(
     context: AccountContext,
     getSourceRect: @escaping () -> CGRect,
-    completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping () -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
+    completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
     dismissed: @escaping () -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
@@ -2188,9 +2203,18 @@ public func storyMediaPickerController(
             if let result = result as? MediaEditorDraft {
                 controller.updateHiddenMediaId(result.path)
                 if let transitionView = controller.transitionView(for: result.path, snapshot: false) {
-                    let transitionOut: () -> (UIView, CGRect)? = {
-                        if let transitionView = controller.transitionView(for: result.path, snapshot: false) {
-                            return (transitionView, transitionView.bounds)
+                    let transitionOut: (Bool?) -> (UIView, CGRect)? = { isNew in
+                        if let isNew {
+                            controller.updateHiddenMediaId(result.path)
+                            if isNew {
+                                if let transitionView = controller.defaultTransitionView() {
+                                    return (transitionView, transitionView.bounds)
+                                }
+                            } else {
+                                if let transitionView = controller.transitionView(for: result.path, snapshot: false) {
+                                    return (transitionView, transitionView.bounds)
+                                }
+                            }
                         }
                         return nil
                     }
@@ -2201,9 +2225,16 @@ public func storyMediaPickerController(
             } else if let result = result as? PHAsset {
                 controller.updateHiddenMediaId(result.localIdentifier)
                 if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
-                    let transitionOut: () -> (UIView, CGRect)? = {
-                        if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
-                            return (transitionView, transitionView.bounds)
+                    let transitionOut: (Bool?) -> (UIView, CGRect)? = { isNew in
+                        if let isNew {
+                            if isNew {
+                                controller.updateHiddenMediaId(nil)
+                                if let transitionView = controller.defaultTransitionView() {
+                                    return (transitionView, transitionView.bounds)
+                                }
+                            } else if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
+                                return (transitionView, transitionView.bounds)
+                            }
                         }
                         return nil
                     }

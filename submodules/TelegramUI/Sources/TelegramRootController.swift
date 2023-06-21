@@ -331,14 +331,14 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     context: context,
                     subject: subject,
                     transitionIn: transitionIn,
-                    transitionOut: { finished in
+                    transitionOut: { finished, isNew in
                         if finished, let transitionOut = transitionOut(finished), let destinationView = transitionOut.destinationView {
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: destinationView,
                                 destinationRect: transitionOut.destinationRect,
                                 destinationCornerRadius: transitionOut.destinationCornerRadius
                             )
-                        } else if !finished, let resultTransition, let (destinationView, destinationRect) = resultTransition.transitionOut() {
+                        } else if !finished, let resultTransition, let (destinationView, destinationRect) = resultTransition.transitionOut(isNew) {
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: destinationView,
                                 destinationRect: destinationRect,

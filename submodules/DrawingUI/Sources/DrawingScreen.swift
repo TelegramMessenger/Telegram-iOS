@@ -753,25 +753,12 @@ private final class DrawingScreenComponent: CombinedComponent {
                         hasTrending: true,
                         forceHasPremium: true
                     )
-                    
-                    let maskItems = EmojiPagerContentComponent.stickerInputData(
-                        context: context,
-                        animationCache: context.animationCache,
-                        animationRenderer: context.animationRenderer,
-                        stickerNamespaces: [Namespaces.ItemCollection.CloudMaskPacks],
-                        stickerOrderedItemListCollectionIds: [],
-                        chatPeerId: context.account.peerId,
-                        hasSearch: true,
-                        hasTrending: false,
-                        forceHasPremium: true
-                    )
-                    
+                                        
                     let signal = combineLatest(queue: .mainQueue(),
                                                emojiItems,
-                                               stickerItems,
-                                               maskItems
-                    ) |> map { emoji, stickers, masks -> StickerPickerInputData in
-                        return StickerPickerInputData(emoji: emoji, stickers: stickers, masks: masks)
+                                               stickerItems
+                    ) |> map { emoji, stickers -> StickerPickerInputData in
+                        return StickerPickerInputData(emoji: emoji, stickers: stickers, masks: nil)
                     }
                     
                     stickerPickerInputData.set(signal)

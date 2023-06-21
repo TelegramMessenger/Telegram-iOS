@@ -1776,7 +1776,7 @@ public final class StoryItemSetContainerComponent: Component {
             let reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrame.maxX - 40.0, y: inputPanelFrame.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
             
             var effectiveDisplayReactions = false
-            if self.inputPanelExternalState.isEditing && !self.inputPanelExternalState.hasText {
+            if self.inputPanelExternalState.isEditing && !self.inputPanelExternalState.hasText  {
                 effectiveDisplayReactions = true
             }
             if self.sendMessageContext.audioRecorderValue != nil || self.sendMessageContext.videoRecorderValue != nil {
@@ -1787,6 +1787,10 @@ public final class StoryItemSetContainerComponent: Component {
             }
             if self.voiceMessagesRestrictedTooltipController != nil {
                 effectiveDisplayReactions = false
+            }
+            
+            if let reactionContextNode = self.reactionContextNode, reactionContextNode.isReactionSearchActive {
+                effectiveDisplayReactions = true
             }
             
             if let reactionItems = self.reactionItems, effectiveDisplayReactions {
@@ -2157,7 +2161,7 @@ public final class StoryItemSetContainerComponent: Component {
                         context: context,
                         subject: .single(.draft(source, Int64(id))),
                         transitionIn: nil,
-                        transitionOut: { _ in return nil },
+                        transitionOut: { _, _ in return nil },
                         completion: { [weak self] _, mediaResult, privacy, commit in
                             switch mediaResult {
                             case let .image(image, dimensions, caption):

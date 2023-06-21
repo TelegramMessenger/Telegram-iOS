@@ -1718,6 +1718,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             let textFieldFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textFrame.minX, height: backgroundFrame.height))
             
             let textField = EmojiSearchTextField(frame: textFieldFrame)
+            textField.keyboardAppearance = params.theme.rootController.keyboardColor.keyboardAppearance
             textField.autocorrectionType = .no
             textField.returnKeyType = .search
             self.textField = textField

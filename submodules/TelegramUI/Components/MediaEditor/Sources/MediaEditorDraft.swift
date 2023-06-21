@@ -5,10 +5,52 @@ import TelegramCore
 import TelegramUIPreferences
 import PersistentStringHash
 import Postbox
+import AccountContext
 
-public enum MediaEditorResultPrivacy: Equatable {
+public enum MediaEditorResultPrivacy: Codable, Equatable {
     case story(privacy: EngineStoryPrivacy, timeout: Int, archive: Bool)
     case message(peers: [EnginePeer.Id], timeout: Int?)
+    
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case privacy
+        case peers
+        case timeout
+        case archive
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        if let privacy = try container.decodeIfPresent(EngineStoryPrivacy.self, forKey: .privacy) {
+            let timeout = try container.decode(Int32.self, forKey: .timeout)
+            let archive = try container.decode(Bool.self, forKey: .archive)
+            self = .story(privacy: privacy, timeout: Int(timeout), archive: archive)
+        } else if let peers = try container.decodeIfPresent([EnginePeer.Id].self, forKey: .peers) {
+            let timeout = try container.decodeIfPresent(Int32.self, forKey: .timeout)
+            self = .message(peers: peers, timeout: timeout.flatMap { Int($0) })
+        } else {
+            fatalError()
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        switch self {
+        case let .story(privacy, timeout, archive):
+            try container.encode(privacy, forKey: .privacy)
+            try container.encode(Int32(timeout), forKey: .timeout)
+            try container.encode(archive, forKey: .archive)
+        case let .message(peers, timeout):
+            try container.encode(peers, forKey: .peers)
+            if let timeout {
+                try container.encode(Int32(timeout), forKey: .timeout)
+            } else {
+                try container.encodeNil(forKey: .timeout)
+            }
+        }
+    }
 }
 
 public final class MediaEditorDraft: Codable, Equatable {
@@ -66,8 +108,9 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             fatalError()
         }
-        self.caption = NSAttributedString()
+        self.caption = ((try? container.decode(ChatTextInputStateText.self, forKey: .caption)) ?? ChatTextInputStateText()).attributedText()
         self.privacy = nil
+        //self.privacy = try container.decode(MediaEditorResultPrivacy.self, forKey: .values)
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -85,6 +128,10 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             fatalError()
         }
+        
+        let chatInputText = ChatTextInputStateText(attributedText: self.caption)
+        try container.encode(chatInputText, forKey: .caption)
+        //try container.encode(self.privacy, forKey: .privacy)
     }
 }
 
@@ -122,7 +169,7 @@ public func addStoryDraft(engine: TelegramEngine, item: MediaEditorDraft) {
 
 public func removeStoryDraft(engine: TelegramEngine, path: String, delete: Bool) {
     if delete {
-        try? FileManager.default.removeItem(atPath: path)
+        try? FileManager.default.removeItem(atPath: fullDraftPath(path))
     }
     let itemId = MediaEditorDraftItemId(path.persistentHashValue)
     let _ = engine.orderedLists.removeItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.storyDrafts, id: itemId.rawValue).start()
@@ -143,4 +190,14 @@ public func storyDrafts(engine: TelegramEngine) -> Signal<[MediaEditorDraft], No
         }
         return result
     }
+}
+
+public extension MediaEditorDraft {
+    func fullPath() -> String {
+        return fullDraftPath(self.path)
+    }
+}
+
+private func fullDraftPath(_ path: String) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts/" + path
 }

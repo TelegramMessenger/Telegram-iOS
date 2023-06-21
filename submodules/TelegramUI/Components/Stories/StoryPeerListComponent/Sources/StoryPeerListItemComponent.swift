@@ -696,7 +696,7 @@ public final class StoryPeerListItemComponent: Component {
             }
             
             var titleTransition = transition
-            if previousComponent?.ringAnimation != nil && component.ringAnimation == nil {
+            if let previousAnimation = previousComponent?.ringAnimation, case .progress = previousAnimation, component.ringAnimation == nil {
                 if let titleView = self.title.view, let snapshotView = titleView.snapshotView(afterScreenUpdates: false) {
                     self.button.addSubview(snapshotView)
                     snapshotView.frame = titleView.frame
@@ -706,6 +706,20 @@ public final class StoryPeerListItemComponent: Component {
                     titleView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 }
                 titleTransition = .immediate
+                
+                self.avatarContent.layer.transform = CATransform3DMakeScale(1.08, 1.08, 1.0)
+                self.avatarContent.layer.animateScale(from: 1.0, to: 1.08, duration: 0.2, completion: { [weak self] _ in
+                    self?.avatarContent.layer.transform = CATransform3DMakeScale(1.0, 1.0, 1.0)
+                    self?.avatarContent.layer.animateScale(from: 1.08, to: 1.0, duration: 0.15)
+                })
+                
+                let initialLineWidth: CGFloat = 2.0
+                let targetLineWidth: CGFloat = 3.0
+                self.indicatorShapeLayer.lineWidth = targetLineWidth
+                self.indicatorShapeLayer.animateShapeLineWidth(from: initialLineWidth, to: targetLineWidth, duration: 0.2, completion: { [weak self] _ in
+                    self?.indicatorShapeLayer.lineWidth = initialLineWidth
+                    self?.indicatorShapeLayer.animateShapeLineWidth(from: targetLineWidth, to: initialLineWidth, duration: 0.15)
+                })
             }
             
             let titleSize = self.title.update(
@@ -746,7 +760,13 @@ public final class StoryPeerListItemComponent: Component {
                 
                 switch ringAnimation {
                 case let .progress(progress):
-                    progressLayer.update(size: progressFrame.size, lineWidth: 4.0, value: .progress(progress), transition: transition)
+                    let progressTransition: Transition
+                    if abs(progress - 0.028) < 0.001 {
+                        progressTransition = .immediate
+                    } else {
+                        progressTransition = .easeInOut(duration: 0.3)
+                    }
+                    progressLayer.update(size: progressFrame.size, lineWidth: 4.0, value: .progress(progress), transition: progressTransition)
                 case .loading:
                     progressLayer.update(size: progressFrame.size, lineWidth: 4.0, value: .indefinite, transition: transition)
                 }

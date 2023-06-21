@@ -288,7 +288,7 @@ public final class MediaEditor {
             let colors = mediaEditorGetGradientColors(from: image)
             textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, colors.0, colors.1))
         case let .draft(draft):
-            guard let image = UIImage(contentsOfFile: draft.path) else {
+            guard let image = UIImage(contentsOfFile: draft.fullPath()) else {
                 return
             }
             let colors: (UIColor, UIColor)
@@ -605,6 +605,11 @@ public final class MediaEditor {
                 }
             }
         }
+    }
+    
+    public func requestRenderFrame() {
+        self.renderer.willRenderFrame()
+        self.renderer.renderFrame()
     }
     
     private func maybeGeneratePersonSegmentation(_ image: UIImage?) {

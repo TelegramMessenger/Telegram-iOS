@@ -4,7 +4,7 @@ import Postbox
 import TelegramApi
 
 public enum EngineOutgoingMessageContent {
-    case text(String)
+    case text(String, [MessageTextEntity])
 }
 
 public final class StoryPreloadInfo {
@@ -222,10 +222,14 @@ public extension TelegramEngine {
             content: EngineOutgoingMessageContent
         ) {
             switch content {
-            case let .text(text):
+            case let .text(text, entities):
+                var attributes: [MessageAttribute] = []
+                if !entities.isEmpty {
+                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                }
                 let message: EnqueueMessage = .message(
                     text: text,
-                    attributes: [],
+                    attributes: attributes,
                     inlineStickers: [:],
                     mediaReference: nil,
                     replyToMessageId: replyToMessageId,

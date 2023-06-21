@@ -235,6 +235,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.typeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.draftNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         if animateSpoilerNode {
             self.spoilerNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
@@ -254,7 +255,9 @@ final class MediaPickerGridItemNode: GridItemNode {
         
         self.backgroundColor = theme.list.mediaPlaceholderColor
         
-        if self.currentDraftState == nil || self.currentDraftState?.0.path != draft.path || self.currentDraftState!.1 != index {
+        if self.currentDraftState == nil || self.currentDraftState?.0.path != draft.path || self.currentDraftState!.1 != index || self.currentState != nil {
+            self.currentState = nil
+            
             let imageSignal: Signal<UIImage?, NoError> = .single(draft.thumbnail)
             self.imageNode.setSignal(imageSignal)
             
@@ -262,8 +265,15 @@ final class MediaPickerGridItemNode: GridItemNode {
             
             if self.draftNode.supernode == nil {
                 self.draftNode.attributedText = NSAttributedString(string: "Draft", font: Font.semibold(12.0), textColor: .white)
-                
                 self.addSubnode(self.draftNode)
+            }
+            
+            if self.typeIconNode.supernode != nil {
+                self.typeIconNode.removeFromSupernode()
+            }
+            
+            if self.durationNode.supernode != nil {
+                self.durationNode.removeFromSupernode()
             }
             
             self.setNeedsLayout()
@@ -286,10 +296,9 @@ final class MediaPickerGridItemNode: GridItemNode {
             if self.backgroundNode.supernode == nil {
                 self.insertSubnode(self.backgroundNode, at: 0)
             }
-        } else {
-            if self.draftNode.supernode != nil {
-                self.draftNode.removeFromSupernode()
-            }
+        }
+        if self.draftNode.supernode != nil {
+            self.draftNode.removeFromSupernode()
         }
                 
         if self.currentMediaState == nil || self.currentMediaState!.0.uniqueIdentifier != media.identifier || self.currentMediaState!.1 != index {
@@ -319,13 +328,14 @@ final class MediaPickerGridItemNode: GridItemNode {
             if self.backgroundNode.supernode == nil {
                 self.insertSubnode(self.backgroundNode, at: 0)
             }
-        } else {
-            if self.draftNode.supernode != nil {
-                self.draftNode.removeFromSupernode()
-            }
+        }
+        if self.draftNode.supernode != nil {
+            self.draftNode.removeFromSupernode()
         }
         
-        if self.currentState == nil || self.currentState!.0 !== fetchResult || self.currentState!.1 != index {
+        if self.currentState == nil || self.currentState!.0 !== fetchResult || self.currentState!.1 != index || self.currentDraftState != nil {
+            self.currentDraftState = nil
+            
             self.backgroundNode.image = nil
             let editingContext = interaction.editingState
             let asset = fetchResult.object(at: index)
