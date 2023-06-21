@@ -366,7 +366,7 @@ public final class TelegramUser: Peer, Equatable {
     }
     
     public func withUpdatedFlags(_ flags: UserInfoFlags) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: emojiStatus, usernames: self.usernames, storiesHidden: self.storiesHidden)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: flags, emojiStatus: self.emojiStatus, usernames: self.usernames, storiesHidden: self.storiesHidden)
     }
     
     public func withUpdatedStoriesHidden(_ storiesHidden: Bool?) -> TelegramUser {

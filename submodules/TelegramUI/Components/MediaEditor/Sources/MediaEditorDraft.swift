@@ -7,10 +7,7 @@ import PersistentStringHash
 import Postbox
 import AccountContext
 
-public enum MediaEditorResultPrivacy: Codable, Equatable {
-    case story(privacy: EngineStoryPrivacy, timeout: Int, archive: Bool)
-    case message(peers: [EnginePeer.Id], timeout: Int?)
-    
+public struct MediaEditorResultPrivacy: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case type
         case privacy
@@ -19,37 +16,34 @@ public enum MediaEditorResultPrivacy: Codable, Equatable {
         case archive
     }
     
+    public let privacy: EngineStoryPrivacy
+    public let timeout: Int
+    public let archive: Bool
+    
+    public init(
+        privacy: EngineStoryPrivacy,
+        timeout: Int,
+        archive: Bool
+    ) {
+        self.privacy = privacy
+        self.timeout = timeout
+        self.archive = archive
+    }
+    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        if let privacy = try container.decodeIfPresent(EngineStoryPrivacy.self, forKey: .privacy) {
-            let timeout = try container.decode(Int32.self, forKey: .timeout)
-            let archive = try container.decode(Bool.self, forKey: .archive)
-            self = .story(privacy: privacy, timeout: Int(timeout), archive: archive)
-        } else if let peers = try container.decodeIfPresent([EnginePeer.Id].self, forKey: .peers) {
-            let timeout = try container.decodeIfPresent(Int32.self, forKey: .timeout)
-            self = .message(peers: peers, timeout: timeout.flatMap { Int($0) })
-        } else {
-            fatalError()
-        }
+        self.privacy = try container.decode(EngineStoryPrivacy.self, forKey: .privacy)
+        self.timeout = Int(try container.decode(Int32.self, forKey: .timeout))
+        self.archive = try container.decode(Bool.self, forKey: .archive)
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
-        switch self {
-        case let .story(privacy, timeout, archive):
-            try container.encode(privacy, forKey: .privacy)
-            try container.encode(Int32(timeout), forKey: .timeout)
-            try container.encode(archive, forKey: .archive)
-        case let .message(peers, timeout):
-            try container.encode(peers, forKey: .peers)
-            if let timeout {
-                try container.encode(Int32(timeout), forKey: .timeout)
-            } else {
-                try container.encodeNil(forKey: .timeout)
-            }
-        }
+    
+        try container.encode(privacy, forKey: .privacy)
+        try container.encode(Int32(timeout), forKey: .timeout)
+        try container.encode(archive, forKey: .archive)
     }
 }
 

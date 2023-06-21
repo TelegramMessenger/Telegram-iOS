@@ -675,20 +675,11 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.done),
                         size: CGSize(width: 33.0, height: 33.0)
                     )),
-                    action: { [weak self] in
-                        guard let self, let controller = environment.controller() as? MediaEditorScreen else {
+                    action: {
+                        guard let controller = environment.controller() as? MediaEditorScreen else {
                             return
                         }
-                        guard let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View else {
-                            return
-                        }
-                        var inputText = NSAttributedString(string: "")
-                        switch inputPanelView.getSendMessageInput() {
-                        case let .text(text):
-                            inputText = text
-                        }
-                        
-                        controller.requestCompletion(caption: inputText, animated: true)
+                        controller.requestCompletion(animated: true)
                     }
                 )),
                 environment: {},
@@ -879,29 +870,23 @@ final class MediaEditorScreenComponent: Component {
             
             var timeoutValue: String
             let timeoutSelected: Bool
-            switch component.privacy {
-            case let .story(_, timeout, archive):
-                switch timeout {
-                case 21600:
-                    timeoutValue = "6"
-                case 43200:
-                    timeoutValue = "12"
-                case 86400:
-                    timeoutValue = "24"
-                case 172800:
-                    timeoutValue = "48"
-                default:
-                    timeoutValue = "24"
-                }
-                if archive {
-                    timeoutValue = "∞"
-                }
-                timeoutSelected = false
-            case let .message(_, timeout):
-                timeoutValue = "\(timeout ?? 1)"
-                timeoutSelected = timeout != nil
+            switch component.privacy.timeout {
+            case 21600:
+                timeoutValue = "6"
+            case 43200:
+                timeoutValue = "12"
+            case 86400:
+                timeoutValue = "24"
+            case 172800:
+                timeoutValue = "48"
+            default:
+                timeoutValue = "24"
             }
-                        
+            if component.privacy.archive {
+                timeoutValue = "∞"
+            }
+            timeoutSelected = false
+            
             var inputPanelAvailableWidth = previewSize.width
             var inputPanelAvailableHeight = 115.0
             if case .regular = environment.metrics.widthClass {
@@ -1067,24 +1052,15 @@ final class MediaEditorScreenComponent: Component {
             }
             
             let privacyText: String
-            switch component.privacy {
-            case let .story(privacy, _, _):
-                switch privacy.base {
-                case .everyone:
-                    privacyText = "Everyone"
-                case .closeFriends:
-                    privacyText = "Close Friends"
-                case .contacts:
-                    privacyText = "Contacts"
-                case .nobody:
-                    privacyText = "Selected Contacts"
-                }
-            case let .message(peerIds, _):
-                if peerIds.count == 1 {
-                    privacyText = "1 Recipient"
-                } else {
-                    privacyText = "\(peerIds.count) Recipients"
-                }
+            switch component.privacy.privacy.base {
+            case .everyone:
+                privacyText = "Everyone"
+            case .closeFriends:
+                privacyText = "Close Friends"
+            case .contacts:
+                privacyText = "Contacts"
+            case .nobody:
+                privacyText = "Selected Contacts"
             }
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool)
@@ -1519,7 +1495,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     struct State {
-        var privacy: MediaEditorResultPrivacy = .story(privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 86400, archive: false)
+        var privacy: MediaEditorResultPrivacy = MediaEditorResultPrivacy(privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 86400, archive: false)
     }
     
     var state = State() {
@@ -2158,18 +2134,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             
-            if finished, case .message = controller.state.privacy {
-                if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
-                    view.animateOut(to: .camera)
-                }
-                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
-                transition.setAlpha(view: self.previewContainerView, alpha: 0.0, completion: { _ in
-                    completion()
-                    if let view = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView {
-                        view.previewView = nil
-                    }
-                })
-            } else if let transitionOut = controller.transitionOut(finished, isNew), let destinationView = transitionOut.destinationView {
+            if isNew == true {
+                self.entitiesView.seek(to: 0.0)
+            }
+            
+            if let transitionOut = controller.transitionOut(finished, isNew), let destinationView = transitionOut.destinationView {
                 var destinationTransitionView: UIView?
                 if !finished {
                     if let transitionIn = controller.transitionIn, case let .gallery(galleryTransitionIn) = transitionIn, let sourceImage = galleryTransitionIn.sourceImage, isNew != true {
@@ -2436,7 +2405,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         private weak var storyArchiveTooltip: ViewController?
         func presentStoryArchiveTooltip(sourceView: UIView) {
-            guard let controller = self.controller, case let .story(_, _, archive) = controller.state.privacy else {
+            guard let controller = self.controller else {
                 return
             }
             
@@ -2450,7 +2419,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 5.0), size: CGSize())
             
             let text: String
-            if archive {
+            if controller.state.privacy.archive {
                 text = "Story will be kept on your page."
             } else {
                 text = "Story will disappear in 24 hours."
@@ -2900,66 +2869,48 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.displayNode.view.addInteraction(dropInteraction)
     }
             
-    func openPrivacySettings() {
+    func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil) {
         self.hapticFeedback.impact(.light)
     
-        if case .message(_, _) = self.state.privacy {
-            self.openSendAsMessage()
-        } else {
-            let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .stories)
-            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let self else {
-                    return
-                }
-                
-                var archive = true
-                var timeout: Int = 86400
-                let initialPrivacy: EngineStoryPrivacy
-                if case let .story(privacy, timeoutValue, archiveValue) = self.state.privacy {
-                    initialPrivacy = privacy
-                    timeout = timeoutValue
-                    archive = archiveValue
-                } else {
-                    initialPrivacy = EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: [])
-                }
-                
-                self.push(
-                    ShareWithPeersScreen(
-                        context: self.context,
-                        initialPrivacy: initialPrivacy,
-                        stateContext: stateContext,
-                        completion: { [weak self] privacy in
-                            guard let self else {
-                                return
-                            }
-                            self.state.privacy = .story(privacy: privacy, timeout: timeout, archive: archive)
-                        },
-                        editCategory: { [weak self] privacy in
-                            guard let self else {
-                                return
-                            }
-                            self.openEditCategory(privacy: privacy, completion: { [weak self] privacy in
-                                guard let self else {
-                                    return
-                                }
-                                self.state.privacy = .story(privacy: privacy, timeout: timeout, archive: archive)
-                                self.openPrivacySettings()
-                            })
-                        },
-                        secondaryAction: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            self.openSendAsMessage()
+        let privacy = privacy ?? self.state.privacy
+        
+        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .stories, initialPeerIds: Set(privacy.privacy.additionallyIncludePeers))
+        let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            let initialPrivacy = privacy.privacy
+            let timeout = privacy.timeout
+            let archive = privacy.archive
+            self.push(
+                ShareWithPeersScreen(
+                    context: self.context,
+                    initialPrivacy: initialPrivacy,
+                    stateContext: stateContext,
+                    completion: { [weak self] privacy in
+                        guard let self else {
+                            return
                         }
-                    )
+                        self.state.privacy = MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, archive: archive)
+                    },
+                    editCategory: { [weak self] privacy in
+                        guard let self else {
+                            return
+                        }
+                        self.openEditCategory(privacy: privacy, completion: { [weak self] privacy in
+                            guard let self else {
+                                return
+                            }
+                            self.openPrivacySettings(MediaEditorResultPrivacy(privacy: privacy, timeout: timeout, archive: archive))
+                        })
+                    }
                 )
-            })
-        }
+            )
+        })
     }
     
     private func openEditCategory(privacy: EngineStoryPrivacy, completion: @escaping (EngineStoryPrivacy) -> Void) {
-        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .contacts(privacy.base))
+        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .contacts(privacy.base), initialPeerIds: Set(privacy.additionallyIncludePeers))
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
                 return
@@ -2979,42 +2930,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                         completion(result)
                     },
-                    editCategory: { _ in },
-                    secondaryAction: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.openSendAsMessage()
-                    }
-                )
-            )
-        })
-    }
-    
-    private func openSendAsMessage() {
-        var initialPeerIds = Set<EnginePeer.Id>()
-        if case let .message(peers, _) = self.state.privacy {
-            initialPeerIds = Set(peers)
-        }
-        let stateContext = ShareWithPeersScreen.StateContext(context: self.context, subject: .chats, initialPeerIds: initialPeerIds)
-        let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
-            guard let self else {
-                return
-            }
-            
-            self.push(
-                ShareWithPeersScreen(
-                    context: self.context,
-                    initialPrivacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []),
-                    stateContext: stateContext,
-                    completion: { [weak self] privacy in
-                        guard let self else {
-                            return
-                        }
-                        self.state.privacy = .message(peers: privacy.additionallyIncludePeers, timeout: nil)
-                    },
-                    editCategory: { _ in },
-                    secondaryAction: {}
+                    editCategory: { _ in }
                 )
             )
         })
@@ -3029,133 +2945,80 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             guard let self else {
                 return
             }
-            switch self.state.privacy {
-            case let .story(privacy, _, _):
-                self.state.privacy = .story(privacy: privacy, timeout: timeout ?? 86400, archive: archive)
-            case let .message(peers, _):
-                self.state.privacy = .message(peers: peers, timeout: timeout)
-            }
+            self.state.privacy = MediaEditorResultPrivacy(privacy: self.state.privacy.privacy, timeout: timeout ?? 86400, archive: archive)
         }
-        
-        var currentValue: Int?
-        var currentArchived = false
+                
+        let title = "Choose how long the story will be visible."
+        let currentValue = self.state.privacy.timeout
+        let currentArchived = self.state.privacy.archive
         let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
-        let title: String
-        switch self.state.privacy {
-        case let .story(_, timeoutValue, archivedValue):
-            title = "Choose how long the story will be visible."
-            currentValue = timeoutValue
-            currentArchived = archivedValue
-        case let .message(_, timeoutValue):
-            title = "Choose how long the media will be kept after opening."
-            currentValue = timeoutValue
-        }
         
         items.append(.action(ContextMenuActionItem(text: title, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
         
-        switch self.state.privacy {
-        case .story:
-            items.append(.action(ContextMenuActionItem(text: "6 Hours", icon: { theme in
-                if !hasPremium {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
-                } else {
-                    return currentValue == 3600 * 6 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-                }
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                if hasPremium {
-                    updateTimeout(3600 * 6, false)
-                } else {
-                    self?.presentTimeoutPremiumSuggestion(3600 * 6)
-                }
-            })))
-            items.append(.action(ContextMenuActionItem(text: "12 Hours", icon: { theme in
-                if !hasPremium {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
-                } else {
-                    return currentValue == 3600 * 12 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-                }
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                if hasPremium {
-                    updateTimeout(3600 * 12, false)
-                } else {
-                    self?.presentTimeoutPremiumSuggestion(3600 * 12)
-                }
-            })))
-            items.append(.action(ContextMenuActionItem(text: "24 Hours", icon: { theme in
-                return currentValue == 86400 && !currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-            }, action: { _, a in
-                a(.default)
-                
-                updateTimeout(86400, false)
-            })))
-            items.append(.action(ContextMenuActionItem(text: "48 Hours", icon: { theme in
-                if !hasPremium {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
-                } else {
-                    return currentValue == 86400 * 2 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-                }
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                if hasPremium {
-                    updateTimeout(86400 * 2, false)
-                } else {
-                    self?.presentTimeoutPremiumSuggestion(86400 * 2)
-                }
-            })))
-            items.append(.action(ContextMenuActionItem(text: "Keep Always", icon: { theme in
-                return currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-            }, action: { _, a in
-                a(.default)
-                
-                updateTimeout(86400, true)
-            })))
-            items.append(.separator)
-            items.append(.action(ContextMenuActionItem(text: "Select 'Keep Always' to show the story on your page.", textLayout: .multiline, textFont: .small, icon: { theme in
-                return nil
-            }, action: { _, _ in
-            })))
-        case .message:
-            items.append(.action(ContextMenuActionItem(text: "Until First View", icon: { _ in
-                return nil
-            }, action: { _, a in
-                a(.default)
-                
-                updateTimeout(1, false)
-            })))
-            items.append(.action(ContextMenuActionItem(text: "3 Seconds", icon: { _ in
-                return nil
-            }, action: { _, a in
-                a(.default)
-                
-                updateTimeout(3, false)
-            })))
-            items.append(.action(ContextMenuActionItem(text: "10 Seconds", icon: { _ in
-                return nil
-            }, action: { _, a in
-                a(.default)
-                
-                updateTimeout(10, false)
-            })))
-            items.append(.action(ContextMenuActionItem(text: "1 Minute", icon: { _ in
-                return nil
-            }, action: { _, a in
-                a(.default)
-                
-                updateTimeout(60, false)
-            })))
-            items.append(.action(ContextMenuActionItem(text: "Keep Always", icon: { _ in
-                return nil
-            }, action: { _, a in
-                a(.default)
-                
-                updateTimeout(nil, false)
-            })))
-        }
+        items.append(.action(ContextMenuActionItem(text: "6 Hours", icon: { theme in
+            if !hasPremium {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
+            } else {
+                return currentValue == 3600 * 6 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }
+        }, action: { [weak self] _, a in
+            a(.default)
+            
+            if hasPremium {
+                updateTimeout(3600 * 6, false)
+            } else {
+                self?.presentTimeoutPremiumSuggestion(3600 * 6)
+            }
+        })))
+        items.append(.action(ContextMenuActionItem(text: "12 Hours", icon: { theme in
+            if !hasPremium {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
+            } else {
+                return currentValue == 3600 * 12 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }
+        }, action: { [weak self] _, a in
+            a(.default)
+            
+            if hasPremium {
+                updateTimeout(3600 * 12, false)
+            } else {
+                self?.presentTimeoutPremiumSuggestion(3600 * 12)
+            }
+        })))
+        items.append(.action(ContextMenuActionItem(text: "24 Hours", icon: { theme in
+            return currentValue == 86400 && !currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+        }, action: { _, a in
+            a(.default)
+            
+            updateTimeout(86400, false)
+        })))
+        items.append(.action(ContextMenuActionItem(text: "48 Hours", icon: { theme in
+            if !hasPremium {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.secondaryColor)
+            } else {
+                return currentValue == 86400 * 2 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }
+        }, action: { [weak self] _, a in
+            a(.default)
+            
+            if hasPremium {
+                updateTimeout(86400 * 2, false)
+            } else {
+                self?.presentTimeoutPremiumSuggestion(86400 * 2)
+            }
+        })))
+        items.append(.action(ContextMenuActionItem(text: "Keep Always", icon: { theme in
+            return currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+        }, action: { _, a in
+            a(.default)
+            
+            updateTimeout(86400, true)
+        })))
+        items.append(.separator)
+        items.append(.action(ContextMenuActionItem(text: "Select 'Keep Always' to show the story on your page.", textLayout: .multiline, textFont: .small, icon: { theme in
+            return nil
+        }, action: { _, _ in
+        })))
         
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
@@ -3251,6 +3114,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
     }
     
+    private func getCaption() -> NSAttributedString {
+        return (self.node.componentHost.view as? MediaEditorScreenComponent.View)?.getInputText() ?? NSAttributedString()
+    }
+    
     private func saveDraft(id: Int64?) {
         guard let subject = self.node.subject, let values = self.node.mediaEditor?.values else {
             return
@@ -3258,7 +3125,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         try? FileManager.default.createDirectory(atPath: draftPath(), withIntermediateDirectories: true)
         
         let privacy = self.state.privacy
-        let caption = (self.node.componentHost.view as? MediaEditorScreenComponent.View)?.getInputText() ?? NSAttributedString()
+        let caption = self.getCaption()
         
         if let resultImage = self.node.mediaEditor?.resultImage {
             self.node.mediaEditor?.seek(0.0, andPlay: false)
@@ -3330,7 +3197,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
         
     private var didComplete = false
-    func requestCompletion(caption: NSAttributedString, animated: Bool) {
+    func requestCompletion(animated: Bool) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, !self.didComplete else {
             return
         }
@@ -3351,13 +3218,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
+        let caption = self.getCaption()
+        
         let randomId: Int64
         if case let .draft(_, id) = subject, let id {
             randomId = id
         } else {
             randomId = Int64.random(in: .min ... .max)
         }
-        
         if mediaEditor.resultIsVideo {
             var firstFrame: Signal<UIImage?, NoError>
             let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
