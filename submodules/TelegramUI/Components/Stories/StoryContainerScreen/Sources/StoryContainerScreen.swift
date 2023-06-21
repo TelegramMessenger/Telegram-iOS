@@ -552,6 +552,10 @@ private final class StoryContainerScreenComponent: Component {
                     focusedItemPromise.set(.single(nil))
                 })
             } else {
+                if let component = self.component, let stateValue = component.content.stateValue, let slice = stateValue.slice, let transitionOut = component.transitionOut(slice.peer.id, slice.item.id) {
+                    transitionOut.completed()
+                }
+                
                 let transition: Transition
                 if self.dismissWithoutTransitionOut {
                     transition = Transition(animation: .curve(duration: 0.5, curve: .spring))

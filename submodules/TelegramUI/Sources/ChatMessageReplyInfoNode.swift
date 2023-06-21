@@ -16,26 +16,26 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 
-enum ChatMessageReplyInfoType {
+public enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
     case standalone
 }
 
-class ChatMessageReplyInfoNode: ASDisplayNode {
-    class Arguments {
-        let presentationData: ChatPresentationData
-        let strings: PresentationStrings
-        let context: AccountContext
-        let type: ChatMessageReplyInfoType
-        let message: Message?
-        let story: StoryId?
-        let parentMessage: Message
-        let constrainedSize: CGSize
-        let animationCache: AnimationCache?
-        let animationRenderer: MultiAnimationRenderer?
-        let associatedData: ChatMessageItemAssociatedData
+public class ChatMessageReplyInfoNode: ASDisplayNode {
+    public class Arguments {
+        public let presentationData: ChatPresentationData
+        public let strings: PresentationStrings
+        public let context: AccountContext
+        public let type: ChatMessageReplyInfoType
+        public let message: Message?
+        public let story: StoryId?
+        public let parentMessage: Message
+        public let constrainedSize: CGSize
+        public let animationCache: AnimationCache?
+        public let animationRenderer: MultiAnimationRenderer?
+        public let associatedData: ChatMessageItemAssociatedData
         
-        init(
+        public init(
             presentationData: ChatPresentationData,
             strings: PresentationStrings,
             context: AccountContext,
@@ -62,7 +62,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         }
     }
     
-    var visibility: Bool = false {
+    public var visibility: Bool = false {
         didSet {
             if self.visibility != oldValue {
                 self.textNode?.visibilityRect = self.visibility ? CGRect.infinite : nil
@@ -79,7 +79,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     private var previousMediaReference: AnyMediaReference?
     private var expiredStoryIconView: UIImageView?
     
-    override init() {
+    override public init() {
         self.contentNode = ASDisplayNode()
         self.contentNode.isUserInteractionEnabled = false
         self.contentNode.displaysAsynchronously = false
@@ -97,7 +97,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode) {
+    public static func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode) {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNodeWithEntities.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
@@ -583,7 +583,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         }
     }
     
-    func mediaTransitionView() -> UIView? {
+    public func mediaTransitionView() -> UIView? {
         if let imageNode = self.imageNode {
             return imageNode.view
         }

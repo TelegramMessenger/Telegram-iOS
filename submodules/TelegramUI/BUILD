@@ -376,6 +376,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
         "//submodules/TelegramUI/Components/Stories/StorySetIndicatorComponent",
         "//submodules/TelegramUI/Components/Chat/ChatMessageForwardInfoNode",
+        "//submodules/TelegramUI/Components/Chat/ChatAvatarNavigationNode",
         "//submodules/Utils/VolumeButtons",
         "//submodules/ChatContextQuery",
     ] + select({

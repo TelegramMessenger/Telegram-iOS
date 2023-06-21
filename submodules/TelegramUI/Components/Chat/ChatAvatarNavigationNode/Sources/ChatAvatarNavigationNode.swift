@@ -16,18 +16,23 @@ import AccountContext
 import ComponentFlow
 import EmojiStatusComponent
 import AvatarVideoNode
+import AvatarStoryIndicatorComponent
+import ComponentDisplayAdapters
 
 private let normalFont = avatarPlaceholderFont(size: 16.0)
 private let smallFont = avatarPlaceholderFont(size: 12.0)
 
-final class ChatAvatarNavigationNode: ASDisplayNode {
+public final class ChatAvatarNavigationNode: ASDisplayNode {
     private var context: AccountContext?
     
     private let containerNode: ContextControllerSourceNode
-    let avatarNode: AvatarNode
+    public let avatarNode: AvatarNode
     private var avatarVideoNode: AvatarVideoNode?
     
-    let statusView: ComponentView<Empty>
+    public private(set) var avatarStoryView: ComponentView<Empty>?
+    public var hasUnseenStories: Bool?
+    
+    public let statusView: ComponentView<Empty>
     
     private var cachedDataDisposable = MetaDisposable()
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
@@ -42,8 +47,8 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         }
     }
     
-    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
-    var contextActionIsEnabled: Bool = false {
+    public var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    public var contextActionIsEnabled: Bool = false {
         didSet {
             if self.contextActionIsEnabled != oldValue {
                 self.containerNode.isGestureEnabled = self.contextActionIsEnabled
@@ -51,7 +56,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         }
     }
         
-    override init() {
+    override public init() {
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.isGestureEnabled = false
         self.avatarNode = AvatarNode(font: normalFont)
@@ -71,13 +76,17 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0)).offsetBy(dx: 10.0, dy: 1.0)
         self.avatarNode.frame = self.containerNode.bounds
+        
+        #if DEBUG
+        self.hasUnseenStories = true
+        #endif
     }
     
     deinit {
         self.cachedDataDisposable.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         self.view.isOpaque = false
     }
@@ -190,14 +199,49 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    public func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
+        if let hasUnseenStories = self.hasUnseenStories {
+            let avatarStoryView: ComponentView<Empty>
+            if let current = self.avatarStoryView {
+                avatarStoryView = current
+            } else {
+                avatarStoryView = ComponentView()
+                self.avatarStoryView = avatarStoryView
+            }
+            
+            let _ = avatarStoryView.update(
+                transition: Transition(transition),
+                component: AnyComponent(AvatarStoryIndicatorComponent(
+                    hasUnseen: hasUnseenStories,
+                    isDarkTheme: theme.overallDarkAppearance,
+                    activeLineWidth: 1.0,
+                    inactiveLineWidth: 1.0
+                )),
+                environment: {},
+                containerSize: self.avatarNode.bounds.insetBy(dx: 2.0, dy: 2.0).size
+            )
+            if let avatarStoryComponentView = avatarStoryView.view {
+                if avatarStoryComponentView.superview == nil {
+                    self.containerNode.view.insertSubview(avatarStoryComponentView, at: 0)
+                }
+                avatarStoryComponentView.frame = self.avatarNode.frame
+            }
+        } else {
+            if let avatarStoryView = self.avatarStoryView {
+                self.avatarStoryView = nil
+                avatarStoryView.view?.removeFromSuperview()
+            }
+        }
+    }
+    
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: 37.0, height: 37.0)
     }
     
-    func onLayout() {
+    public func onLayout() {
     }
 
-    final class SnapshotState {
+    public final class SnapshotState {
         fileprivate let snapshotView: UIView?
 
         fileprivate init(snapshotView: UIView?) {
@@ -205,14 +249,14 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         }
     }
 
-    func prepareSnapshotState() -> SnapshotState {
+    public func prepareSnapshotState() -> SnapshotState {
         let snapshotView = self.avatarNode.view.snapshotView(afterScreenUpdates: false)
         return SnapshotState(
             snapshotView: snapshotView
         )
     }
 
-    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+    public func animateFromSnapshot(_ snapshotState: SnapshotState) {
         self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true)
 

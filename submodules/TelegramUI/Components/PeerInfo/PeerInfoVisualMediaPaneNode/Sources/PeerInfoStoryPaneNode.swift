@@ -1038,7 +1038,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                         guard let self else {
                                             return
                                         }
-                                        self.view.insertSubview(view, aboveSubview: self.itemGrid.view)
+                                        self.addToTransitionSurface(view: view)
                                     }
                                 ),
                                 destinationRect: self.itemGrid.view.convert(itemRect, to: self.view),
