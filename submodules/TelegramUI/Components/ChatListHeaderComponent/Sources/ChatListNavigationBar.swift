@@ -8,15 +8,23 @@ import ComponentDisplayAdapters
 import SearchUI
 import AccountContext
 import TelegramCore
+import StoryPeerListComponent
 
 public final class ChatListNavigationBar: Component {
+    public final class AnimationHint {
+        let disableStoriesAnimations: Bool
+        
+        public init(disableStoriesAnimations: Bool) {
+            self.disableStoriesAnimations = disableStoriesAnimations
+        }
+    }
+    
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let statusBarHeight: CGFloat
     public let sideInset: CGFloat
     public let isSearchActive: Bool
-    public let storiesUnlocked: Bool
     public let primaryContent: ChatListHeaderComponent.Content?
     public let secondaryContent: ChatListHeaderComponent.Content?
     public let secondaryTransition: CGFloat
@@ -37,7 +45,6 @@ public final class ChatListNavigationBar: Component {
         statusBarHeight: CGFloat,
         sideInset: CGFloat,
         isSearchActive: Bool,
-        storiesUnlocked: Bool,
         primaryContent: ChatListHeaderComponent.Content?,
         secondaryContent: ChatListHeaderComponent.Content?,
         secondaryTransition: CGFloat,
@@ -57,7 +64,6 @@ public final class ChatListNavigationBar: Component {
         self.statusBarHeight = statusBarHeight
         self.sideInset = sideInset
         self.isSearchActive = isSearchActive
-        self.storiesUnlocked = storiesUnlocked
         self.primaryContent = primaryContent
         self.secondaryContent = secondaryContent
         self.secondaryTransition = secondaryTransition
@@ -89,9 +95,6 @@ public final class ChatListNavigationBar: Component {
             return false
         }
         if lhs.isSearchActive != rhs.isSearchActive {
-            return false
-        }
-        if lhs.storiesUnlocked != rhs.storiesUnlocked {
             return false
         }
         if lhs.primaryContent != rhs.primaryContent {
@@ -160,15 +163,7 @@ public final class ChatListNavigationBar: Component {
         public var deferScrollApplication: Bool = false
         private var hasDeferredScrollOffset: Bool = false
         
-        public private(set) var effectiveStoriesInsetHeight: CGFloat = 0.0
-        
-        private var applyScrollFractionAnimator: DisplayLinkAnimator?
-        private var applyScrollFraction: CGFloat = 1.0
-        private var storiesOffsetStartFraction: CGFloat = 1.0
-        private var applyScrollUnlockedFraction: CGFloat = 1.0
-        private var storiesOffsetFraction: CGFloat = 0.0
-        private var storiesUnlockedFraction: CGFloat = 0.0
-        private var storiesUnlockedStartFraction: CGFloat = 1.0
+        public private(set) var storiesUnlocked: Bool = false
         
         private var tabsNode: ASDisplayNode?
         private var tabsNodeIsSearch: Bool = false
@@ -198,9 +193,16 @@ public final class ChatListNavigationBar: Component {
                 return nil
             }
             
-            guard let result = super.hitTest(point, with: event) else {
+            if self.alpha.isZero {
                 return nil
             }
+            for view in self.subviews.reversed() {
+                if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+                    return result
+                }
+            }
+            
+            let result = super.hitTest(point, with: event)
             return result
         }
         
@@ -211,13 +213,10 @@ public final class ChatListNavigationBar: Component {
         }
         
         public func applyScroll(offset: CGFloat, allowAvatarsExpansion: Bool, forceUpdate: Bool = false, transition: Transition) {
-            if self.currentAllowAvatarsExpansion != allowAvatarsExpansion, allowAvatarsExpansion, !transition.animation.isImmediate {
-                self.addStoriesUnlockedAnimation(duration: 0.3, animateScrollUnlocked: false)
-            }
-            
             let transition = transition
             
             self.rawScrollOffset = offset
+            let allowAvatarsExpansionUpdated = self.currentAllowAvatarsExpansion != allowAvatarsExpansion
             self.currentAllowAvatarsExpansion = allowAvatarsExpansion
             
             if self.deferScrollApplication && !forceUpdate {
@@ -235,19 +234,11 @@ public final class ChatListNavigationBar: Component {
             self.scrollStrings = component.strings
             
             let searchOffsetDistance: CGFloat = ChatListNavigationBar.searchScrollHeight
-            let defaultStoriesOffsetDistance: CGFloat = ChatListNavigationBar.storiesScrollHeight
-            let effectiveStoriesOffsetDistance: CGFloat
             
-            var minContentOffset: CGFloat = ChatListNavigationBar.searchScrollHeight
-            if !component.isSearchActive, let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty, component.storiesUnlocked {
-                effectiveStoriesOffsetDistance = defaultStoriesOffsetDistance * (1.0 - component.secondaryTransition)
-                minContentOffset += effectiveStoriesOffsetDistance
-            } else {
-                effectiveStoriesOffsetDistance = 0.0
-            }
+            let minContentOffset: CGFloat = ChatListNavigationBar.searchScrollHeight
             
             let clippedScrollOffset = min(minContentOffset, offset)
-            if self.clippedScrollOffset == clippedScrollOffset && !self.hasDeferredScrollOffset && !forceUpdate {
+            if self.clippedScrollOffset == clippedScrollOffset && !self.hasDeferredScrollOffset && !forceUpdate && !allowAvatarsExpansionUpdated {
                 return
             }
             self.hasDeferredScrollOffset = false
@@ -302,7 +293,7 @@ public final class ChatListNavigationBar: Component {
                 self.addSubview(searchContentNode.view)
             }
             
-            let clippedStoriesOverscrollOffset = -min(0.0, clippedScrollOffset)
+            /*let clippedStoriesOverscrollOffset = -min(0.0, clippedScrollOffset)
             let clippedStoriesOffset = max(0.0, min(clippedScrollOffset, defaultStoriesOffsetDistance))
             var storiesOffsetFraction: CGFloat
             var storiesUnlockedOffsetFraction: CGFloat
@@ -322,7 +313,7 @@ public final class ChatListNavigationBar: Component {
             if self.applyScrollFractionAnimator != nil {
                 storiesOffsetFraction = self.applyScrollFraction * storiesOffsetFraction + (1.0 - self.applyScrollFraction) * self.storiesOffsetStartFraction
                 storiesUnlockedOffsetFraction = self.applyScrollUnlockedFraction * storiesUnlockedOffsetFraction + (1.0 - self.applyScrollUnlockedFraction) * self.storiesUnlockedStartFraction
-            }
+            }*/
             
             let searchSize = CGSize(width: currentLayout.size.width, height: navigationBarSearchContentHeight)
             var searchFrame = CGRect(origin: CGPoint(x: 0.0, y: visibleSize.height - searchSize.height), size: searchSize)
@@ -333,7 +324,7 @@ public final class ChatListNavigationBar: Component {
                 searchFrame.origin.y -= component.accessoryPanelContainerHeight
             }
             
-            let clippedSearchOffset = max(0.0, min(clippedScrollOffset - effectiveStoriesOffsetDistance, searchOffsetDistance))
+            let clippedSearchOffset = max(0.0, min(clippedScrollOffset, searchOffsetDistance))
             let searchOffsetFraction = clippedSearchOffset / searchOffsetDistance
             searchContentNode.expansionProgress = 1.0 - searchOffsetFraction
             
@@ -341,13 +332,38 @@ public final class ChatListNavigationBar: Component {
             
             searchContentNode.updateLayout(size: searchSize, leftInset: component.sideInset, rightInset: component.sideInset, transition: transition.containedViewLayoutTransition)
             
-            var headerTransition = transition
-            if self.applyScrollFractionAnimator != nil {
+            let headerTransition = transition
+            /*if self.applyScrollFractionAnimator != nil {
                 headerTransition = .immediate
+            }*/
+            
+            let storiesOffsetFraction: CGFloat
+            let storiesUnlocked: Bool
+            if allowAvatarsExpansion {
+                storiesOffsetFraction = max(0.0, min(1.0, -offset / ChatListNavigationBar.storiesScrollHeight))
+                
+                if offset <= -80.0 {
+                    storiesUnlocked = true
+                } else if offset >= -66.0 {
+                    storiesUnlocked = false
+                } else {
+                    storiesUnlocked = self.storiesUnlocked
+                }
+            } else {
+                storiesOffsetFraction = 0.0
+                storiesUnlocked = false
             }
             
-            self.storiesOffsetFraction = storiesOffsetFraction
-            self.storiesUnlockedFraction = storiesUnlockedOffsetFraction
+            if allowAvatarsExpansion && transition.animation.isImmediate {
+                if self.storiesUnlocked != storiesUnlocked {
+                    if storiesUnlocked {
+                        HapticFeedback().impact()
+                    } else {
+                        HapticFeedback().tap()
+                    }
+                }
+            }
+            self.storiesUnlocked = storiesUnlocked
             
             let headerComponent = ChatListHeaderComponent(
                 sideInset: component.sideInset + 16.0,
@@ -357,8 +373,8 @@ public final class ChatListNavigationBar: Component {
                 networkStatus: nil,
                 storySubscriptions: component.storySubscriptions,
                 storiesIncludeHidden: component.storiesIncludeHidden,
-                storiesFraction: 1.0 - storiesOffsetFraction,
-                storiesUnlockedFraction: 1.0 - storiesUnlockedOffsetFraction,
+                storiesFraction: storiesOffsetFraction,
+                storiesUnlocked: storiesUnlocked,
                 uploadProgress: component.uploadProgress,
                 context: component.context,
                 theme: component.theme,
@@ -376,16 +392,29 @@ public final class ChatListNavigationBar: Component {
                     component.context.sharedContext.appLockContext.lock()
                 }
             )
+            
+            let animationHint = transition.userData(AnimationHint.self)
+            
+            var animationDuration: Double?
+            if case let .curve(duration, _) = transition.animation {
+                animationDuration = duration
+            }
+            
             self.currentHeaderComponent = headerComponent
             let headerContentSize = self.headerContent.update(
-                transition: headerTransition,
+                transition: headerTransition.withUserData(StoryPeerListComponent.AnimationHint(
+                    duration: animationDuration,
+                    allowAvatarsExpansionUpdated: allowAvatarsExpansionUpdated && allowAvatarsExpansion,
+                    bounce: transition.animation.isImmediate,
+                    disableAnimations: animationHint?.disableStoriesAnimations ?? false
+                )),
                 component: AnyComponent(headerComponent),
                 environment: {},
                 containerSize: CGSize(width: currentLayout.size.width, height: 44.0)
             )
             let headerContentY: CGFloat
             if component.isSearchActive {
-                headerContentY = -headerContentSize.height - effectiveStoriesOffsetDistance
+                headerContentY = -headerContentSize.height
             } else {
                 if component.statusBarHeight < 1.0 {
                     headerContentY = 0.0
@@ -496,7 +525,6 @@ public final class ChatListNavigationBar: Component {
                     statusBarHeight: component.statusBarHeight,
                     sideInset: component.sideInset,
                     isSearchActive: component.isSearchActive,
-                    storiesUnlocked: component.storiesUnlocked,
                     primaryContent: component.primaryContent,
                     secondaryContent: component.secondaryContent,
                     secondaryTransition: component.secondaryTransition,
@@ -520,7 +548,7 @@ public final class ChatListNavigationBar: Component {
                         storySubscriptions: headerComponent.storySubscriptions,
                         storiesIncludeHidden: headerComponent.storiesIncludeHidden,
                         storiesFraction: headerComponent.storiesFraction,
-                        storiesUnlockedFraction: headerComponent.storiesUnlockedFraction,
+                        storiesUnlocked: headerComponent.storiesUnlocked,
                         uploadProgress: storyUploadProgress,
                         context: headerComponent.context,
                         theme: headerComponent.theme,
@@ -543,12 +571,8 @@ public final class ChatListNavigationBar: Component {
         func update(component: ChatListNavigationBar, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
-            var storiesUnlockedUpdated = false
             var uploadProgressUpdated = false
             if let previousComponent = self.component {
-                if previousComponent.storiesUnlocked != component.storiesUnlocked {
-                    storiesUnlockedUpdated = true
-                }
                 if previousComponent.uploadProgress != component.uploadProgress {
                     uploadProgressUpdated = true
                 }
@@ -573,16 +597,7 @@ public final class ChatListNavigationBar: Component {
                 if component.statusBarHeight < 1.0 {
                     contentHeight += 8.0
                 }
-                self.effectiveStoriesInsetHeight = 0.0
             } else {
-                if let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty, component.storiesUnlocked {
-                    let storiesHeight: CGFloat = ChatListNavigationBar.storiesScrollHeight * (1.0 - component.secondaryTransition)
-                    contentHeight += storiesHeight
-                    self.effectiveStoriesInsetHeight = storiesHeight
-                } else {
-                    self.effectiveStoriesInsetHeight = 0.0
-                }
-                
                 contentHeight += navigationBarSearchContentHeight
             }
             
@@ -605,14 +620,10 @@ public final class ChatListNavigationBar: Component {
                 }
             }
             
-            if storiesUnlockedUpdated, case let .curve(duration, _) = transition.animation {
-                self.addStoriesUnlockedAnimation(duration: duration, animateScrollUnlocked: true)
-            }
-            
             return size
         }
         
-        private func addStoriesUnlockedAnimation(duration: Double, animateScrollUnlocked: Bool) {
+        /*private func addStoriesUnlockedAnimation(duration: Double, animateScrollUnlocked: Bool) {
             guard let component = self.component else {
                 return
             }
@@ -648,7 +659,7 @@ public final class ChatListNavigationBar: Component {
                 self.applyScrollFractionAnimator?.invalidate()
                 self.applyScrollFractionAnimator = nil
             })
-        }
+        }*/
     }
     
     public func makeView() -> View {

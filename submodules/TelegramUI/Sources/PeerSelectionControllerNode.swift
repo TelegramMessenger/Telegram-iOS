@@ -210,7 +210,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.chatListNode = nil
         } else {
             self.mainContainerNode = nil
-            self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
+            self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true)
         }
     
         super.init()
@@ -1291,9 +1291,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     func scrollToTop() {
         if self.mainContainerNode?.supernode != nil {
-            self.mainContainerNode?.scrollToTop(animated: true)
+            self.mainContainerNode?.scrollToTop(animated: true, adjustForTempInset: false)
         } else if self.chatListNode?.supernode != nil {
-            self.chatListNode?.scrollToPosition(.top)
+            self.chatListNode?.scrollToPosition(.top(adjustForTempInset: false))
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
             //contactListNode.scrollToTop()
         }

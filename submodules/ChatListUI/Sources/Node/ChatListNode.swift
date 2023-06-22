@@ -1040,7 +1040,7 @@ public enum ChatListGlobalScrollOption {
 }
 
 public enum ChatListNodeScrollPosition {
-    case top
+    case top(adjustForTempInset: Bool)
 }
 
 public enum ChatListNodeEmptyState: Equatable {
@@ -1151,6 +1151,7 @@ public final class ChatListNode: ListView {
     
     public var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
+    public var didBeginInteractiveDragging: ((ListView) -> Void)?
     
     public var isEmptyUpdated: ((ChatListNodeEmptyState, Bool, ContainedViewLayoutTransition) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmptyState?
@@ -1193,9 +1194,11 @@ public final class ChatListNode: ListView {
         }
     }
     
-    public private(set) var startedScrollingAtUpperBound: Bool = false
+    public var startedScrollingAtUpperBound: Bool = false
     
-    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
+    private let autoSetReady: Bool
+    
+    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool, autoSetReady: Bool) {
         self.context = context
         self.location = location
         self.chatListFilter = chatListFilter
@@ -1204,6 +1207,7 @@ public final class ChatListNode: ListView {
         self.mode = mode
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
+        self.autoSetReady = autoSetReady
         
         var isSelecting = false
         if case .peers(_, true, _, _, _, _) = mode {
@@ -2363,7 +2367,7 @@ public final class ChatListNode: ListView {
                 var isHiddenItemVisible = false
                 if let range = range.visibleRange {
                     let entryCount = chatListView.filteredEntries.count
-                    for i in range.firstIndex ..< range.lastIndex {
+                    for i in max(0, range.firstIndex - 1) ..< range.lastIndex {
                         if i < 0 || i >= entryCount {
                             assertionFailure()
                             continue
@@ -2384,11 +2388,11 @@ public final class ChatListNode: ListView {
                     }
                 }
                 if !isHiddenItemVisible && strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
-                    /*strongSelf.updateState { state in
+                    strongSelf.updateState { state in
                         var state = state
                         state.hiddenItemShouldBeTemporaryRevealed = false
                         return state
-                    }*/
+                    }
                 }
             }
         }
@@ -2731,7 +2735,7 @@ public final class ChatListNode: ListView {
             case .none, .unknown:
                 strongSelf.startedScrollingAtUpperBound = false
             case let .known(value):
-                strongSelf.startedScrollingAtUpperBound = value <= 0.0
+                strongSelf.startedScrollingAtUpperBound = value <= 0.001
             }
             
             if let canExpandHiddenItems = strongSelf.canExpandHiddenItems {
@@ -2747,27 +2751,28 @@ public final class ChatListNode: ListView {
                     return state
                 }
             }
+            
+            strongSelf.didBeginInteractiveDragging?(strongSelf)
         }
         
         self.didEndScrolling = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.startedScrollingAtUpperBound = false
             let _ = strongSelf.contentScrollingEnded?(strongSelf)
             let revealHiddenItems: Bool
             switch strongSelf.visibleContentOffset() {
                 case .none, .unknown:
                     revealHiddenItems = false
                 case let .known(value):
-                    revealHiddenItems = value <= 54.0
+                    revealHiddenItems = value <= -strongSelf.tempTopInset - 60.0
             }
             if !revealHiddenItems && strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
-                strongSelf.updateState { state in
+                /*strongSelf.updateState { state in
                     var state = state
                     state.hiddenItemShouldBeTemporaryRevealed = false
                     return state
-                }
+                }*/
             }
         }
         
@@ -2795,9 +2800,9 @@ public final class ChatListNode: ListView {
                 case .none, .unknown:
                     atTop = false
                 case let .known(value):
-                    atTop = value <= 0.0
+                atTop = value <= -strongSelf.tempTopInset
                     if strongSelf.startedScrollingAtUpperBound && startedScrollingWithCanExpandHiddenItems && strongSelf.isTracking {
-                        revealHiddenItems = value <= -60.0
+                        revealHiddenItems = value <= -strongSelf.tempTopInset - 60.0
                     }
             }
             strongSelf.scrolledAtTopValue = atTop
@@ -2939,7 +2944,7 @@ public final class ChatListNode: ListView {
                 if strongSelf.isNodeLoaded, strongSelf.dequeuedInitialTransitionOnLayout {
                     strongSelf.dequeueTransition()
                 } else {
-                    if !strongSelf.didSetReady {
+                    if !strongSelf.didSetReady && strongSelf.autoSetReady {
                         strongSelf.didSetReady = true
                         strongSelf._ready.set(true)
                     }
@@ -3282,6 +3287,7 @@ public final class ChatListNode: ListView {
                 default:
                     break
                 }
+                additionalScrollDistance = 0.0
             } else {
                 additionalScrollDistance += previousStoriesInset - storiesInset
             }
@@ -3311,15 +3317,24 @@ public final class ChatListNode: ListView {
     }
     
     public func scrollToPosition(_ position: ChatListNodeScrollPosition, animated: Bool = true) {
+        var additionalDelta: CGFloat = 0.0
+        switch position {
+        case let .top(adjustForTempInset):
+            if adjustForTempInset {
+                additionalDelta = ChatListNavigationBar.storiesScrollHeight
+                self.tempTopInset = ChatListNavigationBar.storiesScrollHeight
+            }
+        }
+        
         if let list = self.chatListView?.originalList {
             if !list.hasLater {
-                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: animated, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(additionalDelta), animated: animated, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else {
-                let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(0.0), animated: animated, filter: self.chatListFilter)
+                let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(additionalDelta), animated: animated, filter: self.chatListFilter)
                 self.setChatListLocation(location)
             }
         } else {
-            let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(0.0), animated: animated, filter: self.chatListFilter)
+            let location: ChatListNodeLocation = .scroll(index: .chatList(.absoluteUpperBound), sourceIndex: .chatList(.absoluteLowerBound), scrollPosition: .top(additionalDelta), animated: animated, filter: self.chatListFilter)
             self.setChatListLocation(location)
         }
     }
