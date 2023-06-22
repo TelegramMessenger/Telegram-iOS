@@ -64,6 +64,7 @@ swift_library(
         "//submodules/UrlEscaping",
         "//submodules/OverlayStatusController",
         "//submodules/Utils/VolumeButtons",
+        "//submodules/TelegramUI/Components/PeerReportScreen",
     ],
     visibility = [
         "//visibility:public",

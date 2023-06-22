@@ -27,6 +27,7 @@ swift_library(
         "//submodules/ChatContextQuery",
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
+        "//submodules/TelegramUI/Components/MoreHeaderButton",
     ],
     visibility = [
         "//visibility:public",

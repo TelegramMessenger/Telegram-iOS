@@ -587,6 +587,7 @@ public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColo
                     }
                 } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
                     textView.textStorage.addAttribute(key, value: value, range: range)
+                    textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
                 }
             }
                 

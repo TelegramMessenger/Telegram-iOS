@@ -60,7 +60,7 @@ public final class StoryContentItem {
     }
     
     public let id: AnyHashable
-    public let position: Int
+    public let position: Int?
     public let component: AnyComponent<StoryContentItem.Environment>
     public let centerInfoComponent: AnyComponent<Empty>?
     public let rightInfoComponent: AnyComponent<Empty>?
@@ -70,7 +70,7 @@ public final class StoryContentItem {
 
     public init(
         id: AnyHashable,
-        position: Int,
+        position: Int?,
         component: AnyComponent<StoryContentItem.Environment>,
         centerInfoComponent: AnyComponent<Empty>?,
         rightInfoComponent: AnyComponent<Empty>?,
@@ -120,12 +120,17 @@ public final class StoryContentItemSlice {
 public final class StoryContentContextState {
     public final class AdditionalPeerData: Equatable {
         public static func == (lhs: StoryContentContextState.AdditionalPeerData, rhs: StoryContentContextState.AdditionalPeerData) -> Bool {
-            return lhs.areVoiceMessagesAvailable == rhs.areVoiceMessagesAvailable
+            return lhs.isMuted == rhs.isMuted && lhs.areVoiceMessagesAvailable == rhs.areVoiceMessagesAvailable
         }
         
+        public let isMuted: Bool
         public let areVoiceMessagesAvailable: Bool
         
-        public init(areVoiceMessagesAvailable: Bool) {
+        public init(
+            isMuted: Bool,
+            areVoiceMessagesAvailable: Bool
+        ) {
+            self.isMuted = isMuted
             self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         }
     }

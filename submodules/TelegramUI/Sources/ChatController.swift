@@ -100,6 +100,7 @@ import MoreHeaderButton
 import VolumeButtons
 import ChatAvatarNavigationNode
 import ChatContextQuery
+import PeerReportScreen
 
 #if DEBUG
 import os.signpost
@@ -8249,7 +8250,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var message = ""
                     var items: [ActionSheetItem] = []
                     items.append(ReportPeerHeaderActionSheetItem(context: strongSelf.context, text: presentationData.strings.Report_AdditionalDetailsText))
-                    items.append(ReportPeerDetailsActionSheetItem(context: strongSelf.context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
+                    items.append(ReportPeerDetailsActionSheetItem(context: strongSelf.context, theme: presentationData.theme, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
                         message = text
                     }))
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {

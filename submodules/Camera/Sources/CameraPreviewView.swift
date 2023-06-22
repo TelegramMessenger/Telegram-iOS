@@ -42,9 +42,14 @@ public class CameraSimplePreviewView: UIView {
         }
     }
     
+    private let additional: Bool
+    
     private var previewingDisposable: Disposable?
     private let placeholderView = UIImageView()
+    
     public init(frame: CGRect, additional: Bool) {
+        self.additional = additional
+        
         super.init(frame: frame)
         
         self.videoPreviewLayer.videoGravity = .resizeAspectFill
@@ -53,19 +58,17 @@ public class CameraSimplePreviewView: UIView {
         self.placeholderView.image = additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
         self.addSubview(self.placeholderView)
         
-        if #available(iOS 13.0, *) {
-            self.previewingDisposable = (self.isPreviewing
-            |> filter { $0 }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
-                UIView.animate(withDuration: 0.3, delay: 0.15) {
-                    self?.placeholderView.alpha = 0.0
-                }
-            })
-        } else {
-            Queue.mainQueue().after(0.5) {
-                UIView.animate(withDuration: 0.3) {
-                    self.placeholderView.alpha = 0.0
+        if !additional {
+            if #available(iOS 13.0, *) {
+                self.previewingDisposable = (self.isPreviewing
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    self?.removePlaceholder(delay: 0.15)
+                })
+            } else {
+                Queue.mainQueue().after(0.35) {
+                    self.removePlaceholder(delay: 0.15)
                 }
             }
         }
@@ -83,6 +86,20 @@ public class CameraSimplePreviewView: UIView {
         super.layoutSubviews()
         
         self.placeholderView.frame = self.bounds.insetBy(dx: -1.0, dy: -1.0)
+    }
+    
+    public func removePlaceholder(delay: Double = 0.0) {
+        UIView.animate(withDuration: 0.3, delay: delay) {
+            self.placeholderView.alpha = 0.0
+        }
+    }
+    
+    public func resetPlaceholder() {
+        guard self.placeholderView.alpha == 0.0 else {
+            return
+        }
+        self.placeholderView.image = self.additional ? CameraSimplePreviewView.lastAdditionalStateImage() : CameraSimplePreviewView.lastStateImage()
+        self.placeholderView.alpha = 1.0
     }
     
     private var _videoPreviewLayer: AVCaptureVideoPreviewLayer?

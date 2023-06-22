@@ -55,6 +55,7 @@ public final class MessageInputPanelComponent: Component {
     public let inputModeAction: (() -> Void)?
     public let timeoutAction: ((UIView) -> Void)?
     public let forwardAction: (() -> Void)?
+    public let moreAction: ((UIView, ContextGesture?) -> Void)?
     public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
@@ -87,6 +88,7 @@ public final class MessageInputPanelComponent: Component {
         inputModeAction: (() -> Void)?,
         timeoutAction: ((UIView) -> Void)?,
         forwardAction: (() -> Void)?,
+        moreAction: ((UIView, ContextGesture?) -> Void)?,
         presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
         audioRecorder: ManagedAudioRecorder?,
         videoRecordingStatus: InstantVideoControllerRecordingStatus?,
@@ -118,6 +120,7 @@ public final class MessageInputPanelComponent: Component {
         self.inputModeAction = inputModeAction
         self.timeoutAction = timeoutAction
         self.forwardAction = forwardAction
+        self.moreAction = moreAction
         self.presentVoiceMessagesUnavailableTooltip = presentVoiceMessagesUnavailableTooltip
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
@@ -187,6 +190,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if (lhs.forwardAction == nil) != (rhs.forwardAction == nil) {
+            return false
+        }
+        if (lhs.moreAction == nil) != (rhs.moreAction == nil) {
             return false
         }
         if lhs.hideKeyboard != rhs.hideKeyboard {
@@ -498,7 +504,11 @@ public final class MessageInputPanelComponent: Component {
             
             if component.attachmentAction != nil {
                 let attachmentButtonMode: MessageInputActionButtonComponent.Mode
-                attachmentButtonMode = .attach
+                if !self.textFieldExternalState.isEditing && component.moreAction != nil {
+                    attachmentButtonMode = .more
+                } else {
+                    attachmentButtonMode = .attach
+                }
                 
                 let attachmentButtonSize = self.attachmentButton.update(
                     transition: transition,
@@ -525,6 +535,12 @@ public final class MessageInputPanelComponent: Component {
                         lockMediaRecording: {
                         },
                         stopAndPreviewMediaRecording: {
+                        },
+                        moreAction: { [weak self] view, gesture in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.moreAction?(view, gesture)
                         },
                         context: component.context,
                         theme: component.theme,
@@ -709,6 +725,7 @@ public final class MessageInputPanelComponent: Component {
                         }
                         component.stopAndPreviewMediaRecording?()
                     },
+                    moreAction: { _, _ in },
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,

@@ -158,7 +158,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var activeDownloadsDisposable: Disposable?
     private var clearUnseenDownloadsTimer: SwiftSignalKit.Timer?
     
-    private var isPremium: Bool = false
+    private(set) var isPremium: Bool = false
     
     private var didSetupTabs = false
     
@@ -2341,6 +2341,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     fileprivate func openStoryCamera() {
+        guard self.isPremium else {
+            let context = self.context
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = context.sharedContext.makePremiumDemoController(context: self.context, subject: .stories, action: {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                replaceImpl?(controller)
+            })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            self.push(controller)
+            return
+        }
         var cameraTransitionIn: StoryCameraTransitionIn?
         if let componentView = self.chatListHeaderView() {
             if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
@@ -2506,8 +2519,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         })))
                         
                         let isMuted = notificationSettings.storiesMuted == true
-                        items.append(.action(ContextMenuActionItem(text: isMuted ? "Unmute" : "Mute", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Muted": "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
+                        items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Not Notify", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)
                             

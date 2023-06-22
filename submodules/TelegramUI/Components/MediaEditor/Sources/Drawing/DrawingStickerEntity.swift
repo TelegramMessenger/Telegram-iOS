@@ -4,6 +4,14 @@ import Display
 import AccountContext
 import TelegramCore
 
+private func entitiesPath() -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/mediaEntities"
+}
+
+private func fullEntityMediaPath(_ path: String) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/mediaEntities/" + path
+}
+
 public final class DrawingStickerEntity: DrawingEntity, Codable {
     public enum Content: Equatable {
         case file(TelegramMediaFile)
@@ -36,9 +44,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case file
-        case image
+        case imagePath
         case videoPath
-        case videoImage
+        case videoImagePath
         case referenceDrawingSize
         case position
         case scale
@@ -101,11 +109,11 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
             self.content = .file(file)
-        } else if let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
+        } else if let imagePath = try container.decodeIfPresent(String.self, forKey: .imagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
             self.content = .image(image)
         } else if let videoPath = try container.decodeIfPresent(String.self, forKey: .videoPath) {
             var imageValue: UIImage?
-            if let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
+            if let imagePath = try container.decodeIfPresent(String.self, forKey: .videoImagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
                 imageValue = image
             }
             self.content = .video(videoPath, imageValue)
@@ -126,10 +134,22 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case let .file(file):
             try container.encode(file, forKey: .file)
         case let .image(image):
-            try container.encodeIfPresent(image.pngData(), forKey: .image)
+            let imagePath = "\(self.uuid).png"
+            let fullImagePath = fullEntityMediaPath(imagePath)
+            if let imageData = image.pngData() {
+                try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+                try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
+                try container.encodeIfPresent(imagePath, forKey: .imagePath)
+            }
         case let .video(path, image):
             try container.encode(path, forKey: .videoPath)
-            try container.encodeIfPresent(image?.jpegData(compressionQuality: 0.87), forKey: .videoImage)
+            let imagePath = "\(self.uuid).jpg"
+            let fullImagePath = fullEntityMediaPath(imagePath)
+            if let imageData = image?.jpegData(compressionQuality: 0.87) {
+                try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+                try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
+                try container.encodeIfPresent(imagePath, forKey: .videoImagePath)
+            }
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)

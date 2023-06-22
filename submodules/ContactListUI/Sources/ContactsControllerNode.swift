@@ -68,6 +68,9 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private var presentationDataDisposable: Disposable?
     private let stringsPromise = Promise<PresentationStrings>()
     
+    private var isPremium = false
+    private var isPremiumDisposable: Disposable?
+    
     weak var controller: ContactsController?
     
     private var initialScrollingOffset: CGFloat?
@@ -258,11 +261,22 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             
             self.storiesReady.set(.single(true))
         })
+        
+        self.isPremiumDisposable = (self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+        |> map {
+            return $0?.isPremium ?? false
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] isPremium in
+            if let self {
+                self.isPremium = isPremium
+            }
+        })
     }
     
     deinit {
         self.presentationDataDisposable?.dispose()
         self.storySubscriptionsDisposable?.dispose()
+        self.isPremiumDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -291,6 +305,10 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return true
         }
         return false
+    }
+    
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        return self.isPremium
     }
     
     private func updateThemeAndStrings() {
