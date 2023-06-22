@@ -939,6 +939,7 @@ public enum PremiumIntroSource {
     case voiceToText
     case fasterDownload
     case translation
+    case stories
 }
 
 public enum PremiumDemoSubject {
@@ -956,6 +957,7 @@ public enum PremiumDemoSubject {
     case animatedEmoji
     case emojiStatus
     case translation
+    case stories
 }
 
 public enum PremiumLimitSubject {

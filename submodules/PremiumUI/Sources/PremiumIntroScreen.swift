@@ -184,6 +184,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .stories:
+            if case .stories = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -213,63 +219,66 @@ public enum PremiumSource: Equatable {
     case translation
     case linksPerSharedFolder
     case membershipInSharedFolders
+    case stories
     
     var identifier: String? {
         switch self {
-            case .settings:
-                return "settings"
-            case .stickers:
-                return "premium_stickers"
-            case .reactions:
-                return "infinite_reactions"
-            case .ads:
-                return "no_ads"
-            case .upload:
-                return "more_upload"
-            case .appIcons:
-                return "app_icons"
-            case .groupsAndChannels:
-                return "double_limits__channels"
-            case .pinnedChats:
-                return "double_limits__dialog_pinned"
-            case .publicLinks:
-                return "double_limits__channels_public"
-            case .savedGifs:
-                return "double_limits__saved_gifs"
-            case .savedStickers:
-                return "double_limits__stickers_faved"
-            case .folders:
-                return "double_limits__dialog_filters"
-            case .chatsPerFolder:
-                return "double_limits__dialog_filters_chats"
-            case .accounts:
-                return "double_limits__accounts"
-            case .about:
-                return "double_limits__about"
-            case .animatedEmoji:
-                return "animated_emoji"
-            case let .profile(id):
-                return "profile__\(id.id._internalGetInt64Value())"
-            case .emojiStatus:
-                return "emoji_status"
-            case .voiceToText:
-                return "voice_to_text"
-            case .fasterDownload:
-                return "faster_download"
-            case .gift, .giftTerms:
-                return nil
-            case let .deeplink(reference):
-                if let reference = reference {
-                    return "deeplink_\(reference)"
-                } else {
-                    return "deeplink"
-                }
-            case .translation:
-                return "translations"
-            case .linksPerSharedFolder:
-                return "double_limits__community_invites"
-            case .membershipInSharedFolders:
-                return "double_limits__communities_joined"
+        case .settings:
+            return "settings"
+        case .stickers:
+            return "premium_stickers"
+        case .reactions:
+            return "infinite_reactions"
+        case .ads:
+            return "no_ads"
+        case .upload:
+            return "more_upload"
+        case .appIcons:
+            return "app_icons"
+        case .groupsAndChannels:
+            return "double_limits__channels"
+        case .pinnedChats:
+            return "double_limits__dialog_pinned"
+        case .publicLinks:
+            return "double_limits__channels_public"
+        case .savedGifs:
+            return "double_limits__saved_gifs"
+        case .savedStickers:
+            return "double_limits__stickers_faved"
+        case .folders:
+            return "double_limits__dialog_filters"
+        case .chatsPerFolder:
+            return "double_limits__dialog_filters_chats"
+        case .accounts:
+            return "double_limits__accounts"
+        case .about:
+            return "double_limits__about"
+        case .animatedEmoji:
+            return "animated_emoji"
+        case let .profile(id):
+            return "profile__\(id.id._internalGetInt64Value())"
+        case .emojiStatus:
+            return "emoji_status"
+        case .voiceToText:
+            return "voice_to_text"
+        case .fasterDownload:
+            return "faster_download"
+        case .gift, .giftTerms:
+            return nil
+        case let .deeplink(reference):
+            if let reference = reference {
+                return "deeplink_\(reference)"
+            } else {
+                return "deeplink"
+            }
+        case .translation:
+            return "translations"
+        case .linksPerSharedFolder:
+            return "double_limits__community_invites"
+        case .membershipInSharedFolders:
+            return "double_limits__communities_joined"
+        case .stories:
+            return "stories"
         }
     }
 }
@@ -289,6 +298,7 @@ enum PremiumPerk: CaseIterable {
     case animatedEmoji
     case emojiStatus
     case translation
+    case stories
     
     static var allCases: [PremiumPerk] {
         return [
@@ -321,133 +331,142 @@ enum PremiumPerk: CaseIterable {
     
     var identifier: String {
         switch self {
-            case .doubleLimits:
-                return "double_limits"
-            case .moreUpload:
-                return "more_upload"
-            case .fasterDownload:
-                return "faster_download"
-            case .voiceToText:
-                return "voice_to_text"
-            case .noAds:
-                return "no_ads"
-            case .uniqueReactions:
-                return "infinite_reactions"
-            case .premiumStickers:
-                return "premium_stickers"
-            case .advancedChatManagement:
-                return "advanced_chat_management"
-            case .profileBadge:
-                return "profile_badge"
-            case .animatedUserpics:
-                return "animated_userpics"
-            case .appIcons:
-                return "app_icons"
-            case .animatedEmoji:
-                return "animated_emoji"
-            case .emojiStatus:
-                return "emoji_status"
-            case .translation:
-                return "translations"
+        case .doubleLimits:
+            return "double_limits"
+        case .moreUpload:
+            return "more_upload"
+        case .fasterDownload:
+            return "faster_download"
+        case .voiceToText:
+            return "voice_to_text"
+        case .noAds:
+            return "no_ads"
+        case .uniqueReactions:
+            return "infinite_reactions"
+        case .premiumStickers:
+            return "premium_stickers"
+        case .advancedChatManagement:
+            return "advanced_chat_management"
+        case .profileBadge:
+            return "profile_badge"
+        case .animatedUserpics:
+            return "animated_userpics"
+        case .appIcons:
+            return "app_icons"
+        case .animatedEmoji:
+            return "animated_emoji"
+        case .emojiStatus:
+            return "emoji_status"
+        case .translation:
+            return "translations"
+        case .stories:
+            return "stories"
         }
     }
     
     func title(strings: PresentationStrings) -> String {
         switch self {
-            case .doubleLimits:
-                return strings.Premium_DoubledLimits
-            case .moreUpload:
-                return strings.Premium_UploadSize
-            case .fasterDownload:
-                return strings.Premium_FasterSpeed
-            case .voiceToText:
-                return strings.Premium_VoiceToText
-            case .noAds:
-                return strings.Premium_NoAds
-            case .uniqueReactions:
-                return strings.Premium_InfiniteReactions
-            case .premiumStickers:
-                return strings.Premium_Stickers
-            case .advancedChatManagement:
-                return strings.Premium_ChatManagement
-            case .profileBadge:
-                return strings.Premium_Badge
-            case .animatedUserpics:
-                return strings.Premium_Avatar
-            case .appIcons:
-                return strings.Premium_AppIcon
-            case .animatedEmoji:
-                return strings.Premium_AnimatedEmoji
-            case .emojiStatus:
-                return strings.Premium_EmojiStatus
-            case .translation:
-                return strings.Premium_Translation
+        case .doubleLimits:
+            return strings.Premium_DoubledLimits
+        case .moreUpload:
+            return strings.Premium_UploadSize
+        case .fasterDownload:
+            return strings.Premium_FasterSpeed
+        case .voiceToText:
+            return strings.Premium_VoiceToText
+        case .noAds:
+            return strings.Premium_NoAds
+        case .uniqueReactions:
+            return strings.Premium_InfiniteReactions
+        case .premiumStickers:
+            return strings.Premium_Stickers
+        case .advancedChatManagement:
+            return strings.Premium_ChatManagement
+        case .profileBadge:
+            return strings.Premium_Badge
+        case .animatedUserpics:
+            return strings.Premium_Avatar
+        case .appIcons:
+            return strings.Premium_AppIcon
+        case .animatedEmoji:
+            return strings.Premium_AnimatedEmoji
+        case .emojiStatus:
+            return strings.Premium_EmojiStatus
+        case .translation:
+            return strings.Premium_Translation
+        case .stories:
+            //TODO:localize
+            return "Story Posting"
         }
     }
     
     func subtitle(strings: PresentationStrings) -> String {
         switch self {
-            case .doubleLimits:
-                return strings.Premium_DoubledLimitsInfo
-            case .moreUpload:
-                return strings.Premium_UploadSizeInfo
-            case .fasterDownload:
-                return strings.Premium_FasterSpeedInfo
-            case .voiceToText:
-                return strings.Premium_VoiceToTextInfo
-            case .noAds:
-                return strings.Premium_NoAdsInfo
-            case .uniqueReactions:
-                return strings.Premium_InfiniteReactionsInfo
-            case .premiumStickers:
-                return strings.Premium_StickersInfo
-            case .advancedChatManagement:
-                return strings.Premium_ChatManagementInfo
-            case .profileBadge:
-                return strings.Premium_BadgeInfo
-            case .animatedUserpics:
-                return strings.Premium_AvatarInfo
-            case .appIcons:
-                return strings.Premium_AppIconInfo
-            case .animatedEmoji:
-                return strings.Premium_AnimatedEmojiInfo
-            case .emojiStatus:
-                return strings.Premium_EmojiStatusInfo
-            case .translation:
-                return strings.Premium_TranslationInfo
+        case .doubleLimits:
+            return strings.Premium_DoubledLimitsInfo
+        case .moreUpload:
+            return strings.Premium_UploadSizeInfo
+        case .fasterDownload:
+            return strings.Premium_FasterSpeedInfo
+        case .voiceToText:
+            return strings.Premium_VoiceToTextInfo
+        case .noAds:
+            return strings.Premium_NoAdsInfo
+        case .uniqueReactions:
+            return strings.Premium_InfiniteReactionsInfo
+        case .premiumStickers:
+            return strings.Premium_StickersInfo
+        case .advancedChatManagement:
+            return strings.Premium_ChatManagementInfo
+        case .profileBadge:
+            return strings.Premium_BadgeInfo
+        case .animatedUserpics:
+            return strings.Premium_AvatarInfo
+        case .appIcons:
+            return strings.Premium_AppIconInfo
+        case .animatedEmoji:
+            return strings.Premium_AnimatedEmojiInfo
+        case .emojiStatus:
+            return strings.Premium_EmojiStatusInfo
+        case .translation:
+            return strings.Premium_TranslationInfo
+        case .stories:
+            return "Be one of the first to share your stories with your contacts or an unlimited audience."
         }
     }
     
     var iconName: String {
         switch self {
-            case .doubleLimits:
-                return "Premium/Perk/Limits"
-            case .moreUpload:
-                return "Premium/Perk/Upload"
-            case .fasterDownload:
-                return "Premium/Perk/Speed"
-            case .voiceToText:
-                return "Premium/Perk/Voice"
-            case .noAds:
-                return "Premium/Perk/NoAds"
-            case .uniqueReactions:
-                return "Premium/Perk/Reactions"
-            case .premiumStickers:
-                return "Premium/Perk/Stickers"
-            case .advancedChatManagement:
-                return "Premium/Perk/Chat"
-            case .profileBadge:
-                return "Premium/Perk/Badge"
-            case .animatedUserpics:
-                return "Premium/Perk/Avatar"
-            case .appIcons:
-                return "Premium/Perk/AppIcon"
-            case .animatedEmoji:
-                return "Premium/Perk/Emoji"
-            case .emojiStatus:
-                return "Premium/Perk/Status"
-            case .translation:
-                return "Premium/Perk/Translation"
+        case .doubleLimits:
+            return "Premium/Perk/Limits"
+        case .moreUpload:
+            return "Premium/Perk/Upload"
+        case .fasterDownload:
+            return "Premium/Perk/Speed"
+        case .voiceToText:
+            return "Premium/Perk/Voice"
+        case .noAds:
+            return "Premium/Perk/NoAds"
+        case .uniqueReactions:
+            return "Premium/Perk/Reactions"
+        case .premiumStickers:
+            return "Premium/Perk/Stickers"
+        case .advancedChatManagement:
+            return "Premium/Perk/Chat"
+        case .profileBadge:
+            return "Premium/Perk/Badge"
+        case .animatedUserpics:
+            return "Premium/Perk/Avatar"
+        case .appIcons:
+            return "Premium/Perk/AppIcon"
+        case .animatedEmoji:
+            return "Premium/Perk/Emoji"
+        case .emojiStatus:
+            return "Premium/Perk/Status"
+        case .translation:
+            return "Premium/Perk/Translation"
+        case .stories:
+            return "Premium/Perk/Translation"
         }
     }
 }
@@ -1714,6 +1733,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .emojiStatus
                             case .translation:
                                 demoSubject = .translation
+                            case .stories:
+                                demoSubject = .stories
                             }
                             
                             let isPremium = state?.isPremium == true

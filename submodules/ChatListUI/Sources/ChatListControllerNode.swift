@@ -1191,7 +1191,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
                 }
                      
-                if case .compact = layout.metrics.widthClass {
+                if case .compact = layout.metrics.widthClass, self.controller?.isPremium == true {
                     let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
                     if selectedIndex <= 0 && translation.x > 0.0 {
                         transitionFraction = 0.0
@@ -1203,6 +1203,11 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     if cameraIsAlreadyOpened {
                         transitionFraction = 0.0
                         return
+                    }
+                } else {
+                    if selectedIndex <= 0 && translation.x > 0.0 {
+                        let overscroll = translation.x
+                        transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
                     }
                 }
                 

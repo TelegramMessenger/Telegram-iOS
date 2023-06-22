@@ -888,7 +888,7 @@ final class MediaEditorScreenComponent: Component {
             timeoutSelected = false
             
             var inputPanelAvailableWidth = previewSize.width
-            var inputPanelAvailableHeight = 115.0
+            var inputPanelAvailableHeight = 103.0
             if case .regular = environment.metrics.widthClass {
                 if (self.inputPanelExternalState.isEditing || self.inputPanelExternalState.hasText) {
                     inputPanelAvailableWidth += 200.0
@@ -1547,6 +1547,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var isDismissing = false
         private var dismissOffset: CGFloat = 0.0
         private var isDismissed = false
+        private var isDismissBySwipeSuppressed = false
         
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
@@ -1955,6 +1956,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if abs(translation.y) > 10.0 && !self.isEnhancing && hasSwipeToDismiss {
                     if !self.isDismissing {
                         self.isDismissing = true
+                        self.isDismissBySwipeSuppressed = controller.isEligibleForDraft()
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
                 } else if abs(translation.x) > 10.0 && !self.isDismissing {
@@ -1965,6 +1967,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if self.isDismissing {
                     self.dismissOffset = translation.y
                     controller.requestLayout(transition: .immediate)
+                    
+                    if abs(self.dismissOffset) > 20.0, controller.isEligibleForDraft() {
+                        gestureRecognizer.isEnabled = false
+                        gestureRecognizer.isEnabled = true
+                        controller.maybePresentDiscardAlert()
+                    }
                 } else if self.isEnhancing {
                     if let mediaEditor = self.mediaEditor {
                         let value = mediaEditor.getToolValue(.enhance) as? Float ?? 0.0
@@ -1977,7 +1985,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             case .ended, .cancelled:
                 if self.isDismissing {
-                    if abs(translation.y) > self.view.frame.height * 0.33 || abs(velocity.y) > 1000.0 {
+                    if abs(translation.y) > self.view.frame.height * 0.33 || abs(velocity.y) > 1000.0, !controller.isEligibleForDraft() {
                         controller.requestDismiss(saveDraft: false, animated: true)
                     } else {
                         self.dismissOffset = 0.0
@@ -2532,7 +2540,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         isInteractingWithEntities: self.isInteractingWithEntities,
                         isSavingAvailable: controller.isSavingAvailable,
                         hasAppeared: self.hasAppeared,
-                        isDismissing: self.isDismissing,
+                        isDismissing: self.isDismissing && !self.isDismissBySwipeSuppressed,
                         bottomSafeInset: layout.intrinsicInsets.bottom,
                         mediaEditor: self.mediaEditor,
                         privacy: controller.state.privacy,
@@ -2697,7 +2705,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             
             transition.setFrame(view: self.backgroundDimView, frame: CGRect(origin: .zero, size: layout.size))
-            transition.setAlpha(view: self.backgroundDimView, alpha: self.isDismissing ? 0.0 : 1.0)
+            transition.setAlpha(view: self.backgroundDimView, alpha: self.isDismissing && !self.isDismissBySwipeSuppressed ? 0.0 : 1.0)
             
             var bottomInputOffset: CGFloat = 0.0
             if inputHeight > 0.0 {
@@ -3042,19 +3050,27 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.present(controller, in: .current)
     }
     
-    func maybePresentDiscardAlert() {
+    func isEligibleForDraft() -> Bool {
         guard let mediaEditor = self.node.mediaEditor else {
-            return
+            return false
         }
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
-        self.hapticFeedback.impact(.light)
         if let subject = self.node.subject, case .asset = subject, self.node.mediaEditor?.values.hasChanges == false {
+            return false
+        }
+        return true
+    }
+    
+    func maybePresentDiscardAlert() {
+        self.hapticFeedback.impact(.light)
+        if !self.isEligibleForDraft() {
             self.requestDismiss(saveDraft: false, animated: true)
             return
         }
+        
         let title: String
         let save: String
         if case .draft = self.node.subject {

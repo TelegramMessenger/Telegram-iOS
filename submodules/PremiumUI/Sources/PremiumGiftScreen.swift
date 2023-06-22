@@ -397,6 +397,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .emojiStatus
                         case .translation:
                             demoSubject = .translation
+                        case .stories:
+                            demoSubject = .stories
                         }
                         
                         let buttonText: String
