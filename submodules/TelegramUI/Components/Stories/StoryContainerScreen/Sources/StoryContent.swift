@@ -60,7 +60,7 @@ public final class StoryContentItem {
     }
     
     public let id: AnyHashable
-    public let position: Int
+    public let position: Int?
     public let component: AnyComponent<StoryContentItem.Environment>
     public let centerInfoComponent: AnyComponent<Empty>?
     public let rightInfoComponent: AnyComponent<Empty>?
@@ -70,7 +70,7 @@ public final class StoryContentItem {
 
     public init(
         id: AnyHashable,
-        position: Int,
+        position: Int?,
         component: AnyComponent<StoryContentItem.Environment>,
         centerInfoComponent: AnyComponent<Empty>?,
         rightInfoComponent: AnyComponent<Empty>?,

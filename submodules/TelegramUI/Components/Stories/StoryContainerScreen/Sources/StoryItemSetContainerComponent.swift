@@ -2136,11 +2136,9 @@ public final class StoryItemSetContainerComponent: Component {
             self.ignoreScrolling = false
             self.updateScrolling(transition: transition)
             
-            if let focusedItem, let visibleItem = self.visibleItems[focusedItem.storyItem.id] {
+            if let focusedItem, let visibleItem = self.visibleItems[focusedItem.storyItem.id], let index = focusedItem.position {
                 let navigationStripSideInset: CGFloat = 8.0
                 let navigationStripTopInset: CGFloat = 8.0
-                
-                let index = focusedItem.position
                 
                 let _ = self.navigationStrip.update(
                     transition: transition,

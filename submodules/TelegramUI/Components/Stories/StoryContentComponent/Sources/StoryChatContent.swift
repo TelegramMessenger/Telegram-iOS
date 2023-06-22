@@ -1122,16 +1122,16 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                         additionalPeerData: additionalPeerData,
                         item: StoryContentItem(
                             id: AnyHashable(item.id),
-                            position: focusedIndex,
+                            position: nil,
                             component: AnyComponent(StoryItemContentComponent(
                                 context: context,
                                 peer: peer,
                                 item: item
                             )),
-                            centerInfoComponent: AnyComponent(StoryAuthorInfoComponent(
+                            centerInfoComponent: AnyComponent(StoryPositionInfoComponent(
                                 context: context,
-                                peer: peer,
-                                timestamp: item.timestamp
+                                position: focusedIndex,
+                                totalCount: state.totalCount
                             )),
                             rightInfoComponent: AnyComponent(StoryAvatarInfoComponent(
                                 context: context,
