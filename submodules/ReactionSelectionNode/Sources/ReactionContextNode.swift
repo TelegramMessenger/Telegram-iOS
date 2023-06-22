@@ -217,7 +217,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var highlightedByHover = false
     private var didTriggerExpandedReaction: Bool = false
     private var continuousHaptic: Any?
-    private var validLayout: (CGSize, UIEdgeInsets, CGRect, Bool)?
+    private var validLayout: (CGSize, UIEdgeInsets, CGRect, Bool, Bool)?
     private var isLeftAligned: Bool = true
     private var itemLayout: ItemLayout?
     
@@ -603,8 +603,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, isCoveredByInput: Bool, isAnimatingOut: Bool, transition: ContainedViewLayoutTransition) {
-        self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: isAnimatingOut, transition: transition, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+    public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, centerAligned: Bool = false, isCoveredByInput: Bool, isAnimatingOut: Bool, transition: ContainedViewLayoutTransition) {
+        self.updateLayout(size: size, insets: insets, anchorRect: anchorRect,  centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: isAnimatingOut, transition: transition, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
     }
     
     public func updateIsIntersectingContent(isIntersectingContent: Bool, transition: ContainedViewLayoutTransition) {
@@ -615,8 +615,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         if self.extensionDistance != distance {
             self.extensionDistance = distance
             
-            if let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+            if let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
             }
         }
     }
@@ -629,7 +629,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func calculateBackgroundFrame(containerSize: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, contentSize: CGSize) -> (backgroundFrame: CGRect, visualBackgroundFrame: CGRect, isLeftAligned: Bool, cloudSourcePoint: CGFloat) {
+    private func calculateBackgroundFrame(containerSize: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, contentSize: CGSize, centerAligned: Bool) -> (backgroundFrame: CGRect, visualBackgroundFrame: CGRect, isLeftAligned: Bool, cloudSourcePoint: CGFloat) {
         var contentSize = contentSize
         contentSize.width = max(46.0, contentSize.width)
         contentSize.height = self.currentContentHeight
@@ -656,6 +656,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         if rect.minX < sideInset {
             rect.origin.x = sideInset
+        }
+        
+        if centerAligned {
+            rect.origin.x = floor((containerSize.width - rect.width) / 2.0)
         }
         
         let cloudSourcePoint: CGFloat
@@ -972,12 +976,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, isCoveredByInput: Bool, isAnimatingOut: Bool, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
+    private func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, centerAligned: Bool, isCoveredByInput: Bool, isAnimatingOut: Bool, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
         if let expandItemView = self.expandItemView {
             expandItemView.updateTheme(theme: self.presentationData.theme)
         }
         
-        self.validLayout = (size, insets, anchorRect, isCoveredByInput)
+        self.validLayout = (size, insets, anchorRect, isCoveredByInput, centerAligned)
         
         let externalSideInset: CGFloat = 4.0
         let sideInset: CGFloat = 6.0
@@ -1030,7 +1034,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         backgroundInsets.left += sideInset
         backgroundInsets.right += sideInset
         
-        let (actualBackgroundFrame, visualBackgroundFrame, isLeftAligned, cloudSourcePoint) = self.calculateBackgroundFrame(containerSize: CGSize(width: size.width, height: size.height), insets: backgroundInsets, anchorRect: anchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight))
+        let (actualBackgroundFrame, visualBackgroundFrame, isLeftAligned, cloudSourcePoint) = self.calculateBackgroundFrame(containerSize: CGSize(width: size.width, height: size.height), insets: backgroundInsets, anchorRect: anchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight), centerAligned: centerAligned)
         self.isLeftAligned = isLeftAligned
         
         self.itemLayout = ItemLayout(
@@ -1199,7 +1203,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             let springScaleDelay: Double = 0.1
             let springDelay: Double = springScaleDelay + 0.01
             
-            let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: visualBackgroundFrame.height, height: contentHeight)).0
+            let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: visualBackgroundFrame.height, height: contentHeight), centerAligned: false).0
             
             self.backgroundNode.animateInFromAnchorRect(size: visualBackgroundFrame.size, sourceBackgroundFrame: sourceBackgroundFrame.offsetBy(dx: -visualBackgroundFrame.minX, dy: -visualBackgroundFrame.minY))
             
@@ -1210,7 +1214,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.contentTintContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - visualBackgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
             self.contentTintContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(x: (sourceBackgroundFrame.minX - visualBackgroundFrame.minX), y: 0.0), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: visualBackgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
         } else if let animateOutToAnchorRect = animateOutToAnchorRect {
-            let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight)).0
+            let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight), centerAligned: false).0
             
             let offset = CGPoint(x: -(targetBackgroundFrame.minX - visualBackgroundFrame.minX), y: -(targetBackgroundFrame.minY - visualBackgroundFrame.minY))
             self.position = CGPoint(x: self.position.x - offset.x, y: self.position.y - offset.y)
@@ -1596,8 +1600,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     public func animateIn(from sourceAnchorRect: CGRect) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         
-        if let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
+        if let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
         }
         
         let mainCircleDelay: Double = 0.01
@@ -1681,8 +1685,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             expandItemView.tintView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         }
         
-        if let targetAnchorRect = targetAnchorRect, let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: targetAnchorRect)
+        if let targetAnchorRect = targetAnchorRect, let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: targetAnchorRect)
         }
     }
     
@@ -2134,8 +2138,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     self.hapticFeedback = HapticFeedback()
                 }
                 
-                if let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: longPressDuration, curve: .linear), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+                if let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: longPressDuration, curve: .linear), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
                 }
                 
                 self.longPressTimer?.invalidate()
@@ -2165,8 +2169,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.continuousHaptic = nil
             
             self.highlightedReaction = nil
-            if let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.3, curve: .spring), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+            if let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.3, curve: .spring), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
             }
         case .ended:
             self.longPressTimer?.invalidate()
@@ -2242,8 +2246,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 self.hapticFeedback?.tap()
             }
             
-            if let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+            if let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
             }
         }
     }
@@ -2258,8 +2262,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if performAction {
                 self.performReactionSelection(reaction: highlightedReaction, isLarge: isLarge)
             } else {
-                if let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+                if let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
                 }
             }
         }
@@ -2356,8 +2360,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public func setHighlightedReaction(_ value: ReactionItem.Reaction?) {
         self.highlightedReaction = value
-        if let (size, insets, anchorRect, isCoveredByInput) = self.validLayout {
-            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+        if let (size, insets, anchorRect, isCoveredByInput, centerAligned) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: false, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
         }
     }
 }
