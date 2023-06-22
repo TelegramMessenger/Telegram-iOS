@@ -2515,7 +2515,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let isMuted = notificationSettings.storiesMuted == true
                         items.append(.action(ContextMenuActionItem(text: isMuted ? "Notify" : "Not Notify", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Muted": "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.default)
                             

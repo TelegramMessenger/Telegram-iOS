@@ -51,7 +51,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 PostboxViewKey.basicPeer(peerId),
                 PostboxViewKey.cachedPeerData(peerId: peerId),
                 PostboxViewKey.storiesState(key: .peer(peerId)),
-                PostboxViewKey.storyItems(peerId: peerId)
+                PostboxViewKey.storyItems(peerId: peerId),
             ]
             if peerId == context.account.peerId {
                 inputKeys.append(PostboxViewKey.storiesState(key: .local))
@@ -60,10 +60,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                 self.currentFocusedIdUpdatedPromise.get(),
                 context.account.postbox.combinedView(
                     keys: inputKeys
-                )
+                ),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global())
             )
-            |> mapToSignal { _, views -> Signal<(CombinedView, [PeerId: Peer]), NoError> in
-                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer]) in
+            |> mapToSignal { _, views, globalNotificationSettings -> Signal<(CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings), NoError> in
+                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings) in
                     var peers: [PeerId: Peer] = [:]
                     if let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView {
                         for item in itemsView.items {
@@ -78,10 +79,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                             }
                         }
                     }
-                    return (views, peers)
+                    return (views, peers, globalNotificationSettings)
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] views, peers in
+            |> deliverOnMainQueue).start(next: { [weak self] views, peers, globalNotificationSettings in
                 guard let self else {
                     return
                 }
@@ -99,10 +100,15 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 let additionalPeerData: StoryContentContextState.AdditionalPeerData
                 if let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView, let cachedUserData = cachedPeerDataView.cachedPeerData as? CachedUserData {
-                    let _ = cachedUserData
-                    additionalPeerData = StoryContentContextState.AdditionalPeerData(areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable)
+                    var isMuted = false
+                    if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings, let storiesMuted = notificationSettings.storiesMuted {
+                        isMuted = storiesMuted
+                    } else {
+                        isMuted = globalNotificationSettings.privateChats.storiesMuted
+                    }
+                    additionalPeerData = StoryContentContextState.AdditionalPeerData(isMuted: isMuted, areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable)
                 } else {
-                    additionalPeerData = StoryContentContextState.AdditionalPeerData(areVoiceMessagesAvailable: true)
+                    additionalPeerData = StoryContentContextState.AdditionalPeerData(isMuted: true, areVoiceMessagesAvailable: true)
                 }
                 let state = stateView.value?.get(Stories.PeerState.self)
                 
@@ -874,7 +880,9 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId),
-                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: storyId.peerId)
+                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.NotificationSettings.Global()
             ),
             context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer]) in
                 guard let item = transaction.getStory(id: storyId)?.get(Stories.StoredItem.self) else {
@@ -893,15 +901,23 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 return (item, peers)
             }
         )
-        |> deliverOnMainQueue).start(next: { [weak self] peerAndVoiceMessages, itemAndPeers in
+        |> deliverOnMainQueue).start(next: { [weak self] data, itemAndPeers in
             guard let self else {
                 return
             }
             
-            let (peer, areVoiceMessagesAvailable) = peerAndVoiceMessages
+            let (peer, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
             let (item, peers) = itemAndPeers
             
+            var isMuted = false
+            if let storiesMuted = notificationSettings.storiesMuted {
+                isMuted = storiesMuted
+            } else {
+                isMuted = globalNotificationSettings.privateChats.storiesMuted
+            }
+            
             let additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                isMuted: isMuted,
                 areVoiceMessagesAvailable: areVoiceMessagesAvailable
             )
             
@@ -1039,19 +1055,30 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: peerId)
+                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
+                TelegramEngine.EngineData.Item.NotificationSettings.Global()
             ),
             listContext.state,
             self.focusedIdUpdated.get()
         )
         //|> delay(0.4, queue: .mainQueue())
-        |> deliverOnMainQueue).start(next: { [weak self] peerAndVoiceMessages, state, _ in
+        |> deliverOnMainQueue).start(next: { [weak self] data, state, _ in
             guard let self else {
                 return
             }
             
-            let (peer, areVoiceMessagesAvailable) = peerAndVoiceMessages
+            let (peer, areVoiceMessagesAvailable, notificationSettings, globalNotificationSettings) = data
+            
+            var isMuted = false
+            if let storiesMuted = notificationSettings.storiesMuted {
+                isMuted = storiesMuted
+            } else {
+                isMuted = globalNotificationSettings.privateChats.storiesMuted
+            }
+            
             let additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                isMuted: isMuted,
                 areVoiceMessagesAvailable: areVoiceMessagesAvailable
             )
             

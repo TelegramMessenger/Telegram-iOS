@@ -120,12 +120,17 @@ public final class StoryContentItemSlice {
 public final class StoryContentContextState {
     public final class AdditionalPeerData: Equatable {
         public static func == (lhs: StoryContentContextState.AdditionalPeerData, rhs: StoryContentContextState.AdditionalPeerData) -> Bool {
-            return lhs.areVoiceMessagesAvailable == rhs.areVoiceMessagesAvailable
+            return lhs.isMuted == rhs.isMuted && lhs.areVoiceMessagesAvailable == rhs.areVoiceMessagesAvailable
         }
         
+        public let isMuted: Bool
         public let areVoiceMessagesAvailable: Bool
         
-        public init(areVoiceMessagesAvailable: Bool) {
+        public init(
+            isMuted: Bool,
+            areVoiceMessagesAvailable: Bool
+        ) {
+            self.isMuted = isMuted
             self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         }
     }

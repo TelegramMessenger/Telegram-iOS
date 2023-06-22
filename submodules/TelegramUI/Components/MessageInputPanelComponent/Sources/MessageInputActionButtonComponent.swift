@@ -7,6 +7,7 @@ import ChatTextInputMediaRecordingButton
 import AccountContext
 import TelegramPresentationData
 import ChatPresentationInterfaceState
+import MoreHeaderButton
 
 private extension MessageInputActionButtonComponent.Mode {
     var iconName: String? {
@@ -34,6 +35,7 @@ public final class MessageInputActionButtonComponent: Component {
         case delete
         case attach
         case forward
+        case more
     }
     
     public enum Action {
@@ -47,6 +49,7 @@ public final class MessageInputActionButtonComponent: Component {
     public let updateMediaCancelFraction: (CGFloat) -> Void
     public let lockMediaRecording: () -> Void
     public let stopAndPreviewMediaRecording: () -> Void
+    public let moreAction: (UIView, ContextGesture?) -> Void
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -61,6 +64,7 @@ public final class MessageInputActionButtonComponent: Component {
         updateMediaCancelFraction: @escaping (CGFloat) -> Void,
         lockMediaRecording: @escaping () -> Void,
         stopAndPreviewMediaRecording: @escaping () -> Void,
+        moreAction: @escaping (UIView, ContextGesture?) -> Void,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -74,6 +78,7 @@ public final class MessageInputActionButtonComponent: Component {
         self.updateMediaCancelFraction = updateMediaCancelFraction
         self.lockMediaRecording = lockMediaRecording
         self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
+        self.moreAction = moreAction
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -107,6 +112,7 @@ public final class MessageInputActionButtonComponent: Component {
     public final class View: HighlightTrackingButton {
         private var micButton: ChatTextInputMediaRecordingButton?
         private let sendIconView: UIImageView
+        private var moreButton: MoreHeaderButton?
         
         private var component: MessageInputActionButtonComponent?
         private weak var componentState: EmptyComponentState?
@@ -228,19 +234,46 @@ public final class MessageInputActionButtonComponent: Component {
                 }
             }
             
+            if self.moreButton == nil {
+                let moreButton = MoreHeaderButton(color: .white)
+                self.moreButton = moreButton
+                self.addSubnode(moreButton)
+                
+                moreButton.isUserInteractionEnabled = true
+                moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: .white)))
+                moreButton.onPressed = { [weak self] in
+                    guard let self, let component = self.component, let moreButton = self.moreButton else {
+                        return
+                    }
+                    moreButton.play()
+                    component.moreAction(moreButton.view, nil)
+                }
+                moreButton.contextAction = { [weak self] sourceNode, gesture in
+                    guard let self, let component = self.component, let moreButton = self.moreButton else {
+                        return
+                    }
+                    moreButton.play()
+                    component.moreAction(moreButton.view, gesture)
+                }
+                self.moreButton = moreButton
+                self.addSubnode(moreButton)
+            }
+            
             var sendAlpha: CGFloat = 0.0
             var microphoneAlpha: CGFloat = 0.0
+            var moreAlpha: CGFloat = 0.0
             switch component.mode {
             case .none:
                 break
             case .send, .apply, .attach, .delete, .forward:
                 sendAlpha = 1.0
+            case .more:
+                moreAlpha = 1.0
             case .videoInput, .voiceInput:
                 microphoneAlpha = 1.0
             case .unavailableVoiceInput:
                 microphoneAlpha = 0.4
             }
-            
             
             if self.sendIconView.image == nil || previousComponent?.mode.iconName != component.mode.iconName {
                 if let iconName = component.mode.iconName {
@@ -310,6 +343,17 @@ public final class MessageInputActionButtonComponent: Component {
                 transition.setBounds(view: self.sendIconView, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
             }
             
+            if let moreButton = self.moreButton {
+                let buttonSize = CGSize(width: 32.0, height: 44.0)
+                moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: .white)))
+                let moreFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - buttonSize.height) * 0.5)), size: buttonSize)
+                transition.setPosition(view: moreButton.view, position: moreFrame.center)
+                transition.setBounds(view: moreButton.view, bounds: CGRect(origin: CGPoint(), size: moreFrame.size))
+                
+                transition.setAlpha(view: moreButton.view, alpha: moreAlpha)
+                transition.setScale(view: moreButton.view, scale: moreAlpha == 0.0 ? 0.01 : 1.0)
+            }
+            
             if let micButton = self.micButton {
                 if themeUpdated {
                     micButton.updateTheme(theme: component.theme)
@@ -325,7 +369,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

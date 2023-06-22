@@ -22,6 +22,7 @@ import ShareWithPeersScreen
 import PlainButtonComponent
 import TooltipUI
 import PresentationDataUtils
+import PeerReportScreen
 
 public final class StoryItemSetContainerComponent: Component {
     public final class ExternalState {
@@ -264,6 +265,8 @@ public final class StoryItemSetContainerComponent: Component {
         weak var actionSheet: ActionSheetController?
         weak var contextController: ContextController?
         weak var privacyController: ShareWithPeersScreen?
+        
+        var isReporting: Bool = false
         
         var component: StoryItemSetContainerComponent?
         weak var state: EmptyComponentState?
@@ -550,6 +553,9 @@ public final class StoryItemSetContainerComponent: Component {
                 return true
             }
             if self.privacyController != nil {
+                return true
+            }
+            if self.isReporting {
                 return true
             }
             if self.isEditingStory {
@@ -1167,6 +1173,95 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         self.sendMessageContext.performShareAction(view: self)
                     } : nil,
+                    moreAction: { [weak self] sourceView, gesture in
+                        guard let self, let component = self.component, let controller = component.controller() else {
+                            return
+                        }
+                        
+                        component.controller()?.forEachController { c in
+                            if let c = c as? UndoOverlayController {
+                                c.dismiss()
+                            }
+                            return true
+                        }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                        var items: [ContextMenuItem] = []
+                        items.append(.action(ContextMenuActionItem(text: component.slice.additionalPeerData.isMuted ? "Notify" : "Not Notify", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: component.slice.additionalPeerData.isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            let _ = component.context.engine.peers.togglePeerStoriesMuted(peerId: component.slice.peer.id).start()
+                        })))
+                                              
+                        var isHidden = false
+                        if case let .user(user) = component.slice.peer, let storiesHidden = user.storiesHidden {
+                            isHidden = storiesHidden
+                        }
+                        
+                        items.append(.action(ContextMenuActionItem(text: isHidden ? "Unhide \(component.slice.peer.compactDisplayTitle)" : "Hide \(component.slice.peer.compactDisplayTitle)", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Chat/Context Menu/Archive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            
+                            let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: true)
+                        })))
+                        
+                        items.append(.action(ContextMenuActionItem(text: "Report", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, a in
+                            guard let self, let component = self.component, let controller = component.controller() else {
+                                return
+                            }
+                            
+                            let options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .illegalDrugs, .personalDetails, .other]
+                            presentPeerReportOptions(
+                                context: component.context,
+                                parent: controller,
+                                contextController: c,
+                                backAction: { _ in },
+                                subject: .story(component.slice.peer.id, component.slice.item.storyItem.id),
+                                options: options,
+                                passthrough: true,
+                                forceTheme: defaultDarkPresentationTheme,
+                                isDetailedReportingVisible: { [weak self] isReporting in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.isReporting = isReporting
+                                    self.updateIsProgressPaused()
+                                },
+                                completion: { [weak self] reason, _ in
+                                    guard let self, let component = self.component, let controller = component.controller(), let reason else {
+                                        return
+                                    }
+                                    let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.peer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").start()
+                                    controller.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                }
+                            )
+                        })))
+                        
+                        let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                        contextController.dismissed = { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.contextController = nil
+                            self.updateIsProgressPaused()
+                        }
+                        self.contextController = contextController
+                        self.updateIsProgressPaused()
+                        controller.present(contextController, in: .window(.root))
+                    },
                     presentVoiceMessagesUnavailableTooltip: { [weak self] view in
                         guard let self, let component = self.component, self.voiceMessagesRestrictedTooltipController == nil else {
                             return
@@ -1337,6 +1432,13 @@ public final class StoryItemSetContainerComponent: Component {
                                 return
                             }
                             
+                            component.controller()?.forEachController { c in
+                                if let c = c as? UndoOverlayController {
+                                    c.dismiss()
+                                }
+                                return true
+                            }
+                            
                             var items: [ContextMenuItem] = []
                             
                             let additionalCount = component.slice.item.storyItem.privacy?.additionallyIncludePeers.count ?? 0
@@ -1392,14 +1494,7 @@ public final class StoryItemSetContainerComponent: Component {
                             })))
                             
                             items.append(.separator)
-                            
-                            component.controller()?.forEachController { c in
-                                if let c = c as? UndoOverlayController {
-                                    c.dismiss()
-                                }
-                                return true
-                            }
-                            
+                                                        
                             items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from profile" : "Save to profile", icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Chat/Context Menu/Check" : "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, a in

@@ -968,6 +968,7 @@ final class MediaEditorScreenComponent: Component {
                         })
                     },
                     forwardAction: nil,
+                    moreAction: nil,
                     presentVoiceMessagesUnavailableTooltip: nil,
                     audioRecorder: nil,
                     videoRecordingStatus: nil,

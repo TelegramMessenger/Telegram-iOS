@@ -19,6 +19,7 @@ public enum PeerReportSubject {
     case peer(EnginePeer.Id)
     case messages([EngineMessage.Id])
     case profilePhoto(EnginePeer.Id, Int64)
+    case story(EnginePeer.Id, Int32)
 }
 
 public enum PeerReportOption {
@@ -33,10 +34,34 @@ public enum PeerReportOption {
     case other
 }
 
-public func presentPeerReportOptions(context: AccountContext, parent: ViewController, contextController: ContextControllerProtocol?, backAction: ((ContextControllerProtocol) -> Void)? = nil, subject: PeerReportSubject, options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other], passthrough: Bool = false, completion: @escaping (ReportReason?, Bool) -> Void) {
+public func presentPeerReportOptions(
+    context: AccountContext,
+    parent: ViewController,
+    contextController: ContextControllerProtocol?,
+    backAction: ((ContextControllerProtocol) -> Void)? = nil,
+    subject: PeerReportSubject,
+    options: [PeerReportOption] = [.spam, .violence, .pornography, .childAbuse, .copyright, .other],
+    passthrough: Bool = false,
+    forceTheme: PresentationTheme? = nil,
+    isDetailedReportingVisible: ((Bool) -> Void)? = nil,
+    completion: @escaping (ReportReason?, Bool) -> Void
+) {
     if let contextController = contextController {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
         var items: [ContextMenuItem] = []
+        
+        if let _ = backAction {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+            }, iconPosition: .left, action: { (c, _) in
+                c.popItems()
+            })))
+            items.append(.separator)
+        }
+        
         for option in options {
             let title: String
             let color: ContextMenuActionItemTextColor = .primary
@@ -73,8 +98,6 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
             items.append(.action(ContextMenuActionItem(text: title, textColor: color, icon: { theme in
                 return generateTintedImage(image: icon, color: theme.contextMenu.primaryColor)
             }, action: { [weak parent] _, f in
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                
                 let reportReason: ReportReason
                 switch option {
                 case .spam:
@@ -114,36 +137,46 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                             completion(reportReason, true)
                         } else {
                             switch subject {
-                                case let .peer(peerId):
-                                    let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: "")
-                                    |> deliverOnMainQueue).start(completed: {
-                                        displaySuccess()
-                                        completion(nil, false)
-                                    })
-                                case let .messages(messageIds):
-                                    let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: "")
-                                    |> deliverOnMainQueue).start(completed: {
-                                        displaySuccess()
-                                        completion(nil, false)
-                                    })
-                                case let .profilePhoto(peerId, _):
-                                    let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: "")
-                                    |> deliverOnMainQueue).start(completed: {
-                                        displaySuccess()
-                                        completion(nil, false)
-                                    })
+                            case let .peer(peerId):
+                                let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: "")
+                                |> deliverOnMainQueue).start(completed: {
+                                    displaySuccess()
+                                    completion(nil, false)
+                                })
+                            case let .messages(messageIds):
+                                let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: "")
+                                |> deliverOnMainQueue).start(completed: {
+                                    displaySuccess()
+                                    completion(nil, false)
+                                })
+                            case let .profilePhoto(peerId, _):
+                                let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: "")
+                                |> deliverOnMainQueue).start(completed: {
+                                    displaySuccess()
+                                    completion(nil, false)
+                                })
+                            case let .story(peerId, storyId):
+                                let _ = (context.engine.peers.reportPeerStory(peerId: peerId, storyId: storyId, reason: reportReason, message: "")
+                                |> deliverOnMainQueue).start(completed: {
+                                    displaySuccess()
+                                    completion(nil, false)
+                                })
                             }
                         }
                     }
                     
+                    isDetailedReportingVisible?(true)
                     let controller = ActionSheetController(presentationData: presentationData, allowInputInset: true)
+                    controller.dismissed = { _ in
+                        isDetailedReportingVisible?(false)
+                    }
                     let dismissAction: () -> Void = { [weak controller] in
                         controller?.dismissAnimated()
                     }
                     var message = ""
                     var items: [ActionSheetItem] = []
                     items.append(ReportPeerHeaderActionSheetItem(context: context, text: presentationData.strings.Report_AdditionalDetailsText))
-                    items.append(ReportPeerDetailsActionSheetItem(context: context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
+                    items.append(ReportPeerDetailsActionSheetItem(context: context, theme: presentationData.theme, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
                         message = text
                     }))
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
@@ -154,22 +187,16 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                     
                     controller.setItemGroups([
                         ActionSheetItemGroup(items: items),
-                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: {
+                            dismissAction()
+                        })])
                     ])
                     parent?.present(controller, in: .window(.root))
                 }
                 f(.dismissWithoutContent)
             })))
         }
-        if let backAction = backAction {
-            items.append(.separator)
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-            }, iconPosition: .left, action: { (c, _) in
-                backAction(c)
-            })))
-        }
-        contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
+        contextController.pushItems(items: .single(ContextController.Items(content: .list(items))))
     } else {
         contextController?.dismiss(completion: nil)
         parent.view.endEditing(true)
@@ -246,24 +273,30 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                         completion(reportReason, true)
                     } else {
                         switch subject {
-                            case let .peer(peerId):
-                                let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: message)
-                                |> deliverOnMainQueue).start(completed: {
-                                    displaySuccess()
-                                    completion(nil, true)
-                                })
-                            case let .messages(messageIds):
-                                let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: message)
-                                |> deliverOnMainQueue).start(completed: {
-                                    displaySuccess()
-                                    completion(nil, true)
-                                })
-                            case let .profilePhoto(peerId, _):
-                                let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: message)
-                                |> deliverOnMainQueue).start(completed: {
-                                    displaySuccess()
-                                    completion(nil, true)
-                                })
+                        case let .peer(peerId):
+                            let _ = (context.engine.peers.reportPeer(peerId: peerId, reason: reportReason, message: message)
+                            |> deliverOnMainQueue).start(completed: {
+                                displaySuccess()
+                                completion(nil, true)
+                            })
+                        case let .messages(messageIds):
+                            let _ = (context.engine.peers.reportPeerMessages(messageIds: messageIds, reason: reportReason, message: message)
+                            |> deliverOnMainQueue).start(completed: {
+                                displaySuccess()
+                                completion(nil, true)
+                            })
+                        case let .profilePhoto(peerId, _):
+                            let _ = (context.engine.peers.reportPeerPhoto(peerId: peerId, reason: reportReason, message: message)
+                            |> deliverOnMainQueue).start(completed: {
+                                displaySuccess()
+                                completion(nil, true)
+                            })
+                        case let .story(peerId, storyId):
+                            let _ = (context.engine.peers.reportPeerStory(peerId: peerId, storyId: storyId, reason: reportReason, message: message)
+                            |> deliverOnMainQueue).start(completed: {
+                                displaySuccess()
+                                completion(nil, true)
+                            })
                         }
                     }
                 }
@@ -276,7 +309,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                     var message = ""
                     var items: [ActionSheetItem] = []
                     items.append(ReportPeerHeaderActionSheetItem(context: context, text: presentationData.strings.Report_AdditionalDetailsText))
-                    items.append(ReportPeerDetailsActionSheetItem(context: context, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
+                    items.append(ReportPeerDetailsActionSheetItem(context: context, theme: presentationData.theme, placeholderText: presentationData.strings.Report_AdditionalDetailsPlaceholder, textUpdated: { text in
                         message = text
                     }))
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Report_Report, color: .accent, font: .bold, enabled: true, action: {
