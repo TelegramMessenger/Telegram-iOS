@@ -178,7 +178,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var powerSavingMonitoringDisposable: Disposable?
     
-    private(set) var storySubscriptions: EngineStorySubscriptions?
+    private var rawStorySubscriptions: EngineStorySubscriptions?
+    private var shouldFixStorySubscriptionOrder: Bool = false
+    private var fixedStorySubscriptionOrder: [EnginePeer.Id] = []
+    var orderedStorySubscriptions: EngineStorySubscriptions?
     
     private var storyProgressDisposable: Disposable?
     private var storySubscriptionsDisposable: Disposable?
@@ -838,6 +841,30 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.present(controller, in: .window(.root))
     }
     
+    func allowAutomaticOrder() {
+        if !self.shouldFixStorySubscriptionOrder {
+            return
+        }
+            
+        self.shouldFixStorySubscriptionOrder = false
+        self.fixedStorySubscriptionOrder = self.rawStorySubscriptions?.items.map(\.peer.id) ?? []
+        if self.orderedStorySubscriptions != self.rawStorySubscriptions {
+            self.orderedStorySubscriptions = self.rawStorySubscriptions
+            
+            // important not to cause a loop
+            DispatchQueue.main.async { [weak self] in
+                guard let self else {
+                    return
+                }
+                
+                self.chatListDisplayNode.requestNavigationBarLayout(transition: Transition.immediate.withUserData(ChatListNavigationBar.AnimationHint(
+                    disableStoriesAnimations: false,
+                    crossfadeStoryPeers: true
+                )))
+            }
+        }
+    }
+    
     private func updateThemeAndStrings() {
         if case .chatList(.root) = self.location {
             self.tabBarItem.title = self.presentationData.strings.DialogList_Title
@@ -1283,7 +1310,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
-            let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peerId, singlePeer: false)
+            let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peerId, singlePeer: true)
             let _ = (storyContent.state
             |> filter { $0.slice != nil }
             |> take(1)
@@ -1821,17 +1848,38 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             })
             self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: false)
-            |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
+            |> deliverOnMainQueue).start(next: { [weak self] rawStorySubscriptions in
                 guard let self else {
                     return
                 }
                 
                 var wasEmpty = true
-                if let storySubscriptions = self.storySubscriptions, !storySubscriptions.items.isEmpty {
+                if let rawStorySubscriptions = self.rawStorySubscriptions, !rawStorySubscriptions.items.isEmpty {
                     wasEmpty = false
                 }
-                self.storySubscriptions = storySubscriptions
-                let isEmpty = storySubscriptions.items.isEmpty
+                
+                self.rawStorySubscriptions = rawStorySubscriptions
+                var items: [EngineStorySubscriptions.Item] = []
+                if self.shouldFixStorySubscriptionOrder {
+                    for peerId in self.fixedStorySubscriptionOrder {
+                        if let item = rawStorySubscriptions.items.first(where: { $0.peer.id == peerId }) {
+                            items.append(item)
+                        }
+                    }
+                }
+                for item in rawStorySubscriptions.items {
+                    if !items.contains(where: { $0.peer.id == item.peer.id }) {
+                        items.append(item)
+                    }
+                }
+                self.orderedStorySubscriptions = EngineStorySubscriptions(
+                    accountItem: rawStorySubscriptions.accountItem,
+                    items: items,
+                    hasMoreToken: rawStorySubscriptions.hasMoreToken
+                )
+                self.fixedStorySubscriptionOrder = items.map(\.peer.id)
+                
+                let isEmpty = rawStorySubscriptions.items.isEmpty
                 
                 let transition: ContainedViewLayoutTransition
                 if self.didAppear {
@@ -1851,7 +1899,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     var chatListState = chatListState
                     
                     var peerStoryMapping: [EnginePeer.Id: Bool] = [:]
-                    for item in storySubscriptions.items {
+                    for item in rawStorySubscriptions.items {
                         if item.peer.id == self.context.account.peerId {
                             continue
                         }
@@ -2303,7 +2351,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    func updateHeaderContent(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> (primaryContent: ChatListHeaderComponent.Content?, secondaryContent: ChatListHeaderComponent.Content?) {
+    func updateHeaderContent(layout: ContainerViewLayout) -> (primaryContent: ChatListHeaderComponent.Content?, secondaryContent: ChatListHeaderComponent.Content?) {
         var primaryContent: ChatListHeaderComponent.Content?
         if let primaryContext = self.primaryContext {
             var backTitle: String?
@@ -2448,9 +2496,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if peer.id == self.context.account.peerId {
-                    if let storySubscriptions = self.storySubscriptions {
+                    if let rawStorySubscriptions = self.rawStorySubscriptions {
                         var openCamera = false
-                        if let accountItem = storySubscriptions.accountItem {
+                        if let accountItem = rawStorySubscriptions.accountItem {
                             openCamera = accountItem.storyCount == 0
                         } else {
                             openCamera = true
@@ -2463,7 +2511,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peer.id, singlePeer: false)
+                self.shouldFixStorySubscriptionOrder = true
+                let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peer.id, singlePeer: false, fixedOrder: self.fixedStorySubscriptionOrder)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
@@ -2584,7 +2633,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             let _ = self.context.engine.peers.togglePeerStoriesMuted(peerId: peer.id).start()
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: "Archive", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: "Hide", icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)

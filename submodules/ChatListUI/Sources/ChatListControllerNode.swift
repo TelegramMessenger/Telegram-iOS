@@ -927,7 +927,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             if itemNode.listNode.isTracking && !self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset == 0.0 {
                 if case let .known(value) = offset {
                     if value < -1.0 {
-                        if let storySubscriptions = self.controller?.storySubscriptions, !storySubscriptions.items.isEmpty {
+                        if let storySubscriptions = self.controller?.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
                             self.currentItemNode.startedScrollingAtUpperBound = true
                             self.tempTopInset = ChatListNavigationBar.storiesScrollHeight
                         }
@@ -958,7 +958,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
             let tempTopInset: CGFloat
             if self.currentItemNode.startedScrollingAtUpperBound {
-                if let storySubscriptions = self.controller?.storySubscriptions, !storySubscriptions.items.isEmpty {
+                if let storySubscriptions = self.controller?.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
                     tempTopInset = ChatListNavigationBar.storiesScrollHeight
                 } else {
                     tempTopInset = 0.0
@@ -1796,7 +1796,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 return false
             }
             
-            if let storySubscriptions = controller.storySubscriptions, !storySubscriptions.items.isEmpty {
+            if let storySubscriptions = controller.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
                 if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                     if navigationBarComponentView.storiesUnlocked {
                         return true
@@ -1914,8 +1914,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    private func updateNavigationBar(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> (navigationHeight: CGFloat, storiesInset: CGFloat) {
-        let headerContent = self.controller?.updateHeaderContent(layout: layout, transition: transition)
+    private func updateNavigationBar(layout: ContainerViewLayout, deferScrollApplication: Bool, transition: Transition) -> (navigationHeight: CGFloat, storiesInset: CGFloat) {
+        let headerContent = self.controller?.updateHeaderContent(layout: layout)
         
         var tabsNode: ASDisplayNode?
         var tabsNodeIsSearch = false
@@ -1928,7 +1928,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         
         let navigationBarSize = self.navigationBarView.update(
-            transition: Transition(transition),
+            transition: transition,
             component: AnyComponent(ChatListNavigationBar(
                 context: self.context,
                 theme: self.presentationData.theme,
@@ -1939,7 +1939,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 primaryContent: headerContent?.primaryContent,
                 secondaryContent: headerContent?.secondaryContent,
                 secondaryTransition: self.inlineStackContainerTransitionFraction,
-                storySubscriptions: self.controller?.storySubscriptions,
+                storySubscriptions: self.controller?.orderedStorySubscriptions,
                 storiesIncludeHidden: false,
                 uploadProgress: self.controller?.storyUploadProgress,
                 tabsNode: tabsNode,
@@ -1970,18 +1970,26 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         return
                     }
                     controller.openStatusSetup(sourceView: sourceView)
+                },
+                allowAutomaticOrder: { [weak self] in
+                    guard let self, let controller = self.controller else {
+                        return
+                    }
+                    controller.allowAutomaticOrder()
                 }
             )),
             environment: {},
             containerSize: layout.size
         )
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.deferScrollApplication = true
+            if deferScrollApplication {
+                navigationBarComponentView.deferScrollApplication = true
+            }
             
             if navigationBarComponentView.superview == nil {
                 self.view.addSubview(navigationBarComponentView)
             }
-            transition.updateFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
+            transition.setFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
             
             return (navigationBarSize.height, 0.0)
         } else {
@@ -2030,15 +2038,18 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
-            navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: allowAvatarsExpansion, forceUpdate: false, transition: Transition(transition).withUserData(ChatListNavigationBar.AnimationHint(disableStoriesAnimations: self.tempDisableStoriesAnimations)))
+            navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: allowAvatarsExpansion, forceUpdate: false, transition: Transition(transition).withUserData(ChatListNavigationBar.AnimationHint(
+                disableStoriesAnimations: self.tempDisableStoriesAnimations,
+                crossfadeStoryPeers: false
+            )))
         }
     }
     
-    func requestNavigationBarLayout(transition: ContainedViewLayoutTransition) {
+    func requestNavigationBarLayout(transition: Transition) {
         guard let (layout, _, _, _, _) = self.containerLayout else {
             return
         }
-        let _ = self.updateNavigationBar(layout: layout, transition: transition)
+        let _ = self.updateNavigationBar(layout: layout, deferScrollApplication: false, transition: transition)
     }
     
     func scrollToStories(animated: Bool) {
@@ -2046,7 +2057,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return
         }
         
-        if let storySubscriptions = self.controller?.storySubscriptions, !storySubscriptions.items.isEmpty {
+        if let storySubscriptions = self.controller?.orderedStorySubscriptions, !storySubscriptions.items.isEmpty {
             self.tempAllowAvatarExpansion = true
             self.tempDisableStoriesAnimations = !animated
             self.tempNavigationScrollingTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
@@ -2055,12 +2066,6 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.tempDisableStoriesAnimations = false
             tempNavigationScrollingTransition = nil
         }
-        
-        /*self.mainContainerNode.scrollToTop(animated: false)
-        self.mainContainerNode.ignoreStoryUnlockedScrolling = true
-        self.controller?.requestLayout(transition: .immediate)
-        self.mainContainerNode.scrollToTop(animated: false)
-        self.mainContainerNode.ignoreStoryUnlockedScrolling = false*/
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -2069,7 +2074,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         var cleanNavigationBarHeight = cleanNavigationBarHeight
         var storiesInset = storiesInset
         
-        let navigationBarLayout = self.updateNavigationBar(layout: layout, transition: transition)
+        let navigationBarLayout = self.updateNavigationBar(layout: layout, deferScrollApplication: true, transition: Transition(transition))
         self.mainContainerNode.initialScrollingOffset = ChatListNavigationBar.searchScrollHeight + navigationBarLayout.storiesInset
         
         navigationBarHeight = navigationBarLayout.navigationHeight
@@ -2350,7 +2355,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func shouldStopScrolling(listView: ListView, velocity: CGFloat, isPrimary: Bool) -> Bool {
-        if abs(velocity) > 200.0 {
+        if abs(velocity) > 10.0 {
             return false
         }
         

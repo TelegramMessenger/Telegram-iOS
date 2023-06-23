@@ -403,13 +403,15 @@ public final class StoryContentContextImpl: StoryContentContext {
         context: AccountContext,
         isHidden: Bool,
         focusedPeerId: EnginePeer.Id?,
-        singlePeer: Bool
+        singlePeer: Bool,
+        fixedOrder: [EnginePeer.Id] = []
     ) {
         self.context = context
         self.isHidden = isHidden
         if let focusedPeerId {
             self.focusedItem = (focusedPeerId, nil)
         }
+        self.fixedSubscriptionOrder = fixedOrder
         
         if singlePeer {
             guard let focusedPeerId else {

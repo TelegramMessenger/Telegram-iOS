@@ -451,6 +451,8 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     self.contactListNode.activateSearch?()
                 },
                 openStatusSetup: { _ in
+                },
+                allowAutomaticOrder: {
                 }
             )),
             environment: {},

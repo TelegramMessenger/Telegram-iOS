@@ -475,6 +475,9 @@ public final class EngineStorySubscriptions: Equatable {
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs === rhs {
+                return true
+            }
             if lhs.peer != rhs.peer {
                 return false
             }
@@ -505,6 +508,9 @@ public final class EngineStorySubscriptions: Equatable {
     }
     
     public static func ==(lhs: EngineStorySubscriptions, rhs: EngineStorySubscriptions) -> Bool {
+        if lhs === rhs {
+            return true
+        }
         if lhs.accountItem != rhs.accountItem {
             return false
         }
@@ -1065,7 +1071,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             
             account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
             
-            #if DEBUG && false
+            #if DEBUG && true
             if "".isEmpty {
                 return .complete()
             }
