@@ -136,7 +136,7 @@ func pushPeerNotificationSettings(postbox: Postbox, network: Network, peerId: Pe
                         storiesMuted = storiesMutedValue ? .boolTrue : .boolFalse
                     }
                     
-                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound, storiesMuted: storiesMuted)
+                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound, storiesMuted: storiesMuted, storiesHideSender: nil, storiesSound: nil)
                     return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyForumTopic(peer: inputPeer, topMsgId: Int32(clamping: threadId)), settings: inputSettings))
                     |> `catch` { _ -> Signal<Api.Bool, NoError> in
                         return .single(.boolFalse)
@@ -184,7 +184,7 @@ func pushPeerNotificationSettings(postbox: Postbox, network: Network, peerId: Pe
                         flags |= (1 << 6)
                         storiesMuted = storiesMutedValue ? .boolTrue : .boolFalse
                     }
-                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound, storiesMuted: storiesMuted)
+                    let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound, storiesMuted: storiesMuted, storiesHideSender: nil, storiesSound: nil)
                     return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))
                     |> `catch` { _ -> Signal<Api.Bool, NoError> in
                         return .single(.boolFalse)
