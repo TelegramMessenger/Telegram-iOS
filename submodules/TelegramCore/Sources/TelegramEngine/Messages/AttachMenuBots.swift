@@ -712,6 +712,7 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
                 case let .botApp(botAppFlags, app):
                 switch app {
                 case let .botApp(flags, id, accessHash, shortName, title, description, photo, document, hash):
+                    let _ = flags
                     var appFlags = BotApp.Flags()
                     if (botAppFlags & (1 << 0)) != 0 {
                         appFlags.insert(.notActivated)
