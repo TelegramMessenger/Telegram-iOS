@@ -242,7 +242,7 @@ final class MediaEditorScreenComponent: Component {
         private var isDismissed = false
         
         private var isEditingCaption = false
-        private var currentInputMode: MessageInputPanelComponent.InputMode = .keyboard
+        private var currentInputMode: MessageInputPanelComponent.InputMode = .text
         
         private var didInitializeInputMediaNodeDataPromise = false
         private var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
@@ -337,7 +337,7 @@ final class MediaEditorScreenComponent: Component {
                     updateChoosingSticker: { _ in },
                     switchToTextInput: { [weak self] in
                         if let self {
-                            self.currentInputMode = .keyboard
+                            self.currentInputMode = .text
                             self.state?.updated(transition: .immediate)
                         }
                     },
@@ -373,7 +373,7 @@ final class MediaEditorScreenComponent: Component {
         }
         
         @objc private func fadePressed() {
-            self.currentInputMode = .keyboard
+            self.currentInputMode = .text
             self.endEditing(true)
         }
         
@@ -900,10 +900,10 @@ final class MediaEditorScreenComponent: Component {
             
             let nextInputMode: MessageInputPanelComponent.InputMode
             switch self.currentInputMode {
-            case .keyboard:
+            case .text:
                 nextInputMode = .emoji
             case .emoji:
-                nextInputMode = .keyboard
+                nextInputMode = .text
             default:
                 nextInputMode = .emoji
             }
@@ -918,7 +918,7 @@ final class MediaEditorScreenComponent: Component {
                     style: .editor,
                     placeholder: "Add a caption...",
                     alwaysDarkWhenHasText: false,
-                    nextInputMode: nextInputMode,
+                    nextInputMode: { _ in  return nextInputMode },
                     areVoiceMessagesAvailable: false,
                     presentController: { [weak self] c in
                         guard let self, let _ = self.component else {
@@ -930,7 +930,7 @@ final class MediaEditorScreenComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.currentInputMode = .keyboard
+                        self.currentInputMode = .text
                         self.endEditing(true)
                     },
                     setMediaRecordingActive: nil,
@@ -941,10 +941,10 @@ final class MediaEditorScreenComponent: Component {
                     inputModeAction: { [weak self] in
                         if let self {
                             switch self.currentInputMode {
-                            case .keyboard:
+                            case .text:
                                 self.currentInputMode = .emoji
                             case .emoji:
-                                self.currentInputMode = .keyboard
+                                self.currentInputMode = .text
                             default:
                                 self.currentInputMode = .emoji
                             }
@@ -1028,8 +1028,7 @@ final class MediaEditorScreenComponent: Component {
                 transition.setFrame(view: inputPanelBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: isVisible ? availableSize.height - inputPanelBackgroundSize.height : availableSize.height), size: inputPanelBackgroundSize))
                 transition.setAlpha(view: inputPanelBackgroundView, alpha: isVisible ? 1.0 : 0.0, delay: isVisible ? 0.0 : 0.4)
             }
-            
-                        
+                  
             var isEditingTextEntity = false
             var sizeSliderVisible = false
             var sizeValue: CGFloat?
@@ -1385,7 +1384,7 @@ final class MediaEditorScreenComponent: Component {
                         stateContext: self.inputMediaNodeStateContext
                     )
                     inputMediaNode.externalTopPanelContainerImpl = nil
-                    if let inputPanelView = self.inputPanel.view {
+                    if let inputPanelView = self.inputPanel.view, inputMediaNode.view.superview == nil {
                         self.insertSubview(inputMediaNode.view, belowSubview: inputPanelView)
                     }
                     self.inputMediaNode = inputMediaNode
@@ -3833,18 +3832,24 @@ public final class BlurredGradientComponent: Component {
     }
     
     let position: Position
+    let dark: Bool
     let tag: AnyObject?
 
     public init(
         position: Position,
+        dark: Bool = false,
         tag: AnyObject?
     ) {
         self.position = position
+        self.dark = dark
         self.tag = tag
     }
     
     public static func ==(lhs: BlurredGradientComponent, rhs: BlurredGradientComponent) -> Bool {
         if lhs.position != rhs.position {
+            return false
+        }
+        if lhs.dark != rhs.dark {
             return false
         }
         return true
@@ -3882,7 +3887,12 @@ public final class BlurredGradientComponent: Component {
                     direction: .vertical
                 )
                 
-                self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.35).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
+                if component.dark {
+                    self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.6).cgColor, UIColor(rgb: 0x000000, alpha: 0.6).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
+                    self.gradientForeground.locations = [0.0, 0.8, 1.0]
+                } else {
+                    self.gradientForeground.colors = [UIColor(rgb: 0x000000, alpha: 0.35).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor]
+                }
                 self.gradientForeground.startPoint = CGPoint(x: 0.5, y: component.position == .top ? 0.0 : 1.0)
                 self.gradientForeground.endPoint = CGPoint(x: 0.5, y: component.position == .top ? 1.0 : 0.0)
                 

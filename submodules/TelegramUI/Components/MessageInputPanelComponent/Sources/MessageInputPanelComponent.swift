@@ -20,7 +20,7 @@ public final class MessageInputPanelComponent: Component {
     }
     
     public enum InputMode: Hashable {
-        case keyboard
+        case text
         case stickers
         case emoji
     }
@@ -28,6 +28,7 @@ public final class MessageInputPanelComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
+        public fileprivate(set) var isKeyboardHidden: Bool = false
         
         public fileprivate(set) var insertText: (NSAttributedString) -> Void = { _ in }
         public fileprivate(set) var deleteBackward: () -> Void = { }
@@ -43,7 +44,7 @@ public final class MessageInputPanelComponent: Component {
     public let style: Style
     public let placeholder: String
     public let alwaysDarkWhenHasText: Bool
-    public let nextInputMode: InputMode?
+    public let nextInputMode: (Bool) -> InputMode?
     public let areVoiceMessagesAvailable: Bool
     public let presentController: (ViewController) -> Void
     public let sendMessageAction: () -> Void
@@ -76,7 +77,7 @@ public final class MessageInputPanelComponent: Component {
         style: Style,
         placeholder: String,
         alwaysDarkWhenHasText: Bool,
-        nextInputMode: InputMode?,
+        nextInputMode: @escaping (Bool) -> InputMode?,
         areVoiceMessagesAvailable: Bool,
         presentController: @escaping (ViewController) -> Void,
         sendMessageAction: @escaping () -> Void,
@@ -148,9 +149,6 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.style != rhs.style {
-            return false
-        }
-        if lhs.nextInputMode != rhs.nextInputMode {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
@@ -238,6 +236,8 @@ public final class MessageInputPanelComponent: Component {
         
         private var contextQueryResultPanel: ComponentView<Empty>?
         private var contextQueryResultPanelExternalState: ContextResultPanelComponent.ExternalState?
+        
+        private var currentInputMode: InputMode?
         
         private var component: MessageInputPanelComponent?
         private weak var state: EmptyComponentState?
@@ -363,7 +363,7 @@ public final class MessageInputPanelComponent: Component {
             
             let baseFieldHeight: CGFloat = 40.0
             
-            let previousComponent = self.component
+
             self.component = component
             self.state = state
 
@@ -759,10 +759,15 @@ public final class MessageInputPanelComponent: Component {
             let animationName: String
             var animationPlay = false
             
-            if let inputMode = component.nextInputMode {
+            let previousInputMode = self.currentInputMode
+            let inputMode = component.nextInputMode(self.textFieldExternalState.hasText)
+            self.currentInputMode = inputMode
+            
+            if let inputMode {
+                self.currentInputMode = inputMode
                 switch inputMode {
-                case .keyboard:
-                    if let previousInputMode = previousComponent?.nextInputMode {
+                case .text:
+                    if let previousInputMode {
                         if case .stickers = previousInputMode {
                             animationName = "input_anim_stickerToKey"
                             animationPlay = true
@@ -776,8 +781,8 @@ public final class MessageInputPanelComponent: Component {
                         animationName = "input_anim_stickerToKey"
                     }
                 case .stickers:
-                    if let previousInputMode = previousComponent?.nextInputMode {
-                        if case .keyboard = previousInputMode {
+                    if let previousInputMode {
+                        if case .text = previousInputMode {
                             animationName = "input_anim_keyToSticker"
                             animationPlay = true
                         } else if case .emoji = previousInputMode {
@@ -790,8 +795,8 @@ public final class MessageInputPanelComponent: Component {
                         animationName = "input_anim_keyToSticker"
                     }
                 case .emoji:
-                    if let previousInputMode = previousComponent?.nextInputMode {
-                        if case .keyboard = previousInputMode {
+                    if let previousInputMode {
+                        if case .text = previousInputMode {
                             animationName = "input_anim_keyToSmile"
                             animationPlay = true
                         } else if case .stickers = previousInputMode {
@@ -927,6 +932,7 @@ public final class MessageInputPanelComponent: Component {
                     view.deleteBackward()
                 }
             }
+            component.externalState.isKeyboardHidden = component.hideKeyboard
             
             if hasMediaRecording {
                 if let dismissingMediaRecordingPanel = self.dismissingMediaRecordingPanel {

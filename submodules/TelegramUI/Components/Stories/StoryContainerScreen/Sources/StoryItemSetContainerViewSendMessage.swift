@@ -34,22 +34,35 @@ import ChatPresentationInterfaceState
 import Postbox
 import OverlayStatusController
 import PresentationDataUtils
+import TextFieldComponent
 
 final class StoryItemSetContainerSendMessage {
     enum InputMode {
         case text
-        case emoji
-        case sticker
+        case media
     }
+    
+    private var context: AccountContext?
+    private weak var view: StoryItemSetContainerComponent.View?
+    private var inputPanelExternalState: MessageInputPanelComponent.ExternalState?
     
     weak var attachmentController: AttachmentController?
     weak var shareController: ShareController?
     
-    var inputMode: InputMode = .text
+    var currentInputMode: InputMode = .text
+    private var needsInputActivation = false
     
     var audioRecorderValue: ManagedAudioRecorder?
     var audioRecorder = Promise<ManagedAudioRecorder?>()
     var recordedAudioPreview: ChatRecordedMediaPreview?
+    
+    var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
+    var inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
+    var inputMediaNodeDataDisposable: Disposable?
+    var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
+    var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
+    var inputMediaNode: ChatEntityKeyboardInputNode?
+    var inputMediaNodeBackground = SimpleLayer()
     
     var videoRecorderValue: InstantVideoController?
     var tempVideoRecorderValue: InstantVideoController?
@@ -62,14 +75,308 @@ final class StoryItemSetContainerSendMessage {
     private(set) var isMediaRecordingLocked: Bool = false
     var wasRecordingDismissed: Bool = false
     
+    init() {
+        self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            self.inputMediaNodeData = value
+        })
+    }
+    
     deinit {
         self.controllerNavigationDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
         self.navigationActionDisposable.dispose()
         self.resolvePeerByNameDisposable.dispose()
+        self.inputMediaNodeDataDisposable?.dispose()
+    }
+    
+    func setup(context: AccountContext, view: StoryItemSetContainerComponent.View, inputPanelExternalState: MessageInputPanelComponent.ExternalState) {
+        self.context = context
+        self.inputPanelExternalState = inputPanelExternalState
+        self.view = view
+        
+        self.inputMediaNodeDataPromise.set(
+            ChatEntityKeyboardInputNode.inputData(
+                context: context,
+                chatPeerId: nil,
+                areCustomEmojiEnabled: true,
+                hasSearch: false,
+                hideBackground: true,
+                sendGif: nil
+            )
+        )
+        
+        self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
+            sendSticker: { [weak self] fileReference, _, _, _, _, _, _, _, _ in
+                if let view = self?.view {
+                    self?.performSendStickerAction(view: view, fileReference: fileReference)
+                }
+                return false
+            },
+            sendEmoji: { [weak self] text, attribute, bool1 in
+                if let self {
+                    let _ = self
+                }
+            },
+            sendGif: { [weak self] fileReference, _, _, _, _ in
+                if let view = self?.view {
+                    self?.performSendGifAction(view: view, fileReference: fileReference)
+                }
+                return false
+            },
+            sendBotContextResultAsGif: { _, _, _, _, _, _ in
+                return false
+            },
+            updateChoosingSticker: { _ in },
+            switchToTextInput: { [weak self] in
+                if let self {
+                    self.currentInputMode = .text
+                    self.view?.state?.updated(transition: .immediate)
+                }
+            },
+            dismissTextInput: {
+                
+            },
+            insertText: { [weak self] text in
+                if let self {
+                    self.inputPanelExternalState?.insertText(text)
+                }
+            },
+            backwardsDeleteText: { [weak self] in
+                if let self {
+                    self.inputPanelExternalState?.deleteBackward()
+                }
+            },
+            presentController: { [weak self] c, a in
+                if let self {
+                    self.view?.component?.controller()?.present(c, in: .window(.root), with: a)
+                }
+            },
+            presentGlobalOverlayController: { [weak self] c, a in
+                if let self {
+                    self.view?.component?.controller()?.presentInGlobalOverlay(c, with: a)
+                }
+            },
+            getNavigationController: {
+                return self.view?.component?.controller()?.navigationController as? NavigationController
+            },
+            requestLayout: { [weak self] _ in
+                if let self {
+                    self.view?.state?.updated()
+                }
+            }
+        )
     }
     
     func toggleInputMode() {
+        guard let view = self.view else {
+            return
+        }
+        if case .text = self.currentInputMode {
+            if !hasFirstResponder(view) {
+                self.needsInputActivation = true
+            }
+            self.currentInputMode = .media
+        } else {
+            self.currentInputMode = .text
+        }
+    }
+    
+    func updateInputMediaNode(inputPanel: ComponentView<Empty>, availableSize: CGSize, bottomInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: Transition) {
+        guard let context = self.context, let inputPanelView = inputPanel.view as? MessageInputPanelComponent.View else {
+            return
+        }
+                
+        if case .media = self.currentInputMode, let inputData = self.inputMediaNodeData {
+            let inputMediaNode: ChatEntityKeyboardInputNode
+            if let current = self.inputMediaNode {
+                inputMediaNode = current
+            } else {
+                inputMediaNode = ChatEntityKeyboardInputNode(
+                    context: context,
+                    currentInputData: inputData,
+                    updatedInputData: self.inputMediaNodeDataPromise.get(),
+                    defaultToEmojiTab: self.inputPanelExternalState?.hasText ?? false,
+                    opaqueTopPanelBackground: false,
+                    interaction: self.inputMediaInteraction,
+                    chatPeerId: nil,
+                    stateContext: self.inputMediaNodeStateContext
+                )
+                inputMediaNode.externalTopPanelContainerImpl = nil
+                if inputMediaNode.view.superview == nil {
+                    self.inputMediaNodeBackground.removeAllAnimations()
+                    self.inputMediaNodeBackground.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
+//                    inputPanelView.superview?.layer.insertSublayer(self.inputMediaNodeBackground, below: inputPanelView.layer)
+                    inputPanelView.superview?.insertSubview(inputMediaNode.view, belowSubview: inputPanelView)
+                }
+                self.inputMediaNode = inputMediaNode
+            }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
+            let presentationInterfaceState = ChatPresentationInterfaceState(
+                chatWallpaper: .builtin(WallpaperSettings()),
+                theme: presentationData.theme,
+                strings: presentationData.strings,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
+                limitsConfiguration: context.currentLimitsConfiguration.with { $0 },
+                fontSize: presentationData.chatFontSize,
+                bubbleCorners: presentationData.chatBubbleCorners,
+                accountPeerId: context.account.peerId,
+                mode: .standard(previewing: false),
+                chatLocation: .peer(id: context.account.peerId),
+                subject: nil,
+                peerNearbyData: nil,
+                greetingData: nil,
+                pendingUnpinnedAllMessages: false,
+                activeGroupCallInfo: nil,
+                hasActiveGroupCall: false,
+                importState: nil,
+                threadData: nil,
+                isGeneralThreadClosed: nil
+            )
+            
+            let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
+            let inputNodeHeight = heightAndOverflow.0
+            var inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+            if self.needsInputActivation {
+                inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+            }
+            transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+            transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
+        } else if let inputMediaNode = self.inputMediaNode {
+            self.inputMediaNode = nil
+            
+            var targetFrame = inputMediaNode.frame
+            if effectiveInputHeight > 0.0 {
+                targetFrame.origin.y = availableSize.height - effectiveInputHeight
+            } else {
+                targetFrame.origin.y = availableSize.height
+            }
+            transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
+                if let inputMediaNode {
+                    Queue.mainQueue().after(0.3) {
+                        inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
+                            inputMediaNode?.view.removeFromSuperview()
+                        })
+                    }
+                }
+            })
+            transition.setFrame(layer: self.inputMediaNodeBackground, frame: targetFrame, completion: { _ in
+                Queue.mainQueue().after(0.3) {
+                    if self.currentInputMode == .text {
+                        self.inputMediaNodeBackground.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { finished in
+                            if finished {
+                                self.inputMediaNodeBackground.removeFromSuperlayer()
+                            }
+                            self.inputMediaNodeBackground.removeAllAnimations()
+                        })
+                    }
+                }
+            })
+        }
+        
+        if self.needsInputActivation {
+            self.needsInputActivation = false
+            Queue.mainQueue().justDispatch {
+                inputPanelView.activateInput()
+            }
+        }
+    }
+    
+    func animateOut(bounds: CGRect) {
+        if let inputMediaNode = self.inputMediaNode {
+            inputMediaNode.layer.animatePosition(
+                from: CGPoint(),
+                to: CGPoint(x: 0.0, y: bounds.height - inputMediaNode.frame.minY),
+                duration: 0.3,
+                timingFunction: kCAMediaTimingFunctionSpring,
+                removeOnCompletion: false,
+                additive: true
+            )
+            inputMediaNode.layer.animateAlpha(from: inputMediaNode.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            
+            self.inputMediaNodeBackground.animatePosition(
+                from: CGPoint(),
+                to: CGPoint(x: 0.0, y: bounds.height - self.inputMediaNodeBackground.frame.minY),
+                duration: 0.3,
+                timingFunction: kCAMediaTimingFunctionSpring,
+                removeOnCompletion: false,
+                additive: true
+            )
+            self.inputMediaNodeBackground.animateAlpha(from: CGFloat(self.inputMediaNodeBackground.opacity), to: 0.0, duration: 0.3, removeOnCompletion: false)
+        }
+    }
+    
+    func performSendStickerAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        
+        component.context.engine.messages.enqueueOutgoingMessage(
+            to: peerId,
+            replyTo: nil,
+            storyId: focusedStoryId,
+            content: .file(fileReference)
+        )
+        
+        self.currentInputMode = .text
+        view.endEditing(true)
+        
+        Queue.mainQueue().after(0.66) {
+            if let controller = component.controller() {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                controller.present(UndoOverlayController(
+                    presentationData: presentationData,
+                    content: .succeed(text: "Message Sent"),
+                    elevatedLayout: false,
+                    animateInAsReplacement: false,
+                    action: { _ in return false }
+                ), in: .current)
+            }
+        }
+    }
+    
+    func performSendGifAction(view: StoryItemSetContainerComponent.View, fileReference: FileMediaReference) {
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
+        
+        component.context.engine.messages.enqueueOutgoingMessage(
+            to: peerId,
+            replyTo: nil,
+            storyId: focusedStoryId,
+            content: .file(fileReference)
+        )
+        
+        self.currentInputMode = .text
+        view.endEditing(true)
+        
+        Queue.mainQueue().after(0.66) {
+            if let controller = component.controller() {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                controller.present(UndoOverlayController(
+                    presentationData: presentationData,
+                    content: .succeed(text: "Message Sent"),
+                    elevatedLayout: false,
+                    animateInAsReplacement: false,
+                    action: { _ in return false }
+                ), in: .current)
+            }
+        }
     }
     
     func performSendMessageAction(
@@ -105,21 +412,24 @@ final class StoryItemSetContainerSendMessage {
                     component.context.engine.messages.enqueueOutgoingMessage(
                         to: peerId,
                         replyTo: nil,
-                        storyId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
+                        storyId: focusedStoryId,
                         content: .text(text.string, entities)
                     )
                     inputPanelView.clearSendMessageInput()
+                    self.currentInputMode = .text
                     view.endEditing(true)
                     
-                    if let controller = component.controller() {
-                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        controller.present(UndoOverlayController(
-                            presentationData: presentationData,
-                            content: .succeed(text: "Message Sent"),
-                            elevatedLayout: false,
-                            animateInAsReplacement: false,
-                            action: { _ in return false }
-                        ), in: .current)
+                    Queue.mainQueue().after(0.66) {
+                        if let controller = component.controller() {
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            controller.present(UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .succeed(text: "Message Sent"),
+                                elevatedLayout: false,
+                                animateInAsReplacement: false,
+                                action: { _ in return false }
+                            ), in: .current)
+                        }
                     }
                 }
             }
@@ -448,6 +758,7 @@ final class StoryItemSetContainerSendMessage {
             
             let inputIsActive = !"".isEmpty
             
+            self.currentInputMode = .text
             view.endEditing(true)
                     
             var banSendText: (Int32, Bool)?

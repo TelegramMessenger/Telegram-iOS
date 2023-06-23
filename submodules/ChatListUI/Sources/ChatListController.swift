@@ -159,6 +159,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var clearUnseenDownloadsTimer: SwiftSignalKit.Timer?
     
     private(set) var isPremium: Bool = false
+    private(set) var storyPostingAvailability: StoriesConfiguration.PostingAvailability = .disabled
+    private var storiesPostingAvailabilityDisposable: Disposable?
     
     private var didSetupTabs = false
     
@@ -697,6 +699,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.reloadFilters()
         }
         
+        self.storiesPostingAvailabilityDisposable = (self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { view -> AppConfiguration in
+            let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+            return appConfiguration
+        }
+        |> distinctUntilChanged
+        |> map { appConfiguration -> StoriesConfiguration.PostingAvailability in
+            let storiesConfiguration = StoriesConfiguration.with(appConfiguration: appConfiguration)
+            return storiesConfiguration.posting
+        }
+        |> deliverOnMainQueue
+        ).start(next: { [weak self] postingAvailability in
+            if let self {
+                self.storyPostingAvailability = postingAvailability
+            }
+        })
+        
         self.updateNavigationMetadata()
     }
 
@@ -725,6 +744,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.storySubscriptionsDisposable?.dispose()
         self.preloadStorySubscriptionsDisposable?.dispose()
         self.storyProgressDisposable?.dispose()
+        self.storiesPostingAvailabilityDisposable?.dispose()
     }
     
     private func updateNavigationMetadata() {
@@ -2341,19 +2361,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     fileprivate func openStoryCamera() {
-//        guard self.isPremium else {
-//            let context = self.context
-//            var replaceImpl: ((ViewController) -> Void)?
-//            let controller = context.sharedContext.makePremiumDemoController(context: self.context, subject: .stories, action: {
-//                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
-//                replaceImpl?(controller)
-//            })
-//            replaceImpl = { [weak controller] c in
-//                controller?.replace(with: c)
-//            }
-//            self.push(controller)
-//            return
-//        }
+        switch self.storyPostingAvailability {
+        case .premium:
+            guard self.isPremium else {
+                let context = self.context
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = context.sharedContext.makePremiumDemoController(context: self.context, subject: .stories, action: {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                self.push(controller)
+                return
+            }
+        case .disabled:
+            return
+        default:
+            break
+        }
+   
         var cameraTransitionIn: StoryCameraTransitionIn?
         if let componentView = self.chatListHeaderView() {
             if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
@@ -4754,7 +4782,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let (accountPeer, limits, _) = result
             let isPremium = accountPeer?.isPremium ?? false
             
-            
             let _ = strongSelf.context.engine.peers.markChatListFeaturedFiltersAsSeen().start()
             let (_, filterItems) = filterItemsAndTotalCount
             
@@ -4905,6 +4932,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if let coordinator = self.storyCameraTransitionInCoordinator {
             coordinator.completeWithTransitionProgressAndVelocity(transitionFraction, velocity)
             self.storyCameraTransitionInCoordinator = nil
+        }
+    }
+    
+    var isStoryPostingAvailable: Bool {
+        switch self.storyPostingAvailability {
+        case .enabled:
+            return true
+        case .premium:
+            return self.isPremium
+        case .disabled:
+            return false
         }
     }
 }

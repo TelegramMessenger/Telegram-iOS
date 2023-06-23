@@ -183,18 +183,18 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         return hasPremium
     }
     
-    public static func inputData(context: AccountContext, chatPeerId: PeerId?, areCustomEmojiEnabled: Bool, sendGif: ((FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool)?) -> Signal<InputData, NoError> {
+    public static func inputData(context: AccountContext, chatPeerId: PeerId?, areCustomEmojiEnabled: Bool, hasSearch: Bool = true, hideBackground: Bool = false, sendGif: ((FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool)?) -> Signal<InputData, NoError> {
         let animationCache = context.animationCache
         let animationRenderer = context.animationRenderer
         
-        let emojiItems = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: true, hasTrending: true, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
+        let emojiItems = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: true, hasTrending: true, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId, hasSearch: hasSearch, hideBackground: hideBackground)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers]
                 
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: true, hasTrending: true, forceHasPremium: false)
+        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: hasSearch, hasTrending: true, forceHasPremium: false, hideBackground: hideBackground)
         
         let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
         |> map { appConfiguration -> [String] in
@@ -240,7 +240,9 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             openSearch: {
             },
             updateSearchQuery: { _ in
-            }
+            },
+            hideBackground: hideBackground,
+            hasSearch: hasSearch
         )
         
         // We are going to subscribe to the actual data when the view is loaded
@@ -256,7 +258,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 displaySearchWithPlaceholder: nil,
                 searchCategories: nil,
                 searchInitiallyHidden: true,
-                searchState: .empty(hasResults: false)
+                searchState: .empty(hasResults: false),
+                hideBackground: hideBackground
             )
         ))
         
@@ -429,6 +432,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             self.subject = subject
             self.gifInputInteraction = gifInputInteraction
             
+            let hideBackground = gifInputInteraction.hideBackground
+            
             let hasRecentGifs = context.engine.data.subscribe(TelegramEngine.EngineData.Item.OrderedLists.ListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs))
             |> map { savedGifs -> Bool in
                 return !savedGifs.isEmpty
@@ -461,10 +466,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: false,
                             loadMoreToken: nil,
-                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            displaySearchWithPlaceholder: gifInputInteraction.hasSearch ? presentationData.strings.Common_Search : nil,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .empty(hasResults: false)
+                            searchState: .empty(hasResults: false),
+                            hideBackground: hideBackground
                         )
                     )
                 }
@@ -494,10 +500,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: isLoading,
                             loadMoreToken: nil,
-                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            displaySearchWithPlaceholder: gifInputInteraction.hasSearch ? presentationData.strings.Common_Search : nil,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .empty(hasResults: false)
+                            searchState: .empty(hasResults: false),
+                            hideBackground: hideBackground
                         )
                     )
                 }
@@ -533,10 +540,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: isLoading,
                             loadMoreToken: loadMoreToken,
-                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            displaySearchWithPlaceholder: gifInputInteraction.hasSearch ? presentationData.strings.Common_Search : nil,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .active
+                            searchState: .active,
+                            hideBackground: gifInputInteraction.hideBackground
                         )
                     )
                 }
@@ -619,10 +627,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: isLoading,
                             loadMoreToken: loadMoreToken,
-                            displaySearchWithPlaceholder: presentationData.strings.Common_Search,
+                            displaySearchWithPlaceholder: gifInputInteraction.hasSearch ? presentationData.strings.Common_Search : nil,
                             searchCategories: searchCategories,
                             searchInitiallyHidden: true,
-                            searchState: .active
+                            searchState: .active,
+                            hideBackground: gifInputInteraction.hideBackground
                         )
                     )
                 }
@@ -1738,7 +1747,9 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 } else {
                     self.gifMode = .recent
                 }
-            }
+            },
+            hideBackground: currentInputData.gifs?.component.hideBackground ?? false,
+            hasSearch: currentInputData.gifs?.component.inputInteraction.hasSearch ?? false
         )
         
         self.switchToTextInput = { [weak self] in

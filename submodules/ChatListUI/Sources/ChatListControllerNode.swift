@@ -1214,7 +1214,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
                 }
                      
-                if case .compact = layout.metrics.widthClass, self.controller?.isPremium == true {
+                if case .compact = layout.metrics.widthClass, self.controller?.isStoryPostingAvailable == true {
                     let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
                     if selectedIndex <= 0 && translation.x > 0.0 {
                         transitionFraction = 0.0
