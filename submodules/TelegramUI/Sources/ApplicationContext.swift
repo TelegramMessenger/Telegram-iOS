@@ -851,47 +851,51 @@ final class AuthorizedApplicationContext {
         }))
     }
     
-    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false) {
-        var visiblePeerId: PeerId?
-        if let controller = self.rootController.topViewController as? ChatControllerImpl, controller.chatLocation.peerId == peerId, controller.chatLocation.threadId == threadId {
-            visiblePeerId = peerId
-        }
-        
-        if visiblePeerId != peerId || messageId != nil {
-            let isOutgoingMessage: Signal<Bool, NoError>
-            if let messageId {
-                let accountPeerId = self.context.account.peerId
-                isOutgoingMessage = self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
-                |> map { message -> Bool in
-                    if let message {
-                        return !message._asMessage().effectivelyIncoming(accountPeerId)
-                    } else {
-                        return false
-                    }
-                }
-            } else {
-                isOutgoingMessage = .single(false)
+    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?) {
+        if let _ = storyId {
+            self.rootController.chatListController?.openStories(peerId: peerId)
+        } else {
+            var visiblePeerId: PeerId?
+            if let controller = self.rootController.topViewController as? ChatControllerImpl, controller.chatLocation.peerId == peerId, controller.chatLocation.threadId == threadId {
+                visiblePeerId = peerId
             }
-            let _ = combineLatest(
-                queue: Queue.mainQueue(),
-                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
-                isOutgoingMessage
-            ).start(next: { peer, isOutgoingMessage in
-                guard let peer = peer else {
-                    return
-                }
-                
-                let chatLocation: NavigateToChatControllerParams.Location
-                if let threadId = threadId {
-                    chatLocation = .replyThread(ChatReplyThreadMessage(
-                        messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
-                    ))
+            
+            if visiblePeerId != peerId || messageId != nil {
+                let isOutgoingMessage: Signal<Bool, NoError>
+                if let messageId {
+                    let accountPeerId = self.context.account.peerId
+                    isOutgoingMessage = self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                    |> map { message -> Bool in
+                        if let message {
+                            return !message._asMessage().effectivelyIncoming(accountPeerId)
+                        } else {
+                            return false
+                        }
+                    }
                 } else {
-                    chatLocation = .peer(peer)
+                    isOutgoingMessage = .single(false)
                 }
-                
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) } : nil, activateInput: activateInput ? .text : nil))
-            })
+                let _ = combineLatest(
+                    queue: Queue.mainQueue(),
+                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+                    isOutgoingMessage
+                ).start(next: { peer, isOutgoingMessage in
+                    guard let peer = peer else {
+                        return
+                    }
+                    
+                    let chatLocation: NavigateToChatControllerParams.Location
+                    if let threadId = threadId {
+                        chatLocation = .replyThread(ChatReplyThreadMessage(
+                            messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                        ))
+                    } else {
+                        chatLocation = .peer(peer)
+                    }
+                    
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: isOutgoingMessage ? messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) } : nil, activateInput: activateInput ? .text : nil))
+                })
+            }
         }
     }
     
