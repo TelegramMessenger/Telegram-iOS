@@ -261,14 +261,20 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
             notificationSettings = globalSettings.groupChats
         case .channel:
             notificationSettings = globalSettings.channels
+        case .stories:
+            notificationSettings = globalSettings.privateChats
     }
 
-    entries.append(.enable(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, notificationSettings.enabled))
+    if case .stories = category {
+        entries.append(.enable(presentationData.theme, "Show All Notifications", notificationSettings.storiesMuted == nil || notificationSettings.storiesMuted == false))
+    } else {
+        entries.append(.enable(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, notificationSettings.enabled))
         
-    if notificationSettings.enabled || !notificationExceptions.isEmpty {
-        entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
-        entries.append(.previews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, notificationSettings.displayPreviews))
-        entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: filteredGlobalSound(notificationSettings.sound)), filteredGlobalSound(notificationSettings.sound)))
+        if notificationSettings.enabled || !notificationExceptions.isEmpty {
+            entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
+            entries.append(.previews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, notificationSettings.displayPreviews))
+            entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: filteredGlobalSound(notificationSettings.sound)), filteredGlobalSound(notificationSettings.sound)))
+        }
     }
     
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptions.uppercased()))
@@ -304,8 +310,16 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     for (_, value) in sortedExceptions {
         if !value.peer.isDeleted {
             var title: String
-            var muted = false
-            switch value.settings.muteState {
+            
+            if case .stories = category {
+                if value.settings.storiesMuted == true {
+                    title = presentationData.strings.Notification_Exceptions_AlwaysOff
+                } else {
+                    title = presentationData.strings.Notification_Exceptions_AlwaysOn
+                }
+            } else {
+                var muted = false
+                switch value.settings.muteState {
                 case let .muted(until):
                     if until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                         if until < Int32.max - 1 {
@@ -332,18 +346,18 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
                     title = presentationData.strings.Notification_Exceptions_AlwaysOn
                 default:
                     title = ""
-            }
-            if !muted {
-                switch value.settings.messageSound {
-                case .default:
-                    break
-                default:
-                    if !title.isEmpty {
-                        title.append(", ")
-                    }
-                    title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
                 }
-                switch value.settings.displayPreviews {
+                if !muted {
+                    switch value.settings.messageSound {
+                    case .default:
+                        break
+                    default:
+                        if !title.isEmpty {
+                            title.append(", ")
+                        }
+                        title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
+                    }
+                    switch value.settings.displayPreviews {
                     case .default:
                         break
                     default:
@@ -355,6 +369,7 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
                         } else {
                             title += presentationData.strings.Notification_Exceptions_PreviewAlwaysOff
                         }
+                    }
                 }
             }
             existingPeerIds.insert(value.peer.id)
@@ -374,6 +389,7 @@ public enum NotificationsPeerCategory {
     case privateChat
     case group
     case channel
+    case stories
 }
 
 private final class NotificationExceptionState : Equatable {
@@ -429,9 +445,9 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
     
     statePromise.set(NotificationExceptionState(mode: mode))
     
-    let notificationExceptions: Promise<(users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode)> = Promise()
+    let notificationExceptions: Promise<(users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode, stories: NotificationExceptionMode)> = Promise()
     
-    let updateNotificationExceptions:((users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode)) -> Void = { value in
+    let updateNotificationExceptions:((users: NotificationExceptionMode, groups: NotificationExceptionMode, channels: NotificationExceptionMode, stories: NotificationExceptionMode)) -> Void = { value in
         notificationExceptions.set(.single(value))
     }
     
@@ -526,6 +542,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             let canRemove = mode.peerIds.contains(peerId)
             
             let defaultSound: PeerMessageSound
+            var isStories = false
             switch mode {
             case .channels:
                 defaultSound = globalSettings.channels.sound._asMessageSound()
@@ -533,9 +550,12 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                 defaultSound = globalSettings.groupChats.sound._asMessageSound()
             case .users:
                 defaultSound = globalSettings.privateChats.sound._asMessageSound()
+            case .stories:
+                defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                isStories = true
             }
             
-            pushControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, threadId: nil, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { peerId, sound in
+            pushControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, threadId: nil, isStories: isStories, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { peerId, sound in
                 _ = updatePeerSound(peer.id, sound).start(next: { _ in
                     updateNotificationsDisposable.set(nil)
                     _ = combineLatest(updatePeerSound(peer.id, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
@@ -607,6 +627,8 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                     settings.groupChats.enabled = value
                 case .channel:
                     settings.channels.enabled = value
+                case .stories:
+                    settings.privateChats.storiesMuted = !value
             }
             return settings
         }).start()
@@ -620,6 +642,8 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                     settings.groupChats.displayPreviews = value
                 case .channel:
                     settings.channels.displayPreviews = value
+                case .stories:
+                    break
             }
             return settings
         }).start()
@@ -634,6 +658,8 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                         settings.groupChats.sound = value
                     case .channel:
                         settings.channels.sound = value
+                    case .stories:
+                        break
                 }
                 return settings
             }).start()
@@ -643,7 +669,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         var filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages, .removeSearchHeader]
         switch category {
-            case .privateChat:
+            case .privateChat, .stories:
                 filter.insert(.onlyPrivateChats)
                 filter.insert(.excludeSavedMessages)
                 filter.insert(.excludeSecretChats)
@@ -712,14 +738,16 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             })
         })
     }, updatedExceptionMode: { mode in
-        _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels) in
+        _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels, stories) in
             switch mode {
                 case .users:
-                    updateNotificationExceptions((mode, groups, channels))
+                    updateNotificationExceptions((mode, groups, channels, stories))
                 case .groups:
-                    updateNotificationExceptions((users, mode, channels))
+                    updateNotificationExceptions((users, mode, channels, stories))
                 case .channels:
-                    updateNotificationExceptions((users, groups, mode))
+                    updateNotificationExceptions((users, groups, mode, stories))
+                case .stories:
+                    updateNotificationExceptions((users, groups, channels, mode))
             }
         })
     })
@@ -780,6 +808,9 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
                 title = presentationData.strings.Notifications_GroupChatsTitle
             case .channel:
                 title = presentationData.strings.Notifications_ChannelsTitle
+            case .stories:
+                //TODO:localize
+                title = "Stories"
         }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: focusOnItemTag, initialScrollToItem: scrollToItem)

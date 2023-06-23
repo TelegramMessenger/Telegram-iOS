@@ -3743,6 +3743,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         } else {
                             return .optionalAction(performAction)
                         }
+                    } else if let item = self.item, let story = item.message.media.first(where: { $0 is TelegramMediaStory }) as? TelegramMediaStory {
+                        if let storyItem = item.message.associatedStories[story.storyId] {
+                            if storyItem.data.isEmpty {
+                                return .action({
+                                    item.controllerInteraction.navigateToStory(item.message, story.storyId)
+                                })
+                            } else {
+                                if let peer = item.message.peers[story.storyId.peerId] {
+                                    return .action({
+                                        item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                                    })
+                                }
+                            }
+                        }
                     }
                 }
                 loop: for contentNode in self.contentNodes {

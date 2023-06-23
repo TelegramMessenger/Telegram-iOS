@@ -509,66 +509,59 @@ public class ContactsController: ViewController {
         
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         
-        if let componentView = self.chatListHeaderView(), componentView.storyPeerAction == nil {
-            componentView.storyPeerAction = { [weak self] peer in
+        self.contactsNode.openStories = { [weak self] peer, sourceNode in
+            guard let self else {
+                return
+            }
+                
+            let storyContent = StoryContentContextImpl(context: self.context, isHidden: true, focusedPeerId: peer.id, singlePeer: true)
+            let _ = (storyContent.state
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self, weak sourceNode] storyContentState in
                 guard let self else {
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, isHidden: true, focusedPeerId: peer?.id, singlePeer: false)
-                let _ = (storyContent.state
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
-                    guard let self else {
-                        return
-                    }
-                    
-                    if let peer, peer.id == self.context.account.peerId, storyContentState.slice == nil {
-                        return
-                    }
-                    
-                    var transitionIn: StoryContainerScreen.TransitionIn?
-                    if let peer, let componentView = self.chatListHeaderView() {
-                        if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
-                            transitionIn = StoryContainerScreen.TransitionIn(
-                                sourceView: transitionView,
-                                sourceRect: transitionView.bounds,
-                                sourceCornerRadius: transitionView.bounds.height * 0.5,
-                                sourceIsAvatar: true
+                var transitionIn: StoryContainerScreen.TransitionIn?
+                if let itemNode = sourceNode as? ContactsPeerItemNode {
+                    transitionIn = StoryContainerScreen.TransitionIn(
+                        sourceView: itemNode.avatarNode.view,
+                        sourceRect: itemNode.avatarNode.view.bounds,
+                        sourceCornerRadius: itemNode.avatarNode.view.bounds.height * 0.5,
+                        sourceIsAvatar: true
+                    )
+                    itemNode.avatarNode.isHidden = true
+                }
+                
+                let storyContainerScreen = StoryContainerScreen(
+                    context: self.context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { _, _ in
+                        if let itemNode = sourceNode as? ContactsPeerItemNode {
+                            let rect = itemNode.avatarNode.view.convert(itemNode.avatarNode.view.bounds, to: itemNode.view)
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: itemNode.view,
+                                transitionView: nil,
+                                destinationRect: rect,
+                                destinationCornerRadius: rect.height * 0.5,
+                                destinationIsAvatar: true,
+                                completed: { [weak itemNode] in
+                                    guard let itemNode else {
+                                        return
+                                    }
+                                    itemNode.avatarNode.isHidden = false
+                                }
                             )
                         }
+                        return nil
                     }
-                    
-                    let storyContainerScreen = StoryContainerScreen(
-                        context: self.context,
-                        content: storyContent,
-                        transitionIn: transitionIn,
-                        transitionOut: { [weak self] peerId, _ in
-                            guard let self else {
-                                return nil
-                            }
-                            
-                            if let componentView = self.chatListHeaderView() {
-                                if let (transitionView, transitionContentView) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
-                                    return StoryContainerScreen.TransitionOut(
-                                        destinationView: transitionView,
-                                        transitionView: transitionContentView,
-                                        destinationRect: transitionView.bounds,
-                                        destinationCornerRadius: transitionView.bounds.height * 0.5,
-                                        destinationIsAvatar: true,
-                                        completed: {}
-                                    )
-                                }
-                            }
-                            
-                            return nil
-                        }
-                    )
-                    self.push(storyContainerScreen)
-                })
-            }
+                )
+                self.push(storyContainerScreen)
+            })
+        }
             
-            componentView.storyContextPeerAction = { [weak self] sourceNode, gesture, peer in
+                /*componentView.storyContextPeerAction = { [weak self] sourceNode, gesture, peer in
                 guard let self else {
                     return
                 }
@@ -627,7 +620,7 @@ public class ContactsController: ViewController {
                 let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: self, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
                 self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
             }
-        }
+        }*/
     }
     
     @objc private func sortPressed() {

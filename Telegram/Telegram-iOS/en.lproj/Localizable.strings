@@ -9366,6 +9366,7 @@ Sorry for the inconvenience.";
 "Paint.Flip" = "Flip";
 
 "Message.ForwardedStoryShort" = "Forwarded Story\nFrom: %@";
+"Message.ForwardedExpiredStoryShort" = "Expired Story\nFrom: %@";
 
 "Conversation.StoryForwardTooltip.Chat.One" = "Story forwarded to **%@**";
 "Conversation.StoryForwardTooltip.TwoChats.One" = "Story forwarded to to **%@** and **%@**";

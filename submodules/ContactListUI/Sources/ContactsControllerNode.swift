@@ -63,6 +63,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var openPeopleNearby: (() -> Void)?
     var openInvite: (() -> Void)?
     var openQrScan: (() -> Void)?
+    var openStories: ((EnginePeer, ASDisplayNode) -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -113,10 +114,10 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
         }
         
-        var contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
+        var contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?
         
-        self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true, contextAction: { peer, node, gesture, location in
-            contextAction?(peer, node, gesture, location)
+        self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true, contextAction: { peer, node, gesture, location, isStories in
+            contextAction?(peer, node, gesture, location, isStories)
         })
         
         super.init()
@@ -159,8 +160,8 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
         }
         
-        contextAction = { [weak self] peer, node, gesture, location in
-            self?.contextAction(peer: peer, node: node, gesture: gesture, location: location)
+        contextAction = { [weak self] peer, node, gesture, location, isStories in
+            self?.contextAction(peer: peer, node: node, gesture: gesture, location: location, isStories: isStories)
         }
         
         self.contactListNode.contentOffsetChanged = { [weak self] offset in
@@ -238,29 +239,18 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 return
             }
             
-            var wasEmpty = true
-            if let storySubscriptions = self.storySubscriptions, !storySubscriptions.items.isEmpty {
-                wasEmpty = false
-            }
             self.storySubscriptions = storySubscriptions
-            let isEmpty = storySubscriptions.items.isEmpty
-            
-            let transition: ContainedViewLayoutTransition
-            if self.didAppear {
-                transition = .animated(duration: 0.4, curve: .spring)
-            } else {
-                transition = .immediate
-            }
-            
-            let _ = wasEmpty
-            let _ = isEmpty
-            
-            //self.chatListDisplayNode.temporaryContentOffsetChangeTransition = transition
-            self.controller?.requestLayout(transition: transition)
-            //self.chatListDisplayNode.temporaryContentOffsetChangeTransition = nil
+            self.contactListNode.storySubscriptions.set(.single(storySubscriptions))
             
             self.storiesReady.set(.single(true))
         })
+        
+        self.contactListNode.openStories = { [weak self] peer, sourceNode in
+            guard let self else {
+                return
+            }
+            self.openStories?(peer, sourceNode)
+        }
         
         self.isPremiumDisposable = (self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
         |> map {
@@ -419,7 +409,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 primaryContent: primaryContent,
                 secondaryContent: nil,
                 secondaryTransition: 0.0,
-                storySubscriptions: self.storySubscriptions,
+                storySubscriptions: nil,
                 storiesIncludeHidden: true,
                 uploadProgress: nil,
                 tabsNode: tabsNode,
@@ -505,13 +495,13 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    private func contextAction(peer: EnginePeer, node: ASDisplayNode?, gesture: ContextGesture?, location: CGPoint?) {
+    private func contextAction(peer: EnginePeer, node: ASDisplayNode?, gesture: ContextGesture?, location: CGPoint?, isStories: Bool) {
         guard let contactsController = self.controller else {
             return
         }
         let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
         chatController.canReadHistory.set(false)
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController, isStories: isStories) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         contactsController.presentInGlobalOverlay(contextController)
     }
     
@@ -532,7 +522,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 requestOpenPeerFromSearch(peer)
             }
         }, contextAction: { [weak self] peer, node, gesture, location in
-            self?.contextAction(peer: peer, node: node, gesture: gesture, location: location)
+            self?.contextAction(peer: peer, node: node, gesture: gesture, location: location, isStories: false)
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

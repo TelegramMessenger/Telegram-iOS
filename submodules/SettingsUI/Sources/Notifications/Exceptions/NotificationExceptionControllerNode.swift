@@ -192,6 +192,11 @@ private func notificationsExceptionEntries(presentationData: PresentationData, n
                     } else {
                         continue
                     }
+                case .stories:
+                    if case .user = peer {
+                    } else {
+                        continue
+                    }
             }
             if existingPeerIds.contains(peer.id) {
                 continue
@@ -311,6 +316,8 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                         icon = PresentationResourcesItemList.createGroupIcon(theme)
                     case .channels:
                         icon = PresentationResourcesItemList.addChannelIcon(theme)
+                    case .stories:
+                        icon = PresentationResourcesItemList.addPersonIcon(theme)
                 }
                 return ItemListPeerActionItem(presentationData: presentationData, icon: icon, title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
                     arguments.selectPeer()
@@ -617,6 +624,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 
                 let canRemove = mode.peerIds.contains(peerId)
                 
+                var isStories = false
                 let defaultSound: PeerMessageSound
                 switch mode {
                 case .channels:
@@ -625,9 +633,12 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     defaultSound = globalSettings.groupChats.sound._asMessageSound()
                 case .users:
                     defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                case .stories:
+                    defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                    isStories = true
                 }
                 
-                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, threadId: nil, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { peerId, sound in
+                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer, threadId: nil, isStories: isStories, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peer.id, sound).start(next: { _ in
                         updateNotificationsDisposable.set(nil)
                         _ = combineLatest(updatePeerSound(peer.id, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
@@ -698,7 +709,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             switch mode {
                 case .groups:
                     filter.insert(.onlyGroups)
-                case .users:
+                case .users, .stories:
                     filter.insert(.onlyPrivateChats)
                     filter.insert(.excludeSavedMessages)
                     filter.insert(.excludeSecretChats)

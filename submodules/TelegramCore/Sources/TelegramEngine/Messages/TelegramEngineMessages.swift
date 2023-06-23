@@ -673,6 +673,7 @@ public extension TelegramEngine {
                         peer: EnginePeer(accountPeer),
                         hasUnseen: false,
                         storyCount: 0,
+                        unseenCount: 0,
                         lastTimestamp: 0
                     )
                     
@@ -685,14 +686,22 @@ public extension TelegramEngine {
                             if let lastEntry = itemsView.items.last?.value.get(Stories.StoredItem.self) {
                                 let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
                                 var hasUnseen = false
+                                var unseenCount = 0
                                 if let peerState = peerState {
                                     hasUnseen = peerState.maxReadId < lastEntry.id
+                                    
+                                    for item in itemsView.items {
+                                        if item.id > peerState.maxReadId {
+                                            unseenCount += 1
+                                        }
+                                    }
                                 }
                                 
                                 let item = EngineStorySubscriptions.Item(
                                     peer: EnginePeer(accountPeer),
                                     hasUnseen: hasUnseen,
                                     storyCount: itemsView.items.count,
+                                    unseenCount: unseenCount,
                                     lastTimestamp: lastEntry.timestamp
                                 )
                                 accountItem = item
@@ -719,14 +728,22 @@ public extension TelegramEngine {
                         
                         let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
                         var hasUnseen = false
+                        var unseenCount = 0
                         if let peerState = peerState {
                             hasUnseen = peerState.maxReadId < lastEntry.id
+                            
+                            for item in itemsView.items {
+                                if item.id > peerState.maxReadId {
+                                    unseenCount += 1
+                                }
+                            }
                         }
                         
                         let item = EngineStorySubscriptions.Item(
                             peer: EnginePeer(peer),
                             hasUnseen: hasUnseen,
                             storyCount: itemsView.items.count,
+                            unseenCount: unseenCount,
                             lastTimestamp: lastEntry.timestamp
                         )
                         
@@ -740,6 +757,13 @@ public extension TelegramEngine {
                     items.sort(by: { lhs, rhs in
                         if lhs.hasUnseen != rhs.hasUnseen {
                             if lhs.hasUnseen {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        if lhs.peer.isService != rhs.peer.isService {
+                            if lhs.peer.isService {
                                 return true
                             } else {
                                 return false

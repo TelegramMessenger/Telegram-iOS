@@ -433,6 +433,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         peer: peer,
                         hasUnseen: state.hasUnseen,
                         storyCount: state.items.count,
+                        unseenCount: 0,
                         lastTimestamp: state.items.last?.timestamp ?? 0
                     )],
                     hasMoreToken: nil

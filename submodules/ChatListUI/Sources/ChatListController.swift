@@ -1754,7 +1754,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 var autodownloadEnabled = true
-                if !shouldDownloadMediaAutomatically(settings: automaticMediaDownloadSettings, peerType: .contact, networkType: automaticDownloadNetworkType, authorPeerId: nil, contactsPeerIds: [], media: nil) {
+                if !shouldDownloadMediaAutomatically(settings: automaticMediaDownloadSettings, peerType: .contact, networkType: automaticDownloadNetworkType, authorPeerId: nil, contactsPeerIds: [], media: nil, isStory: true) {
                     autodownloadEnabled = false
                 }
                 
@@ -2407,6 +2407,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let peer else {
                     self.chatListDisplayNode.scrollToStories(animated: true)
                     return
+                }
+                
+                if peer.id == self.context.account.peerId {
+                    if let storySubscriptions = self.storySubscriptions {
+                        var openCamera = false
+                        if let accountItem = storySubscriptions.accountItem {
+                            openCamera = accountItem.storyCount == 0
+                        } else {
+                            openCamera = true
+                        }
+                        
+                        if openCamera {
+                            self.openStoryCamera()
+                            return
+                        }
+                    }
                 }
                 
                 let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peer.id, singlePeer: false)

@@ -1294,7 +1294,8 @@ public final class StoryItemSetContainerComponent: Component {
                     timeoutSelected: false,
                     displayGradient: component.inputHeight != 0.0 && component.metrics.widthClass != .regular,
                     bottomInset: component.inputHeight != 0.0 ? 0.0 : bottomContentInset,
-                    hideKeyboard: false
+                    hideKeyboard: false,
+                    disabledPlaceholder: component.slice.peer.isService ? "You can't reply to this story" : nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)

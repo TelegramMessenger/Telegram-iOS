@@ -4514,6 +4514,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if let story = message.associatedStories[storyId], story.data.isEmpty {
+                //TODO:localize
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: "This story is no longer available", timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                 return
             }
             
@@ -4696,7 +4698,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
             self.avatarNode = avatarNode
             
-            avatarNode.updateStoryView(transition: .immediate, theme: self.presentationData.theme)
+            //avatarNode.updateStoryView(transition: .immediate, theme: self.presentationData.theme)
         case .feed:
             chatInfoButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
         }

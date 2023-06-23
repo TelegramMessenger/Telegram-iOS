@@ -2350,6 +2350,10 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func shouldStopScrolling(listView: ListView, velocity: CGFloat, isPrimary: Bool) -> Bool {
+        if abs(velocity) > 200.0 {
+            return false
+        }
+        
         if !isPrimary || self.inlineStackContainerNode == nil {
         } else {
             return false

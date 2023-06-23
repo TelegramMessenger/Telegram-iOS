@@ -979,7 +979,8 @@ final class MediaEditorScreenComponent: Component {
                     timeoutSelected: timeoutSelected,
                     displayGradient: false,
                     bottomInset: 0.0,
-                    hideKeyboard: self.currentInputMode == .emoji
+                    hideKeyboard: self.currentInputMode == .emoji,
+                    disabledPlaceholder: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)
