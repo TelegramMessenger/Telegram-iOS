@@ -25,6 +25,7 @@ final class ShareWithPeersScreenComponent: Component {
     let context: AccountContext
     let stateContext: ShareWithPeersScreen.StateContext
     let initialPrivacy: EngineStoryPrivacy
+    let timeout: Int
     let categoryItems: [CategoryItem]
     let completion: (EngineStoryPrivacy) -> Void
     let editCategory: (EngineStoryPrivacy) -> Void
@@ -34,6 +35,7 @@ final class ShareWithPeersScreenComponent: Component {
         context: AccountContext,
         stateContext: ShareWithPeersScreen.StateContext,
         initialPrivacy: EngineStoryPrivacy,
+        timeout: Int,
         categoryItems: [CategoryItem],
         completion: @escaping (EngineStoryPrivacy) -> Void,
         editCategory: @escaping (EngineStoryPrivacy) -> Void,
@@ -42,6 +44,7 @@ final class ShareWithPeersScreenComponent: Component {
         self.context = context
         self.stateContext = stateContext
         self.initialPrivacy = initialPrivacy
+        self.timeout = timeout
         self.categoryItems = categoryItems
         self.completion = completion
         self.editCategory = editCategory
@@ -56,6 +59,9 @@ final class ShareWithPeersScreenComponent: Component {
             return false
         }
         if lhs.initialPrivacy != rhs.initialPrivacy {
+            return false
+        }
+        if lhs.timeout != rhs.timeout {
             return false
         }
         if lhs.categoryItems != rhs.categoryItems {
@@ -237,6 +243,7 @@ final class ShareWithPeersScreenComponent: Component {
         
         private var selectedPeers: [EnginePeer.Id] = []
         private var selectedCategories = Set<CategoryId>()
+        private var selectedPeersByCategory: [CategoryId: [EnginePeer.Id]] = [:]
         
         private var component: ShareWithPeersScreenComponent?
         private weak var state: EmptyComponentState?
@@ -447,7 +454,8 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let sectionTitle: String
                         if section.id == 0 {
-                            sectionTitle = "WHO CAN VIEW FOR 24 HOURS"
+                            let hours = component.timeout / 3600
+                            sectionTitle = "WHO CAN VIEW FOR \(hours) HOURS"
                         } else {
                             if case .chats = component.stateContext.subject {
                                 sectionTitle = "CHATS"
@@ -522,8 +530,14 @@ final class ShareWithPeersScreenComponent: Component {
                                     if self.selectedCategories.contains(categoryId) {
                                     } else {
                                         self.selectedPeers = []
+                                        
                                         self.selectedCategories.removeAll()
                                         self.selectedCategories.insert(categoryId)
+                                        
+                                        if self.selectedPeers.isEmpty && categoryId == .selectedContacts {
+                                            component.editCategory(EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []))
+                                            controller.dismiss()
+                                        }
                                     }
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
                                 },
@@ -1233,7 +1247,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         self.initialPeerIds = Set(selectedPeers.map { $0.id })
                     } else {
                         for peer in contactList.peers {
-                            if case let .user(user) = peer, initialPeerIds.contains(user.id) {
+                            if case let .user(user) = peer, initialPeerIds.contains(user.id), !user.isDeleted {
                                 selectedPeers.append(peer)
                             }
                         }
@@ -1249,7 +1263,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     })
                     
                     var peers: [EnginePeer] = []
-                    peers = contactList.peers.filter { !self.initialPeerIds.contains($0.id) && $0.id != context.account.peerId }.sorted(by: { lhs, rhs in
+                    peers = contactList.peers.filter { !self.initialPeerIds.contains($0.id) && $0.id != context.account.peerId && !$0.isDeleted }.sorted(by: { lhs, rhs in
                         let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
                         if result == .orderedSame {
                             return lhs.id < rhs.id
@@ -1297,7 +1311,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void, editCategory: @escaping (EngineStoryPrivacy) -> Void, secondaryAction: @escaping () -> Void = {}) {
+    public init(context: AccountContext, initialPrivacy: EngineStoryPrivacy, timeout: Int, stateContext: StateContext, completion: @escaping (EngineStoryPrivacy) -> Void, editCategory: @escaping (EngineStoryPrivacy) -> Void, secondaryAction: @escaping () -> Void = {}) {
         self.context = context
         
         var categoryItems: [ShareWithPeersScreenComponent.CategoryItem] = []
@@ -1309,13 +1323,23 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 iconColor: .blue,
                 actionTitle: nil
             ))
+            
+            var contactsSubtitle = "exclude people"
+            if initialPrivacy.base == .contacts, initialPrivacy.additionallyIncludePeers.count > 0 {
+                if initialPrivacy.additionallyIncludePeers.count == 1 {
+                    contactsSubtitle = "except 1 person"
+                } else {
+                    contactsSubtitle = "except \(initialPrivacy.additionallyIncludePeers.count) people"
+                }
+            }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .contacts,
                 title: "Contacts",
                 icon: "Chat List/Tabs/IconContacts",
                 iconColor: .yellow,
-                actionTitle: "exclude people"
+                actionTitle: contactsSubtitle
             ))
+            
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .closeFriends,
                 title: "Close Friends",
@@ -1323,12 +1347,21 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 iconColor: .green,
                 actionTitle: "edit list"
             ))
+            
+            var selectedContactsSubtitle = "choose"
+            if initialPrivacy.base == .nobody, initialPrivacy.additionallyIncludePeers.count > 0 {
+                if initialPrivacy.additionallyIncludePeers.count == 1 {
+                    selectedContactsSubtitle = "1 person"
+                } else {
+                    selectedContactsSubtitle = "\(initialPrivacy.additionallyIncludePeers.count) people"
+                }
+            }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .selectedContacts,
                 title: "Selected Contacts",
                 icon: "Chat List/Filters/Group",
                 iconColor: .violet,
-                actionTitle: "edit list"
+                actionTitle: selectedContactsSubtitle
             ))
         }
         
@@ -1336,6 +1369,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             context: context,
             stateContext: stateContext,
             initialPrivacy: initialPrivacy,
+            timeout: timeout,
             categoryItems: categoryItems,
             completion: completion,
             editCategory: editCategory,

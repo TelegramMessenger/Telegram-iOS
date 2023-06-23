@@ -88,6 +88,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         let presentGlobalOverlayController: (ViewController, Any?) -> Void
         let getNavigationController: () -> NavigationController?
         let requestLayout: (ContainedViewLayoutTransition) -> Void
+        public var forceTheme: PresentationTheme?
         
         public init(
             sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
@@ -1333,6 +1334,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     interaction.getNavigationController()?.pushViewController(FeaturedStickersScreen(
                                         context: context,
                                         highlightedPackId: featuredStickerPack.info.id,
+                                        forceTheme: interaction.forceTheme,
                                         sendSticker: { [weak interaction] fileReference, sourceNode, sourceRect in
                                             guard let interaction else {
                                                 return false
@@ -1369,7 +1371,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let interaction else {
                     return
                 }
-                let controller = context.sharedContext.makeInstalledStickerPacksController(context: context, mode: .modal)
+                let controller = context.sharedContext.makeInstalledStickerPacksController(context: context, mode: .modal, forceTheme: interaction.forceTheme)
                 controller.navigationPresentation = .modal
                 interaction.getNavigationController()?.pushViewController(controller)
             },
@@ -1381,6 +1383,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 interaction.getNavigationController()?.pushViewController(FeaturedStickersScreen(
                     context: context,
                     highlightedPackId: nil,
+                    forceTheme: interaction.forceTheme,
                     sendSticker: { [weak interaction] fileReference, sourceNode, sourceRect in
                         guard let interaction else {
                             return false

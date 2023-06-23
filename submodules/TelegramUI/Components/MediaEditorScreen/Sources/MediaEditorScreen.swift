@@ -417,22 +417,22 @@ final class MediaEditorScreenComponent: Component {
                 }
                 
                 if let view = self.saveButton.view {
-                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 }
                 
                 if let view = self.muteButton.view {
-                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 }
                 
                 if let view = self.settingsButton.view {
-                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 }
                 
                 if let view = self.privacyButton.view {
-                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                 }
                 
@@ -602,6 +602,15 @@ final class MediaEditorScreenComponent: Component {
             }
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
+            
+            var isEditingStory = false
+            if let controller = environment.controller() as? MediaEditorScreen {
+                isEditingStory = controller.isEditingStory
+                if self.component == nil {
+                    self.inputPanelExternalState.initialText = controller.initialCaption
+                }
+            }
+        
             
             self.component = component
             self.state = state
@@ -951,7 +960,7 @@ final class MediaEditorScreenComponent: Component {
                             self.state?.updated(transition: .immediate)
                         }
                     },
-                    timeoutAction: { [weak self] view in
+                    timeoutAction: isEditingStory ? nil : { [weak self] view in
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
@@ -1052,7 +1061,8 @@ final class MediaEditorScreenComponent: Component {
                 transition.setAlpha(view: inputPanelView, alpha: isEditingTextEntity || component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
             
-            let privacyText: String
+            let additionalPeersCount = component.privacy.privacy.additionallyIncludePeers.count
+            var privacyText: String
             switch component.privacy.privacy.base {
             case .everyone:
                 privacyText = "Everyone"
@@ -1060,8 +1070,16 @@ final class MediaEditorScreenComponent: Component {
                 privacyText = "Close Friends"
             case .contacts:
                 privacyText = "Contacts"
+                if additionalPeersCount > 0 {
+                    privacyText += " (-\(additionalPeersCount))"
+                }
             case .nobody:
                 privacyText = "Selected Contacts"
+                if additionalPeersCount > 0 {
+                    privacyText += " (\(additionalPeersCount))"
+                } else {
+                    privacyText = "Only You"
+                }
             }
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool)
@@ -1550,6 +1568,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var isDismissed = false
         private var isDismissBySwipeSuppressed = false
         
+        fileprivate var hasAnyChanges = false
+        
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
         
@@ -1699,7 +1719,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let isSavingAvailable: Bool
             switch subject {
             case .image, .video:
-                isSavingAvailable = true
+                isSavingAvailable = !controller.isEditingStory
             default:
                 isSavingAvailable = false
             }
@@ -1777,6 +1797,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if !isSavingAvailable && controller.previousSavedValues == nil {
                         controller.previousSavedValues = values
                     } else {
+                        self.hasAnyChanges = true
+                        
                         controller.isSavingAvailable = true
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
@@ -2259,11 +2281,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     completion()
                 })
             } else {
-                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, removeOnCompletion: false)
-                self.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                self.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: self.bounds.height), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
-                    completion()
-                })
+                if controller.isEditingStory {
+                    self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, removeOnCompletion: false, completion: { _ in
+                        completion()
+                    })
+                } else {
+                    self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, removeOnCompletion: false)
+                    self.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    self.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: self.bounds.height), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
+                        completion()
+                    })
+                }
             }
         }
         
@@ -2567,6 +2595,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                                 let stickerEntity = DrawingStickerEntity(content: .file(file))
                                                 self.interaction?.insertEntity(stickerEntity)
                                                 
+                                                self.hasAnyChanges = true
                                                 self.controller?.isSavingAvailable = true
                                                 self.controller?.requestLayout(transition: .immediate)
                                             }
@@ -2586,6 +2615,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, animation: .none, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
                                     self.interaction?.insertEntity(textEntity)
                                     
+                                    self.hasAnyChanges = true
                                     self.controller?.isSavingAvailable = true
                                     self.controller?.requestLayout(transition: .immediate)
                                     return
@@ -2818,30 +2848,42 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             case videoFile(path: String)
             case asset(localIdentifier: String)
         }
-        case image(image: UIImage, dimensions: PixelDimensions, caption: NSAttributedString?)
-        case video(video: VideoResult, coverImage: UIImage?, values: MediaEditorValues, duration: Double, dimensions: PixelDimensions, caption: NSAttributedString?)
+        case image(image: UIImage, dimensions: PixelDimensions)
+        case video(video: VideoResult, coverImage: UIImage?, values: MediaEditorValues, duration: Double, dimensions: PixelDimensions)
     }
     
     fileprivate let context: AccountContext
     fileprivate let subject: Signal<Subject?, NoError>
+    fileprivate let isEditingStory: Bool
+    
+    fileprivate let initialCaption: NSAttributedString?
+    fileprivate let initialPrivacy: EngineStoryPrivacy?
+    
     fileprivate let transitionIn: TransitionIn?
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
         
     public var cancelled: (Bool) -> Void = { _ in }
-    public var completion: (Int64, MediaEditorScreen.Result, MediaEditorResultPrivacy, @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _ in }
+    public var completion: (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy , @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _ in }
     public var dismissed: () -> Void = { }
+    public var willDismiss: () -> Void = { }
     
     private let hapticFeedback = HapticFeedback()
     
     public init(
         context: AccountContext,
         subject: Signal<Subject?, NoError>,
+        isEditing: Bool,
+        initialCaption: NSAttributedString? = nil,
+        initialPrivacy: EngineStoryPrivacy? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
-        completion: @escaping (Int64, MediaEditorScreen.Result, MediaEditorResultPrivacy, @escaping (@escaping () -> Void) -> Void) -> Void
+        completion: @escaping (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy, @escaping (@escaping () -> Void) -> Void) -> Void
     ) {
         self.context = context
         self.subject = subject
+        self.isEditingStory = isEditing
+        self.initialCaption = initialCaption
+        self.initialPrivacy = initialPrivacy
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
         self.completion = completion
@@ -2851,6 +2893,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         super.init(navigationBarPresentationData: nil)
+        
+        if let initialPrivacy {
+            self.state.privacy = MediaEditorResultPrivacy(privacy: initialPrivacy, timeout: 86400, archive: false)
+        }
         
         self.automaticallyControlPresentationContextLayout = false
         
@@ -2895,6 +2941,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 ShareWithPeersScreen(
                     context: self.context,
                     initialPrivacy: initialPrivacy,
+                    timeout: timeout,
                     stateContext: stateContext,
                     completion: { [weak self] privacy in
                         guard let self else {
@@ -2929,6 +2976,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 ShareWithPeersScreen(
                     context: self.context,
                     initialPrivacy: privacy,
+                    timeout: 0,
                     stateContext: stateContext,
                     completion: { [weak self] result in
                         guard let self else {
@@ -2936,8 +2984,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                         if case .closeFriends = privacy.base {
                             let _ = self.context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
+                            completion(EngineStoryPrivacy(base: .closeFriends, additionallyIncludePeers: []))
+                        } else {
+                            completion(result)
                         }
-                        completion(result)
                     },
                     editCategory: { _ in }
                 )
@@ -3052,6 +3102,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     func isEligibleForDraft() -> Bool {
+        if self.isEditingStory {
+            return false
+        }
         guard let mediaEditor = self.node.mediaEditor else {
             return false
         }
@@ -3124,6 +3177,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.node.entitiesView.invalidate()
         
         self.cancelled(saveDraft)
+        
+        self.willDismiss()
         
         self.node.animateOut(finished: false, saveDraft: saveDraft, completion: { [weak self] in
             self?.dismiss()
@@ -3236,13 +3291,26 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
         let caption = self.getCaption()
-        
         let randomId: Int64
         if case let .draft(_, id) = subject, let id {
             randomId = id
         } else {
             randomId = Int64.random(in: .min ... .max)
         }
+        
+        if self.isEditingStory && !self.node.hasAnyChanges {
+            self.completion(randomId, nil, caption, self.state.privacy, { [weak self] finished in
+                self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+                    self?.dismiss()
+                    Queue.mainQueue().justDispatch {
+                        finished()
+                    }
+                })
+            })
+            
+            return
+        }
+        
         if mediaEditor.resultIsVideo {
             var firstFrame: Signal<UIImage?, NoError>
             let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
@@ -3358,7 +3426,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     makeEditorImageComposition(account: self.context.account, inputImage: image ?? UIImage(), dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] coverImage in
                         if let self {
-                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions, caption: caption), self.state.privacy, { [weak self] finished in
+                            self.completion(randomId, .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), caption, self.state.privacy, { [weak self] finished in
                                 self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                     self?.dismiss()
                                     Queue.mainQueue().justDispatch {
@@ -3380,7 +3448,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 makeEditorImageComposition(account: self.context.account, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, completion: { [weak self] resultImage in
                     if let self, let resultImage {
-                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size), caption: caption), self.state.privacy, { [weak self] finished in
+                        self.completion(randomId, .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), caption, self.state.privacy, { [weak self] finished in
                             self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                                 self?.dismiss()
                                 Queue.mainQueue().justDispatch {

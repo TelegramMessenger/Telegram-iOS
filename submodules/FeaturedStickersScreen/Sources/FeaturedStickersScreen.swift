@@ -370,6 +370,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         
         let highlightedPackId = controller.highlightedPackId
         
+        let forceTheme = controller.forceTheme
         self.disposable = (combineLatest(queue: .mainQueue(),
             mappedFeatured,
             self.additionalPacks.get(),
@@ -377,6 +378,11 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             context.sharedContext.presentationData
         )
         |> map { featuredEntries, additionalPacks, view, presentationData -> FeaturedTransition in
+            var presentationData = presentationData
+            if let forceTheme {
+                presentationData = presentationData.withUpdated(theme: forceTheme)
+            }
+            
             var installedPacks = Set<ItemCollectionId>()
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
                 if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
@@ -801,6 +807,7 @@ public final class FeaturedStickersScreen: ViewController {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    fileprivate let forceTheme: PresentationTheme?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -809,12 +816,18 @@ public final class FeaturedStickersScreen: ViewController {
     
     fileprivate var searchNavigationNode: SearchNavigationContentNode?
     
-    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, forceTheme: PresentationTheme? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
         self.context = context
         self.highlightedPackId = highlightedPackId
         self.sendSticker = sendSticker
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        
+        self.presentationData = presentationData
+        self.forceTheme = forceTheme
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -833,6 +846,11 @@ public final class FeaturedStickersScreen: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previous = strongSelf.presentationData
+                
+                var presentationData = presentationData
+                if let forceTheme {
+                    presentationData = presentationData.withUpdated(theme: forceTheme)
+                }
                 strongSelf.presentationData = presentationData
                 
                 if previous.theme !== presentationData.theme || previous.strings !== presentationData.strings {

@@ -2576,10 +2576,42 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return
                             }
                             let _ = self.context.engine.peers.togglePeerStoriesMuted(peerId: peer.id).start()
+                            
+                            let iconColor = UIColor.white
+                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                            if isMuted {
+                                self.present(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                                        "Middle.Group 1.Fill 1": iconColor,
+                                        "Top.Group 1.Fill 1": iconColor,
+                                        "Bottom.Group 1.Fill 1": iconColor,
+                                        "EXAMPLE.Group 1.Fill 1": iconColor,
+                                        "Line.Group 1.Stroke 1": iconColor
+                                ], title: nil, text: "You will now get a notification whenever **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** posts a story.", customUndoText: nil, timeout: nil),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { _ in return false }
+                                ), in: .current)
+                            } else {
+                                self.present(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                        "Middle.Group 1.Fill 1": iconColor,
+                                        "Top.Group 1.Fill 1": iconColor,
+                                        "Bottom.Group 1.Fill 1": iconColor,
+                                        "EXAMPLE.Group 1.Fill 1": iconColor,
+                                        "Line.Group 1.Stroke 1": iconColor
+                                    ], title: nil, text: "You will no longer receive a notification when **\(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** posts a story.", customUndoText: nil, timeout: nil),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    action: { _ in return false }
+                                ), in: .current)
+                            }
                         })))
                         
                         items.append(.action(ContextMenuActionItem(text: "Hide", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MoveToContacts"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
                             
@@ -2587,6 +2619,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return
                             }
                             self.context.engine.peers.updatePeerStoriesHidden(id: peer.id, isHidden: true)
+                            
+                            
                         })))
                     }
                     

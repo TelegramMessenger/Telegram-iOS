@@ -975,7 +975,7 @@ public extension TelegramEngine {
             _internal_cancelStoryUpload(account: self.account, stableId: stableId)
         }
         
-        public func editStory(media: EngineStoryInputMedia?, id: Int32, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
+        public func editStory(media: EngineStoryInputMedia?, id: Int32, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
             return _internal_editStory(account: self.account, media: media, id: id, text: text, entities: entities, privacy: privacy)
         }
         

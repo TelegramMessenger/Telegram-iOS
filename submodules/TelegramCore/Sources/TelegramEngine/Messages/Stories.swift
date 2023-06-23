@@ -621,7 +621,11 @@ private func apiInputPrivacyRules(privacy: EngineStoryPrivacy, transaction: Tran
     case .closeFriends:
         privacyRules = [.inputPrivacyValueAllowCloseFriends]
     case .nobody:
-        privacyRules = [.inputPrivacyValueDisallowAll]
+        if privacy.additionallyIncludePeers.isEmpty {
+            privacyRules = [.inputPrivacyValueDisallowAll]
+        } else {
+            privacyRules = []
+        }
     }
     var privacyUsers: [Api.InputUser] = []
     var privacyChats: [Int64] = []
@@ -845,7 +849,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
     }
 }
 
-func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: Int32, text: String, entities: [MessageTextEntity], privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
+func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: Int32, text: String?, entities: [MessageTextEntity]?, privacy: EngineStoryPrivacy?) -> Signal<StoryUploadResult, NoError> {
     let contentSignal: Signal<PendingMessageUploadedContentResult?, NoError>
     let originalMedia: Media?
     if let media = media {
@@ -877,13 +881,11 @@ func _internal_editStory(account: Account, media: EngineStoryInputMedia?, id: In
             if let _ = inputMedia {
                 flags |= 1 << 0
             }
-            if !text.isEmpty {
+            if let text = text  {
                 flags |= 1 << 1
                 apiCaption = text
                 
-                if !entities.isEmpty {
-                    flags |= 1 << 1
-                    
+                if let entities = entities {
                     var associatedPeers: [PeerId: Peer] = [:]
                     for entity in entities {
                         for entityPeerId in entity.associatedPeerIds {
@@ -1193,6 +1195,10 @@ extension Stories.StoredItem {
                         case .privacyValueDisallowAll:
                             base = .nobody
                         case let .privacyValueAllowUsers(users):
+                            for id in users {
+                                additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
+                            }
+                        case let .privacyValueDisallowUsers(users):
                             for id in users {
                                 additionalPeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)))
                             }

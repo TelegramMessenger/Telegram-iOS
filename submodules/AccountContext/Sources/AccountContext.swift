@@ -899,7 +899,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
     
-    func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController
+    func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, forceTheme: PresentationTheme?) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
