@@ -1083,3 +1083,67 @@ public final class PeerExpiringStoryListContext {
         })
     }
 }
+
+public func _internal_pollPeerStories(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(peerId).flatMap(apiInputUser)
+    }
+    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+        guard let inputUser = inputUser else {
+            return .complete()
+        }
+        return network.request(Api.functions.stories.getUserStories(userId: inputUser))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.stories.UserStories?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Never, NoError> in
+            return postbox.transaction { transaction -> Void in
+                var updatedPeerEntries: [StoryItemsTableEntry] = []
+                updatedPeerEntries.removeAll()
+                
+                if let result = result, case let .userStories(stories, users) = result {
+                    var peers: [Peer] = []
+                    var peerPresences: [PeerId: Api.User] = [:]
+                    
+                    for user in users {
+                        let telegramUser = TelegramUser(user: user)
+                        peers.append(telegramUser)
+                        peerPresences[telegramUser.id] = user
+                    }
+                    
+                    switch stories {
+                    case let .userStories(_, userId, maxReadId, stories):
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        
+                        let previousPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
+                        
+                        for story in stories {
+                            if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
+                                if case .placeholder = storedItem, let previousEntry = previousPeerEntries.first(where: { $0.id == storedItem.id }) {
+                                    updatedPeerEntries.append(previousEntry)
+                                } else {
+                                    if let codedEntry = CodableEntry(storedItem) {
+                                        updatedPeerEntries.append(StoryItemsTableEntry(value: codedEntry, id: storedItem.id))
+                                    }
+                                }
+                            }
+                        }
+                        
+                        transaction.setPeerStoryState(peerId: peerId, state: CodableEntry(Stories.PeerState(
+                            maxReadId: maxReadId ?? 0
+                        )))
+                    }
+                    
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                        return updated
+                    })
+                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+                }
+                
+                transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
+            }
+            |> ignoreValues
+        }
+    }
+}

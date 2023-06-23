@@ -2511,62 +2511,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                 }
                 
-                self.shouldFixStorySubscriptionOrder = true
-                let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peer.id, singlePeer: false, fixedOrder: self.fixedStorySubscriptionOrder)
-                let _ = (storyContent.state
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
-                    guard let self else {
-                        return
-                    }
-                    
-                    if peer.id == self.context.account.peerId, storyContentState.slice == nil {
-                        self.openStoryCamera()
-                        return
-                    }
-                    
-                    var transitionIn: StoryContainerScreen.TransitionIn?
-                    if let componentView = self.chatListHeaderView() {
-                        if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
-                            transitionIn = StoryContainerScreen.TransitionIn(
-                                sourceView: transitionView,
-                                sourceRect: transitionView.bounds,
-                                sourceCornerRadius: transitionView.bounds.height * 0.5,
-                                sourceIsAvatar: true
-                            )
-                        }
-                    }
-                    
-                    let storyContainerScreen = StoryContainerScreen(
-                        context: self.context,
-                        content: storyContent,
-                        transitionIn: transitionIn,
-                        transitionOut: { [weak self] peerId, _ in
-                            guard let self else {
-                                return nil
-                            }
-                            
-                            if let componentView = self.chatListHeaderView() {
-                                if let (transitionView, transitionContentView) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
-                                    return StoryContainerScreen.TransitionOut(
-                                        destinationView: transitionView,
-                                        transitionView: transitionContentView,
-                                        destinationRect: transitionView.bounds,
-                                        destinationCornerRadius: transitionView.bounds.height * 0.5,
-                                        destinationIsAvatar: true,
-                                        completed: {}
-                                    )
-                                }
-                            }
-                            
-                            return nil
-                        }
-                    )
-                    if let componentView = self.chatListHeaderView() {
-                        componentView.storyPeerListView()?.setPreviewedItem(signal: storyContainerScreen.focusedItem)
-                    }
-                    self.push(storyContainerScreen)
-                })
+                self.openStories(peerId: peer.id)
             }
             
             componentView.storyContextPeerAction = { [weak self] sourceNode, gesture, peer in
@@ -3339,6 +3284,77 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             } else {
                 completion()
             }
+        })
+    }
+    
+    public func openStories(peerId: EnginePeer.Id) {
+        if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+            if navigationBarView.storiesUnlocked {
+                self.shouldFixStorySubscriptionOrder = true
+            }
+        }
+        let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peerId, singlePeer: false, fixedOrder: self.fixedStorySubscriptionOrder)
+        let _ = (storyContent.state
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
+            guard let self else {
+                return
+            }
+            
+            if peerId == self.context.account.peerId, storyContentState.slice == nil {
+                self.openStoryCamera()
+                return
+            }
+            
+            var transitionIn: StoryContainerScreen.TransitionIn?
+            if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                if navigationBarView.storiesUnlocked {
+                    if let componentView = self.chatListHeaderView() {
+                        if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                            transitionIn = StoryContainerScreen.TransitionIn(
+                                sourceView: transitionView,
+                                sourceRect: transitionView.bounds,
+                                sourceCornerRadius: transitionView.bounds.height * 0.5,
+                                sourceIsAvatar: true
+                            )
+                        }
+                    }
+                }
+            }
+            
+            let storyContainerScreen = StoryContainerScreen(
+                context: self.context,
+                content: storyContent,
+                transitionIn: transitionIn,
+                transitionOut: { [weak self] peerId, _ in
+                    guard let self else {
+                        return nil
+                    }
+                    
+                    if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+                        if navigationBarView.storiesUnlocked {
+                            if let componentView = self.chatListHeaderView() {
+                                if let (transitionView, transitionContentView) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                                    return StoryContainerScreen.TransitionOut(
+                                        destinationView: transitionView,
+                                        transitionView: transitionContentView,
+                                        destinationRect: transitionView.bounds,
+                                        destinationCornerRadius: transitionView.bounds.height * 0.5,
+                                        destinationIsAvatar: true,
+                                        completed: {}
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
+                    return nil
+                }
+            )
+            if let componentView = self.chatListHeaderView() {
+                componentView.storyPeerListView()?.setPreviewedItem(signal: storyContainerScreen.focusedItem)
+            }
+            self.push(storyContainerScreen)
         })
     }
     

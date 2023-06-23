@@ -847,6 +847,7 @@ private final class NotificationServiceHandler {
 
                     var peerId: PeerId?
                     var messageId: MessageId.Id?
+                    var storyId: Int32?
                     var mediaAttachment: Media?
                     var downloadNotificationSound: (file: TelegramMediaFile, path: String, fileName: String)?
 
@@ -867,6 +868,9 @@ private final class NotificationServiceHandler {
 
                     if let messageIdString = payloadJson["msg_id"] as? String {
                         messageId = Int32(messageIdString)
+                    }
+                    if let storyIdString = payloadJson["story_id"] as? String {
+                        storyId = Int32(storyIdString)
                     }
 
                     if let fromIdString = payloadJson["from_id"] as? String {
@@ -917,6 +921,7 @@ private final class NotificationServiceHandler {
                     enum Action {
                         case logout
                         case poll(peerId: PeerId, content: NotificationContent, messageId: MessageId?)
+                        case pollStories(peerId: PeerId, content: NotificationContent, storyId: Int32)
                         case deleteMessage([MessageId])
                         case readReactions([MessageId])
                         case readMessage(MessageId)
@@ -1003,6 +1008,10 @@ private final class NotificationServiceHandler {
                                 interactionAuthorId = peerId
                                 
                                 messageIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId)
+                            }
+                            if let storyId = storyId {
+                                interactionAuthorId = peerId
+                                content.userInfo["story_id"] = "\(storyId)"
                             }
 
                             if peerId.namespace == Namespaces.Peer.CloudUser {
@@ -1107,7 +1116,11 @@ private final class NotificationServiceHandler {
                                 }
                             }*/
 
-                            action = .poll(peerId: peerId, content: content, messageId: messageIdValue)
+                            if let storyId {
+                                action = .pollStories(peerId: peerId, content: content, storyId: storyId)
+                            } else {
+                                action = .poll(peerId: peerId, content: content, messageId: messageIdValue)
+                            }
 
                             updateCurrentContent(content)
                         }
@@ -1535,6 +1548,168 @@ private final class NotificationServiceHandler {
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+
+                                        return content
+                                    }
+                                    |> then(
+                                        pollSignal
+                                        |> map { _ -> NotificationContent in }
+                                    )
+                                } else {
+                                    pollWithUpdatedContent = pollSignal
+                                    |> map { _ -> NotificationContent in }
+                                }
+
+                                var updatedContent = initialContent
+                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content in
+                                    updatedContent = content
+                                }, completed: {
+                                    pollCompletion(updatedContent)
+                                }))
+                            } else {
+                                completed()
+                            }
+                        case let .pollStories(peerId, initialContent, _):
+                            Logger.shared.log("NotificationService \(episode)", "Will poll stories for \(peerId)")
+                            if let stateManager = strongSelf.stateManager {
+                                let pollCompletion: (NotificationContent) -> Void = { content in
+                                    let content = content
+
+                                    queue.async {
+                                        guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
+                                            let content = NotificationContent(isLockedMessage: isLockedMessage)
+                                            updateCurrentContent(content)
+                                            completed()
+                                            return
+                                        }
+                                        
+                                        var fetchStoriesSignal: Signal<Void, NoError> = .single(Void())
+                                        fetchStoriesSignal = _internal_pollPeerStories(postbox: stateManager.postbox, network: stateManager.network, accountPeerId: stateManager.accountPeerId, peerId: peerId)
+                                        |> map { _ -> Void in
+                                        }
+                                        |> then(.single(Void()))
+
+                                        let fetchMediaSignal: Signal<Data?, NoError> = .single(nil)
+                                        
+                                        var fetchNotificationSoundSignal: Signal<Data?, NoError> = .single(nil)
+                                        if let (downloadNotificationSound, _, _) = downloadNotificationSound {
+                                            var fetchResource: TelegramMultipartFetchableResource?
+                                            fetchResource = downloadNotificationSound.resource as? TelegramMultipartFetchableResource
+
+                                            if let resource = fetchResource {
+                                                if let path = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                                    fetchNotificationSoundSignal = .single(data)
+                                                } else {
+                                                    let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
+                                                    fetchNotificationSoundSignal = Signal { subscriber in
+                                                        let collectedData = Atomic<Data>(value: Data())
+                                                        return standaloneMultipartFetch(
+                                                            accountPeerId: stateManager.accountPeerId,
+                                                            postbox: stateManager.postbox,
+                                                            network: stateManager.network,
+                                                            resource: resource,
+                                                            datacenterId: resource.datacenterId,
+                                                            size: nil,
+                                                            intervals: intervals,
+                                                            parameters: MediaResourceFetchParameters(
+                                                                tag: nil,
+                                                                info: resourceFetchInfo(resource: resource),
+                                                                location: nil,
+                                                                contentType: .other,
+                                                                isRandomAccessAllowed: true
+                                                            ),
+                                                            encryptionKey: nil,
+                                                            decryptedSize: nil,
+                                                            continueInBackground: false,
+                                                            useMainConnection: true
+                                                        ).start(next: { result in
+                                                            switch result {
+                                                            case let .dataPart(_, data, _, _):
+                                                                let _ = collectedData.modify { current in
+                                                                    var current = current
+                                                                    current.append(data)
+                                                                    return current
+                                                                }
+                                                            default:
+                                                                break
+                                                            }
+                                                        }, error: { _ in
+                                                            subscriber.putNext(nil)
+                                                            subscriber.putCompletion()
+                                                        }, completed: {
+                                                            subscriber.putNext(collectedData.with({ $0 }))
+                                                            subscriber.putCompletion()
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        Logger.shared.log("NotificationService \(episode)", "Will fetch media")
+                                        let _ = (combineLatest(queue: queue,
+                                            fetchMediaSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(nil)),
+                                            fetchNotificationSoundSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(nil)),
+                                            fetchStoriesSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(Void()))
+                                        )
+                                        |> deliverOn(queue)).start(next: { mediaData, notificationSoundData, _ in
+                                            guard let strongSelf = self, let _ = strongSelf.stateManager else {
+                                                completed()
+                                                return
+                                            }
+
+                                            Logger.shared.log("NotificationService \(episode)", "Did fetch media \(mediaData == nil ? "Non-empty" : "Empty")")
+                                            
+                                            if let notificationSoundData = notificationSoundData {
+                                                Logger.shared.log("NotificationService \(episode)", "Did fetch notificationSoundData")
+                                                
+                                                if let (_, filePath, _) = downloadNotificationSound {
+                                                    let _ = try? notificationSoundData.write(to: URL(fileURLWithPath: filePath))
+                                                }
+                                            }
+
+                                            Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
+
+                                            updateCurrentContent(content)
+
+                                            completed()
+                                        })
+                                    }
+                                }
+
+                                let pollSignal: Signal<Never, NoError>
+                                pollSignal = .complete()
+                                
+                                stateManager.network.shouldKeepConnection.set(.single(true))
+
+                                let pollWithUpdatedContent: Signal<NotificationContent, NoError>
+                                if interactionAuthorId != nil || messageId != nil {
+                                    pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> NotificationContent in
+                                        var content = initialContent
+                                        
+                                        if let interactionAuthorId = interactionAuthorId {
+                                            if inAppNotificationSettings.displayNameOnLockscreen, let peer = transaction.getPeer(interactionAuthorId) {
+                                                var foundLocalId: String?
+                                                transaction.enumerateDeviceContactImportInfoItems({ _, value in
+                                                    if let value = value as? TelegramDeviceContactImportedData {
+                                                        switch value {
+                                                        case let .imported(data, _, peerId):
+                                                            if peerId == interactionAuthorId {
+                                                                foundLocalId = data.localIdentifiers.first
+                                                                return false
+                                                            }
+                                                        default:
+                                                            break
+                                                        }
+                                                    }
+                                                    return true
+                                                })
+                                                
+                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId)
                                             }
                                         }
 

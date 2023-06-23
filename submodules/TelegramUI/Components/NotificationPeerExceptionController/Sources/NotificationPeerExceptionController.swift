@@ -670,7 +670,7 @@ private struct NotificationExceptionPeerState : Equatable {
                 self.mode = .alwaysOn
             }
             self.displayPreviews = notifications.displayPreviews == .hide ? .alwaysOff : .alwaysOn
-            self.storyNotifications = notifications.storiesMuted == false ? .alwaysOff : .alwaysOn
+            self.storyNotifications = notifications.storiesMuted == true ? .alwaysOff : .alwaysOn
         } else {
             self.selectedSound = .default
             self.mode = .alwaysOn

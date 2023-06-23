@@ -1978,12 +1978,12 @@ ios_application(
     extensions = select({
         ":disableExtensionsSetting": [],
         "//conditions:default": [
-            ":ShareExtension",
-            ":NotificationContentExtension",
+            #":ShareExtension",
+            #":NotificationContentExtension",
             ":NotificationServiceExtension",
-            ":IntentsExtension",
-            ":WidgetExtension",
-            ":BroadcastUploadExtension",
+            #":IntentsExtension",
+            #":WidgetExtension",
+            #":BroadcastUploadExtension",
         ],
     }),
     watch_application = select({
@@ -2013,9 +2013,9 @@ xcodeproj(
         "Debug": {
             "//command_line_option:compilation_mode": "dbg",
         },
-        "Release": {
-            "//command_line_option:compilation_mode": "opt",
-        },
+        #"Release": {
+        #    "//command_line_option:compilation_mode": "opt",
+        #},
     },
     default_xcode_configuration = "Debug"
 
