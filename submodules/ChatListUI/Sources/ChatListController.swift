@@ -2341,19 +2341,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     fileprivate func openStoryCamera() {
-        guard self.isPremium else {
-            let context = self.context
-            var replaceImpl: ((ViewController) -> Void)?
-            let controller = context.sharedContext.makePremiumDemoController(context: self.context, subject: .stories, action: {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
-                replaceImpl?(controller)
-            })
-            replaceImpl = { [weak controller] c in
-                controller?.replace(with: c)
-            }
-            self.push(controller)
-            return
-        }
+//        guard self.isPremium else {
+//            let context = self.context
+//            var replaceImpl: ((ViewController) -> Void)?
+//            let controller = context.sharedContext.makePremiumDemoController(context: self.context, subject: .stories, action: {
+//                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories)
+//                replaceImpl?(controller)
+//            })
+//            replaceImpl = { [weak controller] c in
+//                controller?.replace(with: c)
+//            }
+//            self.push(controller)
+//            return
+//        }
         var cameraTransitionIn: StoryCameraTransitionIn?
         if let componentView = self.chatListHeaderView() {
             if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: self.context.account.peerId) {
