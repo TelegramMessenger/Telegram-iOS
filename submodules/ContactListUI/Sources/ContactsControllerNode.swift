@@ -68,8 +68,8 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private var presentationDataDisposable: Disposable?
     private let stringsPromise = Promise<PresentationStrings>()
     
-    private var isPremium = false
-    private var isPremiumDisposable: Disposable?
+    private var isStoryPostingAvailable = false
+    private var storiesPostingAvailabilityDisposable: Disposable?
     
     weak var controller: ContactsController?
     
@@ -262,13 +262,40 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.storiesReady.set(.single(true))
         })
         
-        self.isPremiumDisposable = (self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
-        |> map {
-            return $0?.isPremium ?? false
+        let storiesPostingAvailability = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { view -> AppConfiguration in
+            let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+            return appConfiguration
         }
-        |> deliverOnMainQueue).start(next: { [weak self] isPremium in
+        |> distinctUntilChanged
+        |> map { appConfiguration -> StoriesConfiguration.PostingAvailability in
+            let storiesConfiguration = StoriesConfiguration.with(appConfiguration: appConfiguration)
+            return storiesConfiguration.posting
+        }
+        
+        self.storiesPostingAvailabilityDisposable = combineLatest(queue: Queue.mainQueue(),
+            storiesPostingAvailability,
+            self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+            |> map { peer -> Bool in
+                if case let .user(user) = peer, user.isPremium {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            |> distinctUntilChanged
+        ).start(next: { [weak self] postingAvailability, isPremium in
             if let self {
-                self.isPremium = isPremium
+                let isStoryPostingAvailable: Bool
+                switch postingAvailability {
+                case .enabled:
+                    isStoryPostingAvailable = true
+                case .premium:
+                    isStoryPostingAvailable = isPremium
+                case .disabled:
+                    isStoryPostingAvailable = false
+                }
+                self.isStoryPostingAvailable = isStoryPostingAvailable
             }
         })
     }
@@ -276,7 +303,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     deinit {
         self.presentationDataDisposable?.dispose()
         self.storySubscriptionsDisposable?.dispose()
-        self.isPremiumDisposable?.dispose()
+        self.storiesPostingAvailabilityDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -308,7 +335,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return self.isPremium
+        return self.isStoryPostingAvailable
     }
     
     private func updateThemeAndStrings() {

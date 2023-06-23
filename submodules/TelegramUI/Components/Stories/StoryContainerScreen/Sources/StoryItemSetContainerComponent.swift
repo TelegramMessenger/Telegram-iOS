@@ -1248,7 +1248,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 return
                             }
                             
-                            let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: true)
+                            let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: !isHidden)
                         })))
                         
                         items.append(.action(ContextMenuActionItem(text: "Report", icon: { theme in

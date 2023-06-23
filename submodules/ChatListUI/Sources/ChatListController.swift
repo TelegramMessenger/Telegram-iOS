@@ -161,6 +161,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private(set) var isPremium: Bool = false
     private(set) var storyPostingAvailability: StoriesConfiguration.PostingAvailability = .disabled
     private var storiesPostingAvailabilityDisposable: Disposable?
+    private let storyPostingAvailabilityValue = ValuePromise<StoriesConfiguration.PostingAvailability>(.disabled)
     
     private var didSetupTabs = false
     
@@ -247,7 +248,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             parentController: self,
             hideNetworkActivityStatus: self.hideNetworkActivityStatus,
             containerNode: self.chatListDisplayNode.mainContainerNode,
-            isReorderingTabs: self.isReorderingTabsValue.get()
+            isReorderingTabs: self.isReorderingTabsValue.get(),
+            storyPostingAvailable: self.storyPostingAvailabilityValue.get() |> map { availability -> Bool in
+                switch availability {
+                case .enabled, .premium:
+                    return true
+                default:
+                    return false
+                }
+            }
         )
         self.primaryContext = primaryContext
         self.primaryInfoReady.set(primaryContext.ready.get())
@@ -713,6 +722,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         ).start(next: { [weak self] postingAvailability in
             if let self {
                 self.storyPostingAvailability = postingAvailability
+                self.storyPostingAvailabilityValue.set(postingAvailability)
             }
         })
         
@@ -2792,7 +2802,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 parentController: self,
                 hideNetworkActivityStatus: false,
                 containerNode: inlineNode,
-                isReorderingTabs: .single(false)
+                isReorderingTabs: .single(false),
+                storyPostingAvailable: .single(false)
             )
             self.pendingSecondaryContext = pendingSecondaryContext
             let _ = (pendingSecondaryContext.ready.get()
@@ -5069,7 +5080,8 @@ private final class ChatListLocationContext {
         parentController: ChatListControllerImpl,
         hideNetworkActivityStatus: Bool,
         containerNode: ChatListContainerNode,
-        isReorderingTabs: Signal<Bool, NoError>
+        isReorderingTabs: Signal<Bool, NoError>,
+        storyPostingAvailable: Signal<Bool, NoError>
     ) {
         self.context = context
         self.location = location
@@ -5124,8 +5136,9 @@ private final class ChatListLocationContext {
                     containerNode.currentItemState,
                     isReorderingTabs,
                     peerStatus,
-                    parentController.updatedPresentationData.1
-                ).start(next: { [weak self] networkState, proxy, passcode, stateAndFilterId, isReorderingTabs, peerStatus, presentationData in
+                    parentController.updatedPresentationData.1,
+                    storyPostingAvailable
+                ).start(next: { [weak self] networkState, proxy, passcode, stateAndFilterId, isReorderingTabs, peerStatus, presentationData, storyPostingAvailable in
                     guard let self else {
                         return
                     }
@@ -5136,7 +5149,8 @@ private final class ChatListLocationContext {
                         stateAndFilterId: stateAndFilterId,
                         isReorderingTabs: isReorderingTabs,
                         peerStatus: peerStatus,
-                        presentationData: presentationData
+                        presentationData: presentationData,
+                        storyPostingAvailable: storyPostingAvailable
                     )
                 })
             } else {
@@ -5346,7 +5360,8 @@ private final class ChatListLocationContext {
         stateAndFilterId: (state: ChatListNodeState, filterId: Int32?),
         isReorderingTabs: Bool,
         peerStatus: NetworkStatusTitle.Status?,
-        presentationData: PresentationData
+        presentationData: PresentationData,
+        storyPostingAvailable: Bool
     ) {
         let defaultTitle: String
         switch location {
@@ -5453,15 +5468,19 @@ private final class ChatListLocationContext {
                     }
                 }
                 
-                self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
-                    content: .icon(imageName: "Chat List/AddStoryIcon"),
-                    pressed: { [weak self] _ in
-                        guard let self, let parentController = self.parentController else {
-                            return
+                if storyPostingAvailable {
+                    self.storyButton = AnyComponentWithIdentity(id: "story", component: AnyComponent(NavigationButtonComponent(
+                        content: .icon(imageName: "Chat List/AddStoryIcon"),
+                        pressed: { [weak self] _ in
+                            guard let self, let parentController = self.parentController else {
+                                return
+                            }
+                            parentController.openStoryCamera()
                         }
-                        parentController.openStoryCamera()
-                    }
-                )))
+                    )))
+                } else {
+                    self.storyButton = nil
+                }
             } else {
                 self.rightButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
                     content: .text(title: presentationData.strings.Common_Edit, isBold: false),
