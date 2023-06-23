@@ -778,6 +778,7 @@ private final class StoryContainerScreenComponent: Component {
                                 safeInsets: itemSetContainerSafeInsets,
                                 inputHeight: environment.inputHeight,
                                 metrics: environment.metrics,
+                                deviceMetrics: environment.deviceMetrics,
                                 isProgressPaused: isProgressPaused || i != focusedIndex,
                                 hideUI: (i == focusedIndex && (self.itemSetPanState?.didBegin == false || self.itemSetPinchState != nil)),
                                 visibilityFraction: 1.0 - abs(panFraction + cubeAdditionalRotationFraction),

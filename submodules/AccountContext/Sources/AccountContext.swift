@@ -1074,3 +1074,42 @@ public struct AntiSpamBotConfiguration {
         }
     }
 }
+
+public struct StoriesConfiguration {
+    public enum PostingAvailability {
+        case enabled
+        case premium
+        case disabled
+    }
+    
+    static var defaultValue: StoriesConfiguration {
+        return StoriesConfiguration(posting: .disabled)
+    }
+    
+    public let posting: PostingAvailability
+    
+    fileprivate init(posting: PostingAvailability) {
+        self.posting = posting
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> StoriesConfiguration {
+//#if DEBUG
+//        return StoriesConfiguration(posting: .premium)
+//#else
+        if let data = appConfiguration.data, let postingString = data["stories_posting"] as? String {
+            let posting: PostingAvailability
+            switch postingString {
+            case "enabled":
+                posting = .enabled
+            case "premium":
+                posting = .premium
+            default:
+                posting = .disabled
+            }
+            return StoriesConfiguration(posting: posting)
+        } else {
+            return .defaultValue
+        }
+//#endif
+    }
+}
