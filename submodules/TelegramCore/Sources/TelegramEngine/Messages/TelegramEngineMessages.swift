@@ -5,6 +5,7 @@ import TelegramApi
 
 public enum EngineOutgoingMessageContent {
     case text(String, [MessageTextEntity])
+    case file(FileMediaReference)
 }
 
 public final class StoryPreloadInfo {
@@ -221,29 +222,35 @@ public extension TelegramEngine {
             storyId: StoryId? = nil,
             content: EngineOutgoingMessageContent
         ) {
+            var attributes: [MessageAttribute] = []
+            var text: String = ""
+            var mediaReference: AnyMediaReference?
+            
             switch content {
-            case let .text(text, entities):
-                var attributes: [MessageAttribute] = []
+            case let .text(textValue, entities):
                 if !entities.isEmpty {
                     attributes.append(TextEntitiesMessageAttribute(entities: entities))
                 }
-                let message: EnqueueMessage = .message(
-                    text: text,
-                    attributes: attributes,
-                    inlineStickers: [:],
-                    mediaReference: nil,
-                    replyToMessageId: replyToMessageId,
-                    replyToStoryId: storyId,
-                    localGroupingKey: nil,
-                    correlationId: nil,
-                    bubbleUpEmojiOrStickersets: []
-                )
-                let _ = enqueueMessages(
-                    account: self.account,
-                    peerId: peerId,
-                    messages: [message]
-                ).start()
+                text = textValue
+            case let .file(fileReference):
+                mediaReference = fileReference.abstract
             }
+            let message: EnqueueMessage = .message(
+                text: text,
+                attributes: attributes,
+                inlineStickers: [:],
+                mediaReference: mediaReference,
+                replyToMessageId: replyToMessageId,
+                replyToStoryId: storyId,
+                localGroupingKey: nil,
+                correlationId: nil,
+                bubbleUpEmojiOrStickersets: []
+            )
+            let _ = enqueueMessages(
+                account: self.account,
+                peerId: peerId,
+                messages: [message]
+            ).start()
         }
 
         public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, threadId: Int64?, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId? = nil, replyToStoryId: StoryId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {
