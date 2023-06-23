@@ -603,11 +603,14 @@ final class MediaEditorScreenComponent: Component {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
             
-            if self.component == nil {
-                if let controller = environment.controller() as? MediaEditorScreen {
+            var isEditingStory = false
+            if let controller = environment.controller() as? MediaEditorScreen {
+                isEditingStory = controller.isEditingStory
+                if self.component == nil {
                     self.inputPanelExternalState.initialText = controller.initialCaption
                 }
             }
+        
             
             self.component = component
             self.state = state
@@ -957,7 +960,7 @@ final class MediaEditorScreenComponent: Component {
                             self.state?.updated(transition: .immediate)
                         }
                     },
-                    timeoutAction: { [weak self] view in
+                    timeoutAction: isEditingStory ? nil : { [weak self] view in
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
@@ -985,7 +988,8 @@ final class MediaEditorScreenComponent: Component {
                     timeoutSelected: timeoutSelected,
                     displayGradient: false,
                     bottomInset: 0.0,
-                    hideKeyboard: self.currentInputMode == .emoji
+                    hideKeyboard: self.currentInputMode == .emoji,
+                    disabledPlaceholder: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)
@@ -2861,6 +2865,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     public var cancelled: (Bool) -> Void = { _ in }
     public var completion: (Int64, MediaEditorScreen.Result?, NSAttributedString, MediaEditorResultPrivacy , @escaping (@escaping () -> Void) -> Void) -> Void = { _, _, _, _, _ in }
     public var dismissed: () -> Void = { }
+    public var willDismiss: () -> Void = { }
     
     private let hapticFeedback = HapticFeedback()
     
@@ -3172,6 +3177,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.node.entitiesView.invalidate()
         
         self.cancelled(saveDraft)
+        
+        self.willDismiss()
         
         self.node.animateOut(finished: false, saveDraft: saveDraft, completion: { [weak self] in
             self?.dismiss()

@@ -397,6 +397,8 @@ final class StoryContentCaptionComponent: Component {
                     }
                     textNode.textNode.view.addGestureRecognizer(recognizer)
                 }
+                
+                textNode.visibilityRect = CGRect(origin: CGPoint(), size: CGSize(width: 100000.0, height: 100000.0))
             }
 
             textNode.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset), size: textLayout.0.size)

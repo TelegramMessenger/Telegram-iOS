@@ -70,6 +70,7 @@ public final class MessageInputPanelComponent: Component {
     public let displayGradient: Bool
     public let bottomInset: CGFloat
     public let hideKeyboard: Bool
+    public let disabledPlaceholder: String?
     
     public init(
         externalState: ExternalState,
@@ -102,7 +103,8 @@ public final class MessageInputPanelComponent: Component {
         timeoutSelected: Bool,
         displayGradient: Bool,
         bottomInset: CGFloat,
-        hideKeyboard: Bool
+        hideKeyboard: Bool,
+        disabledPlaceholder: String?
     ) {
         self.externalState = externalState
         self.context = context
@@ -135,6 +137,7 @@ public final class MessageInputPanelComponent: Component {
         self.displayGradient = displayGradient
         self.bottomInset = bottomInset
         self.hideKeyboard = hideKeyboard
+        self.disabledPlaceholder = disabledPlaceholder
     }
     
     public static func ==(lhs: MessageInputPanelComponent, rhs: MessageInputPanelComponent) -> Bool {
@@ -198,6 +201,9 @@ public final class MessageInputPanelComponent: Component {
         if lhs.hideKeyboard != rhs.hideKeyboard {
             return false
         }
+        if lhs.disabledPlaceholder != rhs.disabledPlaceholder {
+            return false
+        }
         return true
     }
     
@@ -214,6 +220,7 @@ public final class MessageInputPanelComponent: Component {
         private let placeholder = ComponentView<Empty>()
         private let vibrancyPlaceholder = ComponentView<Empty>()
         
+        private var disabledPlaceholder: ComponentView<Empty>?
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
         
@@ -495,9 +502,11 @@ public final class MessageInputPanelComponent: Component {
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                 placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                 
-                transition.setAlpha(view: placeholderView, alpha: (hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
-                transition.setAlpha(view: vibrancyPlaceholderView, alpha: (hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
+                transition.setAlpha(view: placeholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
+                transition.setAlpha(view: vibrancyPlaceholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
             }
+            
+            transition.setAlpha(view: self.fieldBackgroundView, alpha: component.disabledPlaceholder != nil ? 0.0 : 1.0)
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height + insets.top + insets.bottom)
             
@@ -506,7 +515,38 @@ public final class MessageInputPanelComponent: Component {
                     self.addSubview(textFieldView)
                 }
                 transition.setFrame(view: textFieldView, frame: CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX, y: fieldBackgroundFrame.maxY - textFieldSize.height), size: textFieldSize))
-                transition.setAlpha(view: textFieldView, alpha: (hasMediaRecording || hasMediaEditing) ? 0.0 : 1.0)
+                transition.setAlpha(view: textFieldView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
+            }
+            
+            if let disabledPlaceholderText = component.disabledPlaceholder {
+                let disabledPlaceholder: ComponentView<Empty>
+                var disabledPlaceholderTransition = transition
+                if let current = self.disabledPlaceholder {
+                    disabledPlaceholder = current
+                } else {
+                    disabledPlaceholderTransition = .immediate
+                    disabledPlaceholder = ComponentView()
+                    self.disabledPlaceholder = disabledPlaceholder
+                }
+                let disabledPlaceholderSize = disabledPlaceholder.update(
+                    transition: .immediate,
+                    component: AnyComponent(Text(text: disabledPlaceholderText, font: Font.regular(17.0), color: UIColor(rgb: 0xffffff, alpha: 0.3))),
+                    environment: {},
+                    containerSize: CGSize(width: fieldBackgroundFrame.width - 8.0 * 2.0, height: 100.0)
+                )
+                let disabledPlaceholderFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX + floor((fieldBackgroundFrame.width - disabledPlaceholderSize.width) * 0.5), y: fieldBackgroundFrame.minY + floor((fieldBackgroundFrame.height - disabledPlaceholderSize.height) * 0.5)), size: disabledPlaceholderSize)
+                if let disabledPlaceholderView = disabledPlaceholder.view {
+                    if disabledPlaceholderView.superview == nil {
+                        self.addSubview(disabledPlaceholderView)
+                    }
+                    disabledPlaceholderTransition.setPosition(view: disabledPlaceholderView, position: disabledPlaceholderFrame.center)
+                    disabledPlaceholderView.bounds = CGRect(origin: CGPoint(), size: disabledPlaceholderFrame.size)
+                }
+            } else {
+                if let disabledPlaceholder = self.disabledPlaceholder {
+                    self.disabledPlaceholder = nil
+                    disabledPlaceholder.view?.removeFromSuperview()
+                }
             }
             
             if component.attachmentAction != nil {
@@ -845,7 +885,7 @@ public final class MessageInputPanelComponent: Component {
                 transition.setPosition(view: stickerButtonView, position: stickerIconFrame.center)
                 transition.setBounds(view: stickerButtonView, bounds: CGRect(origin: CGPoint(), size: stickerIconFrame.size))
                 
-                transition.setAlpha(view: stickerButtonView, alpha: (hasMediaRecording || hasMediaEditing || !inputModeVisible) ? 0.0 : 1.0)
+                transition.setAlpha(view: stickerButtonView, alpha: (hasMediaRecording || hasMediaEditing || !inputModeVisible || component.disabledPlaceholder != nil) ? 0.0 : 1.0)
                 transition.setScale(view: stickerButtonView, scale: (hasMediaRecording || hasMediaEditing || !inputModeVisible) ? 0.1 : 1.0)
                 
                 if inputModeVisible {

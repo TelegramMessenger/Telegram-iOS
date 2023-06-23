@@ -13,9 +13,11 @@ import StoryPeerListComponent
 public final class ChatListNavigationBar: Component {
     public final class AnimationHint {
         let disableStoriesAnimations: Bool
+        let crossfadeStoryPeers: Bool
         
-        public init(disableStoriesAnimations: Bool) {
+        public init(disableStoriesAnimations: Bool, crossfadeStoryPeers: Bool) {
             self.disableStoriesAnimations = disableStoriesAnimations
+            self.crossfadeStoryPeers = crossfadeStoryPeers
         }
     }
     
@@ -37,6 +39,7 @@ public final class ChatListNavigationBar: Component {
     public let accessoryPanelContainerHeight: CGFloat
     public let activateSearch: (NavigationBarSearchContentNode) -> Void
     public let openStatusSetup: (UIView) -> Void
+    public let allowAutomaticOrder: () -> Void
     
     public init(
         context: AccountContext,
@@ -56,7 +59,8 @@ public final class ChatListNavigationBar: Component {
         accessoryPanelContainer: ASDisplayNode?,
         accessoryPanelContainerHeight: CGFloat,
         activateSearch: @escaping (NavigationBarSearchContentNode) -> Void,
-        openStatusSetup: @escaping (UIView) -> Void
+        openStatusSetup: @escaping (UIView) -> Void,
+        allowAutomaticOrder: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -76,6 +80,7 @@ public final class ChatListNavigationBar: Component {
         self.accessoryPanelContainerHeight = accessoryPanelContainerHeight
         self.activateSearch = activateSearch
         self.openStatusSetup = openStatusSetup
+        self.allowAutomaticOrder = allowAutomaticOrder
     }
 
     public static func ==(lhs: ChatListNavigationBar, rhs: ChatListNavigationBar) -> Bool {
@@ -363,6 +368,9 @@ public final class ChatListNavigationBar: Component {
                     }
                 }
             }
+            if self.storiesUnlocked != storiesUnlocked, !storiesUnlocked {
+                component.allowAutomaticOrder()
+            }
             self.storiesUnlocked = storiesUnlocked
             
             let headerComponent = ChatListHeaderComponent(
@@ -536,7 +544,8 @@ public final class ChatListNavigationBar: Component {
                     accessoryPanelContainer: component.accessoryPanelContainer,
                     accessoryPanelContainerHeight: component.accessoryPanelContainerHeight,
                     activateSearch: component.activateSearch,
-                    openStatusSetup: component.openStatusSetup
+                    openStatusSetup: component.openStatusSetup,
+                    allowAutomaticOrder: component.allowAutomaticOrder
                 )
                 if let currentLayout = self.currentLayout, let headerComponent = self.currentHeaderComponent {
                     let headerComponent = ChatListHeaderComponent(
@@ -572,9 +581,13 @@ public final class ChatListNavigationBar: Component {
             let themeUpdated = self.component?.theme !== component.theme
             
             var uploadProgressUpdated = false
+            var storySubscriptionsUpdated = false
             if let previousComponent = self.component {
                 if previousComponent.uploadProgress != component.uploadProgress {
                     uploadProgressUpdated = true
+                }
+                if previousComponent.storySubscriptions != component.storySubscriptions {
+                    storySubscriptionsUpdated = true
                 }
             }
             
@@ -614,7 +627,7 @@ public final class ChatListNavigationBar: Component {
             
             self.hasDeferredScrollOffset = true
             
-            if uploadProgressUpdated {
+            if uploadProgressUpdated || storySubscriptionsUpdated {
                 if let rawScrollOffset = self.rawScrollOffset {
                     self.applyScroll(offset: rawScrollOffset, allowAvatarsExpansion: self.currentAllowAvatarsExpansion, forceUpdate: true, transition: transition)
                 }

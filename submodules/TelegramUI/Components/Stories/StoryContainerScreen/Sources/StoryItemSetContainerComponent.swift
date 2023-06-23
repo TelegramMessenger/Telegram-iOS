@@ -1367,7 +1367,8 @@ public final class StoryItemSetContainerComponent: Component {
                     timeoutSelected: false,
                     displayGradient: false, //(component.inputHeight != 0.0 || inputNodeVisible) && component.metrics.widthClass != .regular,
                     bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
-                    hideKeyboard: self.sendMessageContext.currentInputMode == .media
+                    hideKeyboard: self.sendMessageContext.currentInputMode == .media,
+                    disabledPlaceholder: component.slice.peer.isService ? "You can't reply to this story" : nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
@@ -1696,7 +1697,7 @@ public final class StoryItemSetContainerComponent: Component {
                         animateIn = true
                     }
                     viewListTransition.setFrame(view: viewListView, frame: viewListFrame)
-                    viewListTransition.setAlpha(view: viewListView, alpha: component.hideUI ? 0.0 : 1.0)
+                    viewListTransition.setAlpha(view: viewListView, alpha: component.hideUI || self.isEditingStory ? 0.0 : 1.0)
                     
                     if animateIn, !transition.animation.isImmediate {
                         viewListView.animateIn(transition: transition)
@@ -1753,7 +1754,7 @@ public final class StoryItemSetContainerComponent: Component {
                 let closeButtonFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 50.0, height: 64.0))
                 transition.setFrame(view: self.closeButton, frame: closeButtonFrame)
                 transition.setFrame(view: self.closeButtonIconView, frame: CGRect(origin: CGPoint(x: floor((closeButtonFrame.width - image.size.width) * 0.5), y: floor((closeButtonFrame.height - image.size.height) * 0.5)), size: image.size))
-                transition.setAlpha(view: self.closeButton, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+                transition.setAlpha(view: self.closeButton, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
             }
             
             let focusedItem: StoryContentItem? = component.slice.item
@@ -1827,7 +1828,7 @@ public final class StoryItemSetContainerComponent: Component {
                         //view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     
-                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
                 }
             }
             
@@ -1858,20 +1859,20 @@ public final class StoryItemSetContainerComponent: Component {
                         view.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                     
-                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+                    transition.setAlpha(view: view, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
                 }
             }
             
             let gradientHeight: CGFloat = 74.0
             transition.setFrame(layer: self.topContentGradientLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width, height: gradientHeight)))
-            transition.setAlpha(layer: self.topContentGradientLayer, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+            transition.setAlpha(layer: self.topContentGradientLayer, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
             
             let itemSize = CGSize(width: contentFrame.width, height: floorToScreenPixels(contentFrame.width * 1.77778))
             let itemLayout = ItemLayout(size: itemSize) //ItemLayout(size: CGSize(width: contentFrame.width, height: availableSize.height - component.containerInsets.top - 44.0 - bottomContentInsetWithoutInput))
             self.itemLayout = itemLayout
             
             let inputPanelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - inputPanelSize.width) / 2.0), y: availableSize.height - inputPanelBottomInset - inputPanelSize.height), size: inputPanelSize)
-            var inputPanelAlpha: CGFloat = focusedItem?.isMy == true || component.hideUI ? 0.0 : 1.0
+            var inputPanelAlpha: CGFloat = focusedItem?.isMy == true || component.hideUI || self.isEditingStory ? 0.0 : 1.0
             if case .regular = component.metrics.widthClass {
                 inputPanelAlpha *= component.visibilityFraction
             }
@@ -1957,7 +1958,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.contentContainerView.insertSubview(captionItemView, aboveSubview: self.contentDimView)
                     }
                     captionItemTransition.setFrame(view: captionItemView, frame: captionFrame)
-                    captionItemTransition.setAlpha(view: captionItemView, alpha: (component.hideUI || self.displayViewList || self.inputPanelExternalState.isEditing) ? 0.0 : 1.0)
+                    captionItemTransition.setAlpha(view: captionItemView, alpha: (component.hideUI || self.displayViewList || self.isEditingStory || self.inputPanelExternalState.isEditing) ? 0.0 : 1.0)
                 }
             }
             
@@ -2212,7 +2213,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             var dimAlpha: CGFloat = (inputPanelIsOverlay || self.inputPanelExternalState.isEditing) ? 1.0 : normalDimAlpha
-            if component.hideUI || self.displayViewList {
+            if component.hideUI || self.displayViewList || self.isEditingStory {
                 dimAlpha = 0.0
             }
             
@@ -2256,7 +2257,7 @@ public final class StoryItemSetContainerComponent: Component {
                         self.contentContainerView.addSubview(navigationStripView)
                     }
                     transition.setFrame(view: navigationStripView, frame: CGRect(origin: CGPoint(x: navigationStripSideInset, y: navigationStripTopInset), size: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: 2.0)))
-                    transition.setAlpha(view: navigationStripView, alpha: (component.hideUI || self.displayViewList) ? 0.0 : 1.0)
+                    transition.setAlpha(view: navigationStripView, alpha: (component.hideUI || self.displayViewList || self.isEditingStory) ? 0.0 : 1.0)
                 }
             }
             
@@ -2384,6 +2385,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.isEditingStory = true
             self.updateIsProgressPaused()
+            self.state?.updated(transition: .easeInOut(duration: 0.2))
                         
             let subject: Signal<MediaEditorScreen.Subject?, NoError>
 //            if let source {
@@ -2399,7 +2401,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return .single(nil)
                     |> then(
                         .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
-                        |> delay(0.2, queue: Queue.mainQueue())
+                        |> delay(0.1, queue: Queue.mainQueue())
                     )
                 } else {
                     return .single(.video(data.path, nil, nil, nil, PixelDimensions(width: 720, height: 1280), .bottomRight))
@@ -2448,6 +2450,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.isEditingStory = false
                                             self.rewindCurrentItem()
                                             self.updateIsProgressPaused()
+                                            self.state?.updated(transition: .easeInOut(duration: 0.2))
                                             
                                             commit({})
                                         }
@@ -2484,6 +2487,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             self.isEditingStory = false
                                             self.rewindCurrentItem()
                                             self.updateIsProgressPaused()
+                                            self.state?.updated(transition: .easeInOut(duration: 0.2))
                                             
                                             commit({})
                                         }
@@ -2501,6 +2505,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         self.isEditingStory = false
                                         self.rewindCurrentItem()
                                         self.updateIsProgressPaused()
+                                        self.state?.updated(transition: .easeInOut(duration: 0.2))
                                     }
                                     commit({})
                                 }
@@ -2512,15 +2517,18 @@ public final class StoryItemSetContainerComponent: Component {
                         self.isEditingStory = false
                         self.rewindCurrentItem()
                         self.updateIsProgressPaused()
+                        self.state?.updated(transition: .easeInOut(duration: 0.2))
                         
                         commit({})
                     }
                     
                 }
             )
-            controller.dismissed = { [weak self] in
+            controller.willDismiss = { [weak self] in
                 self?.isEditingStory = false
+                self?.rewindCurrentItem()
                 self?.updateIsProgressPaused()
+                self?.state?.updated(transition: .easeInOut(duration: 0.2))
             }
             self.component?.controller()?.push(controller)
             updateProgressImpl = { [weak controller] progress in

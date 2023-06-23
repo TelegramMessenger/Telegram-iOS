@@ -49,6 +49,7 @@ enum AutomaticDownloadCategory {
     case photo
     case video
     case file
+    case story
 }
 
 private enum AutomaticDownloadPeerType {
@@ -243,38 +244,54 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
     let predownload: Bool
     
     switch category {
-        case .photo:
-            peers = AutomaticDownloadPeers(category: categories.photo)
-            size = categories.photo.sizeLimit
-            predownload = categories.photo.predownload
-        case .video:
-            peers = AutomaticDownloadPeers(category: categories.video)
-            size = categories.video.sizeLimit
-            predownload = categories.video.predownload
-        case .file:
-            peers = AutomaticDownloadPeers(category: categories.file)
-            size = categories.file.sizeLimit
-            predownload = categories.file.predownload
+    case .photo:
+        peers = AutomaticDownloadPeers(category: categories.photo)
+        size = categories.photo.sizeLimit
+        predownload = categories.photo.predownload
+    case .video:
+        peers = AutomaticDownloadPeers(category: categories.video)
+        size = categories.video.sizeLimit
+        predownload = categories.video.predownload
+    case .file:
+        peers = AutomaticDownloadPeers(category: categories.file)
+        size = categories.file.sizeLimit
+        predownload = categories.file.predownload
+    case .story:
+        peers = AutomaticDownloadPeers(category: categories.stories)
+        size = categories.stories.sizeLimit
+        predownload = categories.stories.predownload
     }
     
     let downloadTitle: String
     var sizeTitle: String?
     switch category {
-        case .photo:
-            downloadTitle = presentationData.strings.AutoDownloadSettings_AutodownloadPhotos
-        case .video:
-            downloadTitle = presentationData.strings.AutoDownloadSettings_AutodownloadVideos
-            sizeTitle = presentationData.strings.AutoDownloadSettings_MaxVideoSize
-        case .file:
-            downloadTitle = presentationData.strings.AutoDownloadSettings_AutodownloadFiles
-            sizeTitle = presentationData.strings.AutoDownloadSettings_MaxFileSize
+    case .photo:
+        downloadTitle = presentationData.strings.AutoDownloadSettings_AutodownloadPhotos
+    case .video:
+        downloadTitle = presentationData.strings.AutoDownloadSettings_AutodownloadVideos
+        sizeTitle = presentationData.strings.AutoDownloadSettings_MaxVideoSize
+    case .file:
+        downloadTitle = presentationData.strings.AutoDownloadSettings_AutodownloadFiles
+        sizeTitle = presentationData.strings.AutoDownloadSettings_MaxFileSize
+    case .story:
+        //TODO:localize
+        downloadTitle = "AUTO-DOWNLOAD STORIES"
+        sizeTitle = presentationData.strings.AutoDownloadSettings_MaxFileSize
     }
     
-    entries.append(.peerHeader(presentationData.theme, downloadTitle))
-    entries.append(.peerContacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, peers.contacts))
-    entries.append(.peerOtherPrivate(presentationData.theme, presentationData.strings.AutoDownloadSettings_PrivateChats, peers.otherPrivate))
-    entries.append(.peerGroups(presentationData.theme, presentationData.strings.AutoDownloadSettings_GroupChats, peers.groups))
-    entries.append(.peerChannels(presentationData.theme, presentationData.strings.AutoDownloadSettings_Channels, peers.channels))
+    if case .story = category {
+        entries.append(.peerContacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, peers.contacts))
+        //TODO:localize
+        if peers.contacts {
+            entries.append(.peerOtherPrivate(presentationData.theme, "Hidden Contacts", peers.otherPrivate))
+        }
+    } else {
+        entries.append(.peerHeader(presentationData.theme, downloadTitle))
+        entries.append(.peerContacts(presentationData.theme, presentationData.strings.AutoDownloadSettings_Contacts, peers.contacts))
+        entries.append(.peerOtherPrivate(presentationData.theme, presentationData.strings.AutoDownloadSettings_PrivateChats, peers.otherPrivate))
+        entries.append(.peerGroups(presentationData.theme, presentationData.strings.AutoDownloadSettings_GroupChats, peers.groups))
+        entries.append(.peerChannels(presentationData.theme, presentationData.strings.AutoDownloadSettings_Channels, peers.channels))
+    }
     
     switch category {
         case .video, .file:
@@ -339,7 +356,18 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
                             categories.file.groups = !categories.file.groups
                         case .channel:
                             categories.file.channels = !categories.file.channels
-                }
+                    }
+                case .story:
+                    switch type {
+                        case .contact:
+                            categories.stories.contacts = !categories.stories.contacts
+                        case .otherPrivate:
+                            categories.stories.otherPrivate = !categories.stories.otherPrivate
+                        case .group:
+                            categories.stories.groups = !categories.stories.groups
+                        case .channel:
+                            categories.stories.channels = !categories.stories.channels
+                    }
             }
             switch connectionType {
                 case .cellular:
@@ -362,6 +390,8 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
                     categories.video.sizeLimit = size
                 case .file:
                     categories.file.sizeLimit = size
+                case .story:
+                    categories.stories.sizeLimit = size
             }
             switch connectionType {
                 case .cellular:
@@ -384,6 +414,8 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
                     categories.video.predownload = !categories.video.predownload
                 case .file:
                     categories.file.predownload = !categories.file.predownload
+                case .story:
+                    categories.stories.predownload = !categories.stories.predownload
             }
             switch connectionType {
                 case .cellular:
@@ -437,10 +469,13 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
                     title = presentationData.strings.AutoDownloadSettings_VideosTitle
                 case .file:
                     title = presentationData.strings.AutoDownloadSettings_DocumentsTitle
+                case .story:
+                    //TODO:localize
+                    title = "Stories"
             }
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: autodownloadMediaCategoryControllerEntries(presentationData: presentationData, connectionType: connectionType, category: category, settings: automaticMediaDownloadSettings), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: autodownloadMediaCategoryControllerEntries(presentationData: presentationData, connectionType: connectionType, category: category, settings: automaticMediaDownloadSettings), style: .blocks, emptyStateItem: nil, animateChanges: true)
             
             return (controllerState, (listState, arguments))
     }

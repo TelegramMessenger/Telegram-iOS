@@ -464,6 +464,12 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return nil
                     }
+                } else if pathComponents.count >= 3 && pathComponents[1] == "s" {
+                    if let storyId = Int32(pathComponents[2]) {
+                        return .peer(.name(pathComponents[0]), .story(storyId))
+                    } else {
+                        return nil
+                    }
                 } else if pathComponents.count == 4 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let threadId = Int32(pathComponents[2]), let messageId = Int32(pathComponents[3]) {
                         var timecode: Double?

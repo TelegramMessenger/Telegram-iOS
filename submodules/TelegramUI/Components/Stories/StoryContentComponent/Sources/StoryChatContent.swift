@@ -403,13 +403,15 @@ public final class StoryContentContextImpl: StoryContentContext {
         context: AccountContext,
         isHidden: Bool,
         focusedPeerId: EnginePeer.Id?,
-        singlePeer: Bool
+        singlePeer: Bool,
+        fixedOrder: [EnginePeer.Id] = []
     ) {
         self.context = context
         self.isHidden = isHidden
         if let focusedPeerId {
             self.focusedItem = (focusedPeerId, nil)
         }
+        self.fixedSubscriptionOrder = fixedOrder
         
         if singlePeer {
             guard let focusedPeerId else {
@@ -433,6 +435,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         peer: peer,
                         hasUnseen: state.hasUnseen,
                         storyCount: state.items.count,
+                        unseenCount: 0,
                         lastTimestamp: state.items.last?.timestamp ?? 0
                     )],
                     hasMoreToken: nil

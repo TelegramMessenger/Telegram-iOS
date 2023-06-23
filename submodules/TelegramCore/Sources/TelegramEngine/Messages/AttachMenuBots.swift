@@ -709,14 +709,15 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
         }
         |> mapToSignal { result -> Signal<BotApp, GetBotAppError> in
             switch result {
-                case let .botApp(_, app):
+                case let .botApp(botAppFlags, app):
                 switch app {
                 case let .botApp(flags, id, accessHash, shortName, title, description, photo, document, hash):
+                    let _ = flags
                     var appFlags = BotApp.Flags()
-                    if (flags & (1 << 0)) != 0 {
+                    if (botAppFlags & (1 << 0)) != 0 {
                         appFlags.insert(.notActivated)
                     }
-                    if (flags & (1 << 1)) != 0 {
+                    if (botAppFlags & (1 << 1)) != 0 {
                         appFlags.insert(.requiresWriteAccess)
                     }
                     return .single(BotApp(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: appFlags))

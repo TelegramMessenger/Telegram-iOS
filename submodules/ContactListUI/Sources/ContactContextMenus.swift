@@ -10,7 +10,7 @@ import PresentationDataUtils
 import OverlayStatusController
 import LocalizedPeerData
 
-func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, contactsController: ContactsController?) -> Signal<[ContextMenuItem], NoError> {
+func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, contactsController: ContactsController?, isStories: Bool) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
     
     return context.engine.data.get(
@@ -20,6 +20,17 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
     )
     |> map { [weak contactsController] peer, areVoiceCallsAvailable, areVideoCallsAvailable -> [ContextMenuItem] in
         var items: [ContextMenuItem] = []
+        
+        if isStories {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Unhide", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.default)
+
+                context.engine.peers.updatePeerStoriesHidden(id: peerId, isHidden: false)
+            })))
+        }
         
         items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_SendMessage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.contextMenu.primaryColor) }, action: { _, f in
             let _ = (context.engine.data.get(

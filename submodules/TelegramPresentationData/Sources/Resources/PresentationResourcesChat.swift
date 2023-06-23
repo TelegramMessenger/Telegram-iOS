@@ -1256,24 +1256,25 @@ public struct PresentationResourcesChat {
                 context.clip()
                 
                 let color: UIColor
+                let foregroundColor: UIColor
                 switch type {
                 case .incoming:
-                    color = theme.chat.message.incoming.mediaPlaceholderColor
+                    color = theme.chat.message.incoming.mediaActiveControlColor.withMultipliedAlpha(0.1)
+                    foregroundColor = theme.chat.message.incoming.mediaActiveControlColor
                 case .outgoing:
-                    color = theme.chat.message.outgoing.mediaPlaceholderColor
+                    color = theme.chat.message.outgoing.mediaActiveControlColor.withMultipliedAlpha(0.1)
+                    foregroundColor = theme.chat.message.outgoing.mediaActiveControlColor
                 case .free:
-                    color = theme.chat.message.freeform.withWallpaper.fill[0]
+                    color = theme.chat.message.freeform.withWallpaper.reactionActiveMediaPlaceholder
+                    foregroundColor = theme.chat.message.freeform.withWallpaper.reactionActiveBackground
                 }
                 
                 context.setFillColor(color.cgColor)
                 context.fill(CGRect(origin: CGPoint(), size: size))
                 
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ExpiredStoryIcon"), color: .white), let icon = UIImage(bundleImageName: "Chat/Message/ExpiredStoryPlaceholder") {
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ExpiredStoryIcon"), color: foregroundColor) {
                     UIGraphicsPushContext(context)
                     
-                    icon.draw(in: CGRect(origin: CGPoint(), size: size))
-                    
-                    //image.draw(at: CGPoint(x: floor((size.width - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), blendMode: .destinationOut, alpha: 1.0)
                     image.draw(at: CGPoint(x: floor((size.width - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), blendMode: .normal, alpha: 1.0)
                     
                     UIGraphicsPopContext()

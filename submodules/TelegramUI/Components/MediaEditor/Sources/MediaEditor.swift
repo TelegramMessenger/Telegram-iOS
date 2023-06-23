@@ -259,6 +259,11 @@ public final class MediaEditor {
                 self.histogramPromise.set(.single(data))
             }
         }
+        
+        if case let .asset(asset) = subject {
+            self.playerPlaybackState = (asset.duration, 0.0, false, false)
+            self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
+        }
     }
     
     deinit {

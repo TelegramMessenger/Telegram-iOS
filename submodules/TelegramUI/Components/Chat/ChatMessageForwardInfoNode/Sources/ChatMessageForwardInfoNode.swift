@@ -158,8 +158,12 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                     } else {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         
-                        if let _ = storyData {
-                            completeSourceString = strings.Message_ForwardedStoryShort(peerString)
+                        if let storyData = storyData {
+                            if storyData.isExpired {
+                                completeSourceString = strings.Message_ForwardedExpiredStoryShort(peerString)
+                            } else {
+                                completeSourceString = strings.Message_ForwardedStoryShort(peerString)
+                            }
                         } else {
                             completeSourceString = strings.Message_ForwardedMessageShort(peerString)
                         }

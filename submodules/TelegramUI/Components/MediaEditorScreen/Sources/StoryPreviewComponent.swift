@@ -276,7 +276,8 @@ final class StoryPreviewComponent: Component {
                     timeoutSelected: false,
                     displayGradient: false,
                     bottomInset: 0.0,
-                    hideKeyboard: false
+                    hideKeyboard: false,
+                    disabledPlaceholder: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 200.0)

@@ -680,6 +680,7 @@ public extension TelegramEngine {
                         peer: EnginePeer(accountPeer),
                         hasUnseen: false,
                         storyCount: 0,
+                        unseenCount: 0,
                         lastTimestamp: 0
                     )
                     
@@ -692,14 +693,22 @@ public extension TelegramEngine {
                             if let lastEntry = itemsView.items.last?.value.get(Stories.StoredItem.self) {
                                 let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
                                 var hasUnseen = false
+                                var unseenCount = 0
                                 if let peerState = peerState {
                                     hasUnseen = peerState.maxReadId < lastEntry.id
+                                    
+                                    for item in itemsView.items {
+                                        if item.id > peerState.maxReadId {
+                                            unseenCount += 1
+                                        }
+                                    }
                                 }
                                 
                                 let item = EngineStorySubscriptions.Item(
                                     peer: EnginePeer(accountPeer),
                                     hasUnseen: hasUnseen,
                                     storyCount: itemsView.items.count,
+                                    unseenCount: unseenCount,
                                     lastTimestamp: lastEntry.timestamp
                                 )
                                 accountItem = item
@@ -726,14 +735,22 @@ public extension TelegramEngine {
                         
                         let peerState: Stories.PeerState? = stateView.value?.get(Stories.PeerState.self)
                         var hasUnseen = false
+                        var unseenCount = 0
                         if let peerState = peerState {
                             hasUnseen = peerState.maxReadId < lastEntry.id
+                            
+                            for item in itemsView.items {
+                                if item.id > peerState.maxReadId {
+                                    unseenCount += 1
+                                }
+                            }
                         }
                         
                         let item = EngineStorySubscriptions.Item(
                             peer: EnginePeer(peer),
                             hasUnseen: hasUnseen,
                             storyCount: itemsView.items.count,
+                            unseenCount: unseenCount,
                             lastTimestamp: lastEntry.timestamp
                         )
                         
@@ -747,6 +764,13 @@ public extension TelegramEngine {
                     items.sort(by: { lhs, rhs in
                         if lhs.hasUnseen != rhs.hasUnseen {
                             if lhs.hasUnseen {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        if lhs.peer.isService != rhs.peer.isService {
+                            if lhs.peer.isService {
                                 return true
                             } else {
                                 return false
@@ -804,12 +828,9 @@ public extension TelegramEngine {
                 return self.account.postbox.combinedView(keys: additionalDataKeys)
                 |> map { views -> [EngineMediaResource.Id: StoryPreloadInfo] in
                     let _ = accountPeer
-                    let _ = storySubscriptionsView
                     let _ = storiesStateView
                     
-                    var nextPriority: Int = 0
-                    
-                    var resultResources: [EngineMediaResource.Id: StoryPreloadInfo] = [:]
+                    var sortedItems: [(peer: Peer, item: Stories.Item)] = []
                     
                     for peerId in storySubscriptionsView.peerIds {
                         guard let peerView = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView else {
@@ -834,36 +855,51 @@ public extension TelegramEngine {
                             }
                         }
                         
-                        if let peerReference = PeerReference(peer) {
-                            if let nextItem = nextItem, case let .item(item) = nextItem, let media = item.media {
-                                if let image = media as? TelegramMediaImage, let resource = image.representations.last?.resource {
-                                    let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: media), resource: resource)
-                                    resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
-                                        resource: resource,
-                                        size: nil,
-                                        priority: .top(position: nextPriority)
-                                    )
-                                    nextPriority += 1
-                                } else if let file = media as? TelegramMediaFile {
-                                    if let preview = file.previewRepresentations.last {
-                                        let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: file), resource: preview.resource)
-                                        resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
-                                            resource: resource,
-                                            size: nil,
-                                            priority: .top(position: nextPriority)
-                                        )
-                                        nextPriority += 1
-                                    }
-                                    
-                                    let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: item.id, media: file), resource: file.resource)
-                                    resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
-                                        resource: resource,
-                                        size: file.preloadSize,
-                                        priority: .top(position: nextPriority)
-                                    )
-                                    nextPriority += 1
-                                }
+                        if let nextItem = nextItem, case let .item(item) = nextItem {
+                            sortedItems.append((peer, item))
+                        }
+                    }
+                    
+                    sortedItems.sort(by: { lhs, rhs in
+                        return lhs.item.timestamp > rhs.item.timestamp
+                    })
+                    
+                    var nextPriority: Int = 0
+                    var resultResources: [EngineMediaResource.Id: StoryPreloadInfo] = [:]
+                    
+                    for itemAndPeer in sortedItems.prefix(10) {
+                        guard let peerReference = PeerReference(itemAndPeer.peer) else {
+                            continue
+                        }
+                        guard let media = itemAndPeer.item.media else {
+                            continue
+                        }
+                        if let image = media as? TelegramMediaImage, let resource = image.representations.last?.resource {
+                            let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: itemAndPeer.item.id, media: media), resource: resource)
+                            resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                                resource: resource,
+                                size: nil,
+                                priority: .top(position: nextPriority)
+                            )
+                            nextPriority += 1
+                        } else if let file = media as? TelegramMediaFile {
+                            if let preview = file.previewRepresentations.last {
+                                let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: itemAndPeer.item.id, media: file), resource: preview.resource)
+                                resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                                    resource: resource,
+                                    size: nil,
+                                    priority: .top(position: nextPriority)
+                                )
+                                nextPriority += 1
                             }
+                            
+                            let resource = MediaResourceReference.media(media: .story(peer: peerReference, id: itemAndPeer.item.id, media: file), resource: file.resource)
+                            resultResources[EngineMediaResource.Id(resource.resource.id)] = StoryPreloadInfo(
+                                resource: resource,
+                                size: file.preloadSize,
+                                priority: .top(position: nextPriority)
+                            )
+                            nextPriority += 1
                         }
                     }
                     

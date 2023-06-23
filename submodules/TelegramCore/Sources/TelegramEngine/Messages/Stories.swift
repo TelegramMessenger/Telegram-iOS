@@ -457,21 +457,27 @@ public final class EngineStorySubscriptions: Equatable {
         public let peer: EnginePeer
         public let hasUnseen: Bool
         public let storyCount: Int
+        public let unseenCount: Int
         public let lastTimestamp: Int32
         
         public init(
             peer: EnginePeer,
             hasUnseen: Bool,
             storyCount: Int,
+            unseenCount: Int,
             lastTimestamp: Int32
         ) {
             self.peer = peer
             self.hasUnseen = hasUnseen
             self.storyCount = storyCount
+            self.unseenCount = unseenCount
             self.lastTimestamp = lastTimestamp
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs === rhs {
+                return true
+            }
             if lhs.peer != rhs.peer {
                 return false
             }
@@ -479,6 +485,9 @@ public final class EngineStorySubscriptions: Equatable {
                 return false
             }
             if lhs.storyCount != rhs.storyCount {
+                return false
+            }
+            if lhs.unseenCount != rhs.unseenCount {
                 return false
             }
             if lhs.lastTimestamp != rhs.lastTimestamp {
@@ -499,6 +508,9 @@ public final class EngineStorySubscriptions: Equatable {
     }
     
     public static func ==(lhs: EngineStorySubscriptions, rhs: EngineStorySubscriptions) -> Bool {
+        if lhs === rhs {
+            return true
+        }
         if lhs.accountItem != rhs.accountItem {
             return false
         }
@@ -1061,7 +1073,7 @@ func _internal_markStoryAsSeen(account: Account, peerId: PeerId, id: Int32, asPi
             
             account.stateManager.injectStoryUpdates(updates: [.read(peerId: peerId, maxId: id)])
             
-            #if DEBUG && false
+            #if DEBUG && true
             if "".isEmpty {
                 return .complete()
             }

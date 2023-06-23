@@ -171,6 +171,10 @@ final class VideoScrubberComponent: Component {
                 context.fillPath()
             })
             
+            self.zoneView.image = UIImage()
+            self.zoneView.isUserInteractionEnabled = true
+            self.zoneView.hitTestSlop = UIEdgeInsets(top: -8.0, left: 0.0, bottom: -8.0, right: 0.0)
+            
             self.leftHandleView.image = handleImage
             self.leftHandleView.isUserInteractionEnabled = true
             self.leftHandleView.tintColor = .white
@@ -193,6 +197,7 @@ final class VideoScrubberComponent: Component {
                 context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height - borderHeight), size: CGSize(width: size.width, height: scrubberHeight)))
             })?.withRenderingMode(.alwaysTemplate)
             self.borderView.tintColor = .white
+            self.borderView.isUserInteractionEnabled = false
             
             self.transparentFramesContainer.alpha = 0.5
             self.transparentFramesContainer.clipsToBounds = true
@@ -241,7 +246,7 @@ final class VideoScrubberComponent: Component {
             let delta = translation.x / length
             
             let duration = component.endPosition - component.startPosition
-            let startValue = max(0.0, min(component.duration - duration, component.startPosition + delta))
+            let startValue = max(0.0, min(component.duration - duration, component.startPosition + delta * component.duration))
             let endValue = startValue + duration
             
             var transition: Transition = .immediate

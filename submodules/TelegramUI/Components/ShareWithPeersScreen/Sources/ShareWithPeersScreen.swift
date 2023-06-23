@@ -1323,13 +1323,23 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 iconColor: .blue,
                 actionTitle: nil
             ))
+            
+            var contactsSubtitle = "exclude people"
+            if initialPrivacy.base == .contacts, initialPrivacy.additionallyIncludePeers.count > 0 {
+                if initialPrivacy.additionallyIncludePeers.count == 1 {
+                    contactsSubtitle = "except 1 person"
+                } else {
+                    contactsSubtitle = "except \(initialPrivacy.additionallyIncludePeers.count) people"
+                }
+            }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .contacts,
                 title: "Contacts",
                 icon: "Chat List/Tabs/IconContacts",
                 iconColor: .yellow,
-                actionTitle: "exclude people"
+                actionTitle: contactsSubtitle
             ))
+            
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .closeFriends,
                 title: "Close Friends",
@@ -1337,12 +1347,21 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 iconColor: .green,
                 actionTitle: "edit list"
             ))
+            
+            var selectedContactsSubtitle = "choose"
+            if initialPrivacy.base == .nobody, initialPrivacy.additionallyIncludePeers.count > 0 {
+                if initialPrivacy.additionallyIncludePeers.count == 1 {
+                    selectedContactsSubtitle = "1 person"
+                } else {
+                    selectedContactsSubtitle = "\(initialPrivacy.additionallyIncludePeers.count) people"
+                }
+            }
             categoryItems.append(ShareWithPeersScreenComponent.CategoryItem(
                 id: .selectedContacts,
                 title: "Selected Contacts",
                 icon: "Chat List/Filters/Group",
                 iconColor: .violet,
-                actionTitle: "choose"
+                actionTitle: selectedContactsSubtitle
             ))
         }
         
