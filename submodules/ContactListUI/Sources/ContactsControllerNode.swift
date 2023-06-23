@@ -333,7 +333,11 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func contentScrollingEnded(listView: ListView) -> Bool {
-        if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+        if "".isEmpty {
+            return false
+        }
+        
+        /*if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
                 if navigationBarComponentView.effectiveStoriesInsetHeight > 0.0 {
                     if clippedScrollOffset > 0.0 && clippedScrollOffset < navigationBarComponentView.effectiveStoriesInsetHeight {
@@ -365,7 +369,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     }
                 }
             }
-        }
+        }*/
         
         return false
     }
@@ -412,7 +416,6 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 sideInset: layout.safeInsets.left,
                 isSearchActive: self.isSearchDisplayControllerActive,
-                storiesUnlocked: self.storiesUnlocked,
                 primaryContent: primaryContent,
                 secondaryContent: nil,
                 secondaryTransition: 0.0,
@@ -444,7 +447,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             transition.updateFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
             
-            return (navigationBarSize.height, navigationBarComponentView.effectiveStoriesInsetHeight)
+            return (navigationBarSize.height, 0.0)
         } else {
             return (0.0, 0.0)
         }

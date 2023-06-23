@@ -269,10 +269,11 @@ public final class StoryPeerListItemComponent: Component {
     public let hasItems: Bool
     public let ringAnimation: RingAnimation?
     public let collapseFraction: CGFloat
-    public let collapsedScaleFactor: CGFloat
+    public let scale: CGFloat
     public let collapsedWidth: CGFloat
-    public let leftNeighborDistance: CGFloat?
-    public let rightNeighborDistance: CGFloat?
+    public let expandedAlphaFraction: CGFloat
+    public let leftNeighborDistance: CGPoint?
+    public let rightNeighborDistance: CGPoint?
     public let action: (EnginePeer) -> Void
     public let contextGesture: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     
@@ -285,10 +286,11 @@ public final class StoryPeerListItemComponent: Component {
         hasItems: Bool,
         ringAnimation: RingAnimation?,
         collapseFraction: CGFloat,
-        collapsedScaleFactor: CGFloat,
+        scale: CGFloat,
         collapsedWidth: CGFloat,
-        leftNeighborDistance: CGFloat?,
-        rightNeighborDistance: CGFloat?,
+        expandedAlphaFraction: CGFloat,
+        leftNeighborDistance: CGPoint?,
+        rightNeighborDistance: CGPoint?,
         action: @escaping (EnginePeer) -> Void,
         contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     ) {
@@ -300,8 +302,9 @@ public final class StoryPeerListItemComponent: Component {
         self.hasItems = hasItems
         self.ringAnimation = ringAnimation
         self.collapseFraction = collapseFraction
-        self.collapsedScaleFactor = collapsedScaleFactor
+        self.scale = scale
         self.collapsedWidth = collapsedWidth
+        self.expandedAlphaFraction = expandedAlphaFraction
         self.leftNeighborDistance = leftNeighborDistance
         self.rightNeighborDistance = rightNeighborDistance
         self.action = action
@@ -333,10 +336,13 @@ public final class StoryPeerListItemComponent: Component {
         if lhs.collapseFraction != rhs.collapseFraction {
             return false
         }
-        if lhs.collapsedScaleFactor != rhs.collapsedScaleFactor {
+        if lhs.scale != rhs.scale {
             return false
         }
         if lhs.collapsedWidth != rhs.collapsedWidth {
+            return false
+        }
+        if lhs.expandedAlphaFraction != rhs.expandedAlphaFraction {
             return false
         }
         if lhs.leftNeighborDistance != rhs.leftNeighborDistance {
@@ -516,7 +522,7 @@ public final class StoryPeerListItemComponent: Component {
             
             let effectiveWidth: CGFloat = (1.0 - component.collapseFraction) * availableSize.width + component.collapseFraction * component.collapsedWidth
             
-            let effectiveScale: CGFloat = 1.0 * (1.0 - component.collapseFraction) + (24.0 / 52.0) * component.collapsedScaleFactor * component.collapseFraction
+            let effectiveScale: CGFloat = component.scale
             
             let avatarNode: AvatarNode
             if let current = self.avatarNode {
@@ -665,10 +671,10 @@ public final class StoryPeerListItemComponent: Component {
             var mappedRightCenter: CGPoint?
             
             if let leftNeighborDistance = component.leftNeighborDistance {
-                mappedLeftCenter = CGPoint(x: indicatorCenter.x - leftNeighborDistance * (1.0 / effectiveScale), y: indicatorCenter.y)
+                mappedLeftCenter = CGPoint(x: indicatorCenter.x - leftNeighborDistance.x * (1.0 / effectiveScale), y: indicatorCenter.y + leftNeighborDistance.y * (1.0 / effectiveScale))
             }
             if let rightNeighborDistance = component.rightNeighborDistance {
-                mappedRightCenter = CGPoint(x: indicatorCenter.x + rightNeighborDistance * (1.0 / effectiveScale), y: indicatorCenter.y)
+                mappedRightCenter = CGPoint(x: indicatorCenter.x + rightNeighborDistance.x * (1.0 / effectiveScale), y: indicatorCenter.y + rightNeighborDistance.y * (1.0 / effectiveScale))
             }
             
             let avatarPath = CGMutablePath()
@@ -677,7 +683,7 @@ public final class StoryPeerListItemComponent: Component {
                 let cutoutSize: CGFloat = 18.0 + UIScreenPixel * 2.0
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(x: avatarSize.width - cutoutSize + UIScreenPixel, y: avatarSize.height - 1.0 - cutoutSize + UIScreenPixel), size: CGSize(width: cutoutSize, height: cutoutSize)))
             } else if let mappedLeftCenter {
-                avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineWidth, dy: -indicatorLineWidth).offsetBy(dx: -abs(indicatorCenter.x - mappedLeftCenter.x), dy: 0.0))
+                avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineWidth, dy: -indicatorLineWidth).offsetBy(dx: -abs(indicatorCenter.x - mappedLeftCenter.x), dy: -abs(indicatorCenter.y - mappedLeftCenter.y)))
             }
             Transition.immediate.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             
@@ -700,10 +706,10 @@ public final class StoryPeerListItemComponent: Component {
                 if let titleView = self.title.view, let snapshotView = titleView.snapshotView(afterScreenUpdates: false) {
                     self.button.addSubview(snapshotView)
                     snapshotView.frame = titleView.frame
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView.layer.animateAlpha(from: component.expandedAlphaFraction, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
                     })
-                    titleView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    titleView.layer.animateAlpha(from: 0.0, to: component.expandedAlphaFraction, duration: 0.25)
                 }
                 titleTransition = .immediate
                 
@@ -741,7 +747,7 @@ public final class StoryPeerListItemComponent: Component {
                 titleTransition.setPosition(view: titleView, position: titleFrame.center)
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                 titleTransition.setScale(view: titleView, scale: effectiveScale)
-                titleTransition.setAlpha(view: titleView, alpha: 1.0 - component.collapseFraction)
+                titleTransition.setAlpha(view: titleView, alpha: component.expandedAlphaFraction)
             }
             
             if let ringAnimation = component.ringAnimation {

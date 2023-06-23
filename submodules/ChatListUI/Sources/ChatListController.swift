@@ -326,7 +326,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 switch strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.visibleContentOffset() {
                 case .none, .unknown:
                     strongSelf.chatListDisplayNode.willScrollToTop()
-                    strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToPosition(.top)
+                    strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToPosition(.top(adjustForTempInset: false))
                 case let .known(offset):
                     let isFirstFilter = strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter == strongSelf.chatListDisplayNode.mainContainerNode.availableFilters.first?.filter
                     
@@ -349,9 +349,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         strongSelf.chatListDisplayNode.willScrollToTop()
                         if let inlineStackContainerNode = strongSelf.chatListDisplayNode.inlineStackContainerNode {
-                            inlineStackContainerNode.currentItemNode.scrollToPosition(.top)
+                            inlineStackContainerNode.currentItemNode.scrollToPosition(.top(adjustForTempInset: false))
                         } else {
-                            strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToPosition(.top)
+                            strongSelf.chatListDisplayNode.effectiveContainerNode.currentItemNode.scrollToPosition(.top(adjustForTempInset: false))
                         }
                     }
                 }
@@ -2404,7 +2404,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peer?.id, singlePeer: false)
+                guard let peer else {
+                    self.chatListDisplayNode.scrollToStories(animated: true)
+                    return
+                }
+                
+                let storyContent = StoryContentContextImpl(context: self.context, isHidden: false, focusedPeerId: peer.id, singlePeer: false)
                 let _ = (storyContent.state
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] storyContentState in
@@ -2412,13 +2417,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return
                     }
                     
-                    if let peer, peer.id == self.context.account.peerId, storyContentState.slice == nil {
+                    if peer.id == self.context.account.peerId, storyContentState.slice == nil {
                         self.openStoryCamera()
                         return
                     }
                     
                     var transitionIn: StoryContainerScreen.TransitionIn?
-                    if let peer, let componentView = self.chatListHeaderView() {
+                    if let componentView = self.chatListHeaderView() {
                         if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peer.id) {
                             transitionIn = StoryContainerScreen.TransitionIn(
                                 sourceView: transitionView,
@@ -2594,7 +2599,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public func scrollToStories() {
-        self.chatListDisplayNode.scrollToStories()
+        self.chatListDisplayNode.scrollToStories(animated: false)
     }
     
     private func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -3423,9 +3428,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                if let scrollToTop = strongSelf.scrollToTop {
+                /*if let scrollToTop = strongSelf.scrollToTop {
                     scrollToTop()
-                }
+                }*/
                 
                 let tabsIsEmpty: Bool
                 if let (resolvedItems, displayTabsAtBottom, _) = strongSelf.tabContainerData {
