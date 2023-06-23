@@ -4924,10 +4924,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public func scrollToOffsetFromTop(_ offset: CGFloat, animated: Bool) -> Bool {
         for itemNode in self.itemNodes {
             if itemNode.index == 0 {
-                if animated {
-                    self.scroller.setContentOffset(CGPoint(x: 0.0, y: offset + self.tempTopInset), animated: animated)
-                } else {
-                    self.scroller.contentOffset = CGPoint(x: 0.0, y: offset + self.tempTopInset)
+                if self.scroller.contentOffset.y != offset + self.tempTopInset {
+                    self.stopScrolling()
+                    if animated {
+                        self.scroller.setContentOffset(CGPoint(x: 0.0, y: offset + self.tempTopInset), animated: animated)
+                    } else {
+                        self.scroller.contentOffset = CGPoint(x: 0.0, y: offset + self.tempTopInset)
+                    }
                 }
                 return true
             }

@@ -977,6 +977,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 return
             }
             let _ = self
+            //let _ = self.contentScrollingEnded?(self.currentItemNode)
         }
         itemNode.listNode.contentScrollingEnded = { [weak self] listView in
             guard let self else {
@@ -1441,7 +1442,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     self?.filterEmptyAction(filter)
                 }, secondaryEmptyAction: { [weak self] in
                     self?.secondaryEmptyAction()
-                }, autoSetReady: false)
+                }, autoSetReady: !animated)
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
                 
