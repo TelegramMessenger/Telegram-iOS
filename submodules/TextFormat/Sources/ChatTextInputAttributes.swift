@@ -539,6 +539,7 @@ public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColo
         
         textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
         textView.textStorage.removeAttribute(NSAttributedString.Key.foregroundColor, range: fullRange)
+        textView.textStorage.removeAttribute(NSAttributedString.Key.backgroundColor, range: fullRange)
         textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
         textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
         textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
@@ -646,6 +647,7 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
     if !resultAttributedText.isEqual(to: initialAttributedText) {
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.font, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.foregroundColor, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.backgroundColor, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.underlineStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)

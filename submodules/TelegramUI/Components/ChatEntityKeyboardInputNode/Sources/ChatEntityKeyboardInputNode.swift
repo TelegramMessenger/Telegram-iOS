@@ -1017,7 +1017,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
                 if groupId == AnyHashable("recent") {
                     interaction.dismissTextInput()
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    if let forceTheme = interaction.forceTheme {
+                        presentationData = presentationData.withUpdated(theme: forceTheme)
+                    }
                     let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                     var items: [ActionSheetItem] = []
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
@@ -1448,7 +1451,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
                 if groupId == AnyHashable("recent") {
                     interaction.dismissTextInput()
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    if let forceTheme = interaction.forceTheme {
+                        presentationData = presentationData.withUpdated(theme: forceTheme)
+                    }
                     let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                     var items: [ActionSheetItem] = []
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in

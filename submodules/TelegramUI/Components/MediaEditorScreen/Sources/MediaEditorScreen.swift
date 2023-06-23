@@ -293,25 +293,18 @@ final class MediaEditorScreenComponent: Component {
                 self.didInitializeInputMediaNodeDataPromise = true
                 
                 let context = component.context
+                
                 self.inputMediaNodeDataPromise.set(
-                    EmojiPagerContentComponent.emojiInputData(
+                    ChatEntityKeyboardInputNode.inputData(
                         context: context,
-                        animationCache: context.animationCache,
-                        animationRenderer: context.animationRenderer,
-                        isStandalone: true,
-                        isStatusSelection: false,
-                        isReactionSelection: false,
-                        isEmojiSelection: false,
-                        hasTrending: false,
-                        topReactionItems: [],
-                        areUnicodeEmojiEnabled: true,
-                        areCustomEmojiEnabled: true,
                         chatPeerId: nil,
-                        forceHasPremium: false,
-                        hideBackground: true
-                    ) |> map { emoji -> ChatEntityKeyboardInputNode.InputData in
+                        areCustomEmojiEnabled: true,
+                        hasSearch: false,
+                        hideBackground: true,
+                        sendGif: nil
+                    ) |> map { inputData -> ChatEntityKeyboardInputNode.InputData in
                         return ChatEntityKeyboardInputNode.InputData(
-                            emoji: emoji,
+                            emoji: inputData.emoji,
                             stickers: nil,
                             gifs: nil,
                             availableGifSearchEmojies: []
@@ -365,10 +358,13 @@ final class MediaEditorScreenComponent: Component {
                         }
                     },
                     getNavigationController: { return nil },
-                    requestLayout: { _ in
-                        
+                    requestLayout: { [weak self] transition in
+                        if let self {
+                            self.environment?.controller()?.requestLayout(transition: transition)
+                        }
                     }
                 )
+                self.inputMediaInteraction?.forceTheme = defaultDarkColorPresentationTheme
             }
         }
         
@@ -916,6 +912,8 @@ final class MediaEditorScreenComponent: Component {
             default:
                 nextInputMode = .emoji
             }
+            
+            let keyboardWasHidden = self.inputPanelExternalState.isKeyboardHidden
             self.inputPanel.parentState = state
             let inputPanelSize = self.inputPanel.update(
                 transition: transition,
@@ -930,10 +928,10 @@ final class MediaEditorScreenComponent: Component {
                     nextInputMode: { _ in  return nextInputMode },
                     areVoiceMessagesAvailable: false,
                     presentController: { [weak self] c in
-                        guard let self, let _ = self.component else {
+                        guard let self, let _ = self.component, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen else {
                             return
                         }
-                        //component.presentController(c)
+                        controller.present(c, in: .window(.root))
                     },
                     sendMessageAction: { [weak self] in
                         guard let self else {
@@ -1019,7 +1017,7 @@ final class MediaEditorScreenComponent: Component {
             
             var inputHeight = environment.inputHeight
             if self.inputPanelExternalState.isEditing {
-                if self.currentInputMode == .emoji || inputHeight.isZero {
+                if self.currentInputMode == .emoji || (inputHeight.isZero && keyboardWasHidden) {
                     inputHeight = environment.deviceMetrics.standardInputHeight(inLandscape: false)
                 }
             }

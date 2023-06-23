@@ -1206,7 +1206,6 @@ public final class MessageInputPanelComponent: Component {
                         panelView.animateIn(transition: .spring(duration: 0.4))
                     }
                 }
-                
             } else if let contextQueryResultPanel = self.contextQueryResultPanel?.view as? ContextResultPanelComponent.View {
                 self.contextQueryResultPanel = nil
                 contextQueryResultPanel.animateOut(transition: .spring(duration: 0.4), completion: { [weak contextQueryResultPanel] in
